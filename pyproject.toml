@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cc-sessionsync"
+dynamic = ["version"]
+description = "Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code（带备份 / 账本 / 撤回）"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+authors = [{ name = "helefee" }]
+keywords = ["claude-code", "codex", "session", "sync", "claude-desktop"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Environment :: Console",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/helefee/CC-SessionSync"
+Issues = "https://github.com/helefee/CC-SessionSync/issues"
+
+[project.scripts]
+cc-sessionsync = "cc_sessionsync.cli:main"
+
+[tool.setuptools]
+packages = ["cc_sessionsync"]
+
+[tool.setuptools.package-data]
+cc_sessionsync = ["index.html"]
+
+[tool.setuptools.dynamic]
+version = { attr = "cc_sessionsync.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
