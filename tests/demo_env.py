@@ -154,7 +154,7 @@ if __name__ == "__main__":
     info = build(T, extra="--serve" in sys.argv or "--extra" in sys.argv)
     if "--serve" in sys.argv:
         port = sys.argv[sys.argv.index("--serve") + 1]
-        env = dict({k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_", "CODEX_", "CC_SESSIONSYNC_")) or k == "CC_SESSIONSYNC_FAKE_INSTALL"}, **env_for(T))
+        env = dict({k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_", "CODEX_", "CC_SESSIONSYNC_")) or k in ("CC_SESSIONSYNC_FAKE_INSTALL", "CC_SESSIONSYNC_FAKE_PROCTABLE")}, **env_for(T))
         os.execvpe(sys.executable, [sys.executable, "-m", "cc_sessionsync", "ui", "--port", port, "--no-browser"],
                    dict(env, PYTHONPATH=str(HERE.parent)))
     print(json.dumps({"dir": str(T), "accounts": [info["A1"], info["A2"]]}))

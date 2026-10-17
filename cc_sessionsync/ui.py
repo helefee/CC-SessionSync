@@ -103,8 +103,11 @@ def tray_state(since: int = -1) -> dict:
     seq, evs = events.since(since)
     s = settings.load()
     u = update.status()
-    jobs = sum(1 for j in apps.pending() if j["state"] == "waiting")
+    from . import appclose
+    wq = [j for j in apps.pending() if j["state"] == "waiting"]
+    jobs = len(wq)
     return {"seq": seq, "events": evs, "settings": s, "auto_sync": bool(s.get("auto_sync")), "jobs": jobs,
+            "job_kinds": sorted({j.get("kind") or "claude" for j in wq}), "closerun": appclose._active(),
             "update": {"badge": u.get("badge"), "latest": u.get("latest")},
             "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600 for e in events.recent(10))}
 
@@ -308,6 +311,12 @@ class H(BaseHTTPRequestHandler):
             return diag()
         if p == "/api/jobs":
             return apps.pending()
+        if p == "/api/apps/close-plan":              # 「关闭并执行」之前给用户看：怎么开的、几个进程、会中断哪些命令行会话
+            from . import appclose
+            return appclose.plan(q.get("kind") or "claude")
+        if p == "/api/apps/close-run":
+            from . import appclose
+            return appclose.view(q.get("id") or "")
         if p == "/api/settings":
             return settings_view()
         if p == "/api/events":
@@ -432,6 +441,15 @@ class H(BaseHTTPRequestHandler):
             return detect.pick_folder(b.get("start") or "")
         if p == "/api/jobs/cancel":
             return {"ok": apps.cancel(str(b.get("id")))}
+        if p == "/api/apps/close-run":                 # 用户在对话框里点了「关闭并…（完成后重启）」
+            from . import appclose
+            return appclose.start(str(b.get("kind") or "claude"), [str(x) for x in (b.get("jobs") or [])])
+        if p == "/api/apps/close-run/force":           # 用户第二次确认了「强制结束」
+            from . import appclose
+            return appclose.force(str(b.get("id")))
+        if p == "/api/apps/close-run/stop":            # 不关了，改成等它自己退出
+            from . import appclose
+            return appclose.stop(str(b.get("id")))
         if p == "/api/update/check":
             from . import update
             return update.check(force=True)

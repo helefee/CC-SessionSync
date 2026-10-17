@@ -46,7 +46,7 @@ button.primary{background:var(--accent);color:#fff}
 button.primary:hover{background:var(--accent);opacity:.9}
 button.ghost{background:transparent;color:var(--muted)}
 button.ghost:hover{background:var(--hover);color:var(--text)}
-button.danger{color:var(--bad)}
+button.danger{color:var(--bad)}button.primary.danger{background:var(--bad);border-color:var(--bad);color:#fff}
 button:disabled{opacity:.5;cursor:default}
 input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
@@ -387,6 +387,25 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .pgv>.card{padding:14px 16px}
 .pvhd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .pvft{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:10px}
+
+/* v0.2.3：关闭桌面端并执行 */
+.cr{display:flex;flex-direction:column;gap:10px;font-size:13px}
+.cr .crq{display:flex;align-items:center;gap:8px;margin:0;font-size:14.5px}.cr .crq .ic{color:var(--warn);width:18px;height:18px}
+.cr .crk{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.cr .crk>span:nth-child(odd){color:var(--muted)}.cr .crk>span:nth-child(even){word-break:break-all}
+.cr ul{margin:4px 0 0;padding-left:18px}.cr ul li{margin:2px 0;font-size:12px}.cr code{font-size:11.5px;word-break:break-all}
+.cr .crok{border:1px solid var(--ok);background:var(--ok-weak);border-radius:10px;padding:8px 10px;font-size:12.5px}
+.cr .crok .ic{width:14px;height:14px;color:var(--ok);vertical-align:-2px}
+.crs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.crs li{display:flex;align-items:center;gap:8px;color:var(--muted)}.crs li.cur{color:var(--text);font-weight:600}.crs li.cur .dim{font-weight:400}
+.crs li.bad{color:var(--bad)}.crs li.bad .ic{width:16px;height:16px}.crs li.ok{color:var(--text)}.crs li.ok .ic{color:var(--ok);width:16px;height:16px}
+.crs .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--line);margin:0 4px}
+.crs .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:crspin .8s linear infinite;margin:0 1px}
+@keyframes crspin{to{transform:rotate(360deg)}}
+.crbar{height:6px;border-radius:4px;background:var(--line);overflow:hidden}.crbar i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.crj{list-style:none;padding:0 !important}.crj li{display:flex;gap:6px;align-items:baseline}
+td.nw{white-space:nowrap}
+#mdCr{margin-left:6px;padding:1px 8px;font-size:12px}
 </style>
 </head>
 <body>
@@ -576,9 +595,100 @@ function copyText(t){
 // run_or_defer 的结果：排队了就告诉用户为什么、什么时候做
 function doneOrQueued(r, okMsg){
   if (!r) return;
-  if (r.deferred) { toast("⏸ " + (r.hint || "桌面端开着，已排队：退出后自动做"), 6000); poll(); return true; }
+  if (r.deferred) { poll(); crAsk({kind: r.kind || "claude", jobs: [r.job], verb: r.verb}); return true; }
   if (r.ok === false) { toast("❌ " + (r.error || "没做成")); return false; }
   if (okMsg) toast("✅ " + okMsg); return true;
+}
+// ---------- 桌面端开着：「关闭并…（完成后重启）」/ 等它退出后自动做 / 取消（0.2.3）----------
+// 改桌面端数据的操作在它开着时会排队（apps.run_or_defer）；这里问用户要不要让我们代劳：正常关掉 → 做 → 按原来的方式重新打开。
+const APPN = {claude: "Claude", codex: "Codex"};
+const crPl = p => `<li><code>${esc(p.exe || p.name)}</code> <span class="dim">· PID ${esc(p.pid)}</span></li>`;
+function queuedAsk(rs){       // 一批结果里第一个排队的 → 问；其他的看顶部提示条
+  const d = (rs || []).find(x => x && x.deferred);
+  if (d) crAsk({kind: d.kind || d.agent || "claude", jobs: [d.job], verb: d.verb});
+  return !!d;
+}
+async function crAsk(o){
+  const n = APPN[o.kind] || "Claude";
+  let pl; try { pl = await api("/api/apps/close-plan?kind=" + (o.kind || "claude")); } catch(e){ toast("❌ " + e.message, 5000); return; }
+  if (pl.busy) return crProg(pl.busy.id);
+  const v = o.verb || (pl.jobs.length === 1 && pl.jobs[0].verb) || "执行";
+  if (!pl.running) { toast(`⏸ ${n} 已经退出了：排队的改动马上自动做`, 5000); poll(); return; }
+  if (!pl.jobs.length) { toast("没有排队中的改动"); return; }
+  const kids = pl.cli_children || [], oth = pl.cli_other || [], banner = !!o.banner;
+  openDlg(`${n} 正在运行`, `<div class="cr">
+    <p class="crq">${ic("power")}<b>${n} 正在运行，需要关闭后才能${esc(v)}。</b></p>
+    <div class="dim">开着的时候改，它退出时会把改动盖回去。可以让我来：先请 ${n} 正常退出（和点窗口右上角关闭一样，不强制），
+      退干净后${esc(v)}，做完按原来的方式重新打开 ${n}。</div>
+    <div class="crk"><span>打开方式</span><span>${esc(pl.launch_text || "")}</span><span>进程</span><span>${pl.pids.length} 个 ${esc(pl.name)} 进程</span>
+      <span>要做的</span><span>${pl.jobs.map(j => esc(j.title)).join("<br>")}</span></div>
+    ${kids.length ? `<div class="miss"><b>⚠ 有 ${kids.length} 个由 ${n} 桌面端启动的 Claude Code 会话正在跑，关闭桌面端会把它们中断：</b><ul>${kids.map(crPl).join("")}</ul></div>` : ""}
+    ${oth.length ? `<div class="crok">另外 ${oth.length} 个命令行 ${o.kind === "codex" ? "codex" : "claude"} 进程不是桌面端开的，<b>不会动</b>：<ul>${oth.map(crPl).join("")}</ul></div>` : ""}
+  </div>`, `<button id="crCancel">取消</button>${banner ? "" : `<button id="crWait">等它退出后自动${esc(v)}</button>`}<button class="primary" id="crGo">${ic("power")} 关闭并${esc(v)}（完成后重启）</button>`);
+  $("#crCancel").onclick = async () => {
+    closeDlg();
+    if (banner) return;
+    for (const id of o.jobs || []) { try { await api("/api/jobs/cancel", {id}); } catch(e){} }
+    toast("已取消，什么都没改"); poll();
+  };
+  const w = $("#crWait"); if (w) w.onclick = () => { closeDlg(); toast(`⏸ 已排队：${n} 完全退出后（托盘里也要退）自动${v}，做完自动重新打开`, 7000); poll(); };
+  $("#crGo").onclick = async () => {
+    $("#crGo").disabled = true;
+    try { const r = await api("/api/apps/close-run", {kind: o.kind || "claude", jobs: o.jobs || pl.jobs.map(j => j.id)}); crProg(r.id, v); }
+    catch(e){ toast("❌ " + e.message, 6000); $("#crGo").disabled = false; }
+  };
+}
+const CRS = [["closing", "请它正常退出"], ["tail", "等它写完盘"], ["running", "做排队的改动"], ["relaunching", "按原来的方式重新打开"]];
+async function crProg(id, verb){
+  let r; try { r = await api("/api/apps/close-run?id=" + id); } catch(e){ return toast("❌ " + e.message); }
+  const n = r.app, v = verb || r.verb || "执行";
+  if (!$("#crBody") || $("#crBody").dataset.id !== id) openDlg(`关闭 ${n} 并${v}`, `<div id="crBody" data-id="${esc(id)}"></div>`, `<div id="crFt" style="display:flex;gap:8px;width:100%;justify-content:flex-end"></div>`);
+  const b = $("#crBody"), ft = $("#crFt");
+  const st = r.state, at = CRS.findIndex(s => s[0] === (st === "ask_force" || st === "forcing" ? "closing" : st));
+  const fin = ["done", "failed", "stopped"].includes(st);
+  const step = (s, i) => { const cur = !fin && i === at, past = fin ? (st === "done" && (i < 3 || r.was_running)) : i < at;
+    const skip = !r.was_running && (i === 0 || i === 3);
+    if (fin && i === 3 && r.relaunched === false) return `<li class="bad">${ic("x")}<span>${s[1]}<span class="dim"> · 没能打开</span></span></li>`;
+    return `<li class="${cur ? "cur" : past && !skip ? "ok" : ""}">${cur ? '<span class="spin"></span>' : past && !skip ? ic("check") : '<span class="dot"></span>'}<span>${s[1].replace("改动", v === "执行" ? "改动" : `改动（${v}）`)}${i === 0 && cur ? `<span class="dim"> · 还剩 ${r.remaining} 个进程，已等 ${Math.round(r.elapsed)} / ${r.wait} 秒</span>` : ""}${skip ? '<span class="dim"> · 它已经退出了，跳过</span>' : ""}</span></li>`; };
+  const pct = Math.min(100, Math.round(100 * r.elapsed / (r.wait || 15)));
+  let html = `<div class="cr"><ol class="crs">${CRS.map(step).join("")}</ol>`;
+  if (st === "closing") html += `<div class="crbar"><i style="width:${pct}%"></i></div>`;
+  if (st === "ask_force") html += `<div class="miss" id="crAsk"><b>${n} 等了 ${r.wait} 秒还没退干净（还剩 ${r.remaining} 个进程，可能缩到托盘里了）。</b><br>
+      可以在任务栏右下角托盘里右键 ${n} 图标 →「退出」，这里会接着等，退干净就自动继续；或者强制结束（未保存的输入可能丢失${r.cli_children ? `，由桌面端开的 ${r.cli_children} 个 Claude Code 会话会被中断` : ""}）。不是桌面端开的命令行进程不会动。</div>`;
+  if (st === "forcing") html += `<div class="dim">已强制结束，等进程退干净…</div>`;
+  if (fin) {
+    const jobs = r.jobs.map(j => `<li><span class="tag ${j.state === "done" ? "ok" : j.state === "failed" ? "bad" : "warn"}">${{done: "做完了", failed: "失败", closing: "改回排队", waiting: "排队中"}[j.state] || esc(j.state)}</span> ${esc(j.title)}${j.result ? `<span class="dim"> · ${esc(j.result)}</span>` : ""}</li>`).join("");
+    if (st === "stopped") html += `<div class="crok">没关 ${n}：改动留在队列里，${n} 完全退出后自动做，做完自动重新打开。</div>`;
+    if (st === "failed") html += `<div class="miss">没做成：${esc(r.error || "")}。改动改回了排队。</div>`;
+    html += `<ul class="crj">${jobs}</ul>`;
+    if (r.note) html += `<div class="miss">${esc(r.note)}</div>`;
+    if (r.relaunched === true) html += `<div class="crok">${ic("check")} 已重新打开 ${n}（${esc(r.launch_text || "")}）。</div>`;
+    if (r.relaunched === false) html += `<div class="miss"><b>没能重新打开 ${n}</b>：${esc(r.relaunch_error || "")}。请从开始菜单手动打开 ${n}。</div>`;
+  }
+  b.innerHTML = html + "</div>";
+  if (st === "ask_force") ft.innerHTML = `<button id="crStop">不关了，改成等它退出</button><button id="crMore">继续等</button><button class="primary danger" id="crKill">强制结束…</button>`;
+  else if (st === "closing") ft.innerHTML = `<button id="crStop">不关了，改成等它退出</button><button onclick="closeDlg()">在后台继续</button>`;
+  else if (fin) ft.innerHTML = `<button class="primary" onclick="closeDlg()">好的</button>`;
+  else ft.innerHTML = `<button onclick="closeDlg()">在后台继续</button>`;
+  const so = $("#crStop"); if (so) so.onclick = async () => { try { await api("/api/apps/close-run/stop", {id}); } catch(e){ toast("❌ " + e.message); } crProg(id, v); };
+  const mo = $("#crMore"); if (mo) mo.onclick = () => { $("#crAsk").insertAdjacentHTML("beforeend", '<div class="dim" style="margin-top:4px">好的，接着等。</div>'); mo.disabled = true; };
+  const kb_ = $("#crKill"); if (kb_) kb_.onclick = () => {
+    ft.innerHTML = `<span class="dim" style="flex:1">确定强制结束 ${n}（${r.remaining} 个进程${r.cli_children ? `，含它开的 ${r.cli_children} 个 Claude Code 会话` : ""}）？</span><button id="crNo">算了</button><button class="primary danger" id="crYes">强制结束</button>`;
+    $("#crNo").onclick = () => crProg(id, v);
+    $("#crYes").onclick = async () => { $("#crYes").disabled = true; try { await api("/api/apps/close-run/force", {id}); } catch(e){ toast("❌ " + e.message); } crProg(id, v); };
+  };
+  if (fin) { poll(); SS.d = null; if (R[PAGE] && PAGE !== "sessions") R[PAGE](true); else treeLoad(); return; }
+  if (st === "ask_force" && $("#crAsk") && b.dataset.asked) return setTimeout(() => crTick(id, v), 800);
+  b.dataset.asked = st === "ask_force" ? "1" : "";
+  setTimeout(() => crTick(id, v), 500);
+}
+async function crTick(id, v){
+  const b = $("#crBody");
+  if (!b || b.dataset.id !== id || !$("#dlg").classList.contains("open")) return;     // 对话框关了：在后台继续，顶部提示条上能再打开
+  if ($("#crYes")) return setTimeout(() => crTick(id, v), 500);                        // 正在问「确定强制结束？」：别刷掉
+  let r; try { r = await api("/api/apps/close-run?id=" + id); } catch(e){ return; }
+  if (r.state === "ask_force" && b.dataset.asked) { const s = b.querySelector(".crs li.cur .dim"); if (s) s.textContent = ` · 还剩 ${r.remaining} 个进程，已等 ${Math.round(r.elapsed)} 秒`; return setTimeout(() => crTick(id, v), 800); }
+  crProg(id, v);
 }
 function confirmDlg(title, html, okText, fn, danger){
   openDlg(title, html, `<button onclick="closeDlg()">取消</button><button class="primary${danger ? " danger" : ""}" id="cfOk">${okText}</button>`);
@@ -651,6 +761,7 @@ window.ccOpen = target => {
   if (p === "update") return updOpen(false);
   if (p === "jobs") { go("backups"); setTimeout(() => { const j = $("#bkJobs"); if (j) j.scrollIntoView({block: "start"}); }, 300); return; }
   if (p) go(p);
+  if (t.closeRun) setTimeout(() => crAsk(t.closeRun), 200);       // 托盘「立即同步」时桌面端开着：打开窗口直接问
 };
 
 // ---------- 显示完整账号（眼睛）----------
@@ -749,7 +860,9 @@ function renderBans(){
   for (const a of ST.acct)
     out.push(`<div class="ban warn" data-ak="${esc(a.k)}">${ic("users")}<div class="tx"><b>${esc(a.title)}</b>：${a.old != null && a.new != null ? `${acm(a.old_rid, a.old)} → ${acm(a.new_rid, a.new)} ${eyeB()}` : esc(a.text)}</div>
       <div class="acts"><button class="primary" data-a="sync">立即同步</button><button data-a="open">打开</button><button class="ghost" data-a="x" title="知道了">${ic("x")}</button></div></div>`);
-  if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等对应的桌面端完全退出后自动做（会弹通知）</div><div class="acts"><button data-j="1">查看</button></div></div>`);
+  const cr = ST.cr;
+  if (cr) out.push(`<div class="ban acc">${ic("power")}<div class="tx">正在关闭 ${esc(cr.app)} 并执行排队的改动，做完自动重新打开…</div><div class="acts"><button data-crv="${esc(cr.id)}">查看进度</button></div></div>`);
+  else if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等${ST.jobKinds.map(k => APPN[k] || k).join(" / ")} 桌面端完全退出后自动做（会弹通知）</div><div class="acts">${ST.jobKinds.map(k => `<button class="primary" data-crk="${esc(k)}">${ic("power")} 关闭 ${APPN[k] || k} 并执行（完成后重启）</button>`).join("")}<button data-j="1">查看</button></div></div>`);
   $("#bans").innerHTML = out.join("");
   $$("#bans [data-u]").forEach(b => b.onclick = () => {
     const k = b.dataset.u;
@@ -768,6 +881,8 @@ function renderBans(){
     go("sync"); syncSelected(true);
   });
   $$("#bans [data-j]").forEach(b => b.onclick = () => ccOpen("jobs"));
+  $$("#bans [data-crk]").forEach(b => b.onclick = () => crAsk({kind: b.dataset.crk, banner: true}));
+  $$("#bans [data-crv]").forEach(b => b.onclick = () => crProg(b.dataset.crv));
 }
 function setBadge(on){ $("#tbUpd").classList.toggle("has-dot", !!on); const s = $("#setUpd"); if (s) s.classList.toggle("has-dot", !!on); }
 let pollT;
@@ -786,7 +901,7 @@ async function poll(){
       } else if (e.kind === "job") jobDone = true;
       else if (e.kind === "auto-sync" && !first && !e.manual) toast("🔄 " + e.title);
     }
-    ST.jobs = t.jobs;
+    ST.jobs = t.jobs; ST.jobKinds = t.job_kinds || ["claude"]; ST.cr = t.closerun || null;
     if (!ST.upd || (t.update && (t.update.badge !== ST.upd.badge || t.update.latest !== ST.upd.latest))) ST.upd = await api("/api/update");
     setBadge(ST.upd && ST.upd.badge);
     renderBans();
@@ -1685,7 +1800,7 @@ function ssAct(act, items){
     closeDlg();
     const q = r.results.filter(x => x.deferred), done = r.results.filter(x => !x.deferred);
     const n = done.reduce((s, x) => s + (x.done || 0), 0), errs = done.flatMap(x => x.errors || []);
-    if (q.length) toast("⏸ " + q[0].hint, 7000); else if (errs.length) toast("⚠ " + errs[0], 6000); else toast(`✅ ${lab}了 ${n} 个（可以撤回）`);
+    if (q.length) { if (n) toast(`✅ ${lab}了 ${n} 个`); queuedAsk(q); } else if (errs.length) toast("⚠ " + errs[0], 6000); else toast(`✅ ${lab}了 ${n} 个（可以撤回）`);
     SS.sel.clear(); R.sessions();
   }, act === "delete");
 }
@@ -1801,7 +1916,7 @@ async function tlRestore(snaps, mode, target){
     if (r.ok === false && !(r.made || []).length) return toast("❌ " + (r.error || (r.errors || [])[0] || "没恢复成"), 6000);
     if (mode === "copy" && target === "claude") { madeDlg("✅ 已恢复到 Claude", r); SS.d = null; treeLoad(); return; }
     const q = (r.results || []).filter(x => x.deferred);
-    toast(q.length ? "⏸ " + (q[0].hint || "桌面端开着，已排队：退出后自动做") : "✅ 已换回这一版（换之前的版本在备份库里，可以撤回）", 7000);
+    if (!queuedAsk(q)) toast("✅ 已换回这一版（换之前的版本在备份库里，可以撤回）", 7000);
     poll(); TL.vers = null; R.timeline();
   } catch(e){ toast("❌ " + e.message, 6000); }
 }
@@ -1818,7 +1933,7 @@ function tlReplaceDlg(snaps, target){
 // 恢复 / 导入之后：新会话的继续命令、桌面端登记情况、撤回
 function madeDlg(title, r){
   const made = r.made || [], dj = r.desktop;
-  const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。`
+  const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。<button class="ghost" id="mdCr">${ic("power")} 关闭 Claude 并登记（完成后重启）</button>`
     : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
   openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）：</div>` : ""}
     ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}</div><div class="dim" style="font-size:12px;word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
@@ -1827,6 +1942,7 @@ function madeDlg(title, r){
     ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
     `<button id="mdUndo" class="ghost">${ic("undo")} 撤回</button><span style="flex:1"></span><button onclick="closeDlg()">关闭</button><button class="primary" id="mdGo">${ic("list")} 去会话列表看</button>`);
   $$("#dlgBody [data-cp]").forEach(b => b.onclick = () => copyText(b.dataset.cp));
+  if ($("#mdCr")) $("#mdCr").onclick = () => crAsk({kind: "claude", jobs: [dj.job], verb: "登记"});
   $$("#dlgBody [data-open]").forEach(b => b.onclick = async () => { try { const o = await api("/api/sessions/open", {agent: "claude", id: b.dataset.open}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } });
   $("#mdGo").onclick = () => { closeDlg(); TL.cur = null; SS.cur = made[0] ? {agent: "claude", id: made[0].id} : null; go("sessions"); };
   $("#mdUndo").onclick = () => confirmDlg("撤回", "把刚才新建的会话挪进回收站（不直接删），桌面端列表里登记的那一条也撤掉。", "撤回", async () => {
@@ -1941,11 +2057,11 @@ R.backups = async () => {
       api("/api/sessions/snapshots"), api("/api/sessions/trash"), api("/api/sessions/ops"), api("/api/settings")]); }
   catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   const waiting = jobs.filter(j => j.state === "waiting"), sc = bs.sched || {};
-  const JST = {waiting: ["warn", "排队中"], done: ["ok", "做完了"], failed: ["bad", "失败"], cancelled: ["", "已取消"]};
+  const JST = {waiting: ["warn", "排队中"], closing: ["warn", "正在关闭桌面端"], done: ["ok", "做完了"], failed: ["bad", "失败"], cancelled: ["", "已取消"]};
   pg.innerHTML = `<h2>${ic("download")}备份</h2><p class="sub">每次改动之前都先备份。这里能撤回同步 / 导入 / 会话操作，从回收站还原，或者从会话备份库恢复某个版本。</p>
     <div class="card" id="bkJobs"><h3>排队中的改动 <span class="tag ${waiting.length ? "warn" : ""}">${waiting.length}</span></h3>
       ${jobs.length ? `<table class="t">${jobs.slice().reverse().slice(0, 12).map(j => `<tr><td>${esc(j.title)}</td><td>${when(j.queued)}</td><td><span class="tag ${(JST[j.state] || [""])[0]}">${(JST[j.state] || ["", j.state])[1]}</span></td>
-        <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td>${j.state === "waiting" ? `<button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
+        <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td class="nw">${j.state === "waiting" ? `<button data-crj="${esc(j.id)}" data-k="${esc(j.kind || "claude")}" title="关闭${APPN[j.kind] || "Claude"} 桌面端、做完、再按原来的方式打开它">${ic("power")} 关闭并执行</button> <button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
         : '<div class="dim" style="font-size:12.5px">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
     <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkPrune" title="按保留规则清掉旧版本，再压缩数据库">${ic("trash")} 清理旧版本</button><button class="primary" id="bkNow">${ic("download")} 立即备份</button></h3>
       <div class="sched"><div>自动备份<b>${sc.auto ? `每 ${sc.every} ${BK_UNIT[sc.unit] || sc.unit}` : "已关"}</b>${sc.running || bs.running ? '<span class="tag warn">正在备份</span>' : ""}</div>
@@ -1970,6 +2086,7 @@ R.backups = async () => {
       ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有同步过。</div>'}</div>
       <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
       ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有导入过。</div>'}</div></div>`;
+  $$("[data-crj]").forEach(b => b.onclick = () => crAsk({kind: b.dataset.k, jobs: [b.dataset.crj], banner: true}));
   $$("[data-cj]").forEach(b => b.onclick = async () => { await api("/api/jobs/cancel", {id: b.dataset.cj}); toast("已取消"); poll(); R.backups(); });
   $("#bkNow").onclick = async () => { $("#bkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } R.backups(); };
   $("#bkAuto").onchange = async e => { await saveSetting({session_backup_auto: e.target.checked}); R.backups(); };

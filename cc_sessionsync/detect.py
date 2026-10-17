@@ -142,7 +142,7 @@ def _win_procs(stats: dict) -> list[dict]:
                         k32.CloseHandle(h)
                 else:
                     stats["denied"] += 1
-                out.append({"pid": e.th32ProcessID, "name": name, "exe": path, "cmd": cmd})
+                out.append({"pid": e.th32ProcessID, "ppid": e.th32ParentProcessID, "name": name, "exe": path, "cmd": cmd})
             ok = k32.Process32NextW(snap, ctypes.byref(e))
     finally:
         k32.CloseHandle(snap)
