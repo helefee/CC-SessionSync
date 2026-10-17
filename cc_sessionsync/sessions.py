@@ -1259,7 +1259,7 @@ def auto_tick(s: dict, now: float | None = None) -> dict | None:
     if not s.get("session_backup_auto"):
         SCHED["next"] = None
         return None
-    last = SCHED["last_run"] or (backup_status().get("last") or 0)
+    last = SCHED["last_run"] if SCHED["last_run"] is not None else (backup_status().get("last") or 0)
     SCHED["next"] = last + interval_s(s)
     if now < SCHED["next"]:
         return None
