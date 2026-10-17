@@ -31,7 +31,7 @@ MARK = "VERIFY-MARKER-7f3a"
 def main() -> int:
     for s in (sys.stdout, sys.stderr):
         s.reconfigure(encoding="utf-8", errors="replace")
-    claude = sys.argv[1] if len(sys.argv) > 1 else (shutil.which("claude") or "claude")
+    claude = (sys.argv[1] if len(sys.argv) > 1 else "") or shutil.which("claude") or "claude"   # Windows 上找到 claude.cmd / claude.exe
     port = int(sys.argv[2]) if len(sys.argv) > 2 else 8799
     T = Path(tempfile.mkdtemp(prefix="cc-verify-"))
     H, proj = T / "home", T / "proj"

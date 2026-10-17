@@ -49,8 +49,7 @@ jobs:
       - name: install Claude Code
         run: npm install -g @anthropic-ai/claude-code
       - name: verify claude --resume opens an imported Codex conversation
-        shell: bash
-        run: python tools/verify_resume.py "$(command -v claude)" 8799
+        run: python tools/verify_resume.py "" 8799
 
   build:
     runs-on: ${{ matrix.os }}

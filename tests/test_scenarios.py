@@ -15,6 +15,7 @@ SCEN = sorted((HERE / "scenarios").glob("s_*.py"))
 def test_scenario(script):
     env = {k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_", "CODEX_", "CC_SESSIONSYNC_"))}
     env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"          # 场景脚本里的 read_text() 不带 encoding；包本身处处写明 utf-8
     r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, encoding="utf-8", errors="replace",
                        env=env, timeout=300)
     print(r.stdout)
