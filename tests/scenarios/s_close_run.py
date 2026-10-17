@@ -58,6 +58,12 @@ li = appclose.plan("claude")["launch"]
 ok(li["how"] == "squirrel" and li["exe"] == SQ_DIR + r"\claude.exe", "Squirrel install: relaunch via the outer AnthropicClaude\\claude.exe")
 procs(SQ, missing=[SQ_DIR + r"\claude.exe"])
 ok(appclose.plan("claude")["launch"] == {"how": "exe", "exe": SQ, "source": SQ}, "no Squirrel stub → the exe itself")
+# 2026-10-18 那台电脑上的真实布局（只读看到的）：商店版主进程叫 Claude.exe（大写），父进程 explorer.exe；它开的 Claude Code 在 claude-code\<版本>\<hash>\claude.exe
+d = procs(); d["procs"] = [dict(p, name="Claude.exe", exe=p["exe"].replace("Claude_1.0.3218.0_x64__pzs8sxrjxfjjc\\app\\claude.exe", "Claude_2.42304.0.0_x64__pzs8sxrjxfjjc\\app\\Claude.exe")) if p["pid"] in (100, 101, 102) else p for p in d["procs"]]
+d["procs"][3]["exe"] = r"C:\Users\me\AppData\Roaming\Claude\claude-code\2.1.299\f0584be0fbaf\claude.exe"; FP.write_text(json.dumps(d))
+pl = appclose.plan("claude")
+ok(pl["pids"] == [100, 101, 102] and pl["launch"]["package"] == "Claude_2.42304.0.0_x64__pzs8sxrjxfjjc" and [p["pid"] for p in pl["cli_children"]] == [200],
+   "real-world layout (Claude.exe, claude-code\\<ver>\\<hash>) recognised")
 ok(appclose.plan("codex")["running"] and appclose.plan("codex")["pids"] == [400], "Codex desktop recognised separately")
 ok(appclose._pkg_family("Claude_1.0_x64__pzs8sxrjxfjjc") == ("Claude", "Claude_pzs8sxrjxfjjc") and appclose._pkg_family("x'; rm") == (None, None),
    "package family parsed; odd names rejected (no PowerShell injection)")
