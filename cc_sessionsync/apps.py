@@ -76,30 +76,23 @@ def _procs() -> list[dict]:
 
 
 def _is_app(kind: str, p: dict) -> bool:
-    exe = p["exe"].lower().replace("/", "\\")
-    if kind == "claude":
-        # 桌面端：商店版在 WindowsApps\Claude_…，安装版在 AnthropicClaude；Claude Code 命令行（…\claude-code\…）不算
-        if os.name != "nt":
-            return "/claude.app/contents/macos/claude" in p["exe"].lower()
-        return p["name"].lower() == "claude.exe" and "claude-code" not in exe and (
-            "\\windowsapps\\claude_" in exe or "anthropicclaude" in exe)
-    if kind == "codex":
-        if os.name != "nt":
-            return "codex.app/contents/macos" in p["exe"].lower() or "app-server" in p["cmd"]
-        return ("openai.codex" in exe and p["name"].lower() in ("chatgpt.exe", "codex.exe")) or (
-            p["name"].lower() == "codex.exe" and "app-server" in p["cmd"])
-    return False
+    """是不是桌面端本身（不是命令行）：见 appclose.is_app。"""
+    from . import appclose
+    return appclose.is_app(kind, p, os.name == "nt")
 
 
 def running(kind: str) -> list[dict]:
     fake = os.environ.get("CC_SESSIONSYNC_FAKE_APP")       # 测试用：这个文件在 = 桌面端「开着」
     if fake:
         return [{"pid": 0, "name": "fake", "exe": "", "cmd": ""}] if Path(fake).exists() else []
+    if os.environ.get("CC_SESSIONSYNC_FAKE_PROCTABLE"):        # 测试用：假进程表（appclose.FakeSys）
+        from . import appclose
+        return appclose.app_procs(kind)
     return [p for p in _procs() if _is_app(kind, p)]
 
 
 def status() -> dict:
-    if os.environ.get("CC_SESSIONSYNC_FAKE_APP"):
+    if os.environ.get("CC_SESSIONSYNC_FAKE_APP") or os.environ.get("CC_SESSIONSYNC_FAKE_PROCTABLE"):
         return {k: bool(running(k)) for k in NAMES}
     ps = _procs()
     return {k: any(_is_app(k, p) for p in ps) for k in NAMES}
@@ -108,44 +101,26 @@ def status() -> dict:
 # ---------- 重新打开 ----------
 
 def launch_info(kind: str, procs: list[dict] | None = None) -> dict | None:
-    """在它还开着时记下怎么重新打开：商店版用 AppsFolder 的 AppID，安装版用 exe 路径。"""
+    """在它还开着时记下怎么重新打开（0.2.3 起见 appclose.launch_info：商店版 AUMID、安装版外层 claude.exe）。"""
+    from . import appclose
     procs = procs if procs is not None else running(kind)
-    exe = next((p["exe"] for p in procs if p["exe"] and not p["name"].lower() == "codex.exe"), None) or \
-        next((p["exe"] for p in procs if p["exe"]), None)
-    if not exe:
-        return None
-    low = exe.lower().replace("/", "\\")
-    if os.name == "nt" and "\\windowsapps\\" in low:
-        pkg = Path(exe).parts[[x.lower() for x in Path(exe).parts].index("windowsapps") + 1]
-        fam = pkg.split("_")[0] + "_" + pkg.split("__")[-1] if "__" in pkg else None
-        if fam:
-            try:
-                r = subprocess.run(["powershell", "-NoProfile", "-Command",
-                                    f"(Get-StartApps | Where-Object {{ $_.AppID -like '{fam}!*' }} | Select-Object -First 1).AppID"],
-                                   capture_output=True, timeout=30, creationflags=NOWIN)
-                aid = r.stdout.decode("utf-8", "replace").strip()
-                if aid:
-                    return {"aumid": aid}
-            except Exception:
-                pass
-    if sys.platform == "darwin" and ".app/" in exe:
-        return {"app": exe[: exe.index(".app/") + 4]}
-    return {"exe": exe}
+    return appclose.launch_info(kind, procs) if procs else None
 
 
 def relaunch(info: dict | None) -> bool:
-    if not info:
-        return False
-    try:
-        if info.get("aumid"):
-            os.startfile(f"shell:AppsFolder\\{info['aumid']}")  # type: ignore[attr-defined]
-        elif info.get("app"):
-            subprocess.Popen(["open", info["app"]])
-        else:
-            subprocess.Popen([info["exe"]], creationflags=0x00000008 if os.name == "nt" else 0)
-        return True
-    except Exception:
-        return False
+    from . import appclose
+    return appclose.relaunch(info)[0]
+
+
+VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "codex-import": "导入", "codex-undo": "撤回导入",
+         "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
+         "timeline-replace": "恢复"}
+
+
+def verb(op: str, args: dict | None = None) -> str:
+    if op == "sessions-batch":
+        return {"delete": "删除", "archive": "归档", "unarchive": "取消归档"}.get((args or {}).get("action"), "改")
+    return VERBS.get(op, "改")
 
 
 # ---------- 队列 ----------
@@ -255,12 +230,12 @@ def run_or_defer(kind: str, op: str, args: dict, title: str) -> dict:
         return dict(r if isinstance(r, dict) else {"result": r}, deferred=False)
     q = _load_q()
     job = {"id": uuid.uuid4().hex[:8], "kind": kind, "op": op, "args": args, "title": title,
-           "state": "waiting", "queued": time.time(), "relaunch": launch_info(kind, procs)}
+           "state": "waiting", "queued": time.time(), "relaunch": launch_info(kind, procs), "verb": verb(op, args)}
     q.append(job)
     _save_q(q)
     _spawn_watcher(kind)
     _log(f"排队 {job['id']} {title}（等 {NAMES[kind]} 退出）")
-    return {"ok": True, "deferred": True, "job": job["id"], "app": NAMES[kind],
+    return {"ok": True, "deferred": True, "job": job["id"], "app": NAMES[kind], "kind": kind, "op": op, "verb": job["verb"],
             "hint": f"{NAMES[kind]} 正开着，直接改会在它退出时被盖回去。已排队：请完全退出 {NAMES[kind]}（托盘里也退），"
                     "后台会等它退干净再做，做完自动重新打开。"}
 
@@ -310,7 +285,10 @@ def watch(kind: str, max_wait: float = 6 * 3600) -> int:
             _save_q(q)
         _save_q(q[-60:])
         if relaunch_info and not running(kind):
-            _log(f"重新打开 {NAMES[kind]}：" + ("成功" if relaunch(relaunch_info) else "失败，请手动打开"))
+            from . import appclose
+            ok, err = appclose.relaunch(relaunch_info)
+            ok = ok and appclose.verify(kind)
+            _log(f"重新打开 {NAMES[kind]}（{appclose.describe(relaunch_info)}）：" + ("成功" if ok else f"失败（{err or '没看到它起来'}），请手动打开"))
         return 0
     finally:
         try:

@@ -484,8 +484,8 @@ class Tray:
                 self.app.hide() if self.app.visible() else self.app.show()
             elif cmd == 5:
                 r = ui.sync_now()
-                if r.get("deferred"):
-                    self.notify("已排队：等 Claude 桌面端退出再同步", r.get("hint") or "", {"page": "sync"})
+                if r.get("deferred"):           # 桌面端开着：打开窗口问用户「关闭并同步（完成后重启）/ 等它退出 / 取消」
+                    self.app.open({"page": "sync", "closeRun": {"kind": "claude", "jobs": [r.get("job")], "verb": "同步"}})
                 elif r.get("ok") is False:
                     self.notify("同步没做成", (r.get("error") or "")[:200], {"page": "sync"})
                 else:

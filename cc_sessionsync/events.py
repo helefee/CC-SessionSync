@@ -60,6 +60,8 @@ def poll_jobs() -> list[dict]:
     for j in apps.pending():
         old = _job_seen.get(j["id"])
         _job_seen[j["id"]] = j["state"]
+        if j.get("runner"):                       # 「关闭并执行」做的：appclose 自己出通知（带重新打开的结果）
+            continue
         if first or old == j["state"] or j["state"] not in ("done", "failed") or old not in (None, "waiting"):
             continue
         if old is None and time.time() - float(j.get("finished") or 0) > 120:
