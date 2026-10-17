@@ -158,6 +158,16 @@ finally:
     apps.watch.__globals__["time"].sleep = _sl
 ok(fp()["log"][-1][0] == "launch" and "成功" in (T / "ss/after-quit.log").read_text(encoding="utf-8").splitlines()[-1], "after-quit watcher relaunches the same way and verifies")
 
+# ---------- 真的进程层：只做只读的事（CI 的 Windows 上能验证 ctypes 调用；什么都不关、不启动） ----------
+real = appclose.RealSys()
+sn = real.snap()
+ok(isinstance(sn, list) and all("ppid" in p for p in sn), "real snapshot works and has parent pids (read-only)")
+if os.name == "nt":
+    ok(appclose._post_wm_close(set()) == 0, "Windows: window enumeration works (posts nothing for an empty set)")
+    a, via = real.aumid("Claude_0.0.0.0_x64__pzs8sxrjxfjjc")
+    ok(via in ("Get-AppxPackage", "Get-StartApps", "not-found"), f"Windows: AUMID lookup runs read-only ({via})")
+os.environ.pop("CC_SESSIONSYNC_FAKE_PROCTABLE"); ok(not appclose.SYS().fake, "no fake table → real layer"); os.environ["CC_SESSIONSYNC_FAKE_PROCTABLE"] = str(FP)
+
 # ---------- HTTP 接口 + 页面 ----------
 procs()
 srv = ui.start(8799)

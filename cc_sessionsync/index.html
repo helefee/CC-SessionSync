@@ -46,7 +46,7 @@ button.primary{background:var(--accent);color:#fff}
 button.primary:hover{background:var(--accent);opacity:.9}
 button.ghost{background:transparent;color:var(--muted)}
 button.ghost:hover{background:var(--hover);color:var(--text)}
-button.danger{color:var(--bad)}
+button.danger{color:var(--bad)}button.primary.danger{background:var(--bad);border-color:var(--bad);color:#fff}
 button:disabled{opacity:.5;cursor:default}
 input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
@@ -398,7 +398,7 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .cr .crok .ic{width:14px;height:14px;color:var(--ok);vertical-align:-2px}
 .crs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .crs li{display:flex;align-items:center;gap:8px;color:var(--muted)}.crs li.cur{color:var(--text);font-weight:600}.crs li.cur .dim{font-weight:400}
-.crs li.ok{color:var(--text)}.crs li.ok .ic{color:var(--ok);width:16px;height:16px}
+.crs li.bad{color:var(--bad)}.crs li.bad .ic{width:16px;height:16px}.crs li.ok{color:var(--text)}.crs li.ok .ic{color:var(--ok);width:16px;height:16px}
 .crs .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--line);margin:0 4px}
 .crs .spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:crspin .8s linear infinite;margin:0 1px}
 @keyframes crspin{to{transform:rotate(360deg)}}
@@ -641,13 +641,14 @@ async function crAsk(o){
 const CRS = [["closing", "请它正常退出"], ["tail", "等它写完盘"], ["running", "做排队的改动"], ["relaunching", "按原来的方式重新打开"]];
 async function crProg(id, verb){
   let r; try { r = await api("/api/apps/close-run?id=" + id); } catch(e){ return toast("❌ " + e.message); }
-  const n = r.app, v = verb || "执行";
+  const n = r.app, v = verb || r.verb || "执行";
   if (!$("#crBody") || $("#crBody").dataset.id !== id) openDlg(`关闭 ${n} 并${v}`, `<div id="crBody" data-id="${esc(id)}"></div>`, `<div id="crFt" style="display:flex;gap:8px;width:100%;justify-content:flex-end"></div>`);
   const b = $("#crBody"), ft = $("#crFt");
   const st = r.state, at = CRS.findIndex(s => s[0] === (st === "ask_force" || st === "forcing" ? "closing" : st));
   const fin = ["done", "failed", "stopped"].includes(st);
   const step = (s, i) => { const cur = !fin && i === at, past = fin ? (st === "done" && (i < 3 || r.was_running)) : i < at;
     const skip = !r.was_running && (i === 0 || i === 3);
+    if (fin && i === 3 && r.relaunched === false) return `<li class="bad">${ic("x")}<span>${s[1]}<span class="dim"> · 没能打开</span></span></li>`;
     return `<li class="${cur ? "cur" : past && !skip ? "ok" : ""}">${cur ? '<span class="spin"></span>' : past && !skip ? ic("check") : '<span class="dot"></span>'}<span>${s[1].replace("改动", v === "执行" ? "改动" : `改动（${v}）`)}${i === 0 && cur ? `<span class="dim"> · 还剩 ${r.remaining} 个进程，已等 ${Math.round(r.elapsed)} / ${r.wait} 秒</span>` : ""}${skip ? '<span class="dim"> · 它已经退出了，跳过</span>' : ""}</span></li>`; };
   const pct = Math.min(100, Math.round(100 * r.elapsed / (r.wait || 15)));
   let html = `<div class="cr"><ol class="crs">${CRS.map(step).join("")}</ol>`;

@@ -153,6 +153,12 @@ def _post_wm_close(pids: set) -> int:
     u32 = ctypes.windll.user32
     hits = []
     PROTO = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    u32.EnumWindows.argtypes = [PROTO, wintypes.LPARAM]
+    u32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    u32.IsWindowVisible.argtypes = [wintypes.HWND]
+    u32.GetWindow.argtypes = [wintypes.HWND, ctypes.c_uint]
+    u32.GetWindow.restype = wintypes.HWND
+    u32.PostMessageW.argtypes = [wintypes.HWND, ctypes.c_uint, wintypes.WPARAM, wintypes.LPARAM]
 
     def cb(h, _l):
         pid = wintypes.DWORD()
@@ -178,7 +184,10 @@ class FakeSys:
         self.p = Path(path)
 
     def _ld(self) -> dict:
-        d = json.loads(self.p.read_text(encoding="utf-8"))
+        try:
+            d = json.loads(self.p.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            d = {"procs": []}
         at = d.get("closing_at")
         if at and time.time() >= at:
             gone = _tree(d["procs"], set(d.get("closing") or []))
@@ -438,6 +447,7 @@ def start(kind: str, job_ids: list | None = None) -> dict:
         r = {"id": rid, "kind": kind, "app": APP[kind], "state": "closing" if pl["running"] else "tail", "t0": time.time(),
              "wait": _envf("CC_SESSIONSYNC_CLOSE_WAIT", WAIT), "elapsed": 0.0, "remaining": len(pl.get("pids") or []),
              "was_running": pl["running"], "launch": pl.get("launch"), "launch_text": pl.get("launch_text"),
+             "verb": next(iter({j.get("verb") or "执行" for j in mine})) if len({j.get("verb") or "执行" for j in mine}) == 1 else "执行",
              "cli_children": len(pl.get("cli_children") or []), "jobs": [{"id": j["id"], "title": j.get("title"), "state": "closing"} for j in mine],
              "forced": False, "relaunched": None, "relaunch_error": None, "error": None, "note": None, "_force": False, "_stop": False}
         RUNS[rid] = r

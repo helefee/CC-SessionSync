@@ -80,6 +80,33 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 「检测到 Claude Code/Codex 账号已切换：旧 → 新」，窗口顶部出现提示条，带「立即同步」「打开」。通知和界面里只显示打码的账号（`z***@example.com`），
 从不读、不显示 token。Windows 的托盘气泡不能放按钮，所以点通知 = 打开窗口，按钮在窗口的提示条上。
 
+### 桌面端开着时：关闭并同步（完成后重启）
+
+同步、撤回、删除 / 归档 / 改名、从回收站还原、时间线「替换当前」等要改桌面端数据的操作，遇到 Claude 桌面端（安装版或商店版 MSIX）正开着，
+会弹出「Claude 正在运行，需要关闭后才能同步。」，三个按钮：
+
+- **关闭并同步（完成后重启）**（缺省）：
+  1. 先记下它是怎么开的：商店版记 AUMID（`Get-AppxPackage` 读包清单，不行再查开始菜单，都不行用 `Claude_pzs8sxrjxfjjc!Claude`），
+     安装版记外层的 `…\AnthropicClaude\claude.exe`（Squirrel 会打开最新的 `app-x.y.z`）。
+  2. 请它正常退出：给主窗口发关闭消息，再 `taskkill /PID`（**不带 /F**）。最多等 15 秒，有进度。
+  3. 15 秒还没退干净（比如缩到了托盘）：可以去托盘里点「退出」（这边接着等），或者改成排队，或者「强制结束…」，要**再确认一次**才会强制结束。
+     强制结束只结束桌面端自己的进程和它开的子进程。
+  4. 退干净后做同步，再按原来的方式重新打开（商店版 `explorer.exe shell:AppsFolder\<AUMID>`，安装版运行外层 `claude.exe`），并确认它真的起来了。
+     结果显示在对话框里，同时弹系统通知；没能打开就明说，请你从开始菜单手动打开。
+- **等它退出后自动同步**：和以前一样排队，你自己退出桌面端后（托盘里也要退）后台做，做完自动重新打开。
+- **取消**：什么都不改。
+
+关之前会列出：由桌面端启动、正在跑的 Claude Code 会话（`claude.exe`）有几个，关闭桌面端会中断它们；不是桌面端开的命令行
+`claude` 进程也会列出来，**永远不会动它们**。顶部「N 个改动在排队」提示条和「备份 → 排队中的改动」里也有「关闭并执行（完成后重启）」。
+托盘里「立即同步」遇到桌面端开着，会打开窗口直接问。
+
+| | |
+|---|---|
+| ![关闭并同步](docs/screenshots/v023-01-sync-dialog-light.png) | ![还没退干净](docs/screenshots/v023-05-ask-force-dark.png) |
+| 点同步时 Claude 开着：怎么开的、会中断哪些 Claude Code 会话、哪些命令行进程不动。 | 15 秒没退干净：去托盘退出 / 改成排队 / 强制结束（要再确认一次）。 |
+| ![做完了](docs/screenshots/v023-11-done-relaunched-light.png) | |
+| 做完后按原来的方式重新打开，并确认它已经起来了。 | |
+
 ### 检查更新（不会自动安装）
 
 - 启动后、之后每 6 小时最多查一次 GitHub 的最新发布（公开接口，不用登录）。
@@ -169,7 +196,8 @@ cd D:\work\shop && claude --resume 8d7c1c3e-…
 
 - **先演练**：`sync --dry-run`、`codex import`（不加 `--apply`）只算不写；界面上也是先「演练」才能点执行。
 - **桌面端开着不写它的数据**：Claude 桌面端把会话列表放在内存里，退出时写回磁盘，开着的时候改会被盖掉。所以要改桌面端列表时，
-  如果它开着，就排队，后台等它完全退出后再做，做完把它重新打开（`jobs` 能看、能取消）。只写命令行会话（`--no-desktop`）不用等。
+  如果它开着，先问你：「关闭并执行（完成后重启）」会请它正常退出（不强制；强制结束要再确认一次），或者排队等你自己退出，
+  后台等它完全退出后再做，做完按原来的方式把它重新打开（`jobs` 能看、能取消）。只写命令行会话（`--no-desktop`）不用等。
 - **备份 + 撤回**：
   - 同步：每次写之前把目标账号文件夹整个拷到 `~/.cc-sessionsync/claude-sync-bak/<时间>/`，旁边 `ledger.json` 记补了哪些、刷新了哪些；
     `restore` 把补进来的挪进回收站、刷新过的换回原版本。撤回过的会话，自动同步不会再补回来。
@@ -289,6 +317,12 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   title via `custom-title` / Codex `session_index.jsonl` + state DB), archive, export md/jsonl, resume in a terminal, delete (backed up to
   the session DB, then moved to `~/.cc-sessionsync/trash`; purging needs typing `DELETE`), restore to the original path only if it is free,
   otherwise as a new copy. Claude Desktop index edits are queued while Desktop runs.
+- **Close & run, then relaunch (0.2.3):** when an action needs Claude Desktop closed (sync, restore, delete/archive/rename, trash restore,
+  timeline replace), a dialog offers 关闭并同步（完成后重启） / wait until it quits / cancel. It records how Desktop was launched (MSIX AUMID via
+  Get-AppxPackage, or the Squirrel `AnthropicClaude\claude.exe`), asks it to quit gracefully (WM_CLOSE + `taskkill` without `/F`, up to 15 s with
+  progress), force-kills only after a second confirmation (and only Desktop's own process tree), warns about Claude Code sessions started by
+  Desktop that would be interrupted, never touches other CLI `claude` processes, runs the queued jobs, relaunches Desktop the same way, verifies
+  it started and reports the result (dialog + notification).
 - **Backups:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
   operation ledger with undo.
 - **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code

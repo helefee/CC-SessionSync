@@ -82,12 +82,12 @@ def _is_app(kind: str, p: dict) -> bool:
 
 
 def running(kind: str) -> list[dict]:
+    if os.environ.get("CC_SESSIONSYNC_FAKE_PROCTABLE"):    # 测试用：假进程表（appclose.FakeSys），比下面那个优先
+        from . import appclose
+        return appclose.app_procs(kind)
     fake = os.environ.get("CC_SESSIONSYNC_FAKE_APP")       # 测试用：这个文件在 = 桌面端「开着」
     if fake:
         return [{"pid": 0, "name": "fake", "exe": "", "cmd": ""}] if Path(fake).exists() else []
-    if os.environ.get("CC_SESSIONSYNC_FAKE_PROCTABLE"):        # 测试用：假进程表（appclose.FakeSys）
-        from . import appclose
-        return appclose.app_procs(kind)
     return [p for p in _procs() if _is_app(kind, p)]
 
 
