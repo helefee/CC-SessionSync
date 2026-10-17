@@ -78,7 +78,7 @@ q = providers.upsert("codex", {"name": "Codex 中转", "mode": "key", "base_url"
 providers.apply_global("codex", q["id"])
 txt = ct.read_text(encoding="utf-8")
 ok("# 我的注释" in txt and '[projects."/work/web"]' in txt, "config.toml comments / other tables preserved (tomlkit)")
-import tomllib
+from cc_sessionsync import _toml as tomllib
 tj = tomllib.loads(txt)
 mp = tj["model_providers"][tj["model_provider"]]
 ok(mp["base_url"] == BASE + "/v1" and "SECRET" not in txt and ("auth" in mp or "env_key" in mp), f"Codex provider written with command auth, no plaintext ({list(mp)})")

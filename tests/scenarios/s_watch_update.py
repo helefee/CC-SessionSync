@@ -81,8 +81,8 @@ ok(st["badge"] and update.should_notify() == "0.2.2", "a newer version than the 
 update.ignore(None)
 # 立即更新：下载 → 校验 → 「安装」
 r = update.install(["--port", "8799"])
-for _ in range(50):
-    if (T / "installed.json").exists():
+for _ in range(100):                     # 等后台线程整个做完（写完参数、状态变成 installing），免得和下面那次抢
+    if (T / "installed.json").exists() and update.DL["state"] in ("installing", "error"):
         break
     time.sleep(0.1)
 inst = json.loads((T / "installed.json").read_text()) if (T / "installed.json").exists() else {}

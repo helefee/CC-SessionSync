@@ -74,7 +74,7 @@ def _read_codex() -> dict | None:
     h = paths.CODEX_HOME
     prov = "openai"
     try:
-        import tomllib
+        from . import _toml as tomllib
         prov = str(tomllib.loads((h / "config.toml").read_text(encoding="utf-8")).get("model_provider") or "openai")
     except Exception:
         pass

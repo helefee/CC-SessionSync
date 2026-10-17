@@ -311,7 +311,7 @@ def _claude_live(scope="user", root=None) -> dict:
 
 
 def _codex_cfg(p: Path) -> dict:
-    import tomllib
+    from . import _toml as tomllib
     try:
         return tomllib.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
     except Exception:
@@ -548,7 +548,7 @@ def _apply_codex_global(p: dict, kn: str | None, drop_plaintext: bool) -> dict:
     elif str(doc.get("model_catalog_json") or "").startswith(CATALOG_PREFIX):
         del doc["model_catalog_json"]              # 只撤 CC Session Sync 自己写的；CC Switch 的目录不动
     out = tk.dumps(doc)
-    import tomllib
+    from . import _toml as tomllib
     tomllib.loads(out)
     modelcfg.atomic_write(f, out.encode("utf-8"))
     return {"ok": True, "file": str(f), "backup": bid, "slot": slot if p["mode"] == "key" else "openai"}
@@ -847,7 +847,7 @@ def _ccs_parse(app: str, sc: dict) -> tuple[dict, str | None]:
                   "fable": env.get("ANTHROPIC_DEFAULT_FABLE_MODEL"), "subagent": env.get("CLAUDE_CODE_SUBAGENT_MODEL")}
         mode = "key" if (key or base) else "login"
         return {"mode": mode, "base_url": base, "models": {k: v for k, v in models.items() if v}}, key
-    import tomllib
+    from . import _toml as tomllib
     cfg = sc.get("config")
     try:
         cfg = tomllib.loads(cfg) if isinstance(cfg, str) else (cfg if isinstance(cfg, dict) else {})

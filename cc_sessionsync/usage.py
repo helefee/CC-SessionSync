@@ -81,7 +81,7 @@ def _claude_ctx() -> dict:
 def _codex_ctx() -> dict:
     names = {}
     try:
-        import tomllib
+        from . import _toml as tomllib
         cfg = tomllib.loads((paths.CODEX_HOME / "config.toml").read_text(encoding="utf-8"))
         for k, v in (cfg.get("model_providers") or {}).items():
             if isinstance(v, dict):

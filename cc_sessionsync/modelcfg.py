@@ -219,7 +219,7 @@ def codex_state(scope: str = "user", root: str | None = None) -> dict:
     p = codex_file(scope, root)
     err, cfg = None, {}
     try:
-        import tomllib
+        from . import _toml as tomllib
         cfg = tomllib.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
@@ -312,7 +312,7 @@ def set_codex(scope: str, root: str | None, changes: dict, provider_auth: dict |
         elif "auth" in t:
             del t["auth"]
     out = tk.dumps(doc)
-    import tomllib
+    from . import _toml as tomllib
     tomllib.loads(out)                                     # 写出去之前先确认还是合法 TOML
     atomic_write(p, out.encode("utf-8"))
     back = tomllib.loads(p.read_text(encoding="utf-8"))
