@@ -14,9 +14,17 @@ if (-not (Test-Path (Join-Path $dir "unins000.exe"))) { throw "no uninstaller" }
 $lnk = Join-Path ([Environment]::GetFolderPath("Programs")) "CC Session Sync.lnk"
 if (-not (Test-Path $lnk)) { throw "no Start menu shortcut: $lnk" }
 $env:CC_SESSIONSYNC_HOME = Join-Path $env:RUNNER_TEMP "ccss-home"
-$v = & $exe --version 2>&1
-if ("$v" -notmatch [regex]::Escape($ver)) { throw "installed --version: $v" }
-$sc = (& $exe selfcheck --offline --json 2>&1) -join "`n" | ConvertFrom-Json
+function Run([string[]]$a) {   # 跑装好的 exe，stdout / stderr 落到文件里再读（不靠控制台继承）
+    $o = Join-Path $env:RUNNER_TEMP "ccss-out.txt"; $e = Join-Path $env:RUNNER_TEMP "ccss-err.txt"
+    $p = Start-Process $exe -ArgumentList $a -Wait -PassThru -NoNewWindow -RedirectStandardOutput $o -RedirectStandardError $e
+    $out = (Get-Content $o -Raw -Encoding utf8) + ""; $err = (Get-Content $e -Raw -Encoding utf8) + ""
+    if ($p.ExitCode -and $p.ExitCode -ne 1) { throw "installed exe $($a -join ' ') -> exit $($p.ExitCode)`n$out`n$err" }
+    return $out
+}
+Get-ChildItem $dir | Select-Object Name, Length | Format-Table -AutoSize | Out-String | Write-Host
+$v = Run @("--version")
+if ("$v" -notmatch [regex]::Escape($ver)) { throw "installed --version: [$v]" }
+$sc = (Run @("selfcheck", "--offline", "--json")) | ConvertFrom-Json
 $inst = $sc.items | Where-Object { $_.id -eq "install" }
 Write-Host "installed selfcheck install: $($inst.status) $($inst.detail)"
 if ($inst.status -ne "pass") { throw "installed integrity check failed" }
