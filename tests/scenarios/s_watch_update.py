@@ -76,8 +76,8 @@ ok(not (T / "installed.json").exists() and update.DL["state"] == "idle", "backgr
 ok(any(e["kind"] == "update" for e in events.recent(50)) or True, "update event (loop)")
 st = update.ignore("9.9.9"); ok(st["ignored"] == "9.9.9" and not st["badge"] and st["newer"], "忽略此版本 → badge off, still knows it's newer")
 ok(not ui.tray_state(-1)["update"]["badge"], "tray badge off after ignore")
-rel["tag_name"] = "v0.2.2"; (T / "release.json").write_text(json.dumps(rel)); st = update.check(force=True)
-ok(st["badge"] and update.should_notify() == "0.2.2", "a newer version than the ignored one → badge + one notification again")
+rel["tag_name"] = "v9.10.0"; (T / "release.json").write_text(json.dumps(rel)); st = update.check(force=True)
+ok(st["badge"] and update.should_notify() == "9.10.0", "a newer version than the ignored one → badge + one notification again")
 update.ignore(None)
 # 立即更新：下载 → 校验 → 「安装」
 r = update.install(["--port", "8799"])

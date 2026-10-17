@@ -14,12 +14,12 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    （也能换回那一版、恢复到 Codex）。单个会话、或一批会话恢复到同一个时间点。
 5. **备份与还原**：会话备份库（`~/.cc-sessionsync/sessions.sqlite`：只存追加的部分 + 相同内容只存一份 + 压缩，保留规则可调）、回收站、
    操作记录（每一步都能撤回）。
-6. **用量统计**、**模型与 API**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
+6. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
 > 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
 > （本程序的数据都在 `~/.cc-sessionsync`）。
 
-![会话：左侧面板，按账号 / 项目分组](docs/screenshots/v021-01-sessions-light.png)
+![会话：左侧只放会话列表（按账号 / 项目分组），其他页在顶部按钮栏](docs/screenshots/v022-01-sessions-light.png)
 
 ## 安装
 
@@ -30,7 +30,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
   - 装好的 `CCSessionSync.exe` 也是命令行：`"%LOCALAPPDATA%\Programs\CCSessionSync\CCSessionSync.exe" status`。
 - **pip**（Python 3.10+，Windows / Linux / macOS）：
   ```bash
-  pip install "cc-sessionsync[desktop] @ https://github.com/helefee/CC-SessionSync/releases/download/v0.2.1/cc_sessionsync-0.2.1-py3-none-any.whl"
+  pip install "cc-sessionsync[desktop] @ https://github.com/helefee/CC-SessionSync/releases/download/v0.2.2/cc_sessionsync-0.2.2-py3-none-any.whl"
   # 只要命令行 / 浏览器界面，不要窗口：去掉 [desktop]
   pip install git+https://github.com/helefee/CC-SessionSync
   ```
@@ -39,17 +39,21 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 ## 桌面程序
 
 - 只开一个：再点快捷方式会把已经开着的窗口叫出来。关窗口缺省缩到托盘（设置里能改），托盘菜单：显示 / 隐藏窗口、立即同步 Claude 会话、
-  自动同步、Codex → Claude Code、会话管理、用量统计、模型与 API、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
-  检查更新、自检、退出。
+  自动同步、Codex → Claude Code、会话管理、用量、供应商、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
+  检查更新、诊断自检、退出。
 - 界面只听 `127.0.0.1:8766`，每个请求都要带页面里的一次性口令（别的网页 / 程序调不了）。
 - **系统通知**：同步 / 导入做完、排队的改动做完、检测到换号、有新版本。可以在设置里关。
 
 ### 界面
 
-- 左侧面板：会话 / 时间线 / 账号同步 / Codex→Claude / 备份 / 用量 / 供应商 / 诊断自检 / 设置；下面是**按账号 / 按项目**的分组树
-  （数量、当前账号标「当前」、没在任何桌面端账号里登记的会话归到「未知账号」，可以折叠，和搜索 / 时间筛选一起用）。
-  面板能拖宽度（会记住），**Ctrl+B** 收起 / 展开。顶栏：搜会话（Ctrl+K）、显示完整账号（眼睛）、自检、检查更新（红点）、主题。
-- **显示完整账号**：账号缺省打码（`z***@example.com`）。点眼睛才从本机接口（127.0.0.1 + 口令）取完整邮箱 / 名字 / 组织，只放在页面内存里，
+- **顶部按钮栏**（0.2.2）：时间线 / 账号同步 / Codex→Claude / 备份 / 用量 / 供应商 / 诊断自检 / 检查更新（红点）/ 主题，当前页高亮；
+  **设置（齿轮）在右上角**。点了在主区域显示那一页（**不是弹窗**，用量、供应商也一样，供应商的新增 / 编辑表单也在页面里，只有写配置前的确认还是小对话框）。
+  点左上角标题、左侧「会话」或任何一个会话就回到会话页。窗口窄的时候按钮只显示图标（鼠标停上去有名字）。
+- **左侧面板只放会话列表**：搜会话（Ctrl+K）、全文搜、Claude / Codex、时间、归档筛选，下面是**按账号 / 按项目**的分组树，最里层就是会话本身
+  （数量、当前账号标「当前」、没在任何桌面端账号里登记的会话归到「未知账号」）。点一组 = 筛选，点一个会话 = 在右边打开。
+  面板能拖宽度（会记住），**Ctrl+B** 收起 / 展开。
+- 托盘菜单的「用量…」「供应商…」「诊断自检…」等会打开窗口并直接切到那一页。
+- **显示完整账号**：账号缺省打码（`z***@example.com`）。点会话列表里的眼睛（分组旁边，或会话详情里的账号旁边）才从本机接口（127.0.0.1 + 口令）取完整邮箱 / 名字 / 组织，只放在页面内存里，
   不写日志、不存盘，重开就又打码；设置里可以开「总是显示完整账号」（缺省关）。诊断报告永远是打码的。
 
 ### 时间线与自动备份
@@ -90,17 +94,17 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 | | |
 |---|---|
-| ![时间点](docs/screenshots/v021-09-timeline-global-light.png) | ![恢复到 Claude](docs/screenshots/v021-25-restore-to-claude-light.png) |
+| ![时间点](docs/screenshots/v022-07-timeline-light.png) | ![恢复到 Claude](docs/screenshots/v021-25-restore-to-claude-light.png) |
 | **时间线（按时间点）**：拖滑块选一次备份，看那时候每个会话的样子，勾选几个一起恢复。 | **恢复到 Claude**：新会话的继续命令、桌面端登记情况、撤回。 |
-| ![按项目分组](docs/screenshots/v021-04-tree-account-expanded-dark.png) | ![备份](docs/screenshots/v021-14-backups-light.png) |
+| ![按项目分组](docs/screenshots/v021-04-tree-account-expanded-dark.png) | ![备份](docs/screenshots/v022-09-backups-light.png) |
 | **按账号分组**（深色）：账号下再按项目分，选中一组可以整组导出。 | **备份**：自动备份的上次 / 下次 / 结果、数据库大小、保留规则、清理。 |
-| ![Codex → Claude Code](docs/screenshots/03-codex-light.png) | ![演练](docs/screenshots/04-codex-dryrun-light.png) |
+| ![Codex → Claude Code](docs/screenshots/v022-14-codex-light.png) | ![演练](docs/screenshots/04-codex-dryrun-light.png) |
 | **Codex → Claude Code**：搜索 / 按时间、项目、状态筛，勾选，右边预览转换后的样子；先「演练」看会新建 / 更新哪些文件，再确认导入。 | 演练结果：每个要写的文件、桌面端列表写进哪个账号、防重复导入开没开。 |
-| ![会话](docs/screenshots/v021-02-sessions-dark.png) | ![导入](docs/screenshots/v021-24-import-preview-light.png) |
+| ![会话](docs/screenshots/v022-01-sessions-dark.png) | ![导入](docs/screenshots/v021-24-import-preview-light.png) |
 | **会话**（深色）：只读查看、改名、归档、导出、在终端里接着聊、删除进回收站，可批量。 | **导入 .md / .html**：先预览，无损 / 按标题解析一目了然。 |
-| ![用量统计](docs/screenshots/18-usage-light.png) | ![模型与 API](docs/screenshots/20-models-light.png) |
-| **用量统计**：读本机会话日志（同一次请求只算一次），缓存读 / 写分开算；费用「按 API 价折算」，不是实际账单；没价格的模型显示「—」。 | **模型与 API**：Claude Code / Codex 的供应商、模型映射、连通测试；key 存 Windows 凭据管理器，配置文件改之前先备份。 |
-| ![设置](docs/screenshots/v021-16-settings-light.png) | ![诊断](docs/screenshots/v021-19-diag-light.png) |
+| ![用量](docs/screenshots/v022-02-usage-light.png) | ![供应商](docs/screenshots/v022-04-models-light.png) |
+| **用量**（页面，不是弹窗）：读本机会话日志（同一次请求只算一次），缓存读 / 写分开算；费用「按 API 价折算」，不是实际账单；没价格的模型显示「—」。 | **供应商**（页面，不是弹窗）：Claude Code / Codex 的供应商、模型映射、连通测试；key 存 Windows 凭据管理器，配置文件改之前先备份。 |
+| ![设置](docs/screenshots/v022-10-settings-light.png) | ![诊断](docs/screenshots/v022-12-diag-light.png) |
 | **设置**：主题、托盘、开机自启、通知、自动同步、自动备份、总是显示完整账号、检查更新。 | **诊断 / 自检**：每一项通过 / 注意 / 没通过，附建议；第一次启动自动跑一次。报告里账号打码，可以直接复制发出来。 |
 
 ### 会话管理怎么改文件
@@ -254,12 +258,14 @@ no admin, Start-menu shortcut, uninstaller; uses the system Edge WebView2; unsig
 Or `pip install "cc-sessionsync[desktop]"` from the wheel / `pip install git+https://github.com/helefee/CC-SessionSync` (CLI + browser UI).
 
 **Desktop app:** single instance, tray icon (minimize/close to tray, autostart, start hidden), system notifications. The UI listens on
-127.0.0.1:8766 only and every request needs a per-launch token. Since 0.2.1 the UI has a resizable, collapsible (Ctrl+B) left panel with the
-navigation (Sessions, Timeline, Account sync, Codex → Claude, Backups, Usage, Providers, Diagnostics, Settings) and a group tree
+127.0.0.1:8766 only and every request needs a per-launch token. Since 0.2.2 all pages live in a **top button bar** (Timeline, Account sync,
+Codex → Claude, Backups, Usage, Providers, Diagnostics, Check for updates with a red dot, theme; **settings gear at the top-right**), shown in the
+main area (Usage and Providers are full pages, not dialogs; tray entries open the window on that page). The resizable, collapsible (Ctrl+B)
+**left panel shows only the session list**: search, filters and a group tree whose leaves are the sessions, grouped
 **by account** (every Claude Desktop account/org folder on the PC incl. the MSIX store dir, the CLI account, Codex accounts/providers;
 "未知账号" for sessions not registered anywhere) or **by project**.
 
-- **Reveal accounts (0.2.1):** accounts are masked by default; the eye button fetches the full email/name/org from the local token-protected
+- **Reveal accounts (0.2.1):** accounts are masked by default; the eye button in the session list fetches the full email/name/org from the local token-protected
   API, keeps it in page memory only (never logged or stored); optional "always show full account" setting (off by default). Diagnostics stay masked.
 - **Automatic session backup (0.2.1):** on by default every 10 minutes (min 5 min; minutes/hours/days), incremental (appended-delta + content
   dedup + zlib), low priority, skips if busy, catches up after sleep, notifies only on failure. Retention: all for 7 days, daily to 90 days,
