@@ -378,7 +378,7 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .side .gsearch{width:auto;padding-right:3px}
 .sfl{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .sfl .seg button{font-size:11.5px;padding:1px 8px}
-.sfl select{font-size:11.5px;padding:2px 4px;flex:1;min-width:0}
+.sfl select{font-size:11.5px;padding:2px 4px;flex:1 1 76px;min-width:76px}
 .tn.leaf{padding-left:8px}
 .tn.leaf .lb{font-weight:400}
 .tn.leaf .n{font-size:10.5px}
@@ -692,7 +692,7 @@ function treeRender(){
   const byProj = xs => { const m = new Map(); for (const x of xs) { const k = x.cwd || ""; m.set(k, (m.get(k) || 0) + 1); } return [...m].sort((a, b) => b[1] - a[1]); };
   const node = (id, sel, label, n, kids, extra = "") => {
     const on = JSON.stringify(sel) === JSON.stringify(TR.sel), open = TR.open.has(id);
-    return `<div class="tn${on ? " on" : ""}" data-id="${esc(id)}" data-sel="${esc(JSON.stringify(sel))}"><span class="tw${kids ? open ? " open" : "" : " none"}" data-tw="${esc(id)}">${ic("chev")}</span>${extra}<span class="lb">${label}</span><span class="n">${n}</span></div>` +
+    return `<div class="tn${on ? " on" : ""}" data-id="${esc(id)}" data-sel="${esc(JSON.stringify(sel))}"><span class="tw${kids ? open ? " open" : "" : " none"}"${kids ? ` data-tw="${esc(id)}"` : ""}>${ic("chev")}</span>${extra}<span class="lb">${label}</span><span class="n">${n}</span></div>` +
       (kids && open ? `<div class="tk">${kids()}</div>` : "");
   };
   // 最里层：会话本身（点了在右边打开）
@@ -1840,7 +1840,7 @@ async function tlGlobal(){
     try { TL.runs = (await api("/api/timeline/runs")).items.slice().reverse(); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
     if (TL.ri < 0 || TL.ri >= TL.runs.length) TL.ri = TL.runs.length - 1; TL.pt = null; }
   const runs = TL.runs;
-  pg.innerHTML = tlHead("每一格是一次备份。选一个时间点，看那时候每个会话是什么样（只读），勾选几个一起「恢复到 Claude」（另存成新会话），或者换回那时的版本。左侧分组、顶栏搜索都能筛。") +
+  pg.innerHTML = tlHead("每一格是一次备份。选一个时间点，看那时候每个会话是什么样（只读），勾选几个一起「恢复到 Claude」（另存成新会话），或者换回那时的版本。左侧分组、搜索都能筛。") +
     (runs.length ? `<div class="card">${tlPicker(runs.map(r => r.at), TL.ri, `${fullTime(runs[TL.ri].at)} · 那次存了 ${runs[TL.ri].n} 个新版本`)}</div>
       <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
         <div class="bar" style="padding:8px 10px 0;margin:0"><span class="seg" id="tlSt"></span><span class="sp"></span></div>
