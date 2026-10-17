@@ -5,7 +5,9 @@
 不联网、不用登录、不花额度。检查：
   1. claude -p --resume <会话号> 能打开导入的会话（退出码 0、拿到假 API 的回复）；
   2. 发给 API 的历史消息里真有导入的内容（用户原话、助手回复、工具摘要）；
-  3. Claude Code 把新的一轮接着写进了同一个会话文件（以后还能接着 resume）。
+  3. Claude Code 把新的一轮接着写进了同一个会话文件（以后还能接着 resume）；
+  4. 0.2.1：时间线「恢复到 Claude」（Claude 版本 + Codex 版本经转换）和「导出 .md / .html → 导入」得到的新会话也都能 resume，
+     历史里带着原来的内容。
 
     python tools/verify_resume.py [claude 可执行文件] [端口]
 """
@@ -94,6 +96,40 @@ def main() -> int:
                             encoding="utf-8", timeout=180, stdin=subprocess.DEVNULL, creationflags=nw)
         if c2.returncode != 0 or "MOCK-OK" not in c2.stdout:
             fails.append("second resume failed")
+        # 4. 时间线恢复 + 导出 / 导入出来的新会话
+        helper = (
+            "import json,sys\n"
+            "from cc_sessionsync import sessions as S, timeline as TL, exports as E\n"
+            "S.backup(why='verify')\n"
+            "snaps={r['agent']:r['id'] for r in S.snapshots(limit=50)}\n"
+            "out={}\n"
+            "r=TL.restore([snaps['claude']],'copy','claude',desktop=False); out['restore-claude']=r['made'][0]['id']\n"
+            "r=TL.restore([snaps['codex']],'copy','claude',desktop=False); out['restore-codex']=r['made'][0]['id']\n"
+            f"sid={sid!r}\n"
+            "for fmt in ('md','html'):\n"
+            "    ex=E.export_many([{'agent':'claude','id':sid}],fmt)\n"
+            "    im=E.import_files(ex['files'],None,False,False)\n"
+            "    assert im['ok'], im\n"
+            "    out['import-'+fmt]=im['made'][0]['id']\n"
+            "print('JSON'+json.dumps(out))\n")
+        h = subprocess.run([sys.executable, "-c", helper], env=env, capture_output=True, text=True, encoding="utf-8", creationflags=nw)
+        made = {}
+        for line in h.stdout.splitlines():
+            if line.startswith("JSON"):
+                made = json.loads(line[4:])
+        if not made:
+            fails.append("restore / import helper failed: " + (h.stderr or h.stdout)[-800:])
+        for kind, nsid in made.items():
+            before = len(log.read_text(encoding="utf-8").splitlines()) if log.exists() else 0
+            c3 = subprocess.run([claude, "-p", "接着说", "--resume", nsid], cwd=proj, env=env, capture_output=True, text=True,
+                                encoding="utf-8", timeout=180, stdin=subprocess.DEVNULL, creationflags=nw)
+            reqs = [json.loads(l) for l in log.read_text(encoding="utf-8").splitlines()[before:]] if log.exists() else []
+            hit = any(MARK in json.dumps(q["body"].get("messages", []), ensure_ascii=False) for q in reqs if q["path"].startswith("/v1/messages"))
+            print(f"{kind}: {nsid} exit {c3.returncode} history-has-marker {hit}")
+            if c3.returncode != 0 or "MOCK-OK" not in c3.stdout:
+                fails.append(f"{kind}: claude --resume failed")
+            elif not hit:
+                fails.append(f"{kind}: original content not in resumed history")
     finally:
         mock.kill()
     print("RESULT", "OK" if not fails else "FAIL", fails, "\ntemp:", T)
