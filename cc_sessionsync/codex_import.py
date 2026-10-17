@@ -183,7 +183,10 @@ def imported_from_claude() -> set[str]:
     """Codex 从 Claude Code 导进来的线程：不再导回 Claude，免得来回套娃。
     例外：我们自己登记的「导过去的那份 = 原来的 Codex 线程」（--mark-codex-imported）那条指回原线程，不算。"""
     d = _load(codex_home() / IMPORTS_NAME, {})
-    ours = {_norm_src(v.get("file", "")): tid for tid, v in _load(MAP, {}).items()}
+    ours = {}
+    for tid, v in _load(MAP, {}).items():         # 和登记时一样按真实路径比（Windows 上 8.3 短名 / 大小写会不一样）
+        if v.get("file"):
+            ours[_norm_src(codex_src_path(Path(v["file"])))] = tid
     out = set()
     for r in (d.get("records") or []) if isinstance(d, dict) else []:
         if not isinstance(r, dict) or not r.get("imported_thread_id"):
