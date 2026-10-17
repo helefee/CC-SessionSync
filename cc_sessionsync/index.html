@@ -278,38 +278,129 @@ pre.rep{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--panel2);
 .us .more{display:flex;justify-content:center;padding:8px}
 @media (max-width:760px){.us .ucards{grid-template-columns:repeat(2,1fr)}.us .ucard .v{font-size:18px}}
 
+/* ---- v0.2.1：左侧面板布局 ---- */
+.body{flex:1;display:flex;min-height:0}
+.side{width:var(--sw,236px);flex:none;background:var(--side);border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.app.noside .side,.app.noside #sideGrip{display:none}
+.nav{padding:8px 8px 8px;display:flex;flex-direction:column;gap:1px;border-bottom:1px solid var(--line2);flex:none}
+.nv{display:flex;align-items:center;gap:10px;background:transparent;padding:6px 10px;border-radius:8px;font-size:13px;color:var(--text);text-align:left;width:100%}
+.nv .ic{width:16px;height:16px;color:var(--muted)}
+.nv:hover{background:var(--hover)}
+.nv.on{background:var(--panel);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}.nv.on .ic{color:var(--accent)}
+.nv>span{flex:1;overflow:hidden;text-overflow:ellipsis}
+.nv em{font-style:normal;font-size:11px;color:var(--faint);font-weight:400}
+.nv .cnt{font-size:10.5px;background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:15px;flex:none}
+.nv .ext{width:12px;height:12px;color:var(--faint)}
+.trh{display:flex;align-items:center;gap:6px;padding:10px 12px 6px;font-size:11.5px;color:var(--muted);font-weight:600;flex:none}
+.trh .sp{flex:1}
+.trh .seg button{font-size:11.5px;padding:1px 9px}
+.tree{flex:1;overflow:auto;padding:0 6px 14px;font-size:12.5px}
+.tn{display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:7px;cursor:pointer;white-space:nowrap;min-width:0;user-select:none}
+.tn:hover{background:var(--hover)}
+.tn.on{background:var(--accent-weak);color:var(--accent)}
+.tn .tw{width:14px;height:14px;flex:none;color:var(--faint);display:inline-flex;align-items:center;justify-content:center;transition:transform .15s}
+.tn .tw .ic{width:12px;height:12px}
+.tn .tw.open{transform:rotate(90deg)}.tn .tw.none{visibility:hidden}
+.tn .lb{flex:1;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tn .n{font-size:11px;color:var(--faint)}
+.tn .lg{width:13px;height:13px;flex:none}
+.tn .cur{font-size:10px;line-height:15px;padding:0 4px;border-radius:5px;background:var(--ok-weak);color:var(--ok);flex:none}
+.tk{padding-left:15px}
+.tree .hint{color:var(--faint);font-size:11.5px;padding:6px 8px}
+.grip{width:6px;flex:none;cursor:col-resize;position:relative;z-index:2}
+.grip:after{content:"";position:absolute;top:0;bottom:0;left:2px;width:2px;border-radius:2px;background:transparent;transition:background .15s}
+.grip:hover:after,.grip.drag:after{background:var(--accent)}
+#sideGrip{margin-left:-3px;margin-right:-3px}
+.gsearch{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:0 9px;width:min(440px,38vw)}
+.gsearch:focus-within{border-color:var(--accent)}
+.gsearch input{border:0;background:transparent;padding:5px 0;flex:1;min-width:0}
+.gsearch .ic{color:var(--faint);width:15px;height:15px}
+.gsearch kbd{font:11px var(--mono);color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:0 4px}
+.top .sp{flex:1}
+.page.full{max-width:none}
+.split2{display:flex;align-items:stretch;min-height:0}
+.split2>.l{flex:1;min-width:300px}
+.split2>.r{width:var(--dw,44%);flex:none;min-width:320px;max-width:70%}
+.split2>.grip{margin:0 3px}
+.split2>.l>.card,.split2>.r>.card{height:100%;margin-bottom:0}
+@media (max-width:900px){.split2{flex-direction:column}.split2>.r{width:auto;max-width:none}.split2>.grip{display:none}}
+.acm{overflow-wrap:anywhere}.acm.full{color:var(--text)}
+button.eye{background:transparent;padding:0 3px;color:var(--faint);line-height:1;vertical-align:-1px}
+button.eye:hover{background:transparent;color:var(--accent)}
+button.eye .ic{width:14px;height:14px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--accent-weak);color:var(--accent);border-radius:999px;padding:1px 4px 1px 10px;max-width:420px}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{background:transparent;padding:0 3px;color:inherit}.chip .ic{width:12px;height:12px}
+.tlpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tlpick input[type=range]{flex:1;min-width:220px;accent-color:var(--accent)}
+.tlnow{font-size:13px;font-weight:600}
+.tlticks{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:2px}
+.tlx{position:relative;height:8px;margin:0 8px}
+.tlx i{position:absolute;top:0;width:2px;height:8px;border-radius:1px;background:var(--line);transform:translateX(-1px)}
+.tlx i.on{background:var(--accent)}
+.diff{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12.5px;margin-bottom:8px;background:var(--panel2)}
+.diff .dl{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.diff .dl>div{min-width:0}
+.diff .dl b{font-size:11.5px;color:var(--muted);font-weight:600}
+.diff .ln{font-size:12px;border-radius:6px;padding:2px 6px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.diff .ln.old{background:var(--bad-weak)}.diff .ln.new{background:var(--ok-weak)}
+.acts2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+button.big{padding:8px 16px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.cmdl{display:flex;gap:6px;align-items:center;margin-top:6px}
+.cmdl code{flex:1;padding:4px 8px;font-size:11.5px}
+.mk{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:8px 0}
+.vrow td{cursor:pointer}
+.emp{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--faint);padding:40px 16px;text-align:center;font-size:13px}
+.emp .ic{width:30px;height:30px;color:var(--line)}
+.sched{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
+.sched>div{background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--muted)}
+.sched b{display:block;font-size:13.5px;color:var(--text);font-weight:600;margin-top:2px}
+.numu{display:inline-flex;gap:6px;align-items:center}.numu input{width:70px}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app" id="app">
   <header class="top">
+    <button class="tbx" id="tbSide" title="收起 / 展开左侧面板（Ctrl+B）"><i data-ic="panelL"></i></button>
     <span class="brand"><img src="/icon.png" alt=""><span>CC Session Sync</span><span class="ver">v__VERSION__</span></span>
-    <nav class="tabs" id="tabs">
-      <button class="tab on" data-p="sync"><i data-ic="users"></i>账号同步</button>
-      <button class="tab" data-p="codex"><i data-ic="codex" data-cls="logo"></i>Codex → Claude Code</button>
-      <button class="tab" data-p="sessions"><i data-ic="list"></i>会话管理</button>
-      <button class="tab" data-p="backups"><i data-ic="download"></i>备份与还原</button>
-      <button class="tab" data-p="settings"><i data-ic="gear"></i>设置</button>
-      <button class="tab" data-p="diag"><i data-ic="activity"></i>诊断<span class="cnt" id="diagCnt" hidden></span></button>
-    </nav>
+    <span class="sp"></span>
+    <label class="gsearch" title="搜会话（标题 / 第一句 / 目录 / id）；Ctrl+Enter 在内容里搜"><i data-ic="search"></i><input type="search" id="gQ" placeholder="搜会话：标题 / 第一句 / 目录 / id"><kbd>Ctrl K</kbd></label>
+    <span class="sp"></span>
     <div class="topact">
-      <button class="tbx" id="tbModel" title="模型与 API（供应商、key、模型映射）"><i data-ic="key"></i></button>
-      <button class="tbx" id="tbUsage" title="用量统计（tokens / 费用）"><i data-ic="chart"></i></button>
+      <button class="tbx" id="tbEye" title="显示完整账号"><i data-ic="eyeOff"></i></button>
       <button class="tbx" id="tbCheck" title="自检"><i data-ic="ok"></i></button>
       <button class="tbx" id="tbUpd" title="检查更新"><i data-ic="refresh"></i><span class="rdot"></span></button>
       <button class="tbx" id="tbTheme" title="主题"></button>
-      <button class="tbx" id="tbSet" title="设置"><i data-ic="gear"></i></button>
     </div>
   </header>
-  <main class="main" id="main">
-    <div id="bans"></div>
-    <section class="page on" id="pg-sync"></section>
-    <section class="page" id="pg-codex"></section>
-    <section class="page" id="pg-sessions"></section>
-    <section class="page" id="pg-backups"></section>
-    <section class="page" id="pg-settings"></section>
-    <section class="page" id="pg-diag"></section>
-  </main>
+  <div class="body">
+    <aside class="side" id="side">
+      <nav class="nav" id="nav">
+        <button class="nv" data-p="sessions"><i data-ic="list"></i><span>会话</span><em id="nvSess"></em></button>
+        <button class="nv" data-p="timeline"><i data-ic="history"></i><span>时间线</span></button>
+        <button class="nv" data-p="sync"><i data-ic="users"></i><span>账号同步</span></button>
+        <button class="nv" data-p="codex"><i data-ic="codex" data-cls="logo"></i><span>Codex → Claude</span></button>
+        <button class="nv" data-p="backups"><i data-ic="download"></i><span>备份</span></button>
+        <button class="nv" data-x="usage"><i data-ic="chart"></i><span>用量</span></button>
+        <button class="nv" data-x="models"><i data-ic="key"></i><span>供应商</span></button>
+        <button class="nv" data-p="diag"><i data-ic="activity"></i><span>诊断自检</span><span class="cnt" id="diagCnt" hidden></span></button>
+        <button class="nv" data-p="settings"><i data-ic="gear"></i><span>设置</span></button>
+      </nav>
+      <div class="trh"><span>分组</span><button class="eye" id="trEye" title="显示完整账号"></button><span class="sp"></span><span class="seg" id="trMode"><button data-m="acct">按账号</button><button data-m="proj">按项目</button></span></div>
+      <div class="tree" id="tree"><div class="hint">读取中…</div></div>
+    </aside>
+    <div class="grip" id="sideGrip" title="拖动调整宽度"></div>
+    <main class="main" id="main">
+      <div id="bans"></div>
+      <section class="page full" id="pg-sessions"></section>
+      <section class="page full" id="pg-timeline"></section>
+      <section class="page" id="pg-sync"></section>
+      <section class="page" id="pg-codex"></section>
+      <section class="page" id="pg-backups"></section>
+      <section class="page" id="pg-settings"></section>
+      <section class="page" id="pg-diag"></section>
+    </main>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 <div class="dlg" id="dlg"><div class="box">
@@ -327,6 +418,7 @@ const ICON = {
   gitbranch: '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
   gitdiff: '<path d="M12 3v14"/><path d="M5 10h14"/><path d="M5 21h14"/>',
   eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c4.97 0 8.27 3.5 9.94 6.65a1 1 0 0 1 0 .7 13.1 13.1 0 0 1-1.67 2.68"/><path d="M14.08 14.16a3 3 0 0 1-4.24-4.24"/><path d="M17.48 17.5A10.75 10.75 0 0 1 2.06 12.35a1 1 0 0 1 0-.7 13.2 13.2 0 0 1 4.46-5.14"/><path d="m2 2 20 20"/>',
   dot: '<circle cx="12" cy="12" r="4"/>',
   messages: '<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
@@ -467,23 +559,44 @@ function applyTheme(t){
 $("#tbTheme").onclick = () => { const t = store.get("ccss.theme") || "system"; applyTheme(THEMES[(THEMES.indexOf(t) + 1) % 3]); if (PAGE === "settings") R.settings(); };
 applyTheme(store.get("ccss.theme") || "system");
 
-// ---------- 页面切换 ----------
-let PAGE = "sync";
+// ---------- 页面切换（左侧面板）----------
+let PAGE = "sessions";
 const R = {};          // 每个页面的 render
 function go(p){
   if (!R[p]) return;
   PAGE = p;
-  $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.p === p));
+  $$("#nav [data-p]").forEach(t => t.classList.toggle("on", t.dataset.p === p));
   $$(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
   store.set("ccss.page", p);
   R[p]();
 }
-$$(".tab").forEach(t => t.onclick = () => go(t.dataset.p));
-$("#tbSet").onclick = () => go("settings");
-$("#tbModel").onclick = () => mcOpen("list");
-$("#tbUsage").onclick = () => usOpen();
+$$("#nav [data-p]").forEach(t => t.onclick = () => go(t.dataset.p));
+$$("#nav [data-x]").forEach(t => { t.insertAdjacentHTML("beforeend", ic("external", "ext")); t.onclick = () => t.dataset.x === "usage" ? usOpen() : mcOpen("list"); });
 $("#tbCheck").onclick = () => scOpen(true);
 $("#tbUpd").onclick = () => updOpen(true);
+// 左侧面板：拖动改宽度（记住），Ctrl+B 收起 / 展开
+function dragGrip(el, getW, setW, min, max, key, invert){
+  el.onmousedown = e => {
+    e.preventDefault(); const x0 = e.clientX, w0 = getW(); el.classList.add("drag"); document.body.style.cursor = "col-resize";
+    const mv = ev => setW(Math.max(min, Math.min(max(), w0 + (invert ? -1 : 1) * (ev.clientX - x0))));
+    const up = () => { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); el.classList.remove("drag"); document.body.style.cursor = ""; store.set(key, String(Math.round(getW()))); };
+    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
+  };
+}
+const rootCss = (k, v) => document.documentElement.style.setProperty(k, v);
+{ const w = +store.get("ccss.sidew"); if (w >= 180 && w <= 520) rootCss("--sw", w + "px");
+  const d = +store.get("ccss.detailw"); if (d >= 300) rootCss("--dw", d + "px");
+  if (store.get("ccss.side") === "0") $("#app").classList.add("noside"); }
+dragGrip($("#sideGrip"), () => $("#side").getBoundingClientRect().width, w => rootCss("--sw", w + "px"), 180, () => Math.min(520, innerWidth * .45), "ccss.sidew");
+function toggleSide(){ const n = $("#app").classList.toggle("noside"); store.set("ccss.side", n ? "0" : "1"); }
+$("#tbSide").onclick = toggleSide;
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "b") { e.preventDefault(); toggleSide(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); $("#gQ").focus(); $("#gQ").select(); }
+});
+// 顶栏搜索：搜会话（在「会话」页里实时筛选；Ctrl+Enter 在内容里搜）
+$("#gQ").oninput = e => { SS.q = e.target.value; if (PAGE === "sessions" && SS.d) ssList(); else if (PAGE === "timeline" && TL.pt) tlList(); treeRender(); };
+$("#gQ").onkeydown = e => { if (e.key !== "Enter") return; if (e.ctrlKey) { if (PAGE !== "sessions") go("sessions"); return ssFulltext(); } if (PAGE !== "sessions" && PAGE !== "timeline") go("sessions"); };
 // 托盘菜单 / 通知点进来：window.ccOpen("codex") 或 ccOpen({page: "sync", account_switch: "claude-desktop"})
 window.ccOpen = target => {
   const t = typeof target === "string" ? {page: target} : (target || {});
@@ -496,6 +609,83 @@ window.ccOpen = target => {
   if (p) go(p);
 };
 
+// ---------- 显示完整账号（眼睛）----------
+// 缺省打码；点眼睛才去本机接口（127.0.0.1 + 口令）取完整账号，只放在这个页面的内存里，不存盘、不写日志；
+// 设置里开了「总是显示完整账号」才会一打开就显示。诊断报告永远是打码的。
+const RV = {on: false, m: {}, loaded: false};
+const acm = (rid, masked, short) => { const f = RV.on && rid && RV.m[rid];
+  return `<span class="acm${short ? " short" : ""}${f ? " full" : ""}" data-rid="${esc(rid || "")}" data-m="${esc(masked || "")}" title="${esc(f ? f.label : rid ? "点眼睛显示完整账号" : "")}">${esc(f ? (short ? f.email || f.label : f.label) : masked || "")}</span>`; };
+const eyeB = () => `<button class="eye" data-eye title="${RV.on ? "隐藏完整账号" : "显示完整账号"}">${ic(RV.on ? "eye" : "eyeOff")}</button>`;
+async function rvLoad(){ const r = await api("/api/accounts/reveal"); RV.m = r.accounts || {}; RV.loaded = true; }
+async function rvSet(on){
+  if (on && !RV.loaded) { try { await rvLoad(); } catch(e){ toast("❌ " + e.message); return; } }
+  RV.on = !!on; rvPaint();
+}
+function rvPaint(){
+  $$(".acm").forEach(e => { const f = RV.on && e.dataset.rid && RV.m[e.dataset.rid];
+    e.textContent = f ? (e.classList.contains("short") ? f.email || f.label : f.label) : e.dataset.m;
+    e.title = f ? f.label : e.dataset.rid ? "点眼睛显示完整账号" : ""; e.classList.toggle("full", !!f); });
+  $$("[data-eye],#tbEye,#trEye").forEach(b => { b.innerHTML = ic(RV.on ? "eye" : "eyeOff"); b.title = RV.on ? "隐藏完整账号" : "显示完整账号"; b.classList.toggle("on", RV.on); });
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-eye],#tbEye,#trEye"); if (!b) return; e.stopPropagation(); e.preventDefault(); rvSet(!RV.on); }, true);
+
+// ---------- 左侧分组树：按账号 / 按项目 ----------
+const TR = {mode: store.get("ccss.trmode") === "proj" ? "proj" : "acct", sel: null, open: new Set(JSON.parse(store.get("ccss.tropen") || "[]"))};
+const trSave = () => store.set("ccss.tropen", JSON.stringify([...TR.open].slice(-200)));
+const trMatch = (x, sel = TR.sel) => !sel || ((!sel.acct || x.gacct === sel.acct) && (sel.proj == null || (x.cwd || "") === sel.proj));
+function trGroup(k){ return ((SS.d && SS.d.groups) || []).find(g => g.key === k); }
+function trLabel(sel = TR.sel){
+  if (!sel) return "";
+  const g = sel.acct && trGroup(sel.acct);
+  return [g ? (g.kind === "codex" ? "Codex · " : "") + g.masked : "", sel.proj != null ? projName(sel.proj) || "（没有目录）" : ""].filter(Boolean).join(" / ");
+}
+async function treeLoad(){ try { SS.d = await api("/api/sessions"); } catch(e){ $("#tree").innerHTML = `<div class="hint">读不到：${esc(e.message)}</div>`; return; } treeRender(); }
+function treeRender(){
+  const box = $("#tree"); if (!box || !SS.d) return;
+  $$("#trMode button").forEach(b => b.classList.toggle("on", b.dataset.m === TR.mode));
+  const items = ssVisible(true), groups = SS.d.groups || [];
+  $("#nvSess").textContent = SS.d.items.length || "";
+  const byProj = xs => { const m = new Map(); for (const x of xs) { const k = x.cwd || ""; m.set(k, (m.get(k) || 0) + 1); } return [...m].sort((a, b) => b[1] - a[1]); };
+  const node = (id, sel, label, n, kids, extra = "", lvl = 0) => {
+    const on = JSON.stringify(sel) === JSON.stringify(TR.sel), open = TR.open.has(id);
+    return `<div class="tn${on ? " on" : ""}" data-id="${esc(id)}" data-sel="${esc(JSON.stringify(sel))}"><span class="tw${kids ? open ? " open" : "" : " none"}" data-tw="${esc(id)}">${ic("chev")}</span>${extra}<span class="lb">${label}</span><span class="n">${n}</span></div>` +
+      (kids && open ? `<div class="tk">${kids()}</div>` : "");
+  };
+  const gLabel = g => g.kind === "unknown" ? `<span title="${esc(g.hint || "")}">未知账号</span>` : acm(g.rid, g.masked, true);
+  const gIcon = g => g.kind === "codex" ? ic("codex", "logo lg") : g.kind === "claude" ? ic("claude", "logo lg") : ic("user", "lg");
+  const gTags = g => g.current ? `<span class="cur" title="${esc((g.tags || []).join("、"))}">当前</span>` : "";
+  let html = node("all", null, "全部会话", items.length, null, ic("list", "lg"));
+  if (TR.mode === "acct") {
+    for (const g of groups) {
+      const xs = items.filter(x => x.gacct === g.key);
+      if (!xs.length && !g.current && !(g.folders || []).length) continue;
+      const tip = (g.folders || []).map(f => `${f.key}（${f.where} · ${f.count}）`).join("\n");
+      html += `<div title="${esc(tip)}">` + node("a:" + g.key, {acct: g.key}, gLabel(g) + gTags(g), xs.length, xs.length ? () => byProj(xs).map(([p, n]) =>
+        node("a:" + g.key + "|" + p, {acct: g.key, proj: p}, `<span title="${esc(p)}">${esc(projName(p) || "（没有目录）")}</span>`, n, null, ic("folder", "lg"))).join("") : null, gIcon(g)) + `</div>`;
+    }
+  } else {
+    for (const [p, n] of byProj(items)) {
+      const xs = items.filter(x => (x.cwd || "") === p);
+      html += node("p:" + p, {proj: p}, `<span title="${esc(p)}">${esc(projName(p) || "（没有目录）")}</span>`, n, () => {
+        const m = new Map(); for (const x of xs) m.set(x.gacct, (m.get(x.gacct) || 0) + 1);
+        return [...m].sort((a, b) => b[1] - a[1]).map(([k, c]) => { const g = trGroup(k) || {key: k, kind: "unknown", masked: "未知账号"};
+          return node("p:" + p + "|" + k, {acct: k, proj: p}, gLabel(g) + gTags(g), c, null, gIcon(g)); }).join("");
+      }, ic("folder", "lg"));
+    }
+  }
+  if (!items.length) html += `<div class="hint">${SS.d.items.length ? "没有符合筛选的会话" : "还没有会话"}</div>`;
+  box.innerHTML = html;
+  $$("#tree [data-tw]").forEach(t => t.onclick = e => { e.stopPropagation(); const id = t.dataset.tw; TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id); trSave(); treeRender(); });
+  $$("#tree .tn").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel); if (TR.sel) { TR.open.add(t.dataset.id); trSave(); } treeRender(); trApply(); });
+  rvPaint();
+}
+function trApply(){
+  if (PAGE === "timeline") return TL.cur ? null : tlList();
+  if (PAGE !== "sessions") return go("sessions");
+  ssList(); ssChip();
+}
+$$("#trMode button").forEach(b => b.onclick = () => { TR.mode = b.dataset.m; store.set("ccss.trmode", TR.mode); TR.sel = null; treeRender(); trApply(); });
+
 // ---------- 顶部提示条（账号切换、新版本、排队中的任务）----------
 const ST = {seq: -1, upd: null, acct: [], jobs: 0, later: sessionStorage.getItem("ccss.later") || ""};
 function renderBans(){
@@ -505,7 +695,7 @@ function renderBans(){
     out.push(`<div class="ban acc" id="banUpd">${ic("sparkles")}<div class="tx"><b>CC Session Sync 有新版本 v${esc(u.latest)}</b>（当前 v${esc(u.current)}）· 不会自动安装，点「立即更新」才装</div>
       <div class="acts"><button class="primary" data-u="install">立即更新</button><button data-u="view">看看更新了什么</button><button class="ghost" data-u="later">稍后</button><button class="ghost" data-u="ignore">忽略此版本</button></div></div>`);
   for (const a of ST.acct)
-    out.push(`<div class="ban warn" data-ak="${esc(a.k)}">${ic("users")}<div class="tx"><b>${esc(a.title)}</b>：${esc(a.text)}</div>
+    out.push(`<div class="ban warn" data-ak="${esc(a.k)}">${ic("users")}<div class="tx"><b>${esc(a.title)}</b>：${a.old != null && a.new != null ? `${acm(a.old_rid, a.old)} → ${acm(a.new_rid, a.new)} ${eyeB()}` : esc(a.text)}</div>
       <div class="acts"><button class="primary" data-a="sync">立即同步</button><button data-a="open">打开</button><button class="ghost" data-a="x" title="知道了">${ic("x")}</button></div></div>`);
   if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等对应的桌面端完全退出后自动做（会弹通知）</div><div class="acts"><button data-j="1">查看</button></div></div>`);
   $("#bans").innerHTML = out.join("");
@@ -539,7 +729,8 @@ async function poll(){
     for (const e of t.events || []) {
       if (e.kind === "account" && (!first || Date.now() / 1000 - e.time < 600)) {
         const k = (e.open && e.open.account_switch) || e.title;
-        ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, title: e.title, text: e.text, open: e.open});
+        ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, title: e.title, text: e.text, open: e.open, old: e.old, new: e.new, old_rid: e.old_rid, new_rid: e.new_rid});
+        RV.loaded = false; if (RV.on) rvLoad().then(rvPaint).catch(() => {}); if (!first) { SS.d = null; treeLoad(); }
       } else if (e.kind === "job") jobDone = true;
       else if (e.kind === "auto-sync" && !first && !e.manual) toast("🔄 " + e.title);
     }
@@ -1143,7 +1334,7 @@ function acctCard(label, a, running){
   const nm = a.email_masked || (a.accountUuid ? "账号 " + short(a.accountUuid) : "没认出来");
   return `<div class="card"><h3>${label}${running != null ? `<span class="tag ${running ? "warn" : ""}">${running ? "在运行" : "没开"}</span>` : ""}</h3>
     <div class="acct"><div class="av">${esc((a.email_masked || a.name || "?")[0].toUpperCase())}</div><div style="min-width:0">
-      <div class="nm">${esc(nm)}${a.stale ? ' <span class="tag warn">可能过期</span>' : ""}</div>
+      <div class="nm">${a.email_masked ? acm(a.rid, nm) + " " + eyeB() : esc(nm)}${a.stale ? ' <span class="tag warn">可能过期</span>' : ""}</div>
       <div class="ds">${a.key ? `会话文件夹 <code>${esc(short(a.key))}…</code> · ${a.count ?? 0} 个会话` : "还没有会话文件夹"}${a.via ? " · 认自 " + esc(a.via) : ""}</div></div></div></div>`;
 }
 R.sync = async () => {
@@ -1299,113 +1490,138 @@ async function cxDry(thenApply){
 }
 
 // ---------- 会话管理 ----------
-const SS = {d: null, sel: new Set(), agent: "", q: "", proj: "", acct: "", date: "", status: "live", cur: null, hits: null};
+const SS = {d: null, sel: new Set(), agent: "", q: "", date: "", status: "live", cur: null, hits: null};
 const skey = x => x.agent + ":" + x.id;
 R.sessions = async (keep) => {
   const pg = $("#pg-sessions");
-  if (!SS.d) pg.innerHTML = '<div class="empty">读取会话…</div>';
+  if (!SS.d) pg.innerHTML = '<div class="emp">' + ic("list") + '读取会话…</div>';
   try { SS.d = await api("/api/sessions"); } catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   const live = new Set(SS.d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
-  pg.innerHTML = `<h2>${ic("list")}会话管理</h2>
-    <p class="sub">Claude Code 和 Codex 的会话都在这。改名缺省只改本程序里显示的名字；删除会先备份进会话备份库，再挪进回收站（不会直接删）；每个改动都记在账本里，可以撤回。</p>
-    <div class="bar"><input type="search" id="ssQ" placeholder="搜标题 / 第一句 / 目录 / id" value="${esc(SS.q)}"><button id="ssFt" title="在全部会话内容里搜（慢一点）">${ic("search")} 搜内容</button>
-      <span class="seg" id="ssAg">${[["","全部"],["claude","Claude Code"],["codex","Codex"]].map(([v,t]) => `<button data-v="${v}" class="${SS.agent===v?"on":""}">${t}</button>`).join("")}</span>
-      <select id="ssProj"><option value="">全部项目</option>${SS.d.projects.map(p => `<option value="${esc(p)}" ${SS.proj===p?"selected":""}>${esc(projName(p))}</option>`).join("")}</select>
-      <select id="ssAcct"><option value="">全部账号</option>${SS.d.accounts.map(a => `<option ${SS.acct===a?"selected":""}>${esc(a)}</option>`).join("")}</select>
+  pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span class="sp"></span>
+      <button id="ssImp" title="把导出的 .md / .html 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html</button>
+      <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
+    <div class="bar"><span class="seg" id="ssAg">${[["","全部"],["claude","Claude Code"],["codex","Codex"]].map(([v,t]) => `<button data-v="${v}" class="${SS.agent===v?"on":""}">${t}</button>`).join("")}</span>
       <select id="ssDate">${[["","不限时间"],["1","今天"],["7","最近 7 天"],["30","最近 30 天"]].map(([v,t]) => `<option value="${v}" ${SS.date===v?"selected":""}>${t}</option>`).join("")}</select>
       <select id="ssStat">${[["live","没归档的"],["archived","已归档"],["all","全部"]].map(([v,t]) => `<option value="${v}" ${SS.status===v?"selected":""}>${t}</option>`).join("")}</select>
-      <span class="sp"></span><button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
-    ${SS.hits ? `<div class="ban" style="margin:0 0 10px">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
-    <div class="split"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="ssList" style="border:0;border-radius:0"></div>
-      <div class="batch" id="ssBatch"></div></div>
-      <div class="card" id="ssView"><div class="empty">点左边一个会话，在这里看记录（只读）</div></div></div>`;
-  ssList();
-  $("#ssQ").oninput = e => { SS.q = e.target.value; ssList(); };
-  $("#ssQ").onkeydown = e => { if (e.key === "Enter" && e.ctrlKey) ssFulltext(); };
+      <button id="ssFt" title="在全部会话内容里搜顶栏搜索框里的字（慢一点；Ctrl+Enter）">${ic("search")} 搜内容</button>
+      <span class="sp"></span><span class="dim" style="font-size:12px">改名 / 删除先备份、可撤回；删除进回收站</span></div>
+    ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
+    <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
+      <div class="batch" id="ssBatch"></div></div></div><div class="grip" id="ssGrip" title="拖动调整宽度"></div>
+      <div class="r"><div class="card" id="ssView"><div class="emp">${ic("messages")}点左边一个会话，在这里看记录（只读）</div></div></div></div>`;
+  ssList(); ssChip(); treeRender();
   $("#ssFt").onclick = ssFulltext;
+  $("#ssImp").onclick = () => imDlg();
   const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
-  $$("#ssAg button").forEach(b => b.onclick = () => { SS.agent = b.dataset.v; $$("#ssAg button").forEach(x => x.classList.toggle("on", x === b)); ssList(); });
-  for (const [id, k] of [["#ssProj", "proj"], ["#ssAcct", "acct"], ["#ssDate", "date"], ["#ssStat", "status"]]) $(id).onchange = e => { SS[k] = e.target.value; ssList(); };
+  $$("#ssAg button").forEach(b => b.onclick = () => { SS.agent = b.dataset.v; $$("#ssAg button").forEach(x => x.classList.toggle("on", x === b)); ssList(); treeRender(); });
+  for (const [id, k] of [["#ssDate", "date"], ["#ssStat", "status"]]) $(id).onchange = e => { SS[k] = e.target.value; ssList(); treeRender(); };
   $("#ssRef").onclick = () => R.sessions();
+  dragGrip($("#ssGrip"), () => $("#pg-sessions .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-sessions .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
   if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else SS.cur = null;
 };
-function ssVisible(){
+function ssChip(){
+  const c = $("#ssChip"); if (!c) return;
+  c.innerHTML = TR.sel ? `<span class="chip" title="左侧分组"><span>${esc(trLabel())}</span><button id="ssChipX" title="不按分组筛">${ic("x")}</button></span>` : "";
+  const x = $("#ssChipX"); if (x) x.onclick = () => { TR.sel = null; treeRender(); ssList(); ssChip(); };
+}
+function ssVisible(noTree){
   const q = SS.q.trim().toLowerCase(), since = SS.date ? Date.now() / 1000 - (SS.date === "1" ? (Date.now() / 1000 - new Date().setHours(0, 0, 0, 0) / 1000) : SS.date * 86400) : 0;
-  return SS.d.items.filter(x => (!SS.agent || x.agent === SS.agent) && (!SS.proj || x.cwd === SS.proj) && (!SS.acct || (x.accounts || []).includes(SS.acct)) &&
+  return SS.d.items.filter(x => (!SS.agent || x.agent === SS.agent) && (noTree || trMatch(x)) &&
     (!since || (x.last || 0) >= since) && (SS.status === "all" || (SS.status === "archived") === !!x.archived) &&
     (!SS.hits || SS.hits.set.has(skey(x))) &&
     (!q || [x.title, x.first, x.cwd, x.id, x.alias].some(v => String(v || "").toLowerCase().includes(q))));
 }
 function ssList(){
+  if (!$("#ssList")) return;
   const rows = ssVisible();
   $("#ssList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="ssAllSel"></th><th>会话</th><th>项目</th><th>最近</th><th class="n">大小</th><th></th></tr>
     ${rows.map(x => `<tr class="click${SS.cur && skey(SS.cur) === skey(x) ? " sel" : ""}" data-k="${esc(skey(x))}"><td><input type="checkbox" data-c="${esc(skey(x))}" ${SS.sel.has(skey(x)) ? "checked" : ""}></td>
       <td class="tl"><div class="ell">${logo(x.agent)} ${esc(x.title || "（无标题）")}${x.alias ? ' <span class="tag" title="只在本程序里改的名字">别名</span>' : ""}</div><span class="s">${esc(x.first || "")}</span></td>
       <td class="ell" title="${esc(x.cwd)}">${esc(projName(x.cwd))}</td><td class="n">${when(x.last)}</td><td class="n">${kb(x.size)}</td>
-      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? '<span class="tag codex">Codex 导入</span> ' : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数">${ic("history")}${x.backups}</span>` : ""}</td></tr>`).join("")}</table>`
-    : `<div class="empty">${SS.d.items.length ? "没有符合筛选的会话" : "还没有 Claude Code / Codex 会话"}</div>`;
+      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? '<span class="tag codex">Codex 导入</span> ' : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数（点开看时间线）" data-tl="${esc(skey(x))}" style="cursor:pointer">${ic("history")}${x.backups}</span>` : ""}</td></tr>`).join("")}</table>`
+    : `<div class="emp">${ic("search")}${SS.d.items.length ? "没有符合筛选的会话" + (TR.sel || SS.q ? "<div><button id='ssClr'>清除筛选</button></div>" : "") : "还没有 Claude Code / Codex 会话"}</div>`;
   $$("#ssList [data-c]").forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { c.checked ? SS.sel.add(c.dataset.c) : SS.sel.delete(c.dataset.c); ssBatch(); }; });
   $$("#ssList tr[data-k]").forEach(tr => tr.onclick = () => { const [a, ...i] = tr.dataset.k.split(":"); ssView(a, i.join(":")); });
+  $$("#ssList [data-tl]").forEach(t => t.onclick = e => { e.stopPropagation(); const [a, ...i] = t.dataset.tl.split(":"); tlOpen(a, i.join(":")); });
+  const cl = $("#ssClr"); if (cl) cl.onclick = () => { TR.sel = null; SS.q = ""; $("#gQ").value = ""; treeRender(); ssList(); ssChip(); };
   const a = $("#ssAllSel"); if (a) { a.checked = rows.length && rows.every(x => SS.sel.has(skey(x))); a.onchange = () => { rows.forEach(x => a.checked ? SS.sel.add(skey(x)) : SS.sel.delete(skey(x))); ssList(); }; }
   ssBatch();
 }
 const ssItems = () => [...SS.sel].map(k => { const [agent, ...i] = k.split(":"); return {agent, id: i.join(":")}; });
 function ssBatch(){
-  const n = SS.sel.size, b = $("#ssBatch");
-  b.innerHTML = n ? `<span>已选 ${n} 个</span><span style="flex:1"></span><button data-b="archive">${ic("archive")} 归档</button><button data-b="unarchive">取消归档</button><button data-b="export">${ic("upload")} 导出</button><button class="danger" data-b="delete">${ic("trash")} 删除</button><button class="ghost" data-b="clear">${ic("x")}</button>`
-    : `<span class="dim">勾选多个可以批量归档 / 导出 / 删除</span><span style="flex:1"></span><span class="dim">${ssVisible().length} / ${SS.d.items.length} 个</span>`;
+  const n = SS.sel.size, b = $("#ssBatch"); if (!b) return;
+  const vis = ssVisible();
+  b.innerHTML = n ? `<span>已选 ${n} 个</span><span style="flex:1"></span><button data-b="archive">${ic("archive")} 归档</button><button data-b="unarchive">取消归档</button><button data-b="export">${ic("file")} 导出</button><button class="danger" data-b="delete">${ic("trash")} 删除</button><button class="ghost" data-b="clear">${ic("x")}</button>`
+    : `<span class="dim">勾选多个可以批量归档 / 导出 / 删除</span><span style="flex:1"></span>${TR.sel && vis.length ? `<button id="ssGrpEx" title="把左侧选中的这一组全部导出">${ic("file")} 导出这一组（${vis.length}）</button>` : ""}<span class="dim">${vis.length} / ${SS.d.items.length} 个</span>`;
   $$("#ssBatch [data-b]").forEach(x => x.onclick = () => ssAct(x.dataset.b, ssItems()));
+  const g = $("#ssGrpEx"); if (g) g.onclick = () => exDlg(vis.map(x => ({agent: x.agent, id: x.id})), trLabel());
 }
 async function ssFulltext(){
-  const q = SS.q.trim(); if (!q) return toast("先在搜索框里写要搜的字");
+  const q = SS.q.trim(); if (!q) return toast("先在顶栏搜索框里写要搜的字");
   toast("在会话内容里搜「" + q + "」…", 8000);
-  try { const r = await api("/api/sessions/fulltext", {q}); SS.hits = {q, set: new Set(r.hits.map(skey)), partial: r.partial}; SS.q = ""; R.sessions(); toast(`找到 ${r.hits.length} 个`); }
+  try { const r = await api("/api/sessions/fulltext", {q}); SS.hits = {q, set: new Set(r.hits.map(skey)), partial: r.partial}; SS.q = ""; $("#gQ").value = ""; R.sessions(); toast(`找到 ${r.hits.length} 个`); }
   catch(e){ toast("❌ " + e.message); }
 }
+// 聊天样式的只读记录
+const chatHtml = (entries, agent) => entries.length ? entries.map(m => `<div class="msg ${m.role === "user" ? "user" : m.role === "tool" ? "tool" : "assistant"}">${m.role !== "tool" ? `<div class="who">${m.role === "user" ? "你" : agent === "codex" ? "Codex" : "Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>` : ""}${esc(m.text)}</div>`).join("") : '<div class="empty">（没有对话内容）</div>';
 async function ssView(agent, id){
   SS.cur = {agent, id};
   $$("#ssList tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === agent + ":" + id));
   const x = SS.d.items.find(i => i.agent === agent && i.id === id) || {};
   const box = $("#ssView"); box.innerHTML = '<div class="empty">读取…</div>';
   let r; try { r = await api(`/api/sessions/read?agent=${agent}&id=${encodeURIComponent(id)}&limit=300`); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  const g = trGroup(x.gacct);
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
-      <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="历史备份">${ic("history")}</button>
+      <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
-        <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
+        <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
         <button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button><button data-v="copy">${ic("copy")} 复制继续命令</button>
         <button data-v="del" class="danger">${ic("trash")} 删除（进回收站）</button></div></span>
       <button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button></h3>
-    <div class="dim" style="font-size:12px;margin:-4px 0 8px;word-break:break-all">${esc(x.cwd || "")} · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
-    <div class="pv">${r.entries.length ? r.entries.map(m => `<div class="msg ${m.role === "user" ? "user" : m.role === "tool" ? "tool" : "assistant"}">${m.role !== "tool" ? `<div class="who">${m.role === "user" ? "你" : agent === "codex" ? "Codex" : "Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>` : ""}${esc(m.text)}</div>`).join("") : '<div class="empty">（没有对话内容）</div>'}
+    <div class="dim" style="font-size:12px;margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
+    <div class="pv">${chatHtml(r.entries, agent)}
       ${r.cut ? `<div class="dim" style="text-align:center;font-size:12px">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条（导出能看全部）</div>` : ""}</div>`;
   $("#svRen").onclick = () => ssRename(agent, id, x);
-  $("#svHist").onclick = () => ssSnaps(agent, id);
+  $("#svHist").onclick = () => tlOpen(agent, id);
   $("#svOpen").onclick = async () => { try { const o = await api("/api/sessions/open", {agent, id}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } };
   $("#svMoreB").onclick = e => { e.stopPropagation(); $("#svMore").classList.toggle("open"); };
   $$("#svMore [data-v]").forEach(b => b.onclick = () => { $("#svMore").classList.remove("open"); const v = b.dataset.v;
-    if (v === "md" || v === "jsonl") return ssExport([{agent, id}], v);
+    if (v === "md" || v === "jsonl" || v === "html") return ssExport([{agent, id}], v);
     if (v === "arch") return ssAct(x.archived ? "unarchive" : "archive", [{agent, id}]);
     if (v === "copy") return copyText(x.resume || id);
     if (v === "del") return ssAct("delete", [{agent, id}]); });
 }
 document.addEventListener("click", () => $$(".menu.open").forEach(m => { if (m.id !== "mcMenu") m.classList.remove("open"); }));
-async function ssExport(items, fmt){
-  const out = [];
-  for (const i of items) { try { const r = await api("/api/sessions/export", Object.assign({fmt: fmt || "md"}, i)); if (r.ok) out.push(r.path); } catch(e){ toast("❌ " + e.message); } }
-  if (!out.length) return;
-  openDlg("✅ 已导出", `<div>导出了 ${out.length} 个：</div><div class="dgls">${out.map(p => `<div>${esc(p)}</div>`).join("")}</div>`,
+// 导出：md / html 走 /api/export（带完整原始记录，能无损导回来）；jsonl 是原样复制
+async function ssExport(items, fmt, label){
+  let out = [], dir = "", errs = [];
+  if (fmt === "jsonl") {
+    for (const i of items) { try { const r = await api("/api/sessions/export", Object.assign({fmt}, i)); if (r.ok) out.push(r.path); } catch(e){ errs.push(e.message); } }
+  } else {
+    try { const r = await api("/api/export", {items, fmt, label: label || ""}); out = r.files || []; dir = items.length > 1 ? r.dir : ""; errs = r.errors || []; }
+    catch(e){ return toast("❌ " + e.message, 5000); }
+  }
+  if (!out.length) return toast("❌ " + (errs[0] || "没导出来"), 5000);
+  openDlg("✅ 已导出", `<div>导出了 ${out.length} 个${dir ? `，在 <code>${esc(dir)}</code>` : ""}：</div><div class="dgls">${out.slice(0, 30).map(p => `<div>${esc(p)}</div>`).join("")}${out.length > 30 ? `<div>…还有 ${out.length - 30} 个</div>` : ""}</div>
+    ${fmt !== "jsonl" ? '<div class="dim" style="font-size:12px;margin-top:6px">文件里带着完整的原始记录：用「导入 .md / .html」能一模一样地导回来。</div>' : ""}
+    ${errs.length ? `<div class="miss">${errs.length} 个没导出来：${esc(errs[0])}</div>` : ""}`,
     `<button onclick="closeDlg()">关闭</button><button class="primary" id="exRev">${ic("folder")} 打开文件夹</button>`);
-  $("#exRev").onclick = () => api("/api/reveal", {path: out[0]}).catch(e => toast("❌ " + e.message));
+  $("#exRev").onclick = () => api("/api/reveal", {path: dir || out[0]}).catch(e => toast("❌ " + e.message));
+}
+function exDlg(items, label){
+  openDlg("导出", `导出 ${items.length} 个会话到 <code>${esc((SY.st || {}).home || "~/.cc-sessionsync")}/exports</code>${items.length > 1 ? "（放进一个文件夹）" : ""}
+    <div class="dim" style="font-size:12.5px;margin-top:8px">Markdown / HTML：好读（角色、时间、代码块；HTML 里工具调用折叠、自带浅色 / 深色样式，单个文件就能打开），并且内嵌完整原始记录，可以无损导回来。原始 jsonl：原样复制。</div>`,
+    `<button onclick="closeDlg()">取消</button><button id="ex1">原始 jsonl</button><button id="ex3">HTML</button><button class="primary" id="ex2">Markdown</button>`);
+  $("#ex1").onclick = () => ssExport(items, "jsonl", label); $("#ex2").onclick = () => ssExport(items, "md", label); $("#ex3").onclick = () => ssExport(items, "html", label);
 }
 function ssAct(act, items){
   if (!items.length) return;
   if (act === "clear") { SS.sel.clear(); return ssList(); }
-  if (act === "export") return openDlg("导出", `导出 ${items.length} 个会话到 <code>${esc((SY.st || {}).home || "~/.cc-sessionsync")}/exports</code>`,
-      `<button onclick="closeDlg()">取消</button><button id="ex1">原始 jsonl</button><button class="primary" id="ex2">Markdown</button>`) || ($("#ex1").onclick = () => ssExport(items, "jsonl"), $("#ex2").onclick = () => ssExport(items, "md"));
+  if (act === "export") return exDlg(items, "");
   const names = items.map(i => (SS.d.items.find(x => x.agent === i.agent && x.id === i.id) || {}).title || i.id).slice(0, 8);
   const lab = {archive: "归档", unarchive: "取消归档", delete: "删除"}[act];
   const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:12.5px">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
-    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「备份与还原 → 回收站」还原，或在操作记录里撤回。</div>`
+    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「备份 → 回收站」还原，或在操作记录里撤回。</div>`
       : `<div class="dim" style="font-size:12.5px">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
     <div class="dim" style="font-size:12px;margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
   confirmDlg(lab + "会话", html, lab, async () => {
@@ -1430,13 +1646,6 @@ function ssRename(agent, id, x){
       closeDlg(); doneOrQueued(r, "已改名（可以撤回）"); R.sessions(); } catch(e){ toast("❌ " + e.message, 5000); }
   };
 }
-async function ssSnaps(agent, id){
-  let r; try { r = await api(`/api/sessions/snapshots?agent=${agent}&id=${encodeURIComponent(id)}`); } catch(e){ return toast("❌ " + e.message); }
-  openDlg("历史备份", r.items.length ? `<div class="dim" style="font-size:12.5px;margin-bottom:6px">会话备份库里这个会话的各个版本。恢复：原文件不在了就放回原位，还在就另存一份新的（不覆盖）。</div>
-    <table class="t"><tr><th>备份时间</th><th>当时的修改时间</th><th class="n">大小</th><th>原因</th><th></th></tr>${r.items.map(s => `<tr><td>${when(s.at)}</td><td>${when(s.mtime)}</td><td class="n">${kb(s.size)}</td><td>${esc(s.why)}</td><td><button data-s="${s.id}">恢复</button></td></tr>`).join("")}</table>`
-    : `<div class="empty">还没有备份。到「备份与还原 → 会话备份库」点「立即备份」。</div>`);
-  $$("#dlgBody [data-s]").forEach(b => b.onclick = () => snapRestore(+b.dataset.s));
-}
 async function snapRestore(sid){
   try { const r = await api("/api/sessions/restore-snapshot", {snap: sid});
     if (r.ok === false) return toast("❌ " + r.error, 5000);
@@ -1444,27 +1653,256 @@ async function snapRestore(sid){
   catch(e){ toast("❌ " + e.message, 5000); }
 }
 
+// ---------- 时间线：选一个时间点 → 预览对话 → 恢复到 Claude ----------
+const TL = {cur: null, vers: null, idx: -1, runs: null, ri: -1, t: null, pt: null, sel: new Set(), state: "changed", pv: null};
+const dtLocal = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fullTime = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+function tlOpen(agent, id){ TL.cur = {agent, id}; TL.vers = null; TL.idx = -1; go("timeline"); }
+function tlGacct(x){
+  const m = SS.d && SS.d.items.find(i => i.agent === x.agent && i.id === x.id);
+  if (m) return m.gacct;
+  return x.agent === "codex" ? "codex:" + (x.provider || "openai") : ((x.accounts || [])[0] || "unknown");
+}
+R.timeline = async () => {
+  if (!SS.d) await treeLoad();
+  return TL.cur ? tlSession() : tlGlobal();
+};
+const tlHead = sub => `<div class="bar" style="margin-bottom:6px"><h2 style="margin:0">${ic("history")}时间线</h2>
+  <span class="seg" id="tlMode"><button data-m="g" class="${TL.cur ? "" : "on"}">按时间点（全部会话）</button><button data-m="s" class="${TL.cur ? "on" : ""}" ${TL.cur ? "" : 'disabled title="在列表里点一个会话的「时间线」"'}>单个会话</button></span><span class="sp"></span>
+  <button class="ghost" id="tlRef" title="刷新">${ic("refresh")}</button></div><p class="sub">${sub}</p>`;
+function tlWireHead(){
+  $$("#tlMode button").forEach(b => b.onclick = () => { if (b.dataset.m === "g") { TL.cur = null; R.timeline(); } });
+  $("#tlRef").onclick = () => { TL.vers = null; TL.runs = null; R.timeline(); };
+}
+// 时间点选择：滑块（每一格是一次备份 / 一个版本）+ 日期时间
+function tlPicker(times, idx, label){
+  const t0 = times[0], t1 = times[times.length - 1], span = Math.max(1, t1 - t0);
+  return `<div class="tlpick"><button class="ghost" id="tlPrev" title="上一个" ${idx <= 0 ? "disabled" : ""}>${ic("back")}</button>
+      <input type="range" id="tlR" min="0" max="${times.length - 1}" value="${idx}" step="1">
+      <button class="ghost" id="tlNext" title="下一个" style="transform:scaleX(-1)" ${idx >= times.length - 1 ? "disabled" : ""}>${ic("back")}</button>
+      <input type="datetime-local" id="tlDT" value="${dtLocal(times[idx])}" title="选一个时间：取那之前最后一个版本"></div>
+    ${times.length <= 400 ? `<div class="tlx">${times.map((t, i) => `<i class="${i === idx ? "on" : ""}" style="left:${((t - t0) / span * 100).toFixed(2)}%"></i>`).join("")}</div>` : ""}
+    <div class="tlticks"><span>${fullTime(t0)}</span><span class="tlnow">${label}</span><span>${fullTime(t1)}</span></div>`;
+}
+function tlWirePicker(times, set){
+  const r = $("#tlR"); r.oninput = () => set(+r.value, true); r.onchange = () => set(+r.value);
+  $("#tlPrev").onclick = () => set(Math.max(0, +r.value - 1)); $("#tlNext").onclick = () => set(Math.min(times.length - 1, +r.value + 1));
+  $("#tlDT").onchange = e => { const t = new Date(e.target.value).getTime() / 1000; if (!t) return; let i = 0; times.forEach((x, k) => { if (x <= t + 59) i = k; }); set(i); };
+}
+
+// 单个会话
+async function tlSession(){
+  const pg = $("#pg-timeline"), {agent, id} = TL.cur;
+  if (!TL.vers) { pg.innerHTML = tlHead("") + '<div class="emp">读取…</div>';
+    try { TL.vers = await api(`/api/timeline/versions?agent=${agent}&id=${encodeURIComponent(id)}`); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+    if (TL.idx < 0 || TL.idx >= TL.vers.items.length) TL.idx = TL.vers.items.length - 1; }
+  const v = TL.vers, vs = v.items;
+  const x = SS.d && SS.d.items.find(i => i.agent === agent && i.id === id) || {};
+  const g = trGroup(x.gacct || tlGacct({agent, id}));
+  pg.innerHTML = tlHead(`会话备份库里这个会话的每个版本。拖滑块或选时间 → 右边预览那时候的对话、和现在比 → 「恢复到 Claude」另存成新会话（不覆盖现在的）。`) +
+    `<div class="card"><h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(v.title || "（无标题）")}</span>${v.exists ? "" : '<span class="tag warn">现在这个会话已经没了</span>'}<span class="tag">${vs.length} 个版本</span></h3>
+      <div class="dim" style="font-size:12px;margin:-4px 0 8px">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}<span title="${esc(v.cwd || "")}">${esc(projName(v.cwd))}</span> · ${esc(id)}</div>
+      ${vs.length ? tlPicker(vs.map(r => r.at), TL.idx, vs[TL.idx] ? `${fullTime(vs[TL.idx].at)} · ${vs[TL.idx].msgs ?? "?"} 条消息` : "") : `<div class="emp">${ic("history")}这个会话还没有备份版本。<div><button id="tlBk">${ic("download")} 立即备份</button></div></div>`}</div>
+    ${vs.length ? `<div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="tlVers" style="border:0;border-radius:0;max-height:calc(100vh - 380px)"></div></div></div>
+      <div class="grip" id="tlGrip"></div><div class="r"><div class="card" id="tlPv"></div></div></div>` : ""}`;
+  tlWireHead();
+  const bk = $("#tlBk"); if (bk) bk.onclick = async () => { bk.disabled = true; try { await api("/api/backup/now", {}); } catch(e){ toast("❌ " + e.message); } TL.vers = null; tlSession(); };
+  if (!vs.length) return rvPaint();
+  const list = () => { $("#tlVers").innerHTML = `<table class="t"><tr><th>时间</th><th class="n">消息</th><th class="n">大小</th><th>变化</th><th></th></tr>${vs.map((r, i) => `<tr class="click vrow${i === TL.idx ? " sel" : ""}" data-i="${i}">
+      <td>${fullTime(r.at)}</td><td class="n">${r.msgs ?? "—"}</td><td class="n">${kb(r.size)}</td><td class="dim">${esc(r.change)}</td><td>${r.current ? '<span class="tag ok">就是现在</span>' : ""}${r.why === "restored" ? ' <span class="tag">恢复出来的</span>' : ""}</td></tr>`).slice().reverse().join("")}</table>`;
+    $$("#tlVers [data-i]").forEach(tr => tr.onclick = () => set(+tr.dataset.i)); };
+  const set = (i, quick) => { TL.idx = i; if (quick) { $(".tlnow").textContent = `${fullTime(vs[i].at)} · ${vs[i].msgs ?? "?"} 条消息`; return; } tlSession(); };
+  tlWirePicker(vs.map(r => r.at), set);
+  list();
+  dragGrip($("#tlGrip"), () => $("#pg-timeline .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-timeline .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
+  tlPreview(vs[TL.idx].id, $("#tlPv"), agent);
+}
+// 预览一个版本：聊天样式 + 和现在比 + 恢复按钮
+async function tlPreview(snap, box, agent){
+  box.innerHTML = '<div class="empty">读取…</div>';
+  let r; try { r = await api(`/api/timeline/view?snap=${snap}&limit=300`); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  TL.pv = r; const s = r.snap, d = r.diff;
+  const smp = (xs, cls) => xs.map(e => `<div class="ln ${cls}" title="${esc(e.text)}">${e.role === "user" ? "你：" : e.role === "tool" ? "工具：" : ""}${esc(e.text.slice(0, 160))}</div>`).join("");
+  box.innerHTML = `<h3>${logo(s.agent)} <span style="flex:1">${fullTime(s.at)} 的版本</span><span class="tag">${r.total} 条</span><span class="tag">${kb(s.size)}</span></h3>
+    <div class="diff">${d.identical ? `<span class="tag ok">${ic("check")} 和现在一模一样</span>` : !d.exists ? `<span class="tag warn">现在这个会话已经没了</span>：恢复就能找回来`
+      : `前 <b>${d.same}</b> 条和现在一样；${d.only_now ? `之后现在多了 <b>${d.only_now}</b> 条` : "现在没有更多"}${d.only_then ? `；这一版里有 <b>${d.only_then}</b> 条现在没了` : ""}`}
+      ${!d.identical && (d.then_samples.length || d.now_samples.length) ? `<details style="margin-top:4px"><summary class="dim" style="cursor:pointer">看差别</summary><div class="dl">
+        <div><b>只在这一版（${d.only_then}）</b>${smp(d.then_samples, "old") || '<div class="dim">—</div>'}</div><div><b>只在现在（${d.only_now}）</b>${smp(d.now_samples, "new") || '<div class="dim">—</div>'}</div></div></details>` : ""}</div>
+    <div class="acts2"><button class="primary big" id="pvClaude" title="另存成一个新的 Claude Code 会话（新 id，标题带「恢复 @时间」）；登记进桌面端当前账号">${ic("claude", "logo")} 恢复到 Claude</button>
+      ${s.agent === "codex" ? `<button id="pvCodex" title="把 Codex 里这个会话换回这一版（先备份现在的）">${ic("codex", "logo")} 恢复到 Codex</button>` : ""}
+      ${d.exists && !d.identical && s.agent === "claude" ? `<button id="pvRep" title="用这一版替换现在的会话（先把现在的备份）">${ic("undo")} 替换当前…</button>` : ""}
+      <span class="menu" id="pvEx"><button class="ghost" id="pvExB" title="导出这一版">${ic("file")} 导出</button><div class="list"><button data-f="md">Markdown</button><button data-f="html">HTML</button></div></span></div>
+    <div class="pv" style="max-height:calc(100vh - 470px);min-height:200px">${r.cut ? `<div class="dim" style="text-align:center;font-size:12px">前面还有 ${r.cut} 条没显示（恢复 / 导出是完整的）</div>` : ""}${chatHtml(r.entries, s.agent)}</div>`;
+  $("#pvClaude").onclick = () => tlRestore([s.id], "copy", "claude");
+  const cx = $("#pvCodex"); if (cx) cx.onclick = () => tlReplaceDlg([s.id], "codex");
+  const rp = $("#pvRep"); if (rp) rp.onclick = () => tlReplaceDlg([s.id], "claude");
+  $("#pvExB").onclick = e => { e.stopPropagation(); $("#pvEx").classList.toggle("open"); };
+  $$("#pvEx [data-f]").forEach(b => b.onclick = () => { $("#pvEx").classList.remove("open"); ssExport([{snap: s.id}], b.dataset.f, "version"); });
+  const pv = box.querySelector(".pv"); pv.scrollTop = pv.scrollHeight;
+}
+async function tlRestore(snaps, mode, target){
+  try { const r = await api("/api/timeline/restore", {snaps, mode, target, desktop: true});
+    if (r.ok === false && !(r.made || []).length) return toast("❌ " + (r.error || (r.errors || [])[0] || "没恢复成"), 6000);
+    if (mode === "copy" && target === "claude") { madeDlg("✅ 已恢复到 Claude", r); SS.d = null; treeLoad(); return; }
+    const q = (r.results || []).filter(x => x.deferred);
+    toast(q.length ? "⏸ " + (q[0].hint || "桌面端开着，已排队：退出后自动做") : "✅ 已换回这一版（换之前的版本在备份库里，可以撤回）", 7000);
+    poll(); TL.vers = null; R.timeline();
+  } catch(e){ toast("❌ " + e.message, 6000); }
+}
+function tlReplaceDlg(snaps, target){
+  const app = target === "codex" ? "Codex" : target === "claude" ? "Claude" : "Claude / Codex", tgt = target === "codex" ? "codex" : "claude";
+  openDlg(target === "codex" ? "恢复到 Codex" : "替换当前会话", `<div>用备份里的版本<b>替换</b> ${snaps.length} 个${app}会话现在的内容。</div>
+    <ul style="font-size:12.5px;margin:8px 0;padding-left:20px"><li>替换前先把现在的版本存进会话备份库，并记进操作记录，可以撤回。</li><li>${app} 桌面端开着的话会排队，等它完全退出后再换。</li>
+    <li>不想动现在的会话：用「恢复到 Claude」另存一份新的更稳妥。</li></ul>
+    <label class="chk"><input type="checkbox" id="rpOk"> 我知道会替换现在的会话内容</label>`,
+    `<button onclick="closeDlg()">取消</button><button class="primary danger" id="rpGo" disabled>替换</button>`);
+  $("#rpOk").onchange = e => $("#rpGo").disabled = !e.target.checked;
+  $("#rpGo").onclick = () => { closeDlg(); tlRestore(snaps, "replace", tgt); };
+}
+// 恢复 / 导入之后：新会话的继续命令、桌面端登记情况、撤回
+function madeDlg(title, r){
+  const made = r.made || [], dj = r.desktop;
+  const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。`
+    : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
+  openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）：</div>` : ""}
+    ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}</div><div class="dim" style="font-size:12px;word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
+      <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}
+    <div class="dim" style="font-size:12.5px;margin-top:6px">${dnote}</div>
+    ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
+    `<button id="mdUndo" class="ghost">${ic("undo")} 撤回</button><span style="flex:1"></span><button onclick="closeDlg()">关闭</button><button class="primary" id="mdGo">${ic("list")} 去会话列表看</button>`);
+  $$("#dlgBody [data-cp]").forEach(b => b.onclick = () => copyText(b.dataset.cp));
+  $$("#dlgBody [data-open]").forEach(b => b.onclick = async () => { try { const o = await api("/api/sessions/open", {agent: "claude", id: b.dataset.open}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } });
+  $("#mdGo").onclick = () => { closeDlg(); TL.cur = null; SS.cur = made[0] ? {agent: "claude", id: made[0].id} : null; go("sessions"); };
+  $("#mdUndo").onclick = () => confirmDlg("撤回", "把刚才新建的会话挪进回收站（不直接删），桌面端列表里登记的那一条也撤掉。", "撤回", async () => {
+    try { const x = await api("/api/sessions/undo", {op: r.op}); closeDlg(); doneOrQueued(x, "已撤回"); SS.d = null; treeLoad(); if (R[PAGE]) R[PAGE](); } catch(e){ toast("❌ " + e.message); } });
+}
+
+// 全部会话：选一个时间点
+async function tlGlobal(){
+  const pg = $("#pg-timeline");
+  if (!TL.runs) { pg.innerHTML = tlHead("") + '<div class="emp">读取…</div>';
+    try { TL.runs = (await api("/api/timeline/runs")).items.slice().reverse(); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+    if (TL.ri < 0 || TL.ri >= TL.runs.length) TL.ri = TL.runs.length - 1; TL.pt = null; }
+  const runs = TL.runs;
+  pg.innerHTML = tlHead("每一格是一次备份。选一个时间点，看那时候每个会话是什么样（只读），勾选几个一起「恢复到 Claude」（另存成新会话），或者换回那时的版本。左侧分组、顶栏搜索都能筛。") +
+    (runs.length ? `<div class="card">${tlPicker(runs.map(r => r.at), TL.ri, `${fullTime(runs[TL.ri].at)} · 那次存了 ${runs[TL.ri].n} 个新版本`)}</div>
+      <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
+        <div class="bar" style="padding:8px 10px 0;margin:0"><span class="seg" id="tlSt"></span><span class="sp"></span></div>
+        <div class="scroll" id="tlList" style="border:0;border-radius:0;max-height:calc(100vh - 420px)"></div><div class="batch" id="tlBatch"></div></div></div>
+      <div class="grip" id="tlGrip"></div><div class="r"><div class="card" id="tlPv"><div class="emp">${ic("messages")}点左边一个会话，预览它在这个时间点的对话</div></div></div></div>`
+      : `<div class="card"><div class="emp">${ic("history")}会话备份库里还没有版本。自动备份缺省每 10 分钟一次；也可以现在就备份。<div><button class="primary" id="tlBk">${ic("download")} 立即备份</button></div></div></div>`);
+  tlWireHead();
+  const bk = $("#tlBk"); if (bk) bk.onclick = async () => { bk.disabled = true; try { await api("/api/backup/now", {}); } catch(e){ toast("❌ " + e.message); } TL.runs = null; tlGlobal(); };
+  if (!runs.length) return;
+  const set = (i, quick) => { TL.ri = i; if (quick) { $(".tlnow").textContent = `${fullTime(runs[i].at)} · 那次存了 ${runs[i].n} 个新版本`; return; } TL.pt = null; TL.sel.clear(); tlGlobal(); };
+  tlWirePicker(runs.map(r => r.at), set);
+  dragGrip($("#tlGrip"), () => $("#pg-timeline .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-timeline .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
+  if (!TL.pt) {
+    const nx = runs[TL.ri + 1], t = Math.min(runs[TL.ri].at + 600, nx ? nx.at - 0.001 : Infinity);
+    $("#tlList").innerHTML = '<div class="empty">读取…</div>';
+    try { TL.pt = await api("/api/timeline/point?t=" + (isFinite(t) ? t : runs[TL.ri].at + 600)); } catch(e){ $("#tlList").innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  }
+  tlList();
+}
+function tlVisible(){
+  const q = SS.q.trim().toLowerCase();
+  return (TL.pt ? TL.pt.items : []).filter(x => (TL.state === "all" || x.state === TL.state) && (!SS.agent || x.agent === SS.agent) &&
+    (!TR.sel || trMatch({gacct: tlGacct(x), cwd: x.cwd})) && (!q || [x.title, x.cwd, x.id].some(v => String(v || "").toLowerCase().includes(q))));
+}
+function tlList(){
+  if (!$("#tlList") || !TL.pt) return;
+  const c = TL.pt.counts, ST_ = {changed: ["warn", "后来变过"], gone: ["bad", "现在没了"], same: ["ok", "没变"]};
+  $("#tlSt").innerHTML = [["changed", `后来变过 ${c.changed}`], ["gone", `现在没了 ${c.gone}`], ["same", `没变 ${c.same}`], ["all", "全部"]].map(([v, t]) => `<button data-v="${v}" class="${TL.state === v ? "on" : ""}">${t}</button>`).join("");
+  $$("#tlSt button").forEach(b => b.onclick = () => { TL.state = b.dataset.v; tlList(); });
+  const rows = tlVisible();
+  for (const k of [...TL.sel]) if (!rows.some(x => x.snap === k)) TL.sel.delete(k);
+  $("#tlList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="tlAll"></th><th>会话</th><th>项目</th><th>那时的版本</th><th class="n">消息</th><th></th></tr>${rows.map(x => `<tr class="click${TL.pv && TL.pv.snap.id === x.snap ? " sel" : ""}" data-s="${x.snap}">
+      <td><input type="checkbox" data-c="${x.snap}" ${TL.sel.has(x.snap) ? "checked" : ""}></td><td class="tl"><div class="ell">${logo(x.agent)} ${esc(x.title)}</div></td>
+      <td class="ell" title="${esc(x.cwd || "")}">${esc(projName(x.cwd))}</td><td class="n">${when(x.at)}</td><td class="n">${x.msgs ?? "—"}</td>
+      <td><span class="tag ${ST_[x.state][0]}">${ST_[x.state][1]}${x.later_versions ? " ·" + x.later_versions : ""}</span> <button class="ghost" data-one="${esc(x.agent + ":" + x.id)}" title="看这个会话的全部版本" style="padding:1px 5px">${ic("history")}</button></td></tr>`).join("")}</table>`
+    : `<div class="emp">${ic("history")}这个时间点没有符合筛选的会话${TL.state !== "all" ? "<div><button id='tlAllSt'>看全部</button></div>" : ""}</div>`;
+  $$("#tlList [data-c]").forEach(cb => { cb.onclick = e => e.stopPropagation(); cb.onchange = () => { cb.checked ? TL.sel.add(+cb.dataset.c) : TL.sel.delete(+cb.dataset.c); tlBatch(); }; });
+  $$("#tlList tr[data-s]").forEach(tr => tr.onclick = () => { $$("#tlList tr[data-s]").forEach(t => t.classList.toggle("sel", t === tr)); const x = rows.find(r => r.snap === +tr.dataset.s); tlPreview(+tr.dataset.s, $("#tlPv"), x.agent); });
+  $$("#tlList [data-one]").forEach(b => b.onclick = e => { e.stopPropagation(); const [a, ...i] = b.dataset.one.split(":"); tlOpen(a, i.join(":")); });
+  const as = $("#tlAllSt"); if (as) as.onclick = () => { TL.state = "all"; tlList(); };
+  const all = $("#tlAll"); if (all) { all.checked = rows.length && rows.every(x => TL.sel.has(x.snap)); all.onchange = () => { rows.forEach(x => all.checked ? TL.sel.add(x.snap) : TL.sel.delete(x.snap)); tlList(); }; }
+  tlBatch();
+}
+function tlBatch(){
+  const n = TL.sel.size, b = $("#tlBatch"); if (!b) return;
+  const pick = (TL.pt ? TL.pt.items : []).filter(x => TL.sel.has(x.snap));
+  b.innerHTML = n ? `<span>已选 ${n} 个</span><span style="flex:1"></span><button id="tlEx">${ic("file")} 导出</button>${pick.every(x => x.state !== "gone") ? `<button id="tlRep">${ic("undo")} 换回那时的版本…</button>` : ""}<button class="primary" id="tlGo">${ic("claude", "logo")} 恢复到 Claude（${n}）</button>`
+    : `<span class="dim">勾选几个，一起恢复到这个时间点</span><span style="flex:1"></span><span class="dim">${tlVisible().length} 个</span>`;
+  if (!n) return;
+  $("#tlGo").onclick = () => tlRestore([...TL.sel], "copy", "claude");
+  $("#tlEx").onclick = () => openDlg("导出这些版本", `导出 ${n} 个会话在 ${fullTime(TL.runs[TL.ri].at)} 时的版本。`, `<button onclick="closeDlg()">取消</button><button id="tx2">HTML</button><button class="primary" id="tx1">Markdown</button>`) ||
+    ($("#tx1").onclick = () => ssExport([...TL.sel].map(s => ({snap: s})), "md", "timeline"), $("#tx2").onclick = () => ssExport([...TL.sel].map(s => ({snap: s})), "html", "timeline"));
+  const rp = $("#tlRep"); if (rp) rp.onclick = () => tlReplaceDlg([...TL.sel], "claude-or-codex");
+}
+
+// ---------- 导入 .md / .html ----------
+const IM = {files: [], plan: null};
+async function imDlg(){
+  IM.files = []; IM.plan = null;
+  if (!SY.st) { try { SY.st = await api("/api/status"); } catch(e){} }
+  const projs = (SS.d && SS.d.projects) || [];
+  openDlg("导入 .md / .html", `<div class="dim" style="font-size:12.5px">把导出的 .md / .html 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。</div>
+    <input type="file" id="imF" accept=".md,.markdown,.html,.htm" multiple style="margin-top:10px;width:100%">
+    <div class="setrow"><div class="sl"><div><b>放进哪个项目</b><div class="sd">留空 = 用文件里记的工作目录（没有就放家目录）</div></div></div><input id="imCwd" list="imProj" placeholder="（用文件里记的）" style="width:300px"><datalist id="imProj">${projs.map(p => `<option value="${esc(p)}">`).join("")}</datalist></div>
+    <div class="setrow" style="border:0"><div class="sl"><div><b>登记进 Claude 桌面端</b><div class="sd">登记进当前账号 ${acm((SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).rid, (SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).email_masked || "")} 的会话列表；桌面端开着会排队</div></div></div>${sw("imDesk", true)}</div>
+    <div id="imPv"></div>`, `<button onclick="closeDlg()">取消</button><button id="imDry" disabled>预览</button><button class="primary" id="imGo" disabled>导入</button>`);
+  $("#imF").onchange = async e => {
+    IM.files = await Promise.all([...e.target.files].map(f => f.text().then(text => ({name: f.name, text}))));
+    IM.plan = null; $("#imGo").disabled = true; $("#imDry").disabled = !IM.files.length; if (IM.files.length) imDry();
+  };
+  $("#imDry").onclick = imDry;
+  $("#imGo").onclick = async () => {
+    $("#imGo").disabled = true;
+    try { const r = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), desktop: $("#imDesk").checked, dry: false});
+      madeDlg(r.ok ? "✅ 已导入" : "⚠ 导入完成（有错）", r); SS.d = null; treeLoad(); if (PAGE === "sessions") R.sessions(); }
+    catch(e){ toast("❌ " + e.message, 6000); $("#imGo").disabled = false; }
+  };
+}
+async function imDry(){
+  const box = $("#imPv"); box.innerHTML = '<div class="empty">读取…</div>';
+  try { IM.plan = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), dry: true}); }
+  catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  const rows = IM.plan.rows || [];
+  box.innerHTML = `<div class="dim" style="font-size:12.5px;margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop())}：${esc(r.error)}</div>`
+    : `<div class="mk"><div class="tl">${esc(r.title)} ${r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>'} ${r.agent === "codex" ? '<span class="tag codex">原来是 Codex</span>' : ""}</div>
+      <div class="dim" style="font-size:12px">${r.messages} 条消息 · ${kb(r.size)} · 放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div>
+      <div class="pv" style="max-height:160px;margin-top:6px">${chatHtml((r.preview || []).slice(0, 6), r.agent)}</div></div>`).join("")}`;
+  $("#imGo").disabled = !rows.some(r => !r.error);
+}
+
 // ---------- 备份与还原 ----------
+const BK_UNIT = {min: "分钟", hour: "小时", day: "天"};
+const inTxt = t => { const d = t - Date.now() / 1000; return d <= 30 ? "马上" : d < 3600 ? Math.round(d / 60) + " 分钟后" : d < 86400 ? (d / 3600).toFixed(1) + " 小时后" : (d / 86400).toFixed(1) + " 天后"; };
 R.backups = async () => {
   const pg = $("#pg-backups");
   let bk, led, jobs, bs, snaps, trash, ops, s;
   try { [bk, led, jobs, bs, snaps, trash, ops, s] = await Promise.all([api("/api/backups"), api("/api/codex/ledgers"), api("/api/jobs"), api("/api/sessions/backup-status"),
       api("/api/sessions/snapshots"), api("/api/sessions/trash"), api("/api/sessions/ops"), api("/api/settings")]); }
   catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
-  const waiting = jobs.filter(j => j.state === "waiting");
+  const waiting = jobs.filter(j => j.state === "waiting"), sc = bs.sched || {};
   const JST = {waiting: ["warn", "排队中"], done: ["ok", "做完了"], failed: ["bad", "失败"], cancelled: ["", "已取消"]};
-  pg.innerHTML = `<h2>${ic("download")}备份与还原</h2><p class="sub">每次改动之前都先备份。这里能撤回同步 / 导入 / 会话操作，从回收站还原，或者从会话备份库恢复某个版本。</p>
+  pg.innerHTML = `<h2>${ic("download")}备份</h2><p class="sub">每次改动之前都先备份。这里能撤回同步 / 导入 / 会话操作，从回收站还原，或者从会话备份库恢复某个版本。</p>
     <div class="card" id="bkJobs"><h3>排队中的改动 <span class="tag ${waiting.length ? "warn" : ""}">${waiting.length}</span></h3>
       ${jobs.length ? `<table class="t">${jobs.slice().reverse().slice(0, 12).map(j => `<tr><td>${esc(j.title)}</td><td>${when(j.queued)}</td><td><span class="tag ${(JST[j.state] || [""])[0]}">${(JST[j.state] || ["", j.state])[1]}</span></td>
         <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td>${j.state === "waiting" ? `<button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
         : '<div class="dim" style="font-size:12.5px">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
-    <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkNow">${ic("download")} 立即备份</button></h3>
-      <div class="kv"><div>位置</div><div><code>${esc(bs.db)}</code></div><div>内容</div><div>${bs.sessions} 个会话 · ${bs.snapshots} 个版本 · 原始 ${kb(bs.raw_bytes)}，数据库文件 ${kb(bs.db_bytes)}</div>
-        <div>上次备份</div><div>${bs.last ? when(bs.last) : "还没备份过"}${bs.running ? ' <span class="tag warn">正在备份</span>' : ""}${bs.error ? ` <span class="tag bad">${esc(bs.error)}</span>` : ""}</div></div>
-      <div class="setrow" style="margin-top:6px"><div class="sl">${ic("sync")}<div><b>定时自动备份</b><div class="sd">只备份变过的会话（按修改时间 + 内容去重），完整原始 jsonl。</div></div></div>
-        <select id="bkHours">${[1,3,6,12,24].map(h => `<option value="${h}" ${(s.session_backup_hours || 6) == h ? "selected" : ""}>每 ${h} 小时</option>`).join("")}</select>${sw("bkAuto", s.session_backup_auto)}</div>
+    <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkPrune" title="按保留规则清掉旧版本，再压缩数据库">${ic("trash")} 清理旧版本</button><button class="primary" id="bkNow">${ic("download")} 立即备份</button></h3>
+      <div class="sched"><div>自动备份<b>${sc.auto ? `每 ${sc.every} ${BK_UNIT[sc.unit] || sc.unit}` : "已关"}</b>${sc.running || bs.running ? '<span class="tag warn">正在备份</span>' : ""}</div>
+        <div>上次<b>${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没备份过"}</b>${sc.last_error ? `<span class="tag bad" title="${esc(sc.last_error)}">失败</span>` : sc.last_result ? `新版本 ${sc.last_result.snapshots} · 看了 ${sc.last_result.files} 个` : ""}</div>
+        <div>下次<b>${sc.auto ? sc.next ? inTxt(sc.next) : "马上" : "—"}</b>${sc.auto ? `${fullTime(sc.next || Date.now() / 1000).slice(5, 16)}` : "打开自动备份才会定时跑"}</div>
+        <div>数据库文件<b>${kb(bs.db_bytes)}</b>${bs.sessions} 个会话 · ${bs.snapshots} 个版本</div></div>
+      <div class="kv"><div>位置</div><div><code>${esc(bs.db)}</code></div><div>存储</div><div>记录原文共 ${kb(bs.raw_bytes)}，实际只存了 ${kb(bs.stored_bytes)}（每次只存追加的部分 + 相同内容只存一份 + 压缩）${bs.error ? ` <span class="tag bad">${esc(bs.error)}</span>` : ""}</div></div>
+      <div class="setrow" style="margin-top:6px"><div class="sl">${ic("sync")}<div><b>定时自动备份</b><div class="sd">缺省开、每 10 分钟；最短 5 分钟。只备份变过的会话，后台低优先级跑；正在跑就跳过这一轮；睡眠 / 关机错过了，醒来补一次；失败才弹通知。</div></div></div>
+        <span class="numu"><input type="number" id="bkEvery" min="1" value="${esc(s.session_backup_every ?? 10)}"><select id="bkUnit">${Object.entries(BK_UNIT).map(([k, v]) => `<option value="${k}" ${s.session_backup_unit === k ? "selected" : ""}>${v}</option>`).join("")}</select></span>${sw("bkAuto", s.session_backup_auto)}</div>
+      <div class="setrow" style="border:0"><div class="sl">${ic("archive")}<div><b>保留多久</b><div class="sd">最近 N 天的版本全留；再往前到 M 天每天留最后一版；更早的每周一版。每个会话最新的一版永远留着。点「清理旧版本」才按这个删。</div></div></div>
+        <span class="numu">全留 <input type="number" id="bkKeepAll" min="1" value="${esc(s.retention_all_days ?? 7)}"> 天，每天一版到 <input type="number" id="bkKeepDay" min="1" value="${esc(s.retention_daily_days ?? 90)}"> 天</span></div>
       ${snaps.items.length ? `<details style="margin-top:6px"><summary class="dim" style="cursor:pointer;font-size:12.5px">最近的 ${Math.min(snaps.items.length, 50)} 个版本</summary><div class="scroll" style="max-height:300px;margin-top:6px"><table class="t"><tr><th>会话</th><th>备份时间</th><th class="n">大小</th><th>原文件</th><th></th></tr>
-        ${snaps.items.slice(0, 50).map(x => `<tr><td class="tl">${logo(x.agent)} <span class="ell" style="display:inline-block;vertical-align:bottom;max-width:300px">${esc(x.title || x.sid)}</span></td><td>${when(x.at)}</td><td class="n">${kb(x.size)}</td><td>${x.exists ? '<span class="tag ok">在</span>' : '<span class="tag warn">不在了</span>'}</td><td><button data-snap="${x.id}">恢复</button></td></tr>`).join("")}</table></div></details>` : ""}</div>
+        ${snaps.items.slice(0, 50).map(x => `<tr><td class="tl">${logo(x.agent)} <span class="ell" style="display:inline-block;vertical-align:bottom;max-width:300px">${esc(x.title || x.sid)}</span></td><td>${when(x.at)}</td><td class="n">${kb(x.size)}</td><td>${x.exists ? '<span class="tag ok">在</span>' : '<span class="tag warn">不在了</span>'}</td><td style="white-space:nowrap"><button data-tlo="${esc(x.agent + ":" + x.sid)}">${ic("history")} 时间线</button></td></tr>`).join("")}</table></div></details>` : ""}</div>
     <div class="card"><h3>${ic("trash")}回收站 <span class="tag">${trash.items.length}</span></h3>
       ${trash.items.length ? `<table class="t">${trash.items.map(t => `<tr><td><code>${esc(t.id)}</code></td><td>${when(t.time)}</td><td>${t.items.length} 个会话（${t.items.filter(i => i.agent === "claude").length} Claude / ${t.items.filter(i => i.agent === "codex").length} Codex）</td>
         <td>${t.restored ? `<span class="tag ok">已还原</span>` : ""}</td><td style="white-space:nowrap">${t.restored ? "" : `<button data-tr="${esc(t.id)}">${ic("undo")} 还原</button> `}<button class="ghost danger" data-tp="${esc(t.id)}">彻底删除</button></td></tr>`).join("")}</table>`
@@ -1477,10 +1915,15 @@ R.backups = async () => {
       <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
       ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有导入过。</div>'}</div></div>`;
   $$("[data-cj]").forEach(b => b.onclick = async () => { await api("/api/jobs/cancel", {id: b.dataset.cj}); toast("已取消"); poll(); R.backups(); });
-  $("#bkNow").onclick = async () => { $("#bkNow").disabled = true; try { const r = await api("/api/sessions/backup", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } R.backups(); };
-  $("#bkAuto").onchange = e => saveSetting({session_backup_auto: e.target.checked});
-  $("#bkHours").onchange = e => saveSetting({session_backup_hours: +e.target.value});
-  $$("[data-snap]").forEach(b => b.onclick = () => snapRestore(+b.dataset.snap));
+  $("#bkNow").onclick = async () => { $("#bkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } R.backups(); };
+  $("#bkAuto").onchange = async e => { await saveSetting({session_backup_auto: e.target.checked}); R.backups(); };
+  const bkEv = async () => { const r = await saveSetting({session_backup_every: +$("#bkEvery").value, session_backup_unit: $("#bkUnit").value}); R.backups(); };
+  $("#bkEvery").onchange = bkEv; $("#bkUnit").onchange = bkEv;
+  const bkKeep = async () => { await saveSetting({retention_all_days: +$("#bkKeepAll").value, retention_daily_days: +$("#bkKeepDay").value}); R.backups(); };
+  $("#bkKeepAll").onchange = bkKeep; $("#bkKeepDay").onchange = bkKeep;
+  $("#bkPrune").onclick = () => confirmDlg("清理旧版本", `按保留规则清掉旧版本：最近 <b>${s.retention_all_days ?? 7}</b> 天全留，<b>${s.retention_daily_days ?? 90}</b> 天内每天留最后一版，更早的每周一版；每个会话最新的一版永远留着。然后压缩数据库（现在 ${kb(bs.db_bytes)}）。<div class="dim" style="font-size:12px;margin-top:6px">只动备份库，不碰 Claude / Codex 的会话文件。</div>`, "清理", async () => {
+    try { const r = await api("/api/backup/prune", {vacuum: true}); closeDlg(); toast(`✅ 清掉 ${r.snapshots_dropped} 个旧版本，数据库 ${kb(r.db_before)} → ${kb(r.db_after)}`, 6000); R.backups(); } catch(e){ toast("❌ " + e.message); } });
+  $$("[data-tlo]").forEach(b => b.onclick = () => { const [a, ...i] = b.dataset.tlo.split(":"); tlOpen(a, i.join(":")); });
   $$("[data-tr]").forEach(b => b.onclick = () => confirmDlg("从回收站还原", `把 <code>${esc(b.dataset.tr)}</code> 里的会话放回去：原位置空着就放回原位；原位置已经有文件了就另存一份新的（不覆盖）。桌面端开着会排队。`, "还原", async () => {
     const r = await api("/api/sessions/trash-restore", {batch: b.dataset.tr}); closeDlg(); doneOrQueued(r, `还原了 ${r.restored || 0} 个${(r.copies || []).length ? `（${r.copies.length} 个另存为新副本）` : ""}`); R.backups(); }));
   $$("[data-tp]").forEach(b => b.onclick = () => {
@@ -1517,7 +1960,9 @@ R.settings = async () => {
     <div class="card"><h3>同步与导入</h3><div class="setlist">
       ${setRow("sync", "自动同步 Claude 会话", "桌面端没开时把别的账号新出现的会话补进当前账号。CC Msg 里也开了的话开一个就够", sw("stSync", s.auto_sync))}
       ${setRow("shield", "导入 Codex 时登记进 Codex 导入记录", "防止 Codex 桌面端把导过去的会话再导回来（会改 ~/.codex 里那个文件，先备份）", sw("stMark", s.codex_mark_imported))}
-      ${setRow("history", "会话定时自动备份", "把 Claude Code / Codex 的会话记录增量备份进 sessions.sqlite", `<select id="stBkH" ${s.session_backup_auto ? "" : "disabled"}>${[1,3,6,12,24].map(h => `<option value="${h}" ${(s.session_backup_hours || 6) == h ? "selected" : ""}>每 ${h} 小时</option>`).join("")}</select>${sw("stBk", s.session_backup_auto)}`)}</div></div>
+      ${setRow("history", "会话自动备份", "把 Claude Code / Codex 的会话增量备份进 sessions.sqlite（时间线、恢复都靠它）。缺省开、每 10 分钟，最短 5 分钟；失败才弹通知", `<span class="numu"><input type="number" id="stBkE" min="1" value="${esc(s.session_backup_every ?? 10)}" ${s.session_backup_auto ? "" : "disabled"}><select id="stBkU" ${s.session_backup_auto ? "" : "disabled"}>${Object.entries(BK_UNIT).map(([k, v]) => `<option value="${k}" ${s.session_backup_unit === k ? "selected" : ""}>${v}</option>`).join("")}</select></span>${sw("stBk", s.session_backup_auto)}`)}</div></div>
+    <div class="card"><h3>隐私</h3><div class="setlist">
+      ${setRow("eye", "总是显示完整账号", "缺省关：账号打码显示，点眼睛临时显示（不记住，重开就又打码）。打开后每次启动都直接显示。完整账号只从本机接口（127.0.0.1 + 口令）取，不写日志；诊断报告里永远是打码的", sw("stFull", s.show_full_accounts))}</div></div>
     <div class="card"><h3>更新</h3><div class="setlist">
       ${setRow("refresh", "自动检查更新", "每 6 小时最多查一次 GitHub 发布页。<b>只提示，不会自动安装</b>：有新版本时托盘弹一次通知、按钮上出红点，点「立即更新」才下载安装", sw("stUpd", s.update_auto))}
       ${setRow("info", `当前版本 v${esc(u.current)}`, u.checked ? `上次检查 ${when(u.checked)}：${u.error ? esc(u.error) : u.newer ? `有新版本 v${esc(u.latest)}${u.ignored === u.latest ? "（已忽略）" : ""}` : "已经是最新"}` : "还没检查过",
@@ -1529,8 +1974,10 @@ R.settings = async () => {
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
   bind("#stMark", "codex_mark_imported"); bind("#stUpd", "update_auto");
-  $("#stBk").onchange = e => { $("#stBkH").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
-  $("#stBkH").onchange = e => saveSetting({session_backup_hours: +e.target.value});
+  $("#stBk").onchange = e => { $("#stBkE").disabled = $("#stBkU").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
+  const stEv = async () => { const r = await saveSetting({session_backup_every: +$("#stBkE").value, session_backup_unit: $("#stBkU").value}); if (!r) R.settings(); };
+  $("#stBkE").onchange = stEv; $("#stBkU").onchange = stEv;
+  $("#stFull").onchange = e => { saveSetting({show_full_accounts: e.target.checked}); rvSet(e.target.checked); };
   $("#setUpd").onclick = () => updOpen(true);
   $("#stRev").onclick = () => api("/api/reveal", {path: st.home}).catch(e => toast("❌ " + e.message));
 };
@@ -1557,14 +2004,14 @@ R.diag = async () => {
       <div class="dgls">${(a.dirs || []).map(x => `<div>${x.exists ? "✓" : "✗"} ${esc(x.label)}：${esc(x.path)}${x.recent ? " · 最近写入 " + when(x.recent) : ""}</div>`).join("")}</div>
       ${(a.notes || []).length ? `<div class="dgls">${a.notes.map(n => `<div>· ${esc(n)}</div>`).join("")}</div>` : ""}</div>`; };
   const acc = d.accounts || {}, w = d.watch || {};
-  const accRow = (lab, v, how) => `<tr><td>${lab}</td><td>${esc(v || "—")}</td><td class="dim">${esc(how || "")}</td></tr>`;
+  const accRow = (lab, v, how, rid) => `<tr><td>${lab}</td><td>${rid && v ? acm(rid, v) + " " + eyeB() : esc(v || "—")}</td><td class="dim">${esc(how || "")}</td></tr>`;
   const dirRow = (lab, which, cur) => `<div class="dgrow"><b style="width:120px">${lab}</b><input data-dir="${which}" value="${esc(cur)}"><button data-pick="${which}">选择…</button><button data-save="${which}">保存</button><button class="ghost" data-clr="${which}" title="恢复自动检测">自动</button></div>`;
   pg.innerHTML = `<h2>${ic("activity")}诊断</h2><p class="sub">本程序怎么找到 Claude / Codex、用的哪些目录、当前是哪个账号。报告里只有打码后的账号，没有 token / key，可以直接贴给别人看。</p>
     <div class="grid2"><div class="card"><h3>${ic("ok")}自检<span class="sp"></span><button id="dgSc">${ic("refresh")} 重新自检</button><button class="ghost" id="dgScCp" title="复制自检结果">${ic("copy")}</button></h3><div id="dgScBox">${scHtml(sc)}</div></div>
-      <div><div class="card"><h3>${ic("users")}账号（打码）</h3><table class="t">
-        ${accRow("Claude 桌面端", (acc.desktop || {}).email_masked || short((acc.desktop || {}).accountUuid), (acc.desktop || {}).via && "认自 " + acc.desktop.via)}
-        ${accRow("Claude Code 命令行", (acc.cli || {}).email_masked || short((acc.cli || {}).accountUuid), (acc.cli || {}).via && "认自 " + acc.cli.via)}
-        ${accRow("Codex", (w.codex || {}).label, "auth.json + config.toml")}</table>
+      <div><div class="card"><h3>${ic("users")}账号（打码）<span class="sp"></span>${eyeB()}</h3><table class="t">
+        ${accRow("Claude 桌面端", (acc.desktop || {}).email_masked || short((acc.desktop || {}).accountUuid), (acc.desktop || {}).via && "认自 " + acc.desktop.via, (acc.desktop || {}).rid)}
+        ${accRow("Claude Code 命令行", (acc.cli || {}).email_masked || short((acc.cli || {}).accountUuid), (acc.cli || {}).via && "认自 " + acc.cli.via, (acc.cli || {}).rid)}
+        ${accRow("Codex", (w.codex || {}).label, "auth.json + config.toml", (w.codex || {}).rid)}</table>
         <div class="dim" style="font-size:12px;margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
       <div class="card">${ag("claude", "Claude")}${ag("codex", "Codex")}</div></div></div>
     <div class="card"><h3>${ic("folder")}数据目录</h3>
@@ -1636,8 +2083,11 @@ async function updInstall(){
 
 // ---------- 启动 ----------
 (async () => {
-  const want = new URLSearchParams(location.search).get("page") || location.hash.replace("#", "") || store.get("ccss.page") || "sync";
-  go(R[want] ? want : "sync");
+  const want = new URLSearchParams(location.search).get("page") || location.hash.replace("#", "") || store.get("ccss.page") || "sessions";
+  try { const st = await api("/api/settings"); if (st.show_full_accounts) await rvSet(true); } catch(e){}
+  rvPaint();
+  await treeLoad();
+  go(R[want] ? want : "sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);
   poll();
   try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}

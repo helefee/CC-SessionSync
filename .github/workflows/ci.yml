@@ -48,7 +48,7 @@ jobs:
           node-version: "22"
       - name: install Claude Code
         run: npm install -g @anthropic-ai/claude-code
-      - name: verify claude --resume opens an imported Codex conversation
+      - name: verify claude --resume opens imported, restored (timeline) and md/html-imported sessions
         run: python tools/verify_resume.py "" 8799
 
   build:

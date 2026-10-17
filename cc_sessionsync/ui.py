@@ -49,6 +49,43 @@ def _mask_accounts(acc: dict) -> dict:
     return out
 
 
+def backup_settings() -> dict:
+    """自动备份用的设置；0.2.0 设过 session_backup_hours、又没设新键的，按原来的小时数。"""
+    s = settings.load()
+    try:
+        raw = json.loads(settings.FILE.read_text(encoding="utf-8"))
+    except Exception:
+        raw = {}
+    if isinstance(raw, dict) and "session_backup_every" not in raw and raw.get("session_backup_hours") is not None:
+        s["_legacy_hours"] = raw["session_backup_hours"]
+    return s
+
+
+def _check_backup_settings(ch: dict) -> None:
+    from . import sessions
+    if "session_backup_unit" in ch and ch["session_backup_unit"] not in sessions.UNITS:
+        raise ValueError("单位只能是 分钟 / 小时 / 天")
+    if "session_backup_every" in ch or "session_backup_unit" in ch:
+        s = settings.load()
+        every = ch.get("session_backup_every", s.get("session_backup_every"))
+        unit = ch.get("session_backup_unit", s.get("session_backup_unit") or "min")
+        try:
+            every = float(every)
+        except (TypeError, ValueError):
+            raise ValueError("间隔要填数字")
+        if every <= 0 or every * sessions.UNITS[unit] < sessions.MIN_INTERVAL:
+            raise ValueError("间隔最少 5 分钟")
+        ch["session_backup_every"] = int(every) if every == int(every) else every
+        ch["session_backup_unit"] = unit
+        ch["session_backup_hours"] = None                      # 换成新键了，老的删掉
+    for k in ("retention_all_days", "retention_daily_days"):
+        if k in ch:
+            try:
+                ch[k] = max(1, int(ch[k]))
+            except (TypeError, ValueError):
+                raise ValueError("保留天数要填整数")
+
+
 def settings_view() -> dict:
     s = settings.load()
     try:
@@ -128,8 +165,60 @@ def diag() -> dict:
             "version": __version__, "frozen": paths.FROZEN, "exe": paths.EXE if paths.FROZEN else None}
 
 
-def _clean(o):
-    return json.loads(json.dumps(o, ensure_ascii=False, default=str))
+def _scrub(o):
+    """回给页面的东西里，账号的完整邮箱 / 名字 / 组织名一律换成打码的（rid 留着，点「显示完整账号」时按它去
+    /api/accounts/reveal 取）。只认带 email 键的字典（就是账号）。"""
+    from .watch import mask_email
+    if isinstance(o, list):
+        return [_scrub(x) for x in o]
+    if not isinstance(o, dict):
+        return o
+    if "email" in o and not isinstance(o.get("email"), (dict, list)):
+        o = dict(o)
+        em, nm, og = o.pop("email", None), o.pop("name", None), o.pop("org_name", None)
+        o["email_masked"] = mask_email(em) or None
+        o["name_masked"] = (nm[:1] + "**") if nm else None
+        o["has_full"] = bool(em or nm or og)
+        o.setdefault("rid", o.get("accountUuid") or "")
+    return {k: _scrub(v) for k, v in o.items()}
+
+
+def _clean(o, reveal: bool = False):
+    o = json.loads(json.dumps(o, ensure_ascii=False, default=str))
+    return o if reveal else _scrub(o)
+
+
+def reveal_accounts() -> dict:
+    """完整账号：{rid: {email, name, org, label}}。只在页面点了「显示完整账号」（或开了「总是显示完整账号」）时来取；
+    只从本机文件读，不联网；不写日志、不进诊断报告。"""
+    from . import watch
+    out: dict[str, dict] = {}
+
+    def put(rid, email=None, name=None, org=None, over=True):
+        if not rid or not (email or name or org) or (rid in out and not over):
+            return
+        out[rid] = {k: v for k, v in (("email", email), ("name", name), ("org", org)) if v}
+    try:
+        acc = claude_sync.accounts()
+        for k in ("cli", "desktop"):
+            a = acc.get(k) or {}
+            put(a.get("accountUuid"), a.get("email"), a.get("name"), a.get("org_name"))
+    except Exception:
+        pass
+    try:
+        for uuid, m in claude_sync._load_names().items():
+            put(uuid, m.get("email"), m.get("name"), None, over=False)
+    except Exception:
+        pass
+    try:
+        watch.tick()                                  # 把 Codex（和刚换的号）也读一遍
+    except Exception:
+        pass
+    for rid, m in watch.FULL.items():
+        put(rid, m.get("email"), m.get("name"), m.get("org"), over=rid.startswith("codex:"))
+    for v in out.values():
+        v["label"] = " · ".join(x for x in (v.get("email"), v.get("name"), v.get("org")) if x)
+    return {"ok": True, "accounts": out}
 
 
 class H(BaseHTTPRequestHandler):
@@ -138,8 +227,8 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
-    def _json(self, obj, code=200):
-        b = json.dumps(_clean(obj), ensure_ascii=False).encode("utf-8")
+    def _json(self, obj, code=200, reveal=False):
+        b = json.dumps(_clean(obj, reveal), ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("content-type", "application/json; charset=utf-8")
         self.send_header("cache-control", "no-store")
@@ -188,6 +277,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "app": "cc-sessionsync", "version": __version__})
             if p.startswith("/api/") and not self._tok_ok():
                 return self._json({"ok": False, "error": "口令不对（页面过期了？刷新一下）"}, 403)
+            if p == "/api/accounts/reveal":           # 唯一会回完整账号的地方（要口令）
+                return self._json(reveal_accounts(), reveal=True)
             r = self._get(p, q)
             if r is not None:
                 return self._json(r)
@@ -266,7 +357,17 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/sessions/ops":
                 return {"items": sessions.ops_list()}
             if p == "/api/sessions/backup-status":
-                return sessions.backup_status()
+                return dict(sessions.backup_status(), sched=sessions.sched_status(backup_settings()))
+        if p.startswith("/api/timeline/"):
+            from . import timeline
+            if p == "/api/timeline/versions":
+                return timeline.versions(q["agent"], q["id"])
+            if p == "/api/timeline/view":
+                return timeline.view(int(q["snap"]), int(q.get("limit") or 400))
+            if p == "/api/timeline/runs":
+                return {"items": timeline.runs()}
+            if p == "/api/timeline/point":
+                return timeline.point(float(q["t"]))
         return None
 
     def do_POST(self):
@@ -312,7 +413,9 @@ class H(BaseHTTPRequestHandler):
             return codex_import.undo(str(b.get("ledger")))
         if p == "/api/settings":
             ch = {k: b[k] for k in ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
-                                    "session_backup_auto", "session_backup_hours", "selfcheck_done") if k in b}
+                                    "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
+                                    "show_full_accounts", "retention_all_days", "retention_daily_days") if k in b}
+            _check_backup_settings(ch)
             if ch:
                 settings.update(**ch)
             if "autostart" in b and os.name == "nt":
@@ -404,6 +507,21 @@ class H(BaseHTTPRequestHandler):
                 return usage.import_ccswitch()
         if p.startswith("/api/sessions/"):
             return self._sessions(p.rsplit("/", 1)[1], b)
+        if p == "/api/timeline/restore":
+            from . import timeline
+            return timeline.restore([int(x) for x in b.get("snaps") or []], b.get("mode") or "copy", b.get("target") or "claude",
+                                    b.get("desktop", True) is not False)
+        if p == "/api/backup/now":
+            from . import sessions
+            return sessions.backup_now()
+        if p == "/api/backup/prune":
+            from . import sessions
+            return sessions.prune(backup_settings(), vacuum=bool(b.get("vacuum", True)))
+        if p == "/api/export":
+            from . import exports
+            return exports.export_many(list(b.get("items") or []), b.get("fmt") or "md", str(b.get("label") or ""))
+        if p == "/api/import":
+            return _import(b)
         return None
 
     def _sessions(self, act: str, b: dict):
@@ -411,9 +529,12 @@ class H(BaseHTTPRequestHandler):
         if act == "fulltext":
             return sessions.fulltext(b.get("q") or "")
         if act == "export":
+            if (b.get("fmt") or "md") in ("md", "html"):
+                from . import exports
+                return exports.export_many([{"agent": b["agent"], "id": b["id"]}], b.get("fmt") or "md")
             return sessions.export(b["agent"], b["id"], b.get("fmt") or "md")
         if act == "backup":
-            return sessions.backup(full=bool(b.get("full")), why="manual")
+            return sessions.backup_now() if not b.get("full") else sessions.backup(full=True, why="manual")
         if act == "open":
             x = sessions.find(b["agent"], b["id"])
             if not x or not x.get("file"):
@@ -453,6 +574,24 @@ class H(BaseHTTPRequestHandler):
                 return dict(sessions.undo(b["op"]), deferred=False)
             return apps.run_or_defer(kind, "sessions-undo", {"op": b["op"]}, f"撤回 {b['op']}")
         return None
+
+
+def _import(b: dict) -> dict:
+    """导入 .md / .html：页面把文件内容传过来（浏览器拿不到路径），先存进 ~/.cc-sessionsync/imports/ 再读。"""
+    from . import exports
+    d = paths.HOME / "imports" / time.strftime("%Y%m%d-%H%M%S")
+    files = []
+    for i, f in enumerate(b.get("files") or []):
+        name = Path(str(f.get("name") or f"file{i}.md")).name
+        if Path(name).suffix.lower() not in (".md", ".markdown", ".html", ".htm"):
+            raise ValueError(f"只认 .md / .html：{name}")
+        d.mkdir(parents=True, exist_ok=True)
+        p = d / f"{i:02d}-{name}"
+        p.write_text(str(f.get("text") or ""), encoding="utf-8")
+        files.append(str(p))
+    if not files:
+        raise ValueError("没选文件")
+    return exports.import_files(files, b.get("cwd") or None, b.get("desktop", True) is not False, bool(b.get("dry", True)))
 
 
 def _reveal(path: str) -> dict:
@@ -504,7 +643,7 @@ def start_background(auto_sync: bool | None = None) -> None:
     watch.start()
     if not os.environ.get("CC_SESSIONSYNC_NO_USAGE"):
         usage.start_background()
-    sessions.start_auto(settings.get)
+    sessions.start_auto(backup_settings)
     update.auto_check_later(lambda: settings.get("update_auto", True))
     if MODE["desktop"] and not settings.get("selfcheck_done") and not os.environ.get("CC_SESSIONSYNC_NO_SELFCHECK"):
         def first():

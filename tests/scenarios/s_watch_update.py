@@ -58,23 +58,23 @@ ok(events.poll_jobs() == [], "…only once")
 
 # 检查更新：只提示
 ok(not update.status()["badge"] and update.should_notify() is None, "no release info yet → no badge")
-setup = T / "CCSessionSync-Setup-0.2.1.exe"; setup.write_bytes(b"MZ fake installer " * 1000)
-(T / "CCSessionSync-Setup-0.2.1.exe.sha256").write_text(hashlib.sha256(setup.read_bytes()).hexdigest() + "  CCSessionSync-Setup-0.2.1.exe\n")
+setup = T / "CCSessionSync-Setup-9.9.9.exe"; setup.write_bytes(b"MZ fake installer " * 1000)
+(T / "CCSessionSync-Setup-9.9.9.exe.sha256").write_text(hashlib.sha256(setup.read_bytes()).hexdigest() + "  CCSessionSync-Setup-9.9.9.exe\n")
 rel = json.loads((T / "release.json").read_text())
 rel["assets"] = [{"name": setup.name, "size": setup.stat().st_size, "browser_download_url": setup.as_uri()},
                  {"name": setup.name + ".sha256", "size": 90, "browser_download_url": (T / (setup.name + ".sha256")).as_uri()}]
 (T / "release.json").write_text(json.dumps(rel))
 st = update.check(force=True)
-ok(st["newer"] and st["badge"] and st["latest"] == "0.2.1" and st["has_setup"], "newer release → badge on")
+ok(st["newer"] and st["badge"] and st["latest"] == "9.9.9" and st["has_setup"], "newer release → badge on")
 ok(not (T / "installed.json").exists() and update.DL["state"] == "idle", "checking never downloads or installs")
-ok(update.should_notify() == "0.2.1" and update.should_notify() is None, "one notification per version")
+ok(update.should_notify() == "9.9.9" and update.should_notify() is None, "one notification per version")
 update.check(force=True); ok(update.should_notify() is None, "re-check doesn't notify again")
 ok(ui.tray_state(-1)["update"]["badge"], "tray menu gets the badge")
 # 后台循环跑一轮也不会装
 ui.start_background(); time.sleep(1.5)
 ok(not (T / "installed.json").exists() and update.DL["state"] == "idle", "background loop never installs")
 ok(any(e["kind"] == "update" for e in events.recent(50)) or True, "update event (loop)")
-st = update.ignore("0.2.1"); ok(st["ignored"] == "0.2.1" and not st["badge"] and st["newer"], "忽略此版本 → badge off, still knows it's newer")
+st = update.ignore("9.9.9"); ok(st["ignored"] == "9.9.9" and not st["badge"] and st["newer"], "忽略此版本 → badge off, still knows it's newer")
 ok(not ui.tray_state(-1)["update"]["badge"], "tray badge off after ignore")
 rel["tag_name"] = "v0.2.2"; (T / "release.json").write_text(json.dumps(rel)); st = update.check(force=True)
 ok(st["badge"] and update.should_notify() == "0.2.2", "a newer version than the ignored one → badge + one notification again")

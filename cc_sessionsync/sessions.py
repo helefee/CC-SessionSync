@@ -368,7 +368,122 @@ def list_all(agent: str | None = None) -> dict:
         x["backups"] = bk.get(f"{x['agent']}:{x['id']}", 0)
     projects = sorted({x["cwd"] for x in items if x.get("cwd")})
     accounts = sorted({a for x in items for a in x.get("accounts") or []})
-    return {"ok": True, "items": items, "projects": projects, "accounts": accounts, "ms": int((time.time() - t0) * 1000)}
+    groups = account_groups(items)
+    return {"ok": True, "items": items, "projects": projects, "accounts": accounts, "account_labels": _account_labels(accounts),
+            "groups": groups, "ms": int((time.time() - t0) * 1000)}
+
+
+def account_groups(items: list[dict]) -> list[dict]:
+    """这台电脑上找得到的所有账号（左侧「按账号」分组用），并给每个会话标上 gacct（分到哪个账号下）：
+    - Claude：每个桌面端会话列表目录（%APPDATA% 和商店版虚拟化目录都看）下的「账号 / 组织」文件夹、命令行登的号；
+      会话归到登记了它的账号（优先当前账号），没登记的（只在命令行）归到「未知账号」。
+    - Codex：按供应商分（Codex 的记录里不写账号）；当前登录的号标在它用的供应商上。
+    只给打码的邮箱和 rid，完整的要点眼睛走 /api/accounts/reveal。"""
+    from . import claude_sync, watch
+    from .watch import mask_email
+    names = {}
+    try:
+        names = {u: m.get("email") for u, m in claude_sync._load_names().items()}
+    except Exception:
+        pass
+    try:
+        acc = claude_sync.accounts()
+    except Exception:
+        acc = {}
+    cur_d = (acc.get("desktop") or {}).get("accountUuid")
+    cur_c = (acc.get("cli") or {}).get("accountUuid")
+    for a in acc.values():
+        if a.get("accountUuid") and a.get("email"):
+            names[a["accountUuid"]] = a["email"]
+    g: dict[str, dict] = {}
+
+    def claude_g(uuid_: str) -> dict:
+        k = uuid_[:8]
+        if k not in g:
+            full = next((u for u in list(names) + [cur_d or "", cur_c or ""] if u and u.startswith(k)), uuid_)
+            tags = (["桌面端当前"] if cur_d and cur_d.startswith(k) else []) + (["命令行当前"] if cur_c and cur_c.startswith(k) else [])
+            g[k] = {"key": k, "kind": "claude", "rid": full if len(full) > 8 else "", "masked": mask_email(names.get(full)) or f"账号 {k}",
+                    "tags": tags, "current": bool(tags), "folders": [], "n": 0}
+        return g[k]
+    alt: dict[str, str] = {}
+    try:
+        main = claude_sync.sessions_root()
+        roots = [(main, "")] + [(Path(c["path"]) / "claude-code-sessions", c["label"]) for c in claude_sync.app_dir_candidates()]
+        done = set()
+        for root, lab in roots:
+            try:
+                rp = root.resolve()
+            except OSError:
+                continue
+            if rp in done or not root.is_dir():
+                continue
+            done.add(rp)
+            for a in root.iterdir():
+                if not a.is_dir():
+                    continue
+                for o in a.iterdir():
+                    if o.is_dir():
+                        fs = list(o.glob("local_*.json"))
+                        claude_g(a.name)["folders"].append({"key": f"{a.name}/{o.name}", "where": lab or "当前使用的目录", "count": len(fs)})
+                        if root != main:
+                            for f in fs:
+                                try:
+                                    alt.setdefault(json.loads(f.read_text(encoding="utf-8")).get("cliSessionId") or "", a.name[:8])
+                                except Exception:
+                                    pass
+    except Exception:
+        pass
+    for u in (cur_d, cur_c):
+        if u:
+            claude_g(u)
+    try:
+        cx = watch._read_codex() or {}
+    except Exception:
+        cx = {}
+    for x in items:
+        if x["agent"] == "claude":
+            accs = x.get("accounts") or []
+            k = next((a for a in accs if cur_d and cur_d.startswith(a)), None) or (accs[0] if accs else alt.get(x["id"]))
+            x["gacct"] = k or "unknown"
+            if k:
+                claude_g(k)["n"] += 1
+        else:
+            prov = x.get("provider") or "openai"
+            k = "codex:" + prov
+            if k not in g:
+                lab = cx.get("label") or ""
+                mine = lab.endswith(" · " + prov)
+                g[k] = {"key": k, "kind": "codex", "rid": cx.get("rid", "") if mine else "", "provider": prov,
+                        "masked": (lab.rsplit(" · ", 1)[0] if mine else "") or f"供应商 {prov}", "tags": ["Codex 当前"] if mine else [],
+                        "current": mine, "folders": [], "n": 0}
+            g[k]["n"] += 1
+            x["gacct"] = k
+    unk = sum(1 for x in items if x.get("gacct") == "unknown")
+    out = sorted(g.values(), key=lambda v: (v["kind"] != "claude", not v["current"], -v["n"]))
+    if unk:
+        out.append({"key": "unknown", "kind": "unknown", "rid": "", "masked": "未知账号", "tags": [], "current": False,
+                    "folders": [], "n": unk, "hint": "只在命令行用过、没在任何桌面端账号里登记的会话"})
+    return out
+
+
+def _account_labels(prefixes: list[str]) -> dict:
+    """账号号前 8 位 → {masked: 打码邮箱, rid: 完整账号号}（筛选下拉框里用；完整邮箱要点眼睛去 /api/accounts/reveal 取）。"""
+    from . import claude_sync
+    from .watch import mask_email
+    known = {}
+    try:
+        for uuid, m in claude_sync._load_names().items():
+            known[uuid] = m.get("email")
+        for a in claude_sync.accounts().values():
+            if a.get("accountUuid"):
+                known[a["accountUuid"]] = a.get("email") or known.get(a["accountUuid"])
+    except Exception:
+        pass
+    out = {}
+    for p in prefixes:
+        hit = next((u for u in known if u.startswith(p)), None)
+        out[p] = {"masked": mask_email(known.get(hit)) if hit else "", "rid": hit or ""}
+    return out
 
 
 def find(agent: str, sid: str) -> dict | None:
@@ -415,7 +530,7 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
 
 
 def export(agent: str, sid: str, fmt: str = "md") -> dict:
-    """导出到 ~/.cc-sessionsync/exports/：md（人话 + 回复 + 工具摘要）或 jsonl（原样复制）。"""
+    """导出到 ~/.cc-sessionsync/exports/：md / html（排好版、带原始记录，能导回来；见 exports.py）或 jsonl（原样复制）。"""
     f = claude_file(sid) if agent == "claude" else codex_file(sid)
     if not f:
         return {"ok": False, "error": "找不到会话记录文件"}
@@ -425,17 +540,11 @@ def export(agent: str, sid: str, fmt: str = "md") -> dict:
         out = EXPORTS / f"{agent}-{sid[:8]}-{stamp}.jsonl"
         shutil.copy2(f, out)
         return {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size}
-    first, cwd, title = _first_user(f, agent)
-    lines = [f"# {(title or first)[:80] or sid}", "", f"- 来源：{'Claude Code' if agent == 'claude' else 'Codex'} `{sid}`",
-             f"- 目录：`{cwd or '—'}`", f"- 记录：`{f}`", f"- 导出：{datetime.now():%Y-%m-%d %H:%M}", ""]
-    for e in read(agent, sid, limit=10 ** 9)["entries"]:
-        if e["role"] == "tool":
-            lines.append(f"> 🔧 {e['text']}")
-            continue
-        when = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M") if e.get("ts") else ""
-        lines += ["", f"## {'🧑 我' if e['role'] == 'user' else '🤖 回复'}  {when}", "", e["text"], ""]
-    out = EXPORTS / f"{agent}-{sid[:8]}-{stamp}.md"
-    out.write_text("\n".join(lines), encoding="utf-8")
+    from . import exports
+    r = exports.export_many([{"agent": agent, "id": sid}], "html" if fmt == "html" else "md")
+    if not r["ok"]:
+        return {"ok": False, "error": "; ".join(r["errors"])}
+    out = Path(r["files"][0])
     return {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size}
 
 
@@ -452,6 +561,13 @@ def _db() -> sqlite3.Connection:
     CREATE TABLE IF NOT EXISTS aliases(k TEXT PRIMARY KEY, name TEXT, at REAL);
     CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
     """)
+    for t, col in (("blobs", "base TEXT"), ("blobs", "depth INT DEFAULT 0"), ("snaps", "msgs INT"), ("snaps", "run REAL")):
+        try:                                   # 0.2.0 的库：补上 0.2.1 的列（老数据照常能读）
+            c.execute(f"alter table {t} add column {col}")
+        except sqlite3.OperationalError:
+            pass
+    c.execute("create index if not exists snaps_by_sid on snaps(agent, sid, at)")
+    c.execute("create index if not exists snaps_by_at on snaps(at)")
     return c
 
 
@@ -477,14 +593,59 @@ def backup_index() -> dict:
         return {}
 
 
-def _store(c, agent: str, sid: str, f: Path, why: str, data: bytes | None = None) -> tuple[str, bool]:
-    data = f.read_bytes() if data is None else data
+MAX_DEPTH = 30          # 增量链最长多少节，超过就存一份完整的（读的时候不用拼太多段）
+
+
+def count_msgs(agent: str, data: bytes) -> int:
+    """数一下有几条人话 / 回复（时间线上显示「n 条消息」）。"""
+    parse = parse_claude if agent == "claude" else parse_codex
+    n = 0
+    for line in data.splitlines():
+        if not line.strip():
+            continue
+        try:
+            n += sum(1 for e in parse(json.loads(line)) if e["role"] in ("user", "assistant"))
+        except Exception:
+            continue
+    return n
+
+
+def _put_blob(c, data: bytes, prev: tuple | None) -> tuple[str, bool, int | None]:
+    """存内容（按 sha256 去重）。会话记录是只往后追加的：新内容开头 == 上一版时只存追加的那一段（base + 增量）。
+    → (sha, 是不是新存的, 这一版的消息数（增量时按上一版 + 追加部分算，算不出来是 None）)"""
     sha = hashlib.sha256(data).hexdigest()
+    if c.execute("select 1 from blobs where sha=?", (sha,)).fetchone():
+        return sha, False, None
+    base, depth, payload, msgs = None, 0, data, None
+    if prev:
+        psha, psize, pmsgs, agent = prev
+        if psha and 0 < (psize or 0) < len(data) and hashlib.sha256(data[:psize]).hexdigest() == psha:
+            row = c.execute("select coalesce(depth, 0) from blobs where sha=?", (psha,)).fetchone()
+            if row is not None and row[0] < MAX_DEPTH:
+                base, depth, payload = psha, row[0] + 1, data[psize:]
+                if pmsgs is not None:
+                    msgs = pmsgs + count_msgs(agent, payload)
+    c.execute("insert into blobs(sha, size, data, base, depth) values(?,?,?,?,?)",
+              (sha, len(data), zlib.compress(payload, 6), base, depth))
+    return sha, True, msgs
+
+
+def _store(c, agent: str, sid: str, f: Path, why: str, data: bytes | None = None, run: float | None = None) -> tuple[str, bool]:
+    data = f.read_bytes() if data is None else data
     st = f.stat()
-    new = c.execute("insert or ignore into blobs values(?,?,?)", (sha, len(data), zlib.compress(data, 6))).rowcount > 0
+    seen = c.execute("select sha, size from seen where path=?", (str(f),)).fetchone()
+    prev = None
+    if seen:
+        pm = c.execute("select msgs from snaps where sha=? and msgs is not null limit 1", (seen[0],)).fetchone()
+        prev = (seen[0], seen[1], pm[0] if pm else None, agent)
+    sha, new, msgs = _put_blob(c, data, prev)
+    if msgs is None:
+        old = c.execute("select msgs from snaps where sha=? and msgs is not null limit 1", (sha,)).fetchone()
+        msgs = old[0] if old else count_msgs(agent, data)
     first, cwd, title = _first_user(f, agent)
-    c.execute("insert or ignore into snaps(agent, sid, path, sha, mtime, size, title, cwd, first, at, why) values(?,?,?,?,?,?,?,?,?,?,?)",
-              (agent, sid, str(f), sha, st.st_mtime, len(data), title, cwd, first, time.time(), why))
+    c.execute("insert or ignore into snaps(agent, sid, path, sha, mtime, size, title, cwd, first, at, why, msgs, run) "
+              "values(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+              (agent, sid, str(f), sha, st.st_mtime, len(data), title, cwd, first, time.time(), why, msgs, run or time.time()))
     c.execute("insert or replace into seen values(?,?,?,?)", (str(f), st.st_mtime, st.st_size, sha))
     return sha, new
 
@@ -492,9 +653,11 @@ def _store(c, agent: str, sid: str, f: Path, why: str, data: bytes | None = None
 BK = {"running": False, "last": None, "error": None}
 
 
-def backup(full: bool = False, only: list[tuple[str, str]] | None = None, why: str = "scan") -> dict:
+def backup(full: bool = False, only: list[tuple[str, str]] | None = None, why: str = "scan", low: bool = False) -> dict:
     """把会话记录增量备份进 sessions.sqlite。only=[(agent, sid)] 只备份这几条（删除前用，强制读一遍）。"""
     t0 = time.time()
+    if not only and BK.get("running"):
+        return {"ok": True, "busy": True, "files": 0, "skipped": 0, "new_blobs": 0, "snapshots": 0, "ms": 0, "db": str(DB_PATH)}
     files: list[tuple[str, str, Path]] = []
     if only:
         for a, s in only:
@@ -519,7 +682,9 @@ def backup(full: bool = False, only: list[tuple[str, str]] | None = None, why: s
                     n_skip += 1
                     continue
                 before = c.total_changes
-                _, new = _store(c, a, s, f, why)
+                _, new = _store(c, a, s, f, why, run=t0)
+                if low:
+                    time.sleep(0.002)                  # 后台备份：每个文件之间让一下，不抢前台
                 n_new += new
                 n_snap += c.total_changes - before > 1
             c.execute("insert or replace into meta values('last_backup', ?)", (str(time.time()),))
@@ -540,11 +705,11 @@ def backup_status() -> dict:
         with _db_lock:
             c = _db()
             n = c.execute("select count(*), count(distinct agent || sid) from snaps").fetchone()
-            b = c.execute("select count(*), coalesce(sum(size), 0) from blobs").fetchone()
+            b = c.execute("select count(*), coalesce(sum(size), 0), coalesce(sum(length(data)), 0) from blobs").fetchone()
             last = c.execute("select v from meta where k='last_backup'").fetchone()
             c.close()
         size = DB_PATH.stat().st_size if DB_PATH.exists() else 0
-        return {"db": str(DB_PATH), "snapshots": n[0], "sessions": n[1], "blobs": b[0], "raw_bytes": b[1], "db_bytes": size,
+        return {"db": str(DB_PATH), "snapshots": n[0], "sessions": n[1], "blobs": b[0], "raw_bytes": b[1], "stored_bytes": b[2], "db_bytes": size,
                 "last": float(last[0]) if last else None, **{k: BK[k] for k in ("running", "error")}}
     except Exception as e:
         return {"db": str(DB_PATH), "error": str(e)}
@@ -569,13 +734,20 @@ def snapshots(agent: str | None = None, sid: str | None = None, limit: int = 200
 
 
 def _blob(sha: str) -> bytes:
+    """取一份完整内容：增量存的就顺着 base 往回找，拼起来，最后校验 sha256。"""
+    parts, cur, guard = [], sha, 0
     with _db_lock:
         c = _db()
-        r = c.execute("select data from blobs where sha=?", (sha,)).fetchone()
-        c.close()
-    if not r:
-        raise FileNotFoundError("备份库里没有这份内容")
-    data = zlib.decompress(r[0])
+        try:
+            while cur and guard <= MAX_DEPTH + 5:
+                r = c.execute("select data, base from blobs where sha=?", (cur,)).fetchone()
+                if not r:
+                    raise FileNotFoundError("备份库里没有这份内容")
+                parts.append(zlib.decompress(r[0]))
+                cur, guard = r[1], guard + 1
+        finally:
+            c.close()
+    data = b"".join(reversed(parts))
     if hashlib.sha256(data).hexdigest() != sha:
         raise ValueError("备份内容校验不对")
     return data
@@ -1052,28 +1224,147 @@ def needs_app(action: str, items: list[dict], write_tool: bool = False) -> set[s
 
 # ---------- 定时自动备份 ----------
 
+UNITS = {"min": 60, "hour": 3600, "day": 86400}
+MIN_INTERVAL = 300
+SCHED = {"next": None, "last_run": None, "last_result": None, "last_error": None, "last_prune": 0.0}
+_run_lock = threading.Lock()
 _started = False
 
 
-def start_auto(get_setting, interval_h_default: float = 6) -> None:
-    """设置 session_backup_auto 开着时每 session_backup_hours 小时（缺省 6）增量备份一次；有新内容时发事件。"""
+def interval_s(s: dict) -> float:
+    """设置 → 间隔秒数。0.2.0 留下的 session_backup_hours（没有新键时）照旧认。最少 5 分钟。"""
+    every, unit = s.get("session_backup_every"), s.get("session_backup_unit") or "min"
+    if s.get("_legacy_hours") is not None:
+        every, unit = s["_legacy_hours"], "hour"
+    try:
+        v = float(every) * UNITS.get(unit, 60)
+    except (TypeError, ValueError):
+        v = 600
+    return max(MIN_INTERVAL, v)
+
+
+def _low_priority() -> None:
+    if os.name == "nt":
+        try:
+            import ctypes
+            k = ctypes.windll.kernel32
+            k.SetThreadPriority(k.GetCurrentThread(), -2)        # THREAD_PRIORITY_LOWEST
+        except Exception:
+            pass
+
+
+def auto_tick(s: dict, now: float | None = None) -> dict | None:
+    """后台每 30 秒调一次：到点（或启动 / 睡醒后已经过点）就增量备份一次；正在跑就跳过。失败才发通知。"""
+    now = now or time.time()
+    if not s.get("session_backup_auto"):
+        SCHED["next"] = None
+        return None
+    last = SCHED["last_run"] if SCHED["last_run"] is not None else (backup_status().get("last") or 0)
+    SCHED["next"] = last + interval_s(s)
+    if now < SCHED["next"]:
+        return None
+    if not _run_lock.acquire(blocking=False):
+        return None                                           # 上一次还没跑完
+    try:
+        SCHED["last_run"] = now
+        try:
+            r = backup(why="auto", low=True)
+            SCHED.update(last_result={k: r[k] for k in ("files", "skipped", "snapshots", "ms")}, last_error=None)
+        except Exception as e:
+            SCHED["last_error"] = f"{type(e).__name__}: {e}"
+            from . import events
+            events.add("backup", "会话自动备份失败", SCHED["last_error"][:200], {"page": "backups"})
+            return {"ok": False, "error": SCHED["last_error"]}
+        if now - SCHED["last_prune"] > 6 * 3600:
+            SCHED["last_prune"] = now
+            try:
+                prune(s)
+            except Exception:
+                pass
+        SCHED["next"] = now + interval_s(s)
+        return r
+    finally:
+        _run_lock.release()
+
+
+def backup_now(why: str = "manual") -> dict:
+    """「立即备份」：和定时的共用一把锁（正在跑就等它跑完再跑）。"""
+    with _run_lock:
+        r = backup(why=why)
+        SCHED.update(last_run=time.time(), last_result={k: r[k] for k in ("files", "skipped", "snapshots", "ms")}, last_error=None)
+        return r
+
+
+def sched_status(s: dict) -> dict:
+    return {"auto": bool(s.get("session_backup_auto")), "interval_s": interval_s(s), "every": s.get("session_backup_every"),
+            "unit": s.get("session_backup_unit"), "next": SCHED["next"], "last_run": SCHED["last_run"],
+            "last_result": SCHED["last_result"], "last_error": SCHED["last_error"], "running": bool(BK.get("running"))}
+
+
+def start_auto(get_settings) -> None:
+    """后台线程（低优先级）：按设置定时增量备份。get_settings() → 设置字典。"""
     global _started
     if _started or os.environ.get("CC_SESSIONSYNC_NO_BACKUP"):
         return
     _started = True
 
     def loop():
-        time.sleep(60)
+        _low_priority()
+        time.sleep(20)
         while True:
             try:
-                if get_setting("session_backup_auto", False):
-                    last = backup_status().get("last") or 0
-                    if time.time() - last >= float(get_setting("session_backup_hours", interval_h_default)) * 3600:
-                        r = backup(why="auto")
-                        if r["snapshots"]:
-                            from . import events
-                            events.add("backup", "会话已自动备份", f"新增 {r['snapshots']} 份快照", {"page": "sessions"})
+                auto_tick(get_settings())
             except Exception:
                 pass
-            time.sleep(300)
+            time.sleep(30)
     threading.Thread(target=loop, daemon=True, name="session-backup").start()
+
+
+# ---------- 保留规则 / 清理 ----------
+
+def prune(s: dict, now: float | None = None, vacuum: bool = False) -> dict:
+    """最近 retention_all_days 天（缺省 7）的版本全留；再往前到 retention_daily_days 天（缺省 90）每天留最后一版；
+    更早的每周留最后一版。每个会话最新的一版永远留着。然后删掉没人用的内容（增量链上被引用的底版留着）。"""
+    now = now or time.time()
+    all_d = float(s.get("retention_all_days") or 7)
+    daily_d = max(all_d, float(s.get("retention_daily_days") or 90))
+    before = DB_PATH.stat().st_size if DB_PATH.exists() else 0
+    with _db_lock:
+        c = _db()
+        rows = c.execute("select id, agent, sid, at from snaps order by agent, sid, at desc").fetchall()
+        drop, keep_bucket, last_key = [], set(), None
+        for sid_, agent, sid, at in rows:
+            k = (agent, sid)
+            if k != last_key:
+                last_key, keep_bucket = k, set()
+                continue                                       # 最新一版
+            age = (now - at) / 86400
+            if age <= all_d:
+                continue
+            day = int(at // 86400)
+            b = ("d", day) if age <= daily_d else ("w", day // 7)
+            if b in keep_bucket:
+                drop.append(sid_)
+            else:
+                keep_bucket.add(b)
+        for i in range(0, len(drop), 500):
+            ch = drop[i:i + 500]
+            c.execute(f"delete from snaps where id in ({','.join('?' * len(ch))})", ch)
+        live = {r[0] for r in c.execute("select distinct sha from snaps")}
+        bases = dict(c.execute("select sha, base from blobs"))
+        stack = list(live)
+        while stack:
+            b = bases.get(stack.pop())
+            if b and b not in live:
+                live.add(b)
+                stack.append(b)
+        dead = [sh for sh in bases if sh not in live]
+        for i in range(0, len(dead), 500):
+            ch = dead[i:i + 500]
+            c.execute(f"delete from blobs where sha in ({','.join('?' * len(ch))})", ch)
+        c.commit()
+        if vacuum:
+            c.execute("vacuum")
+        c.close()
+    after = DB_PATH.stat().st_size if DB_PATH.exists() else 0
+    return {"ok": True, "snapshots_dropped": len(drop), "blobs_dropped": len(dead), "db_before": before, "db_after": after}

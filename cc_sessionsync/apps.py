@@ -186,6 +186,11 @@ def _sessions():
     return sessions
 
 
+def _timeline():
+    from . import timeline
+    return timeline
+
+
 def _ops():
     """op 名 → 函数(**args) -> dict。放在函数里导入，免得循环引用。"""
     from . import claude_sync, codex_import
@@ -198,6 +203,8 @@ def _ops():
         "sessions-rename": lambda **a: _sessions().rename(a["agent"], a["id"], a["name"], bool(a.get("write_tool"))),
         "sessions-trash-restore": lambda **a: _sessions().trash_restore(a["batch"], a.get("only")),
         "sessions-undo": lambda **a: _sessions().undo(a["op"]),
+        "desktop-register": lambda **a: _timeline().register_desktop(a["op"], a["regs"]),
+        "timeline-replace": lambda **a: _timeline().replace(a["snaps"]),
     }
     for p in EXTRA_OPS:
         try:

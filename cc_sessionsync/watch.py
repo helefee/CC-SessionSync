@@ -23,6 +23,16 @@ _sig: dict[str, tuple] = {}
 NAMES = {"claude-desktop": "Claude 桌面端", "claude-cli": "Claude Code 命令行", "codex": "Codex"}
 
 
+# 完整账号（邮箱 / 名字 / 组织）只放在本进程内存里，给「显示完整账号」用（GET /api/accounts/reveal，带口令）；
+# 不写文件、不进事件、不进通知、不进日志。key = rid（Claude 是账号号，Codex 是 "codex:<账号号>|<供应商>"）。
+FULL: dict[str, dict] = {}
+
+
+def _keep(rid: str, email: str | None, name: str | None = None, org: str | None = None) -> None:
+    if rid and (email or name or org):
+        FULL[rid] = {k: v for k, v in (("email", email), ("name", name), ("org", org)) if v}
+
+
 def mask_email(e: str | None) -> str:
     if not e or "@" not in e:
         return ""
@@ -54,8 +64,9 @@ def _read_claude_cli() -> dict | None:
         return None
     a = o.get("accountUuid")
     if not a:
-        return {"id": "", "label": "未登录"}
-    return {"id": f"{a}/{o.get('organizationUuid') or ''}", "label": mask_email(o.get("emailAddress")) or a[:8]}
+        return {"id": "", "label": "未登录", "rid": ""}
+    _keep(a, o.get("emailAddress"), o.get("displayName") or o.get("fullName"), o.get("organizationName"))
+    return {"id": f"{a}/{o.get('organizationUuid') or ''}", "label": mask_email(o.get("emailAddress")) or a[:8], "rid": a}
 
 
 def _read_claude_desktop() -> dict | None:
@@ -66,7 +77,9 @@ def _read_claude_desktop() -> dict | None:
         return None
     if not d.get("key"):
         return None
-    return {"id": d["key"], "label": mask_email(d.get("email")) or (d.get("accountUuid") or "")[:8]}
+    a = d.get("accountUuid") or ""
+    _keep(a, d.get("email"), d.get("name"), d.get("org_name"))
+    return {"id": d["key"], "label": mask_email(d.get("email")) or a[:8], "rid": a}
 
 
 def _read_codex() -> dict | None:
@@ -78,7 +91,7 @@ def _read_codex() -> dict | None:
         prov = str(tomllib.loads((h / "config.toml").read_text(encoding="utf-8")).get("model_provider") or "openai")
     except Exception:
         pass
-    acct, email, mode = None, None, None
+    acct, email, mode, cname = None, None, None, None
     try:
         a = json.loads((h / "auth.json").read_text(encoding="utf-8"))
         mode = a.get("auth_mode")
@@ -88,12 +101,15 @@ def _read_codex() -> dict | None:
         if part:
             claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
             email = claims.get("email")
+            cname = claims.get("name")
         elif a.get("OPENAI_API_KEY"):
             mode = mode or "apikey"
     except Exception:
         pass
     who = mask_email(email) or ((acct or "")[:8] if acct else ("API key" if mode == "apikey" else "未登录"))
-    return {"id": f"{acct or mode or ''}|{prov}", "label": f"{who} · {prov}"}
+    rid = f"codex:{acct or mode or ''}|{prov}"
+    _keep(rid, email and f"{email} · {prov}", cname, None)
+    return {"id": f"{acct or mode or ''}|{prov}", "label": f"{who} · {prov}", "rid": rid}
 
 
 def _sources():
@@ -140,7 +156,7 @@ def tick(now: float | None = None, stable: float = 9) -> list[dict]:
         STATE[k] = v
         ev = events.add("account", f"检测到 {NAMES[k]} 账号已切换", f"{cur['label']} → {v['label']}",
                         {"page": "sync" if k.startswith("claude") else "codex", "account_switch": k},
-                        who=k, old=cur["label"], new=v["label"])
+                        who=k, old=cur["label"], new=v["label"], old_rid=cur.get("rid", ""), new_rid=v.get("rid", ""))
         STATE["last"] = (STATE["last"] + [ev])[-10:]
         out.append(ev)
     return out

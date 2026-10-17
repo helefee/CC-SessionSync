@@ -60,7 +60,8 @@ def jwt(claims: dict) -> str:
     return f"{b({'alg': 'none'})}.{b(claims)}.sig"
 
 
-def build(T: Path) -> dict:
+def build(T: Path, extra: bool = False) -> dict:
+    """extra=True（截图用）：再加一个商店版目录里的团队号、一个只在命令行用过的会话、账号名缓存。"""
     H = T / "home"
     H.mkdir(parents=True, exist_ok=True)
     (T / "noprocs.json").write_text("[]")
@@ -92,6 +93,27 @@ def build(T: Path) -> dict:
         ms = int(when.timestamp() * 1000)
         (d / f"local_{U()}.json").write_text(json.dumps({"sessionId": f"local_{k}", "cliSessionId": sid, "title": title, "cwd": cwd,
                                                           "createdAt": ms, "lastActivityAt": ms + 600000, "isArchived": False}, ensure_ascii=False), encoding="utf-8")
+    # 第三个账号：商店版（MSIX）虚拟化目录里的一个团队号，有 1 个会话；再来一个只在命令行用过的会话（→ 未知账号）
+    A3, O3 = U(), U()
+    sid3 = U()
+    if extra:
+        w3 = NOW - timedelta(days=4, hours=5)
+        claude_transcript(H / ".claude/projects/-work-mobile" / f"{sid3}.jsonl", sid3, "/work/mobile",
+                          [("App 启动白屏", "是 splash 里同步读了配置，改成异步。"), ("加个启动耗时埋点", "加好了，上报到 /metrics。")], w3)
+        d3 = T / "la/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Roaming/Claude/claude-code-sessions" / A3 / O3
+        d3.mkdir(parents=True, exist_ok=True)
+        ms3 = int(w3.timestamp() * 1000)
+        (d3 / f"local_{U()}.json").write_text(json.dumps({"sessionId": "local_m", "cliSessionId": sid3, "title": "App 启动白屏", "cwd": "/work/mobile",
+                                                           "createdAt": ms3, "lastActivityAt": ms3 + 600000, "isArchived": False}, ensure_ascii=False), encoding="utf-8")
+        sid4 = U()
+        claude_transcript(H / ".claude/projects/-work-scratch" / f"{sid4}.jsonl", sid4, "/work/scratch",
+                          [("随手写个正则：匹配手机号", "^1[3-9]\\d{9}$")], NOW - timedelta(hours=7))
+        ssd = T / "ss"
+        ssd.mkdir(parents=True, exist_ok=True)
+        (ssd / "claude-accounts.json").write_text(json.dumps({A1: {"email": "old.account@example.com", "name": "Old Account", "from": "demo"},
+                                                              A3: {"email": "team@corp.example", "name": "Team Corp", "from": "demo"}}), encoding="utf-8")
+    else:
+        A3 = None
     ldb = T / "cfg/Claude/Local Storage/leveldb"
     ldb.mkdir(parents=True, exist_ok=True)
     (ldb / "000003.log").write_bytes(b'{"eventName":"e","clientTimestamp":"%s","accountUuid":"%s","organizationUuid":"%s"}'
@@ -115,21 +137,21 @@ def build(T: Path) -> dict:
     (cx / "auth.json").write_text(json.dumps({"auth_mode": "chatgpt", "tokens": {"account_id": "acct-" + U()[:8],
                                                                                    "id_token": jwt({"email": "li.na@example.com"}),
                                                                                    "access_token": "FAKE-NOT-A-TOKEN"}}), encoding="utf-8")
-    (T / "release.json").write_text(json.dumps({"tag_name": "v0.2.1", "name": "v0.2.1", "draft": False, "prerelease": False,
-                                                 "html_url": "https://github.com/helefee/CC-SessionSync/releases/tag/v0.2.1",
-                                                 "body": "- 会话管理：批量导出\n- 修：托盘菜单偶尔不刷新",
+    (T / "release.json").write_text(json.dumps({"tag_name": "v9.9.9", "name": "v9.9.9", "draft": False, "prerelease": False,
+                                                 "html_url": "https://github.com/helefee/CC-SessionSync/releases/tag/v9.9.9",
+                                                 "body": "- （演示用的假版本）\n- 修：托盘菜单偶尔不刷新",
                                                  "published_at": iso(NOW - timedelta(hours=3)),
-                                                 "assets": [{"name": "CCSessionSync-Setup-0.2.1.exe", "size": 31457280,
-                                                             "browser_download_url": "https://example.invalid/CCSessionSync-Setup-0.2.1.exe"},
-                                                            {"name": "CCSessionSync-Setup-0.2.1.exe.sha256", "size": 90,
-                                                             "browser_download_url": "https://example.invalid/CCSessionSync-Setup-0.2.1.exe.sha256"}]}),
+                                                 "assets": [{"name": "CCSessionSync-Setup-9.9.9.exe", "size": 31457280,
+                                                             "browser_download_url": "https://example.invalid/CCSessionSync-Setup-9.9.9.exe"},
+                                                            {"name": "CCSessionSync-Setup-9.9.9.exe.sha256", "size": 90,
+                                                             "browser_download_url": "https://example.invalid/CCSessionSync-Setup-9.9.9.exe.sha256"}]}),
                                    encoding="utf-8")
-    return {"A1": A1, "A2": A2, "sessions": sessions}
+    return {"A1": A1, "A2": A2, "A3": A3, "sessions": sessions}
 
 
 if __name__ == "__main__":
     T = Path(sys.argv[1]).resolve()
-    info = build(T)
+    info = build(T, extra="--serve" in sys.argv or "--extra" in sys.argv)
     if "--serve" in sys.argv:
         port = sys.argv[sys.argv.index("--serve") + 1]
         env = dict({k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_", "CODEX_", "CC_SESSIONSYNC_")) or k == "CC_SESSIONSYNC_FAKE_INSTALL"}, **env_for(T))
