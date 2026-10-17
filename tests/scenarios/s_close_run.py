@@ -184,7 +184,7 @@ v = call("/api/apps/close-run?id=" + v["id"])
 ok(v["state"] == "done" and v["relaunched"] and "_force" not in v, "API: close-run finishes; internal flags not exposed")
 ok(call("/api/apps/close-run/force", {"id": v["id"]}).get("_code") == 400, "force after it's done → refused")
 page = (ROOT / "cc_sessionsync/index.html").read_text(encoding="utf-8")
-for s in ("正在运行，需要关闭后才能", "关闭并${v}（完成后重启）", "等它退出后自动${v}", "/api/apps/close-run/force", "/api/apps/close-run/stop", "closeRun"):
+for s in ("正在运行，需要关闭后才能", "关闭并${esc(v)}（完成后重启）", "等它退出后自动${esc(v)}", "/api/apps/close-run/force", "/api/apps/close-run/stop", "closeRun"):
     ok(s in page, f"page: {s}")
 print("FAILS", FAILS)
 sys.exit(1 if FAILS else 0)
