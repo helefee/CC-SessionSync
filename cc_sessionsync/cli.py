@@ -82,11 +82,18 @@ def cmd_codex(a) -> int:
               + (f"；回收站 {r['trash']}" if r.get("trash") else ""))
         for k in r.get("kept") or []:
             print(f"  没动（导过来之后在 Claude 里接着聊过）：{k}")
+        ci = r.get("codex_imports")
+        if ci:
+            print("  Codex 导入记录：" + ({"restored": "换回了导入前的原文件", "removed": "导入前没有这个文件，已挪进回收站",
+                                         "entries": "只撤回了我们登记的那几条（文件之后被改过）"}.get(ci.get("how"), ci.get("note") or ci.get("error") or "")))
+            if not ci.get("ok"):
+                return 1
         return 0
     # import
     only = a.only.split(",") if a.only else None
+    mark = a.mark if a.mark is not None else codex_import.mark_setting()
     kw = dict(days=a.days, cwd=a.cwd, only=only, include_all=a.all, desktop=not a.no_desktop, target=a.to,
-              reasoning=a.reasoning)
+              reasoning=a.reasoning, mark=mark)
     r = codex_import.run(dry=True, **kw)
     todo = [x for x in r["rows"] if x["state"] in ("new", "update")]
     for x in r["rows"]:
@@ -104,9 +111,20 @@ def cmd_codex(a) -> int:
         print(f"桌面端列表：写进 {r['desktop']['key']}（当前账号）")
     elif r.get("desktop_note"):
         print(r["desktop_note"])
+    if r.get("mark"):
+        mk = r.get("mark_check") or {}
+        if mk.get("ok"):
+            print(f"登记进 Codex 导入记录：开（{mk['file']}，{'已有，先备份再改' if mk.get('exists') else '还没有，会新建'}）")
+        else:
+            print(f"✗ 登记进 Codex 导入记录：{mk.get('error')}")
+    else:
+        print("登记进 Codex 导入记录：关（Codex 桌面端开了「从 Claude Code 导入」的话可能导回去一份重复的；--mark-codex-imported 打开）")
     if not a.apply:
         print("（演练，什么都没写。确认没问题再加 --apply 真正导入）" if todo else "（没有要导入的）")
         return 0
+    if r.get("mark") and not (r.get("mark_check") or {}).get("ok"):
+        print("没有导入：修好那个文件，或者加 --no-mark-codex-imported 关掉登记。")
+        return 1
     if not todo:
         return 0
     if r.get("desktop") and apps.running("claude"):
@@ -114,6 +132,11 @@ def cmd_codex(a) -> int:
         print(j["hint"] + "\n（只想马上在命令行里用：加 --no-desktop 不写桌面端列表，就不用等）")
         return 0
     r = codex_import.run(dry=False, **kw)
+    if r.get("ok") is False:
+        print("✗ " + r["error"])
+        return 1
+    if (r.get("marked") or {}).get("ok"):
+        print(f"已登记进 Codex 导入记录 {r['marked']['marked']} 条（{r['marked']['file']}，原文件备份在账本里）")
     print(f"\n✓ 导入 {r['done']} 个，账本 {r.get('ledger')}（撤回：cc-sessionsync codex undo {r.get('ledger')}）")
     for x in r["rows"]:
         if x.get("resume"):
@@ -151,6 +174,14 @@ def cmd_auto(a) -> int:
         claude_sync.auto_release()
 
 
+def cmd_settings(a) -> int:
+    if a.codex_mark_imported:
+        codex_import.set_mark_setting(a.codex_mark_imported == "on")
+    print(f"codex-mark-imported（导入时登记进 Codex 导入记录）：{'开' if codex_import.mark_setting() else '关'}")
+    print(f"设置文件：{paths.HOME / 'settings.json'}")
+    return 0
+
+
 def cmd_jobs(a) -> int:
     if a.cancel:
         print("已取消" if apps.cancel(a.cancel) else "没有这个排队中的任务")
@@ -178,7 +209,7 @@ def cmd_after_quit(a) -> int:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="cc-sessionsync", description="Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code")
     ap.add_argument("--version", action="version", version=f"cc-sessionsync {__version__}")
-    sub = ap.add_subparsers(dest="cmd", metavar="{status,sync,backups,restore,auto,codex,jobs,diag,ui}")
+    sub = ap.add_subparsers(dest="cmd", metavar="{status,sync,backups,restore,auto,codex,settings,jobs,diag,ui}")
     sub.add_parser("status", help="看当前账号、会话文件夹、Codex 对话数").set_defaults(fn=cmd_status)
     s = sub.add_parser("sync", help="把别的账号下的 Claude 会话补进当前账号的会话列表")
     s.add_argument("--dry-run", action="store_true", help="只演练，不写")
@@ -209,10 +240,17 @@ def build_parser() -> argparse.ArgumentParser:
             x.add_argument("--no-desktop", action="store_true", help="不写 Claude 桌面端会话列表，只写命令行能 --resume 的记录")
             x.add_argument("--to", help="桌面端列表写进哪个 账号/组织（缺省桌面端当前账号）")
             x.add_argument("--reasoning", action="store_true", help="带上 Codex 的思考摘要（有明文摘要的才有）")
+            g = x.add_mutually_exclusive_group()
+            g.add_argument("--mark-codex-imported", dest="mark", action="store_const", const=True, default=None,
+                           help="把导过去的会话登记进 Codex 的 external_agent_session_imports.json，免得 Codex 桌面端再导回去一份（缺省按设置，设置缺省关）")
+            g.add_argument("--no-mark-codex-imported", dest="mark", action="store_const", const=False)
     cl = cs.add_parser("ledgers", help="导入账本列表")
     u = cs.add_parser("undo", help="按账本撤回一次导入")
     u.add_argument("ledger")
     c.set_defaults(fn=cmd_codex)
+    st = sub.add_parser("settings", help="看 / 改设置")
+    st.add_argument("--codex-mark-imported", choices=("on", "off"), help="codex import 缺省要不要登记进 Codex 导入记录")
+    st.set_defaults(fn=cmd_settings)
     j = sub.add_parser("jobs", help="排队等桌面端退出的任务")
     j.add_argument("--cancel", metavar="ID")
     j.set_defaults(fn=cmd_jobs)

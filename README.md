@@ -6,7 +6,7 @@
    但对话内容其实都还在本机。这里把别的账号文件夹里的会话登记补进当前账号（桌面端 + 命令行两套登录都能认）。
 2. **把 Codex 的对话导进 Claude Code。** 把 Codex 的线程（`~/.codex/sessions/**/rollout-*.jsonl`）转成一份 Claude Code 会话
    （`~/.claude/projects/<项目>/<会话号>.jsonl`，可选再加一条桌面端会话列表登记），然后 `claude --resume` 或在桌面端里接着聊。
-   **Codex 的文件只读，一个字节都不改**；只写新文件。
+   **Codex 的对话文件只读，一个字节都不改**；只写新文件。（唯一的例外是可选的「登记进 Codex 导入记录」，缺省关，见下文。）
 
 只用 Python 标准库，Windows / Linux / macOS 都能跑（MSIX 商店版 Claude 桌面端的虚拟化目录也认）。
 
@@ -18,7 +18,7 @@
   双击打开本地界面；也可以在命令行里 `cc-sessionsync-….exe <命令>`。（单文件程序，没签名，SmartScreen 可能提示，点「仍要运行」。）
 - **pip**（Python 3.10+）：
   ```bash
-  pip install https://github.com/helefee/CC-SessionSync/releases/download/v0.1.0/cc_sessionsync-0.1.0-py3-none-any.whl
+  pip install https://github.com/helefee/CC-SessionSync/releases/download/v0.1.1/cc_sessionsync-0.1.1-py3-none-any.whl
   # 或者从源码
   pip install git+https://github.com/helefee/CC-SessionSync
   ```
@@ -54,6 +54,8 @@ cc-sessionsync codex import                            # 演练（缺省就是�
 cc-sessionsync codex import --only 3f9a1c,77b0de --apply   # 只导这两个（线程号末几位）
 cc-sessionsync codex import --cwd D:\work\shop --apply     # 只导这个项目下的
 cc-sessionsync codex import --no-desktop --apply       # 只写命令行用的会话记录，不碰桌面端列表
+cc-sessionsync codex import --mark-codex-imported --apply   # 同时登记进 Codex 导入记录（防止 Codex 再导回去，见下文）
+cc-sessionsync settings --codex-mark-imported on       # 以后缺省就登记（off 关掉；单次用 --no-mark-codex-imported）
 cc-sessionsync codex ledgers                           # 导入账本
 cc-sessionsync codex undo 20261017-101800              # 撤回一次导入
 
@@ -110,8 +112,28 @@ cd D:\work\shop && claude --resume 8d7c1c3e-…
 - **模型显示**：导入的助手消息模型名记为 `codex-import`，费用 / token 统计为 0。
 - Claude Code 的会话文件格式不是官方公开格式，这里按本机 Claude Code（测试用 2.1.302）实际写出的文件来拼；CI 每次都用最新版 Claude Code
   真的 `claude --resume` 一遍（连本机假 API）确认能打开。Claude Code 以后改格式可能需要跟着更新。
-- Codex 桌面端如果开了「从 Claude Code 导入会话」，可能会把导过去的这份当成 Claude 会话再导回 Codex 一份。本工具不改 Codex 的任何文件，
-  所以不会替你登记「这份已导入」；遇到了在 Codex 里删掉重复的那份即可。
+- Codex 桌面端如果开了「从 Claude Code 导入会话」，可能会把导过去的这份当成 Claude 会话再导回 Codex 一份。缺省不处理（不碰 Codex 的文件），
+  要防止就打开下面的「登记进 Codex 导入记录」。
+
+## 登记进 Codex 导入记录（可选，缺省关）
+
+Codex 桌面端「从 Claude Code 导入会话」会扫 `~/.claude/projects`，用 `<CODEX_HOME>/external_agent_session_imports.json` 记哪些已经导过。
+打开这个开关后，每导一个会话，就在这个文件里加一条记录：「这份 Claude 会话 = 原来那个 Codex 线程」，Codex 看到就不会再导一份重复的。
+
+- 打开方式：命令行 `--mark-codex-imported`（单次）、`cc-sessionsync settings --codex-mark-imported on`（以后缺省），
+  或界面「Codex → Claude Code」页的「登记进 Codex 导入记录」勾选（会记住）。缺省关。
+- 记录格式和 Codex 自己写的一样（对照 Codex 开源代码 `codex-rs/external-agent-migration/src/sessions/ledger.rs`）：
+  `{"records": [{"source_path", "content_sha256", "imported_thread_id", "imported_at", "source_modified_at", "connector_names", "title"}],
+  "detected_connector_records": [...]}`；`source_path` 按 Codex 的写法（Windows 是 `\\?\C:\…`），`imported_thread_id` 是原来的 Codex 线程号。
+- **只动这一个文件**，Codex 的其它文件（对话、索引、数据库、配置）一概不碰。改之前把原文件拷进这次导入的账本，写临时文件再一步换上；
+  文件里原有的记录和其它字段原样保留，只增 / 改我们自己那几条。文件不存在就按 Codex 的格式新建。
+- **格式不对就整个不动**：文件不是合法 JSON、或者不是 `{"records": [...]}` 的样子 → 报错，这次导入一个文件都不写（演练时就会提示）。
+  修好它，或者这次用 `--no-mark-codex-imported` 不登记。
+- **撤回**：`codex undo` 一起还原。文件从导入以后没变过 → 原样换回备份（导入前没有这个文件 → 挪进回收站）；
+  之后 Codex 自己又往里加过记录 → 只把我们那几条换回原样，Codex 后来加的保留。你在 Claude 里接着聊过、被保留下来的会话，登记也保留。
+- 你在 Claude 里接着聊了以后，这份会话的内容和登记的不一样了，Codex 会试着把新增的部分接到原来那个 Codex 线程后面
+  （它要求内容严格对得上，转换过的文字版一般对不上，就放弃）；不会再新建一份重复的。
+- Codex 桌面端开着时也可以导：写之前会重新读一遍文件再原子替换，窗口很短；保险起见可以先退出 Codex 再导。
 
 ## 开发
 
@@ -142,6 +164,15 @@ python tools/verify_resume.py "$(command -v claude)"   # 真的 claude --resume 
    optionally, a Claude Desktop session-list entry, so you can `claude --resume <id>` or open it in Desktop. Codex files are only
    read. It is a dry run unless you pass `--apply`; every run writes a ledger and `codex undo <ledger>` moves created files to a
    trash folder and restores updated ones.
+
+**Optional `--mark-codex-imported` (default off):** also records each imported session in Codex's own
+`<CODEX_HOME>/external_agent_session_imports.json` (same schema Codex writes: `records[]` with `source_path` in Rust-canonical form,
+`content_sha256`, `imported_thread_id` = the original Codex thread, `imported_at`, `source_modified_at` in ns, `connector_names`, `title`),
+so Codex Desktop's "import from Claude Code" does not re-import it as a duplicate. Enable per run with the flag, persistently with
+`cc-sessionsync settings --codex-mark-imported on`, or with the toggle in the UI. It is the only Codex file ever written: the original is
+backed up into the import ledger, the write is atomic, existing records and keys are preserved, and a malformed file is left untouched
+(the import is refused with a clear error). `codex undo` restores the file byte-for-byte if it has not changed since, otherwise it reverts
+only our records.
 
 Changes to Claude Desktop's data are deferred while Desktop is running (it would overwrite them on exit): the job is queued,
 a background process waits for Desktop to quit, applies it and relaunches Desktop.

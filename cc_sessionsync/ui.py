@@ -22,7 +22,8 @@ def _status() -> dict:
     return {"version": __version__, "home": str(paths.HOME), "claude_home": str(paths.CLAUDE_HOME),
             "codex_home": str(paths.CODEX_HOME), "accounts": acc, "folders": claude_sync.folders(),
             "app_dirs": claude_sync.app_dirs_brief(), "running": apps.status(),
-            "jobs": [j for j in apps.pending() if j["state"] == "waiting"]}
+            "jobs": [j for j in apps.pending() if j["state"] == "waiting"],
+            "settings": {"codex_mark_imported": codex_import.mark_setting()}}
 
 
 def _settings_set(k: str, v) -> dict:
@@ -50,7 +51,8 @@ def _codex_kw(q: dict) -> dict:
     return {"days": float(q.get("days") or 30), "cwd": q.get("cwd") or None, "only": only or None,
             "include_all": bool(q.get("all")) and q.get("all") not in ("0", "false"),
             "desktop": q.get("desktop") not in (False, "0", "false"), "target": q.get("to") or None,
-            "reasoning": bool(q.get("reasoning")) and q.get("reasoning") not in ("0", "false")}
+            "reasoning": bool(q.get("reasoning")) and q.get("reasoning") not in ("0", "false"),
+            "mark": None if q.get("mark") in (None, "") else q.get("mark") not in (False, "0", "false")}
 
 
 def _clean(o):
@@ -132,6 +134,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json(apps.run_or_defer("claude", "claude-restore", {"backup": b["backup"]}, f"撤回 Claude 同步 {b['backup']}"))
             if p == "/api/codex/import":
                 kw = _codex_kw(b)
+                if kw["mark"] is None:
+                    kw["mark"] = codex_import.mark_setting()
                 if kw["desktop"] and apps.running("claude"):
                     return self._json(apps.run_or_defer("claude", "codex-import", kw, "把 Codex 对话导进 Claude Code"))
                 return self._json(dict(codex_import.run(dry=False, **kw), deferred=False))
@@ -140,6 +144,10 @@ class H(BaseHTTPRequestHandler):
                 if led.get("desktop"):
                     return self._json(apps.run_or_defer("claude", "codex-undo", {"ledger": b["ledger"]}, f"撤回 Codex 导入 {b['ledger']}"))
                 return self._json(codex_import.undo(str(b.get("ledger"))))
+            if p == "/api/settings":
+                if "codex_mark_imported" in b:
+                    codex_import.set_mark_setting(bool(b["codex_mark_imported"]))
+                return self._json({"ok": True, "codex_mark_imported": codex_import.mark_setting()})
             if p == "/api/appdir":
                 return self._json(_settings_set("claude_app_dir", b.get("path") or ""))
             if p == "/api/pickdir":
