@@ -33,7 +33,9 @@ add += json.dumps({"type": "assistant", "uuid": "a-x", "parentUuid": "u-x", "ses
 with open(f, "ab") as fh:
     fh.write(add.encode("utf-8"))
 os.utime(f, (time.time() + 5, time.time() + 5))
-time.sleep(0.01)
+time.sleep(0.05)
+t_mid = time.time()          # 第一次备份之后、第二次之前（Windows 的时钟粒度 ~15 ms，不能拿某一条的 at + 1 ms 当时间点）
+time.sleep(0.05)
 r2 = S.backup(why="t2")
 ok(r2["snapshots"] == 1 and r2["skipped"] >= 5, "second backup: only the changed session")
 import sqlite3
@@ -56,7 +58,7 @@ vw = TL.view(v1[0]["id"])
 ok(vw["ok"] and vw["diff"]["only_now"] == 2 and vw["diff"]["only_then"] == 0 and not vw["diff"]["identical"], "view old version: now has 2 more")
 ok(any("重试上限" in e["text"] for e in vw["diff"]["now_samples"]), "diff samples show what was added since")
 ok(TL.view(v3[-1]["id"])["diff"]["identical"], "current version → identical")
-pt = TL.point(v1[0]["at"] + 0.001)
+pt = TL.point(t_mid)
 st = {x["id"]: x["state"] for x in pt["items"]}
 ok(st.get(sid) == "changed" and list(st.values()).count("same") >= 4, "time point: this one changed later, others same")
 
