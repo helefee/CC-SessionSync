@@ -2,8 +2,24 @@
 
 ## 源码 / Source
 
-`cc_sessionsync` 只用 Python 标准库，没有打包任何第三方 Python 库的代码。
-The `cc_sessionsync` package uses only the Python standard library and vendors no third-party code.
+`cc_sessionsync` 的依赖：`tomlkit`（MIT，改 Codex 的 config.toml 时保留注释和格式）；桌面窗口可选 `pywebview`（BSD-3-Clause）。
+Dependencies: `tomlkit` (MIT, round-trips Codex `config.toml`); optional `pywebview` (BSD-3-Clause) for the desktop window.
+
+### 从 CC Msg 搬来的代码 / Code ported from CC Msg
+
+0.2.0 的桌面壳、托盘、检查更新、用量统计、模型与 API、凭据库、界面样式是从同一作者的 [CC Msg](https://github.com/helefee/CCMessage)
+（MIT）复制过来再改的（CC Msg 仓库本身没动）。详见 README「哪些是搬来的」。
+The 0.2.0 desktop shell, tray, updater, usage stats, Model & API page, keystore and UI styling are copied from the same author's
+CC Msg (MIT) and adapted; see "What was ported" in the README.
+
+| 项目 / Project | 许可 / License | 用在哪 / What is used |
+|---|---|---|
+| [cc-switch](https://github.com/farion1231/cc-switch) — Copyright (c) 2025 Jason Young | MIT (`licenses/cc-switch-MIT.txt`) | 模型价格种子表（`usage_prices.json`）、导入 CC Switch 用量时的「新输入」口径、用量页布局、供应商预设和只读导入（不拷代码）、Codex 自定义供应商的 `model_catalog_json` 思路（本程序写自己的 `ccss-models-<id>.json`） / seed price table, usage page layout, provider presets and read-only import, the model-catalog idea |
+| [magpie](https://github.com/yetone/magpie) — Copyright (c) 2026 yetone | MIT (`licenses/magpie-MIT.txt`) | 会话日志用量去重规则（Claude `message.id` + `requestId`；Codex 累计 / 单轮 `token_count`、重置分段、归档去重），在 `usage.py` 里重写 / usage dedup rules, re-implemented in `usage.py` |
+| [opencodex](https://github.com/lidge-jun/opencodex) — Copyright (c) 2026 opencodex contributors | MIT (`licenses/opencodex-MIT.txt`) | 「模型与 API → 代理」里探测本地网关（缺省端口 10100）和读它的 config.json / proxy detection on the Model & API page |
+| [Inter](https://rsms.me/inter/) | SIL OFL 1.1 (`cc_sessionsync/fonts/Inter-OFL.txt`) | 界面字体子集 / UI font subset |
+| [JetBrains Mono](https://www.jetbrains.com/lp/mono/) | SIL OFL 1.1 (`cc_sessionsync/fonts/JetBrainsMono-OFL.txt`) | 等宽字体子集 / monospace font subset |
+| [Lucide](https://lucide.dev) | ISC | 界面里的 SVG 图标（内联在 `index.html`） / SVG icons inlined in `index.html` |
 
 - LevelDB 表文件里的 Snappy 解压（`claude_sync._unsnappy`）是按公开的 Snappy 格式说明自己写的，没有拷贝 snappy 的代码。
   The Snappy block decoder in `claude_sync._unsnappy` is an independent implementation of the public Snappy format description.
@@ -18,14 +34,17 @@ The `cc_sessionsync` package uses only the Python standard library and vendors n
 "Claude" / "Claude Code" 是 Anthropic 的商标，"Codex" / "ChatGPT" 是 OpenAI 的商标；本项目和它们没有关系。
 "Claude" and "Claude Code" are trademarks of Anthropic; "Codex" and "ChatGPT" are trademarks of OpenAI. This project is not affiliated with either.
 
-## Windows exe
+## Windows 安装版 / Windows installer
 
-发布页上的 `cc-sessionsync-*-windows-x64.exe` 是用 Nuitka 编译的，里面带了：
-The Windows executable on the release page is built with Nuitka and contains:
+发布页上的 `CCSessionSync-Setup-*.exe` 用 Inno Setup 打包（Inno Setup License），里面的 `CCSessionSync.exe` 用 Nuitka 编译，带了：
+`CCSessionSync-Setup-*.exe` is built with Inno Setup; the `CCSessionSync.exe` inside is compiled with Nuitka and contains:
 
 - **CPython** 运行时和标准库 — Python Software Foundation License Version 2（https://docs.python.org/3/license.html）
 - **Nuitka** 运行时辅助代码 — Apache License 2.0（https://github.com/Nuitka/Nuitka/blob/develop/LICENSE.txt）；
   Nuitka 对它编译出来的程序里的这部分代码不额外施加限制。
+- **pywebview** — BSD-3-Clause（https://github.com/r0x0r/pywebview）；Windows 上通过它用系统自带的 Microsoft Edge WebView2 显示界面。
+- **pythonnet**（pywebview 在 Windows 上的依赖）— MIT；**tomlkit** — MIT。
+- 安装程序的中文界面文字 `installer/ChineseSimplified.isl` 来自 Inno Setup 的非官方翻译（随 Inno Setup 许可）。
 
 ## 测试工具 / Test tooling
 

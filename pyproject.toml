@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cc-sessionsync"
 dynamic = ["version"]
-description = "Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code（带备份 / 账本 / 撤回）"
+description = "Claude Code 换号后会话补齐、Codex 对话导入 Claude Code、会话管理 / 备份、用量统计、模型与 API（桌面版 + 命令行，带备份 / 账本 / 撤回）"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "licenses/*.txt"]
 authors = [{ name = "helefee" }]
 keywords = ["claude-code", "codex", "session", "sync", "claude-desktop"]
 classifiers = [
@@ -18,8 +18,12 @@ classifiers = [
   "Operating System :: POSIX :: Linux",
   "Operating System :: MacOS",
   "Environment :: Console",
+  "Environment :: Win32 (MS Windows)",
 ]
-dependencies = []
+dependencies = ["tomlkit>=0.12"]
+
+[project.optional-dependencies]
+desktop = ["pywebview>=5,<7"]
 
 [project.urls]
 Homepage = "https://github.com/helefee/CC-SessionSync"
@@ -32,7 +36,7 @@ cc-sessionsync = "cc_sessionsync.cli:main"
 packages = ["cc_sessionsync"]
 
 [tool.setuptools.package-data]
-cc_sessionsync = ["index.html"]
+cc_sessionsync = ["index.html", "*.ico", "*.png", "usage_prices.json", "fonts/*"]
 
 [tool.setuptools.dynamic]
 version = { attr = "cc_sessionsync.__version__" }

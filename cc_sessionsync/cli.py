@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""命令行入口：cc-sessionsync <命令>（或 python -m cc_sessionsync <命令>）。不带命令 = 打开本地界面。"""
+"""命令行入口：cc-sessionsync <命令>（或 python -m cc_sessionsync <命令>；安装版 CCSessionSync.exe <命令>）。
+不带命令 = 打开桌面窗口（desktop；没装 pywebview 时退回浏览器）。"""
 from __future__ import annotations
 
 import argparse
@@ -202,6 +203,52 @@ def cmd_ui(a) -> int:
     return ui.serve(a.port, open_browser=not a.no_browser, auto_sync=a.auto)
 
 
+def cmd_selfcheck(a) -> int:
+    from . import selfcheck
+    r = selfcheck.run(net=not a.offline)
+    print(json.dumps(r, ensure_ascii=False, indent=1) if a.json else selfcheck.text(r))
+    return 0 if r["ok"] else 1
+
+
+def cmd_sessions(a) -> int:
+    from . import sessions
+    if a.sess_cmd == "list":
+        r = sessions.list_all(a.agent)
+        for x in r["items"][: a.n]:
+            print(f"{_t(x['last'])}  {x['agent']:<6} {x['id'][:8]}  {x['title'][:50]}  ·  {x.get('cwd') or ''}"
+                  + (f"  [{x['why']}]" if x.get("why") else ""))
+        print(f"\n共 {len(r['items'])} 个")
+        return 0
+    if a.sess_cmd == "backup":
+        r = sessions.backup(full=a.full, why="cli")
+        print(f"✓ 看了 {r['files']} 个文件，没变跳过 {r['skipped']}，新快照 {r['snapshots']}，新内容 {r['new_blobs']}（{r['ms']} ms）→ {r['db']}")
+        return 0
+    if a.sess_cmd == "export":
+        r = sessions.export(a.agent, a.id, a.fmt)
+        print(("✓ " + r["path"]) if r.get("ok") else ("✗ " + r["error"]))
+        return 0 if r.get("ok") else 1
+    if a.sess_cmd == "trash":
+        for t in sessions.trash_list():
+            print(f"{t['id']}  {len(t['items'])} 个" + (f"  （已还原 {t['restored']}）" if t.get("restored") else ""))
+        return 0
+    if a.sess_cmd == "ops":
+        for o in sessions.ops_list():
+            print(f"{o['id']}  {o['summary']}" + (f"  （已撤回 {o['undone']}）" if o.get("undone") else ""))
+        return 0
+    return 2
+
+
+def cmd_usage(a) -> int:
+    from . import usage
+    r = usage.scan(full=a.full)
+    s = usage.summary({})
+    t = s["totals"]
+    print(f"扫描：{json.dumps(r, ensure_ascii=False)}")
+    print(f"请求 {t['n']}，真实 tokens {t['real']}，缓存命中率 {('%.1f%%' % (t['hit'] * 100)) if t.get('hit') is not None else '—'}，"
+          f"按 API 价折算 {('$%.2f' % t['cost']) if t['n'] - t['unpriced'] else '—'}")
+    return 0
+
+
 def cmd_after_quit(a) -> int:
     return apps.watch(a.kind)
 
@@ -209,7 +256,7 @@ def cmd_after_quit(a) -> int:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="cc-sessionsync", description="Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code")
     ap.add_argument("--version", action="version", version=f"cc-sessionsync {__version__}")
-    sub = ap.add_subparsers(dest="cmd", metavar="{status,sync,backups,restore,auto,codex,settings,jobs,diag,ui}")
+    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,restore,auto,codex,sessions,usage,settings,jobs,diag,selfcheck,ui}")
     sub.add_parser("status", help="看当前账号、会话文件夹、Codex 对话数").set_defaults(fn=cmd_status)
     s = sub.add_parser("sync", help="把别的账号下的 Claude 会话补进当前账号的会话列表")
     s.add_argument("--dry-run", action="store_true", help="只演练，不写")
@@ -260,10 +307,33 @@ def build_parser() -> argparse.ArgumentParser:
     ui.add_argument("--no-browser", action="store_true")
     ui.add_argument("--auto", action="store_true", help="界面开着时顺便自动同步（桌面端没开时补齐）")
     ui.set_defaults(fn=cmd_ui)
+    sub.add_parser("desktop", help="打开桌面窗口（缺省；--port / --minimized / --quit，见 desktop --help）")
+    sc = sub.add_parser("selfcheck", help="自检：程序文件、数据目录、凭据管理器、Claude / Codex、更新地址")
+    sc.add_argument("--offline", action="store_true", help="不查更新地址")
+    sc.add_argument("--json", action="store_true")
+    sc.set_defaults(fn=cmd_selfcheck)
+    se = sub.add_parser("sessions", help="会话管理（只读命令；改动请在窗口里做）")
+    ss = se.add_subparsers(dest="sess_cmd", required=True)
+    x = ss.add_parser("list", help="列出 Claude Code / Codex 会话")
+    x.add_argument("--agent", choices=("claude", "codex"))
+    x.add_argument("-n", type=int, default=40)
+    x = ss.add_parser("backup", help="把会话记录增量备份进 ~/.cc-sessionsync/sessions.sqlite")
+    x.add_argument("--full", action="store_true", help="不看修改时间，全部重读")
+    x = ss.add_parser("export", help="导出一个会话（md / jsonl）")
+    x.add_argument("agent", choices=("claude", "codex"))
+    x.add_argument("id")
+    x.add_argument("--fmt", choices=("md", "jsonl"), default="md")
+    ss.add_parser("trash", help="回收站")
+    ss.add_parser("ops", help="会话操作账本")
+    se.set_defaults(fn=cmd_sessions)
+    us = sub.add_parser("usage", help="扫一遍会话日志，打印用量汇总")
+    us.add_argument("--full", action="store_true")
+    us.set_defaults(fn=cmd_usage)
     aq = sub.add_parser("after-quit")
     aq.add_argument("kind", choices=("claude", "codex"))
     aq.set_defaults(fn=cmd_after_quit)
-    sub._choices_actions = [c for c in sub._choices_actions if c.dest != "after-quit"]   # 后台用的，不在帮助里列
+    sub.add_parser("key")
+    sub._choices_actions = [c for c in sub._choices_actions if c.dest not in ("after-quit", "key")]   # 后台用的，不在帮助里列
     return ap
 
 
@@ -274,8 +344,16 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:
             pass
     argv = sys.argv[1:] if argv is None else argv
+    if not argv or argv[0] in ("--quit", "--minimized", "--autostart"):     # 安装程序 / 开机自启 / 双击图标
+        argv = ["desktop", *argv]
+    if argv[0] == "desktop":
+        from . import desktop
+        return desktop.main(argv[1:])
+    if argv[0] == "key":                         # Claude 的 apiKeyHelper / Codex 的 auth 命令：只把 key 打到 stdout
+        from . import keystore
+        return keystore.main(argv[1:])
     ap = build_parser()
-    a = ap.parse_args(argv or ["ui"])
+    a = ap.parse_args(argv)
     if not getattr(a, "fn", None):
         ap.print_help()
         return 2

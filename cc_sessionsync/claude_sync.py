@@ -911,16 +911,18 @@ def _auto_sig() -> tuple:
     out = []
     for f in [Path.home() / ".claude.json"]:
         try:
-            out.append((f.name, f.stat().st_mtime))
+            st = f.stat()
+            out.append((f.name, st.st_mtime_ns, st.st_size))   # 加上大小：同一个时钟刻度里改了两次也认得出
         except Exception:
-            out.append((f.name, 0))
+            out.append((f.name, 0, 0))
     ldb = app_path("ldb")
     try:
-        out += sorted((f.name, f.stat().st_mtime) for f in ldb.iterdir() if f.suffix in (".log", ".ldb"))
+        out += sorted((f.name, st.st_mtime_ns, st.st_size) for f in ldb.iterdir() if f.suffix in (".log", ".ldb")
+                      for st in [f.stat()])
     except Exception:
         pass
     try:
-        out += sorted((f"{a.name}/{o.name}", o.stat().st_mtime) for a in sessions_root().iterdir() if a.is_dir()
+        out += sorted((f"{a.name}/{o.name}", o.stat().st_mtime_ns, 0) for a in sessions_root().iterdir() if a.is_dir()
                       for o in a.iterdir() if o.is_dir())
     except Exception:
         pass

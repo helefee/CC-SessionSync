@@ -1,108 +1,1648 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CC Session Sync</title>
+<link rel="icon" href="/icon.png">
+<script>try { var t = localStorage.getItem("ccss.theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <style>
-:root{--bg:#f6f7f9;--fg:#1d2330;--mut:#667085;--card:#fff;--line:#e3e6ea;--acc:#c96442;--ok:#1a7f37;--bad:#c62828}
-@media (prefers-color-scheme:dark){:root{--bg:#16181d;--fg:#e6e8eb;--mut:#9aa3af;--card:#1f2228;--line:#30343c;--acc:#e07a55;--ok:#4ac26b;--bad:#ef6b6b}}
-*{box-sizing:border-box}body{margin:0;font:14px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--fg)}
-header{display:flex;gap:16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--card)}
-header b{font-size:16px}nav button{background:none;border:0;padding:8px 12px;color:var(--mut);cursor:pointer;font:inherit;border-bottom:2px solid transparent}
-nav button.on{color:var(--fg);border-color:var(--acc)}main{max-width:1000px;margin:0 auto;padding:16px 20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 14px}
-h3{margin:0 0 8px;font-size:15px}.mut{color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}
-button.b{background:var(--acc);color:#fff;border:0;border-radius:7px;padding:7px 14px;cursor:pointer;font:inherit}
-button.g{background:none;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;font:inherit}
-button:disabled{opacity:.5;cursor:default}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:5px 6px;border-top:1px solid var(--line);vertical-align:top}
-th{color:var(--mut);font-weight:500}code,pre{font:12px/1.45 ui-monospace,Consolas,monospace}pre{white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;max-height:420px;overflow:auto}
-input[type=text],input[type=number],select{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}.tag{font-size:12px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--mut)}
-#msg{position:fixed;right:16px;bottom:16px;max-width:460px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;box-shadow:0 4px 18px #0003;display:none;white-space:pre-wrap}
-</style></head><body>
-<header><b>CC Session Sync</b><span class="mut">v__VERSION__</span>
-<nav><button data-t="sync" class="on">换号后补齐会话</button><button data-t="codex">Codex → Claude Code</button><button data-t="diag">检测 / 目录</button></nav></header>
-<main>
-<section id="t-sync">
- <div class="card"><h3>当前账号</h3><div id="acc" class="mut">读取中…</div></div>
- <div class="card"><h3>补齐到当前账号</h3>
-  <div class="row"><label>按 <select id="src"><option value="desktop">桌面端</option><option value="cli">命令行（CLI）</option></select> 的当前账号算</label>
-  <button class="g" id="syncPlan">刷新 / 演练</button><button class="b" id="syncGo" disabled>补齐</button></div>
-  <div id="syncOut" class="mut">先点「刷新 / 演练」看会补哪些。</div></div>
- <div class="card"><h3>备份 / 撤回</h3><div id="baks" class="mut"></div></div>
-</section>
-<section id="t-codex" hidden>
- <div class="card"><h3>把 Codex 对话导进 Claude Code</h3>
-  <div class="mut">只读 Codex 的文件；新写一份 Claude Code 会话（原文件不动），写之前记账本，随时可撤回。工具调用 / 命令输出会折成文字摘要，图片不带。</div>
-  <div class="row"><label>最近 <input type="number" id="cdays" value="30" min="0" style="width:70px"> 天（0 = 不限）</label>
-   <label>项目目录 <input type="text" id="ccwd" placeholder="（全部）" style="width:260px"></label>
-   <label><input type="checkbox" id="cdesk" checked> 同时加进桌面端会话列表</label>
-   <label title="把导过去的会话登记进 Codex 的 external_agent_session_imports.json（先备份，撤回时还原），Codex 桌面端就不会再把它导回去一份重复的。这是唯一会写的 Codex 文件。"><input type="checkbox" id="cmark"> 登记进 Codex 导入记录（防止导回去重复）</label>
-   <button class="g" id="cPlan">演练</button><button class="b" id="cGo" disabled>导入勾选的</button></div>
-  <div id="cOut" class="mut">先点「演练」。</div></div>
- <div class="card"><h3>导入账本 / 撤回</h3><div id="leds" class="mut"></div></div>
-</section>
-<section id="t-diag" hidden>
- <div class="card"><h3>Claude 桌面端数据目录</h3><div id="dirs" class="mut"></div></div>
- <div class="card"><h3>检测报告</h3><div class="row"><button class="g" id="dLoad">刷新</button><button class="g" id="dCopy">复制</button></div><pre id="dTxt"></pre></div>
- <div class="card"><h3>排队中的任务</h3><div id="jobs" class="mut"></div></div>
-</section>
-</main><div id="msg"></div>
+@font-face{font-family:"SS Inter";src:url(/fonts/inter-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
+@font-face{font-family:"SS Inter";src:url(/fonts/inter-medium.woff2) format("woff2");font-weight:450 549;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
+@font-face{font-family:"SS Inter";src:url(/fonts/inter-semibold.woff2) format("woff2");font-weight:550 649;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
+@font-face{font-family:"SS Inter";src:url(/fonts/inter-bold.woff2) format("woff2");font-weight:650 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
+@font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
+@font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-medium.woff2) format("woff2");font-weight:450 649;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
+@font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-bold.woff2) format("woff2");font-weight:650 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
+
+:root{
+  --bg:#faf9f5;--panel:#ffffff;--panel2:#f5f4ed;--side:#f3f1ea;--hover:#ebe8de;--hover2:#e2ded1;--bubble:#efece3;
+  --line:#e3dfd3;--line2:#ece9e0;--text:#141413;--muted:#6f6d66;--faint:#a19f97;
+  --accent:#c96442;--accent-weak:#f7e7df;--ink:#141413;--ink-on:#faf9f5;--claude:#c96442;--codex:#1e6b34;--cxn:#1e6b34;
+  --ok:#3f8a52;--ok-weak:#e4f1e5;--warn:#a8701c;--warn-weak:#f8eedb;--bad:#bf4b3a;--bad-weak:#f8e3df;
+  --codebg:#1f1e1d;--codefg:#ebe9e1;--shadow:0 4px 20px rgba(60,48,30,.09);--r:9px;--r2:14px;
+  --sans:"SS Inter","Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
+  --mono:"SS Mono",Consolas,"Cascadia Mono","SFMono-Regular",Menlo,"Microsoft YaHei UI","PingFang SC","Noto Sans SC",monospace;
+  color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#262624;--panel:#30302e;--panel2:#2b2a28;--side:#1f1e1d;--hover:#353431;--hover2:#3e3d3a;--bubble:#393937;
+  --line:#3b3a36;--line2:#31302d;--text:#faf9f5;--muted:#a6a39b;--faint:#77756e;
+  --accent:#d97757;--accent-weak:#40302a;--ink:#faf9f5;--ink-on:#1f1e1d;--claude:#d97757;--codex:#7cc982;--cxn:#7cc982;
+  --ok:#7dbb83;--ok-weak:#26332a;--warn:#e2b25f;--warn-weak:#3a311f;--bad:#e8826f;--bad-weak:#402823;
+  --codebg:#1a1918;--shadow:0 6px 24px rgba(0,0,0,.4);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#262624;--panel:#30302e;--panel2:#2b2a28;--side:#1f1e1d;--hover:#353431;--hover2:#3e3d3a;--bubble:#393937;
+  --line:#3b3a36;--line2:#31302d;--text:#faf9f5;--muted:#a6a39b;--faint:#77756e;
+  --accent:#d97757;--accent-weak:#40302a;--ink:#faf9f5;--ink-on:#1f1e1d;--claude:#d97757;--codex:#7cc982;--cxn:#7cc982;
+  --ok:#7dbb83;--ok-weak:#26332a;--warn:#e2b25f;--warn-weak:#3a311f;--bad:#e8826f;--bad-weak:#402823;
+  --codebg:#1a1918;--shadow:0 6px 24px rgba(0,0,0,.4);color-scheme:dark}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--hover2) transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{border:0;background:var(--hover);border-radius:8px;padding:5px 12px;cursor:pointer;white-space:nowrap;transition:background .15s}
+button:hover{background:var(--hover2)}
+button.primary{background:var(--accent);color:#fff}
+button.primary:hover{background:var(--accent);opacity:.9}
+button.ghost{background:transparent;color:var(--muted)}
+button.ghost:hover{background:var(--hover);color:var(--text)}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.5;cursor:default}
+input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;vertical-align:-2px}
+code{font-family:var(--mono);font-size:12px;background:var(--hover);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere}
+a{color:var(--accent)}
+.ic{width:1.1em;height:1.1em;vertical-align:-.18em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic.logo{width:1.05em;height:1.05em;fill:currentColor;stroke:none}
+.dim{color:var(--faint)}.muted{color:var(--muted)}
+.app{display:flex;flex-direction:column;height:100vh}
+.top{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--line2);background:var(--bg);flex:none}
+.brand{display:flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap}
+.brand img{width:20px;height:20px;border-radius:5px}
+.brand .ver{font-weight:400;font-size:11.5px;color:var(--faint)}
+.tabs{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.tab{font-size:12.5px;padding:3px 11px;border-radius:999px;background:var(--hover);color:var(--text);display:inline-flex;align-items:center;gap:6px}
+.tab .ic{width:14px;height:14px;color:var(--muted)}
+.tab.on{background:var(--ink);color:var(--ink-on)}.tab.on .ic{color:var(--ink-on)}
+.tab .cnt{font-size:10.5px;background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:15px}
+.topact{display:flex;gap:2px;align-items:center}
+.tbx{position:relative;background:transparent;color:var(--muted);padding:5px 7px;border-radius:8px}
+.tbx:hover{background:var(--hover);color:var(--text)}
+.tbx .ic{width:17px;height:17px}
+.rdot{position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 2px var(--bg);display:none}
+.has-dot>.rdot{display:block}
+.main{flex:1;overflow:auto;padding:16px 20px 30px}
+.page{display:none;max-width:1180px;margin:0 auto}
+.page.on{display:block}
+.ban{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px;margin:0 auto 12px;max-width:1180px;font-size:13px;box-shadow:var(--shadow)}
+.ban .ic{width:17px;height:17px;flex:none}
+.ban.warn{border-color:var(--warn);background:var(--warn-weak)}.ban.warn>.ic{color:var(--warn)}
+.ban.acc>.ic{color:var(--accent)}
+.ban .tx{flex:1;min-width:0}.ban .tx b{font-weight:600}
+.ban .acts{display:flex;gap:6px}
+.ban button{padding:3px 10px;font-size:12.5px}
+h2{font-size:17px;font-weight:600;margin:2px 0 4px;display:flex;align-items:center;gap:8px}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;margin-bottom:12px}
+.card h3{font-size:13.5px;font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.card h3 .sp{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.acct{display:flex;gap:10px;align-items:center}
+.acct .av{width:34px;height:34px;border-radius:50%;background:var(--accent-weak);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.acct .nm{font-weight:600}.acct .ds{font-size:12px;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;border-radius:6px;padding:0 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;line-height:18px}
+.tag.claude{color:var(--claude);border-color:currentColor}.tag.codex{color:var(--cxn);border-color:currentColor}
+.tag.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-weak)}.tag.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-weak)}
+.tag.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-weak)}.tag.acc{color:var(--accent);border-color:var(--accent);background:var(--accent-weak)}
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle}
+table.t th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel);z-index:1}
+table.t tr:last-child td{border-bottom:0}
+table.t tr.sel td{background:var(--accent-weak)}
+table.t tr.click{cursor:pointer}table.t tr.click:hover td{background:var(--hover)}
+table.t td.n{text-align:right;white-space:nowrap}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
+#ssList .tl .ell,#ssList .tl .s{max-width:250px}#ssList td:last-child{white-space:nowrap}#ssList .tag.warn{max-width:74px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
+.tl{font-weight:500}.tl .s{display:block;font-weight:400;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.bar .sp{flex:1}
+.bar input[type=search]{width:240px}
+.seg{display:inline-flex;border-radius:999px;background:var(--hover);padding:2px}
+.seg button{border-radius:999px;background:transparent;padding:3px 12px;font-size:12.5px;color:var(--muted)}
+.seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.split{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;align-items:start}
+.scroll{max-height:calc(100vh - 290px);overflow:auto;border:1px solid var(--line2);border-radius:10px}
+.pv{max-height:calc(100vh - 250px);overflow:auto;display:flex;flex-direction:column;gap:8px}
+.msg{border-radius:12px;padding:8px 11px;font-size:13px;white-space:pre-wrap;word-break:break-word;max-width:100%}
+.msg.user{background:var(--bubble);align-self:flex-end;max-width:88%}
+.msg.assistant{background:transparent;border:1px solid var(--line2)}
+.msg.tool{font:12px/1.45 var(--mono);color:var(--muted);padding:2px 6px;border:0}
+.msg .who{font-size:11px;color:var(--faint);margin-bottom:2px;font-family:var(--sans)}
+.empty{color:var(--faint);text-align:center;padding:28px 10px;font-size:13px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:12.5px}.kv>div:nth-child(odd){color:var(--muted)}
+.batch{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line2);font-size:12.5px}
+.switch{position:relative;display:inline-block;width:36px;height:20px;flex:none}
+.switch input{display:none}.switch i{position:absolute;inset:0;border-radius:20px;background:var(--hover2);transition:.15s;cursor:pointer}
+.switch i:after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:.15s}
+.switch input:checked+i{background:var(--accent)}.switch input:checked+i:after{left:18px}
+.chk{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.chk label{display:inline-flex;gap:6px;align-items:center}
+.sc{display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-bottom:1px solid var(--line2)}
+.sc:last-child{border-bottom:0}.sc .ic{width:17px;height:17px;margin-top:2px}
+.sc.pass .ic{color:var(--ok)}.sc.warn .ic{color:var(--warn)}.sc.fail .ic{color:var(--bad)}
+.sc .nm{font-weight:600;font-size:13px}.sc .dt{font-size:12px;color:var(--muted);word-break:break-all}.sc .fx{font-size:12px;color:var(--warn)}
+pre.rep{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px;max-height:340px;overflow:auto;margin:0}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
+.dlg.open{display:flex}
+.dlg .box{background:var(--panel);border-radius:16px;border:1px solid var(--line2);box-shadow:var(--shadow);width:min(620px,100%);max-height:85vh;display:flex;flex-direction:column}
+.dlg .hd{padding:16px 20px 6px;font-weight:600;display:flex;align-items:center}
+.dlg .hd button{margin-left:auto}
+#dlgTitle{display:inline-flex;align-items:center;gap:8px}
+.dlg .bd{padding:8px 20px 12px;overflow:auto}
+.dlg .ft{padding:10px 20px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.dlg.wide .box{width:min(1100px,100%);height:88vh;max-height:88vh}
+.dlg pre{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;margin:0}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px 16px;font-size:13px;z-index:40;display:none;max-width:90vw;align-items:center;gap:8px}
+.toast[style*="block"]{display:flex!important}
+.menu{position:relative}
+.menu .list{position:absolute;right:0;top:calc(100% + 4px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:6px;min-width:160px;display:none;z-index:20}
+.menu.open .list{display:block}
+.menu .list button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:transparent;border-radius:9px;padding:7px 10px}
+.menu .list button:hover{background:var(--hover)}
+.miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:12.5px}
+.okbox{background:var(--ok-weak);border:1px solid var(--ok);border-radius:8px;padding:6px 10px;font-size:12.5px}
+.diff{font:12px/1.5 var(--mono)}.diff .a{color:var(--ok)}.diff .u{color:var(--warn)}
+.updn{white-space:pre-wrap;font-size:12.5px;max-height:240px;overflow:auto;background:var(--panel2);border-radius:10px;padding:8px 10px;border:1px solid var(--line2)}
+.prog{height:6px;border-radius:6px;background:var(--hover);overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:var(--accent);width:0}
+@media (max-width:900px){.split,.grid2{grid-template-columns:1fr}.brand .ver{display:none}}
+/* 下面这些从 CC Msg 搬来：设置行、诊断卡片、用量统计、模型与 API */
+.setlist{display:flex;flex-direction:column;gap:2px;min-width:min(460px,80vw)}
+.setrow{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.setrow:last-child{border-bottom:0}
+.setrow .sl{display:flex;gap:10px;align-items:flex-start;flex:1 1 200px;min-width:0}
+.setrow .sl .ic{width:16px;height:16px;color:var(--muted);margin-top:2px;flex:none}
+.setrow .sd{font-size:12px;color:var(--muted);margin-top:1px}
+.setrow .seg{flex:none}
+.setrow .seg button{font-size:12.5px;padding:4px 12px}
+.dgag{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin:0 0 10px}
+.dgag h4{margin:0 0 4px;font-size:13.5px;display:flex;align-items:center;gap:8px}.dgag .why{font-size:12.5px;margin:0 0 6px}
+.dgst{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--accent-weak);color:var(--accent)}.dgst.none{background:var(--warn-weak);color:var(--warn)}
+.dgls{font-size:11.5px;color:var(--muted);margin:4px 0;font-family:var(--mono,monospace);word-break:break-all}.dgls div{padding:1px 0}
+.dgrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;font-size:12.5px}.dgrow input{flex:1;min-width:180px;font-size:12px;padding:4px 7px}
+/* 0.5.0 用量统计 */
+.us{display:flex;flex-direction:column;gap:12px}
+.us .uhd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.us .usrc{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;border:1px solid var(--line);border-radius:20px;padding:2px 10px}
+.us .usrc i.d{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
+.us .usrc.busy i.d{background:var(--warn);animation:usb 1s infinite alternate}
+@keyframes usb{to{opacity:.3}}
+.us .uhd .sp{flex:1}
+.us .ufl{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.us .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.us .seg button{border:0;border-radius:0;background:transparent;padding:4px 12px;color:var(--muted)}
+.us .seg button.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+.us .ucards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.us .ucard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);min-width:0}
+.us .ucard .k{color:var(--muted);font-size:12.5px}
+.us .ucard .v{font-size:22px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.us .ucard .s{color:var(--faint);font-size:11.5px;margin-top:2px}
+.us .note{color:var(--warn);font-size:11.5px}
+.us .uchart{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel2)}
+.us .uchart .ct{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12.5px;color:var(--muted)}
+.us .uchart svg{width:100%;height:170px;display:block}
+.us .uchart rect.b{fill:var(--accent);opacity:.8}
+.us .uchart rect.b:hover{opacity:1}
+.us .uchart text{fill:var(--faint);font-size:10px}
+.us .uchart line{stroke:var(--line2)}
+.us .utabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.us .utabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--muted);padding:6px 12px}
+.us .utabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.us table{width:100%;border-collapse:collapse;font-size:12.5px}
+.us th,.us td{padding:5px 8px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}
+.us th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
+.us td.l,.us th.l{text-align:left}
+.us td.m{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.us .tag{display:inline-block;font-size:11px;border-radius:5px;padding:0 6px;border:1px solid var(--line);color:var(--muted)}
+.us .tag.claude{color:var(--claude);border-color:currentColor}.us .tag.codex{color:var(--cxn,var(--codex));border-color:currentColor}
+.us .dim{color:var(--faint)}
+.us .miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:12.5px}
+#mcBox code{overflow-wrap:anywhere;word-break:break-all}
+.pvsec{margin-bottom:10px}
+.pvt{margin-top:6px;display:block;overflow-x:auto}.pvt tr.on td{background:var(--ok-weak)}
+.pvr{display:inline-flex;gap:4px;font-size:11.5px}.pvr span{border:1px solid var(--line);border-radius:6px;padding:0 5px}.pvr .y{color:var(--ok);border-color:var(--ok)}.pvr .n{color:var(--faint)}
+.pvm{display:inline-block;font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:0 5px;margin:1px 3px 1px 0}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+.pfold>summary .pfmore{display:none;flex:none;border:0;background:transparent;padding:0 2px;height:18px;color:var(--muted);cursor:pointer;border-radius:5px}
+.pfold>summary:hover .pfmore,.pfold>summary .pfmore:focus-visible{display:inline-flex;align-items:center}
+.pfold>summary .pfmore:hover{background:var(--hover2,var(--line2));color:var(--text)}
+.pjctx{position:fixed;z-index:200;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:5px;min-width:200px}
+.pjctx .pjh{font-size:11.5px;color:var(--faint);padding:3px 9px 5px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pjctx button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;border-radius:7px;padding:6px 9px;font-size:13px}
+.pjctx button:hover{background:var(--line2)}.pjctx button .ic{width:15px;height:15px;color:var(--muted)}
+.mctop{display:flex;align-items:center;gap:8px;min-height:30px;margin:0 0 6px}
+.mctop .mcvt{font-size:13px}
+.mcback{padding:3px 8px;font-size:12.5px}
+.mcban{min-width:0;flex:0 1 auto}
+.mcbl{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:2px 4px;color:var(--muted);font-size:12px;max-width:100%;cursor:pointer;border-radius:6px}
+.mcbl:hover,.mcbl.on{color:var(--text);background:var(--line2)}
+.mcbl .ic{width:14px;height:14px;flex:none;color:var(--warn)}
+.mcbl span:not(.mcchev){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcbx{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px;margin:0 0 10px}
+.mcbx>div{padding:4px 0}.mcbx>div+div{border-top:1px solid var(--line2)}
+.mcm .list{min-width:220px}.mcm .list button{padding:6px 10px;font-size:13px}
+.mcmb{padding:3px 7px}
+.mcnb{margin-left:auto;font-size:11px;border-radius:9px;padding:0 6px;background:var(--bad-weak);color:var(--bad)}
+.pvhd{display:flex;align-items:baseline;gap:10px;margin:4px 2px 4px}
+.pvh{font-size:11.5px;color:var(--faint);font-weight:400;margin-left:6px}
+.pvl{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pvrow{display:grid;grid-template-columns:18px minmax(120px,1.1fr) minmax(0,1.6fr) 56px auto;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:13px}
+.pvrow:hover{background:var(--hover)}.pvrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.pvrow.on{background:var(--accent-weak)}
+.pvrad{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--faint);box-sizing:border-box;display:inline-block}
+.pvrow.on .pvrad{border:4.5px solid var(--accent)}
+.pvn{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvu{color:var(--muted);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono,ui-monospace,monospace)}
+.pvkey{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;font-family:var(--mono,ui-monospace,monospace)}
+.pvb{display:flex;gap:4px;justify-content:flex-end}
+.pvmini{padding:1px 8px;font-size:12px;border-radius:6px}
+.pvo:empty{display:none}.pvo{padding:4px 10px;border-bottom:1px solid var(--line2)}
+.pvadd{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;flex-wrap:wrap}
+.pvaddb{font-weight:600;padding:2px 8px;font-size:12.5px;color:var(--accent)}
+.pve .pvpre{margin-bottom:8px;gap:6px}
+.pvadv{margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:0 10px}
+.pvadv>summary{cursor:pointer;padding:8px 0;font-weight:600;font-size:13px;color:var(--muted)}
+.pvadv[open]>summary{color:var(--text)}
+.pvfh{margin-top:10px;font-size:12px;color:var(--faint)}
+.pvdd{position:fixed;z-index:1000;display:none;max-height:260px;overflow:auto;background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:4px;font-family:var(--mono);font-size:12.5px}
+.pvddi{padding:5px 8px;border-radius:5px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}.pvddi:hover,.pvddi.on{background:var(--hover2,var(--hover))}
+.pvddi .dim{font-family:var(--sans);font-size:11px}.pvddh{padding:4px 8px;font-size:11px;color:var(--faint);font-family:var(--sans)}
+.pvmf{display:flex;gap:6px;align-items:center}
+.pvsub{padding:10px 0 8px;border-top:1px solid var(--line2)}
+.pvsubh{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:13px;margin-bottom:6px}.pvsubh .pvh{flex-basis:100%;margin:2px 0 0}
+.pvtag{font:11px var(--mono);padding:0 6px;border-radius:5px;background:var(--hover);color:var(--muted)}.pvtag.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);font-family:var(--sans)}
+.pvnote{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 8px}.pvnote code{font-size:11.5px}
+.pvtbl{display:flex;flex-direction:column;gap:5px}
+.pvtr{display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;align-items:center}
+.pvtr[data-ov]{grid-template-columns:1fr 16px 1fr 28px}.pvarr{color:var(--faint);text-align:center}
+.pvcat .pvtr,.pvcat .pvth{grid-template-columns:1.4fr 1fr 110px 110px 28px}
+.pvth{display:grid;gap:6px;font-size:11px;color:var(--faint);padding:0 2px}.pvth:only-child{display:none}
+.pvtr input,.pvtr select{width:100%;min-width:0;box-sizing:border-box}.pvtr .pvmi{font-family:var(--mono);font-size:12.5px}
+.pvrx{padding:2px 0!important;color:var(--faint)}.pvrx:hover{color:var(--err,#d33)}
+.pvtadd{display:flex;gap:8px;align-items:center;margin-top:6px}.pvchk{font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center}.pvmf input{width:220px!important}
+.pvmst{padding:0 0 4px;font-size:12px}.pvmst:empty{display:none}.pvmst .miss{margin:4px 0}
+.pvmap{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:2px 10px 4px}
+.pvmh{display:flex;align-items:baseline;gap:4px;padding:8px 0 2px;font-size:13px}
+#mcBox .miss{margin-bottom:6px}
+.us input.pr{width:70px;padding:2px 5px;text-align:right}
+.us .more{display:flex;justify-content:center;padding:8px}
+@media (max-width:760px){.us .ucards{grid-template-columns:repeat(2,1fr)}.us .ucard .v{font-size:18px}}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <span class="brand"><img src="/icon.png" alt=""><span>CC Session Sync</span><span class="ver">v__VERSION__</span></span>
+    <nav class="tabs" id="tabs">
+      <button class="tab on" data-p="sync"><i data-ic="users"></i>账号同步</button>
+      <button class="tab" data-p="codex"><i data-ic="codex" data-cls="logo"></i>Codex → Claude Code</button>
+      <button class="tab" data-p="sessions"><i data-ic="list"></i>会话管理</button>
+      <button class="tab" data-p="backups"><i data-ic="download"></i>备份与还原</button>
+      <button class="tab" data-p="settings"><i data-ic="gear"></i>设置</button>
+      <button class="tab" data-p="diag"><i data-ic="activity"></i>诊断<span class="cnt" id="diagCnt" hidden></span></button>
+    </nav>
+    <div class="topact">
+      <button class="tbx" id="tbModel" title="模型与 API（供应商、key、模型映射）"><i data-ic="key"></i></button>
+      <button class="tbx" id="tbUsage" title="用量统计（tokens / 费用）"><i data-ic="chart"></i></button>
+      <button class="tbx" id="tbCheck" title="自检"><i data-ic="ok"></i></button>
+      <button class="tbx" id="tbUpd" title="检查更新"><i data-ic="refresh"></i><span class="rdot"></span></button>
+      <button class="tbx" id="tbTheme" title="主题"></button>
+      <button class="tbx" id="tbSet" title="设置"><i data-ic="gear"></i></button>
+    </div>
+  </header>
+  <main class="main" id="main">
+    <div id="bans"></div>
+    <section class="page on" id="pg-sync"></section>
+    <section class="page" id="pg-codex"></section>
+    <section class="page" id="pg-sessions"></section>
+    <section class="page" id="pg-backups"></section>
+    <section class="page" id="pg-settings"></section>
+    <section class="page" id="pg-diag"></section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="dlg" id="dlg"><div class="box">
+  <div class="hd"><span id="dlgTitle"></span><button class="ghost" onclick="closeDlg()"><i data-ic="x"></i></button></div>
+  <div class="bd" id="dlgBody"></div>
+  <div class="ft" id="dlgFt"><button onclick="closeDlg()">关闭</button></div>
+</div></div>
 <script>
-const TOKEN="__TOKEN__";const $=s=>document.querySelector(s);
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const t=ts=>ts?new Date(ts*1000).toLocaleString():"—";
-async function get(u){const r=await fetch(u);return r.json()}
-async function post(u,b){const r=await fetch(u,{method:"POST",headers:{"content-type":"application/json","x-token":TOKEN},body:JSON.stringify(b||{})});return r.json()}
-let mt;function msg(s,bad){const m=$("#msg");m.textContent=s;m.style.display="block";m.style.color=bad?"var(--bad)":"";clearTimeout(mt);mt=setTimeout(()=>m.style.display="none",9000)}
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
- document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!=="t-"+b.dataset.t);({sync:loadSync,codex:loadLeds,diag:loadDiag})[b.dataset.t]()});
-function accLine(n,a){if(!a||!a.key)return `${n}：<span class="bad">认不出来</span>`;const who=[a.name,a.email].filter(Boolean).join(" ");
- return `${n}：<code>${esc(a.key)}</code> ${esc(who)}${a.email_guess?"（推测）":""} <span class="tag">${a.exists?"已有 "+a.count+" 个会话":"还没有文件夹"}</span>`}
-async function loadSync(){const s=await get("/api/status");
- $("#acc").innerHTML=accLine("桌面端",s.accounts.desktop)+"<br>"+accLine("命令行",s.accounts.cli)+
- `<br>Claude 桌面端：${s.running.claude?'<span class="bad">开着</span>（同步会排队，等它退出后自动做）':'<span class="ok">没开</span>'}`+
- (s.jobs.length?`<br>排队中：${s.jobs.map(j=>esc(j.title)).join("；")}`:"");loadBaks()}
-async function loadBaks(){const b=await get("/api/backups");$("#baks").innerHTML=b.length?`<table><tr><th>备份</th><th>账号/组织</th><th>内容</th><th></th></tr>`+
- b.slice(0,20).map(x=>`<tr><td><code>${esc(x.id)}</code></td><td><code>${esc((x.key||"?").slice(0,17))}</code></td><td>${x.ledger?(x.ledger.what==="restore"?"还原前的备份":"补 "+x.added+" / 刷新 "+x.updated):"老备份"}</td>
- <td><button class="g" data-r="${esc(x.id)}">撤回</button></td></tr>`).join("")+"</table>":"还没有备份。";
- document.querySelectorAll("[data-r]").forEach(e=>e.onclick=async()=>{if(!confirm("撤回 "+e.dataset.r+"？撤回前也会先备份。"))return;const r=await post("/api/restore",{backup:e.dataset.r});
- msg(r.hint||(r.ok?`已撤回：挪走 ${r.removed} 个，换回 ${r.restored} 个`:r.error),!r.ok&&!r.hint);loadSync()})}
-$("#syncPlan").onclick=async()=>{$("#syncOut").textContent="计算中…";const r=await get("/api/sync/plan?source="+$("#src").value);
- if(!r.ok){$("#syncOut").innerHTML=`<span class="bad">${esc(r.error)}</span>`;$("#syncGo").disabled=true;return}
- $("#syncGo").disabled=!(r.add.length||r.update.length);
- $("#syncOut").innerHTML=`目标 <code>${esc(r.target.key)}</code>（已有 ${r.target.count} 个）：可补 <b>${r.add.length}</b>、要刷新 ${r.update.length}；对话记录已不在跳过 ${r.skip_missing}、删过的不复活 ${r.skip_tomb}、已在跳过 ${r.skip_have}`+
- (r.add.length?`<table><tr><th>最近</th><th>标题</th><th>目录</th></tr>`+r.add.slice(0,60).map(a=>`<tr><td>${t(a.last)}</td><td>${esc(a.title)}${a.archived?' <span class="tag">已归档</span>':""}</td><td><code>${esc(a.cwd)}</code></td></tr>`).join("")+"</table>":"")};
-$("#syncGo").onclick=async()=>{const r=await post("/api/sync",{source:$("#src").value});msg(r.hint||(r.ok?`已补 ${r.done}、刷新 ${r.updated}。打开 Claude 桌面端就能看到。`:r.error),!r.ok&&!r.hint);$("#syncGo").disabled=true;loadSync()};
-const LAB={new:"新导入",update:"更新",same:"导过了",diverged:"已在 Claude 里接着聊过"};
-function ckw(){return {days:$("#cdays").value,cwd:$("#ccwd").value.trim(),desktop:$("#cdesk").checked?"1":"0",mark:$("#cmark").checked?"1":"0"}}
-$("#cmark").onchange=async()=>{const r=await post("/api/settings",{codex_mark_imported:$("#cmark").checked});msg(r.codex_mark_imported?"已打开：导入时登记进 Codex 导入记录（会先备份那个文件）":"已关闭登记")};
-$("#cPlan").onclick=async()=>{$("#cOut").textContent="计算中…";const q=new URLSearchParams(ckw());const r=await get("/api/codex/plan?"+q);
- const rows=r.rows||[];$("#cGo").disabled=!rows.some(x=>x.state==="new"||x.state==="update");
- $("#cOut").innerHTML=`Codex 数据 <code>${esc(r.codex_home)}</code> → Claude Code <code>${esc(r.claude_home)}</code>　`+
- (r.desktop?`桌面端列表写进 <code>${esc(r.desktop.key)}</code>`:esc(r.desktop_note||"不写桌面端列表"))+
- (r.mark?(r.mark_check&&r.mark_check.ok?`<br>登记进 Codex 导入记录：<code>${esc(r.mark_check.file)}</code>（${r.mark_check.exists?"先备份再改":"会新建"}）`:`<br><span class="bad">${esc(r.mark_check&&r.mark_check.error)}——不能导入，修好或关掉登记</span>`):"")+
- `<br>新 ${r.counts.new} / 更新 ${r.counts.update} / 导过了 ${r.counts.same} / 不动 ${r.counts.diverged}`+
- (rows.length?`<table><tr><th></th><th>最近</th><th>标题</th><th>状态</th><th>内容</th><th>目录</th></tr>`+rows.map(x=>{const can=x.state==="new"||x.state==="update";const s=x.stats||{};
- return `<tr><td><input type="checkbox" class="cc" value="${esc(x.thread)}" ${can?"checked":"disabled"}></td><td>${t(x.mtime)}</td><td>${esc(x.title||"（无标题）")}</td><td>${LAB[x.state]}</td>
- <td>${x.turns?`${x.turns} 轮 · 工具 ${s.tools||0}${s.images?" · 图片 "+s.images:""}`:""}${x.error?'<span class="bad">'+esc(x.error)+"</span>":""}</td><td><code>${esc(x.cwd)}</code></td></tr>`}).join("")+"</table>":"<br>没找到 Codex 对话。")};
-$("#cGo").onclick=async()=>{const only=[...document.querySelectorAll(".cc:checked")].map(e=>e.value);if(!only.length)return msg("没勾选",1);
- const b=Object.assign(ckw(),{only});const r=await post("/api/codex/import",b);
- if(r.hint)msg(r.hint);else if(r.ok===false)msg(r.error,1);else{msg(`已导入 ${r.done} 个（账本 ${r.ledger}）。`+(r.marked&&r.marked.ok?`已登记进 Codex 导入记录 ${r.marked.marked} 条。`:"")+`\n命令行：进对应目录 claude --resume，或在桌面端列表里找「（Codex）」开头的。`+(r.errors&&r.errors.length?"\n失败："+r.errors.join("\n"):""),r.errors&&r.errors.length);
- $("#cOut").innerHTML+=`<pre>${esc((r.rows||[]).filter(x=>x.resume).map(x=>x.title+"\n  "+x.resume).join("\n"))}</pre>`}$("#cGo").disabled=true;loadLeds()};
-async function loadMark(){const s=await get("/api/status");$("#cmark").checked=!!s.settings.codex_mark_imported}
-async function loadLeds(){loadMark();const l=await get("/api/codex/ledgers");$("#leds").innerHTML=l.length?`<table><tr><th>账本</th><th>导入</th><th>文件</th><th></th></tr>`+
- l.slice(0,20).map(x=>`<tr><td><code>${esc(x.id)}</code></td><td>${x.threads} 个对话</td><td>新建 ${x.created} / 更新 ${x.updated}</td><td>${x.undone?"已撤回":`<button class="g" data-u="${esc(x.id)}">撤回</button>`}</td></tr>`).join("")+"</table>":"还没有导入过。";
- document.querySelectorAll("[data-u]").forEach(e=>e.onclick=async()=>{if(!confirm("撤回导入 "+e.dataset.u+"？新建的文件挪进回收站。"))return;const r=await post("/api/codex/undo",{ledger:e.dataset.u});
- msg(r.hint||(r.ok?`已撤回：挪走 ${r.moved}、换回 ${r.restored}`+(r.codex_imports?(r.codex_imports.ok?"；Codex 导入记录已还原":"；Codex 导入记录："+r.codex_imports.error):"")+(r.kept.length?`；${r.kept.length} 个已在 Claude 里接着聊过，没动`:""):r.error),!r.ok&&!r.hint);loadLeds()})}
-async function loadDiag(){const s=await get("/api/status");const d=s.app_dirs;
- $("#dirs").innerHTML=d.parts.map(p=>`${esc(p.name)}：<code>${esc(p.path)}</code> <span class="mut">${esc(p.why)}</span>`).join("<br>")+
- `<div class="row">手动指定：<select id="adSel"><option value="">自动（推荐）</option>${d.choices.map(c=>`<option value="${esc(c.path)}" ${d.override===c.path?"selected":""} ${c.exists?"":"disabled"}>${esc(c.label)}　${esc(c.path)}</option>`).join("")}</select>
- <button class="g" id="adSet">保存</button></div>`;
- $("#adSet").onclick=async()=>{const r=await post("/api/appdir",{path:$("#adSel").value});msg(r.ok?"已保存":r.error,!r.ok);loadDiag()};
- const j=await get("/api/jobs");$("#jobs").innerHTML=j.filter(x=>x.state==="waiting").map(x=>`${esc(x.title)} <button class="g" data-c="${esc(x.id)}">取消</button>`).join("<br>")||"没有。";
- document.querySelectorAll("[data-c]").forEach(e=>e.onclick=async()=>{await post("/api/jobs/cancel",{id:e.dataset.c});loadDiag()});
- const r=await get("/api/diag");$("#dTxt").textContent=r.text}
-$("#dLoad").onclick=loadDiag;
-$("#dCopy").onclick=async()=>{const s=$("#dTxt").textContent;try{await navigator.clipboard.writeText(s)}catch(e){const a=document.createElement("textarea");a.value=s;document.body.append(a);a.select();document.execCommand("copy");a.remove()}msg("已复制检测报告")};
-const h=location.hash.slice(1).split("-");const nb=document.querySelector(`nav button[data-t="${h[0]}"]`);
-if(nb){nb.click();if(h[1]==="plan")setTimeout(()=>(h[0]==="codex"?$("#cPlan"):$("#syncPlan")).click(),50)}else loadSync();
-</script></body></html>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const TOKEN = "__TOKEN__", VERSION = "__VERSION__";
+// ---------- SVG 图标（Lucide，ISC 许可；Claude / Codex 用官方 logo；从 CC Msg 搬来）----------
+const ICON = {
+  gitpr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
+  gitmerge: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/>',
+  gitbranch: '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+  gitdiff: '<path d="M12 3v14"/><path d="M5 10h14"/><path d="M5 21h14"/>',
+  eye: '<path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0"/><circle cx="12" cy="12" r="3"/>',
+  dot: '<circle cx="12" cy="12" r="4"/>',
+  messages: '<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
+  refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  subtask: '<path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/>',
+  power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+  minus: '<path d="M5 12h14"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  list: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+  plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+  terminal: '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+  text: '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+  quote: '<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.76-2-2-2H4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .01-1 1.03V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.76-2-2-2h-4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>',
+  forward: '<path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/>',
+  panelL: '<path class="pf" d="M5 4h4v16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+  panelR: '<path class="pf" d="M15 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4z"/><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  sync: '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V8"/><path d="M18 17v-8"/>',
+  listx: '<path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="m19 10-4 4"/><path d="m15 10 4 4"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  play: '<path d="M6 3l14 9-14 9z"/>',
+  external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  term: '<path d="m4 17 6-6-6-6"/><path d="M12 19h8"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
+  pencil: '<path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  chev: '<path d="m9 18 6-6-6-6"/>',
+  sparkles: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/>',
+  layout: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+  contrast: '<circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  back: '<path d="m15 18-6-6 6-6"/>',
+  down: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+  warn: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  ok: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  err: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/>',
+  handoff: '<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
+  tool: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  chat: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  clipboard: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>',
+  // 三家标识：官方 logo（路径取自 Simple Icons；商标归各公司，这里只在本机工具里作识别用）
+  claude: '<path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/>',
+  codex: '<path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/>',
+  cursor: '<path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/>',
+  folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+  user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>'
+};
+Object.assign(ICON, {
+  archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
+  undo: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
+  copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>'
+});
+function ic(name, cls){ return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ""}</svg>`; }
+const logo = agent => ic({claude: "claude", codex: "codex"}[agent] || "user", "logo");
+const EMO = {"✅": "ok", "❌": "err", "⚠": "warn", "🔄": "sync", "📥": "download"};
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function emoIcons(t){ let out = esc(String(t)); for (const [e, n] of Object.entries(EMO)) out = out.split(e).join(ic(n)); return out.replace(/\uFE0F/g, ""); }
+$$("[data-ic]").forEach(e => { e.outerHTML = ic(e.dataset.ic, e.dataset.cls); });
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let cur = null, setOpen = false;          // cur：搬来的「模型与 API」代码按项目区分缓存用；这里只有用户级，一直是 null
+
+// ---------- 基础 ----------
+async function api(path, body){
+  const h = {"x-token": TOKEN};
+  const opt = body === undefined ? {headers: h} : {method: "POST", headers: Object.assign(h, {"Content-Type": "application/json"}), body: JSON.stringify(body)};
+  if (body !== undefined && /^\/api\/(modelcfg|providers)\//.test(path) && !/\/(test|models|ccs-preview)$/.test(path)) mcDirty();
+  const r = await fetch(path, opt); let j = {};
+  try { j = await r.json(); } catch(e){}
+  if (!r.ok) { const e = new Error(j.error || ("HTTP " + r.status)); e.status = r.status; e.j = j; throw e; }
+  return j;
+}
+function mcDirty(){ try { if (typeof MC !== "undefined") MC.c = null; localStorage.removeItem("ccss.mccache"); } catch(e){} }
+let toastT; function toast(t, ms=2800){ const el=$("#toast"); el.innerHTML=emoIcons(t); el.style.display="block"; clearTimeout(toastT); toastT=setTimeout(()=>el.style.display="none", ms); }
+function openDlg(title, html, footer){ $("#dlgTitle").innerHTML=emoIcons(title); $("#dlgBody").innerHTML=html; $("#dlgFt").innerHTML=footer||'<button onclick="closeDlg()">关闭</button>'; $("#dlg").classList.add("open"); }
+function closeDlg(){ $("#dlg").classList.remove("open", "wide"); setOpen = false; }
+$("#dlg").onclick = e => { if (e.target.id === "dlg") closeDlg(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#dlg").classList.contains("open")) closeDlg(); });
+const pad = n => String(n).padStart(2,"0");
+function hm(ts){ const d=new Date(ts*1000); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function when(ts){
+  if (!ts) return "—";
+  if (typeof ts === "string") { const t = Date.parse(ts); if (isNaN(t)) return ts; ts = t / 1000; }
+  const d = new Date(ts * 1000), n = new Date();
+  if (d.toDateString() === n.toDateString()) return "今天 " + hm(ts);
+  const y = new Date(n - 864e5); if (d.toDateString() === y.toDateString()) return "昨天 " + hm(ts);
+  return (d.getFullYear() === n.getFullYear() ? "" : d.getFullYear() + "-") + `${d.getMonth()+1}-${d.getDate()} ${hm(ts)}`;
+}
+const kb = n => n == null ? "—" : n < 1024 ? n + " B" : n < 1048576 ? (n/1024).toFixed(1) + " KB" : (n/1048576).toFixed(1) + " MB";
+const short = k => String(k || "").split("/")[0].slice(0, 8);
+const projName = p => p ? String(p).replace(/[\\/]+$/, "").split(/[\\/]/).pop() : "—";
+const sw = (id, on, attrs = "") => `<label class="switch"><input type="checkbox" id="${id}" ${on ? "checked" : ""} ${attrs}><i></i></label>`;
+function copyText(t){
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("✅ 已复制"), () => {
+    const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("✅ 已复制"); } catch(e){ toast("复制失败"); } ta.remove(); });
+}
+// run_or_defer 的结果：排队了就告诉用户为什么、什么时候做
+function doneOrQueued(r, okMsg){
+  if (!r) return;
+  if (r.deferred) { toast("⏸ " + (r.hint || "桌面端开着，已排队：退出后自动做"), 6000); poll(); return true; }
+  if (r.ok === false) { toast("❌ " + (r.error || "没做成")); return false; }
+  if (okMsg) toast("✅ " + okMsg); return true;
+}
+function confirmDlg(title, html, okText, fn, danger){
+  openDlg(title, html, `<button onclick="closeDlg()">取消</button><button class="primary${danger ? " danger" : ""}" id="cfOk">${okText}</button>`);
+  $("#cfOk").onclick = async () => { $("#cfOk").disabled = true; try { await fn(); } catch(e){ toast("❌ " + e.message, 5000); } finally { const b = $("#cfOk"); if (b) b.disabled = false; } };
+}
+
+// ---------- 主题 ----------
+const THEMES = ["system", "light", "dark"];
+function applyTheme(t){
+  if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme");
+  store.set("ccss.theme", t);
+  $("#tbTheme").innerHTML = ic({system: "contrast", light: "sun", dark: "moon"}[t]);
+  $("#tbTheme").title = "主题：" + {system: "跟随系统", light: "浅色", dark: "深色"}[t] + "（点一下切换）";
+}
+$("#tbTheme").onclick = () => { const t = store.get("ccss.theme") || "system"; applyTheme(THEMES[(THEMES.indexOf(t) + 1) % 3]); if (PAGE === "settings") R.settings(); };
+applyTheme(store.get("ccss.theme") || "system");
+
+// ---------- 页面切换 ----------
+let PAGE = "sync";
+const R = {};          // 每个页面的 render
+function go(p){
+  if (!R[p]) return;
+  PAGE = p;
+  $$(".tab").forEach(t => t.classList.toggle("on", t.dataset.p === p));
+  $$(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
+  store.set("ccss.page", p);
+  R[p]();
+}
+$$(".tab").forEach(t => t.onclick = () => go(t.dataset.p));
+$("#tbSet").onclick = () => go("settings");
+$("#tbModel").onclick = () => mcOpen("list");
+$("#tbUsage").onclick = () => usOpen();
+$("#tbCheck").onclick = () => scOpen(true);
+$("#tbUpd").onclick = () => updOpen(true);
+// 托盘菜单 / 通知点进来：window.ccOpen("codex") 或 ccOpen({page: "sync", account_switch: "claude-desktop"})
+window.ccOpen = target => {
+  const t = typeof target === "string" ? {page: target} : (target || {});
+  const p = t.page;
+  if (p === "usage") return usOpen();
+  if (p === "models") return mcOpen("list");
+  if (p === "update") return updOpen(false);
+  if (p === "selfcheck") return scOpen(false);
+  if (p === "jobs") { go("backups"); setTimeout(() => { const j = $("#bkJobs"); if (j) j.scrollIntoView({block: "start"}); }, 300); return; }
+  if (p) go(p);
+};
+
+// ---------- 顶部提示条（账号切换、新版本、排队中的任务）----------
+const ST = {seq: -1, upd: null, acct: [], jobs: 0, later: sessionStorage.getItem("ccss.later") || ""};
+function renderBans(){
+  const out = [];
+  const u = ST.upd;
+  if (u && u.badge && ST.later !== u.latest)
+    out.push(`<div class="ban acc" id="banUpd">${ic("sparkles")}<div class="tx"><b>CC Session Sync 有新版本 v${esc(u.latest)}</b>（当前 v${esc(u.current)}）· 不会自动安装，点「立即更新」才装</div>
+      <div class="acts"><button class="primary" data-u="install">立即更新</button><button data-u="view">看看更新了什么</button><button class="ghost" data-u="later">稍后</button><button class="ghost" data-u="ignore">忽略此版本</button></div></div>`);
+  for (const a of ST.acct)
+    out.push(`<div class="ban warn" data-ak="${esc(a.k)}">${ic("users")}<div class="tx"><b>${esc(a.title)}</b>：${esc(a.text)}</div>
+      <div class="acts"><button class="primary" data-a="sync">立即同步</button><button data-a="open">打开</button><button class="ghost" data-a="x" title="知道了">${ic("x")}</button></div></div>`);
+  if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等对应的桌面端完全退出后自动做（会弹通知）</div><div class="acts"><button data-j="1">查看</button></div></div>`);
+  $("#bans").innerHTML = out.join("");
+  $$("#bans [data-u]").forEach(b => b.onclick = () => {
+    const k = b.dataset.u;
+    if (k === "install") return updInstall();
+    if (k === "view") return updOpen(false);
+    if (k === "later") { ST.later = u.latest; sessionStorage.setItem("ccss.later", u.latest); renderBans(); toast("好的，红点留着，想装了再点「检查更新」"); }
+    if (k === "ignore") updIgnore(u.latest);
+  });
+  $$("#bans [data-a]").forEach(b => b.onclick = async () => {
+    const box = b.closest("[data-ak]"), k = box.dataset.ak, a = ST.acct.find(x => x.k === k);
+    ST.acct = ST.acct.filter(x => x.k !== k); renderBans();
+    if (b.dataset.a === "x") return;
+    const page = a && a.open && a.open.page || "sync";
+    if (b.dataset.a === "open") return go(page);
+    if (page === "codex") { go("codex"); return; }     // Codex 换号：导入页按新账号重新看一遍
+    go("sync"); syncSelected(true);
+  });
+  $$("#bans [data-j]").forEach(b => b.onclick = () => ccOpen("jobs"));
+}
+function setBadge(on){ $("#tbUpd").classList.toggle("has-dot", !!on); const s = $("#setUpd"); if (s) s.classList.toggle("has-dot", !!on); }
+let pollT;
+async function poll(){
+  clearTimeout(pollT);
+  try {
+    const t = await api("/api/tray?since=" + ST.seq);
+    const first = ST.seq < 0;
+    ST.seq = t.seq;
+    let jobDone = false;
+    for (const e of t.events || []) {
+      if (e.kind === "account" && (!first || Date.now() / 1000 - e.time < 600)) {
+        const k = (e.open && e.open.account_switch) || e.title;
+        ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, title: e.title, text: e.text, open: e.open});
+      } else if (e.kind === "job") jobDone = true;
+      else if (e.kind === "auto-sync" && !first && !e.manual) toast("🔄 " + e.title);
+    }
+    ST.jobs = t.jobs;
+    if (!ST.upd || (t.update && (t.update.badge !== ST.upd.badge || t.update.latest !== ST.upd.latest))) ST.upd = await api("/api/update");
+    setBadge(ST.upd && ST.upd.badge);
+    renderBans();
+    if (jobDone && !first) { toast("✅ 排队的改动做完了"); if (R[PAGE] && !$("#dlg").classList.contains("open")) R[PAGE](true); }
+  } catch(e){}
+  pollT = setTimeout(poll, document.hidden ? 15000 : 5000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+
+// ===== 以下从 CC Msg（agent_bridge/index.html）搬来：用量统计、模型与 API =====
+const US = {app:"", provider:"", model:"", range:"7d", metric:"tokens", tab:"logs", logs:[], off:0, total:0, sum:null, st:null, timer:null};
+const fmtN = n => n == null ? "—" : n >= 1e9 ? (n/1e9).toFixed(2)+"B" : n >= 1e6 ? (n/1e6).toFixed(2)+"M" : n >= 1e4 ? (n/1e3).toFixed(1)+"K" : String(Math.round(n));
+const fmtC = c => c == null ? "—" : "$" + (c >= 100 ? c.toFixed(0) : c >= 1 ? c.toFixed(2) : c.toFixed(4));
+const usApp = a => a === "codex" ? '<span class="tag codex">Codex</span>' : a === "claude-desktop" ? '<span class="tag claude">Claude 桌面</span>' :
+  a === "claude-code" ? '<span class="tag claude">Claude Code</span>' : `<span class="tag">${esc(a)}</span>`;
+function usRange(){
+  const now = Date.now()/1000, d = new Date(); d.setHours(0,0,0,0);
+  return {today:[d/1000, 0], "24h":[now-86400, 0], "7d":[now-7*86400, 0], "30d":[now-30*86400, 0], all:[0, 0]}[US.range] || [0, 0];
+}
+function usQs(){
+  const [f, t] = usRange(), p = new URLSearchParams();
+  for (const k of ["app","provider","model"]) if (US[k]) p.set(k, US[k]);
+  if (f) p.set("from", Math.floor(f)); if (t) p.set("to", Math.floor(t));
+  return p.toString();
+}
+function usOpen(){
+  { const _m = $("#menu"); if (_m) _m.classList.remove("open"); }
+  openDlg("用量统计", `<div class="us" id="usBox"></div>`, '<span class="dim" style="margin-right:auto;font-size:12px">费用按 API 价折算；订阅（Claude / ChatGPT 登录）不是实际账单</span><button onclick="closeDlg()">关闭</button>');
+  $("#dlg").classList.add("wide");
+  usRenderShell();
+  const c = usCacheGet();                       // 上次的数据先画出来（内存 / 本地缓存），后台再刷新
+  if (c) { US.sum = c.sum; US.st = c.st; US.logs = c.logs || []; US.total = c.total || 0; US.off = US.logs.length;
+    try { usHead(); usCards(); usChart(); usOpts(); usMissing(); usTab(true); } catch(e){} usLoad("fresh"); }
+  else usLoad();
+  clearInterval(US.timer);
+  US.timer = setInterval(() => { if (!$("#usBox")) return clearInterval(US.timer); usLoad(true); }, 60000);
+}
+const US_CK = "ccss.uscache";
+function usCacheGet(){
+  const qk = usQs().replace(/(from|to)=\d+&?/g, "");           // 时间窗按「7 天」这类选项比，不按具体秒数
+  if (US.c && US.c.q === qk + US.range) return US.c;
+  try { const j = JSON.parse(localStorage.getItem(US_CK) || "null"); if (j && j.q === qk + US.range && j.sum && j.st) return US.c = j; } catch(e){}
+  return null;
+}
+function usCachePut(){
+  US.c = {q: usQs().replace(/(from|to)=\d+&?/g, "") + US.range, sum: US.sum, st: US.st, logs: US.logs.slice(0, 100), total: US.total, at: Date.now()};
+  try { localStorage.setItem(US_CK, JSON.stringify(US.c)); } catch(e){}
+}
+function usRenderShell(){
+  const seg = (k, items) => `<span class="seg" data-k="${k}">${items.map(([v, t]) => `<button data-v="${v}" class="${US[k]===v?"on":""}">${t}</button>`).join("")}</span>`;
+  $("#usBox").innerHTML = `
+    <div class="uhd"><span class="usrc" id="usSrc"><i class="d"></i>会话日志 · 自动扫描</span><span class="dim" id="usLast" style="font-size:12px"></span><span class="sp"></span>
+      <button id="usSrcBtn"><i data-ic="folder"></i> 数据来源</button><button class="primary" id="usSync"><i data-ic="refresh"></i> 立即同步</button></div>
+    <div class="ufl">${seg("app", [["","全部"],["claude","Claude"],["codex","Codex"]])}
+      <select id="usProv"><option value="">全部供应商</option></select><select id="usModel"><option value="">全部模型</option></select>
+      ${seg("range", [["today","今天"],["24h","24 小时"],["7d","7 天"],["30d","30 天"],["all","全部"]])}</div>
+    <div class="ucards" id="usCards"></div>
+    <div class="uchart"><div class="ct"><span id="usChTitle">用量趋势</span><span class="sp" style="flex:1"></span>${seg("metric", [["tokens","Tokens"],["requests","请求数"],["cost","费用"]])}</div><div id="usChart"></div></div>
+    <div id="usMiss"></div>
+    <div class="utabs">${[["logs","请求日志"],["providers","供应商"],["models","模型"],["prices","价格"]].map(([v,t]) => `<button data-tab="${v}" class="${US.tab===v?"on":""}">${t}</button>`).join("")}</div>
+    <div id="usTab"></div>`;
+  icons($("#usBox"));
+  $$("#usBox .seg button").forEach(b => b.onclick = () => { const k = b.parentNode.dataset.k; US[k] = b.dataset.v;
+    $$(`#usBox .seg[data-k="${k}"] button`).forEach(x => x.classList.toggle("on", x === b)); k === "metric" ? usChart() : usLoad(); });
+  $("#usProv").onchange = e => { US.provider = e.target.value; usLoad(); };
+  $("#usModel").onchange = e => { US.model = e.target.value; usLoad(); };
+  $$("#usBox .utabs button").forEach(b => b.onclick = () => { US.tab = b.dataset.tab; $$("#usBox .utabs button").forEach(x => x.classList.toggle("on", x === b)); usTab(); });
+  $("#usSync").onclick = usSync; $("#usSrcBtn").onclick = usSources;
+}
+function icons(root){ root.querySelectorAll("[data-ic]").forEach(e => { e.outerHTML = ic(e.dataset.ic, e.dataset.cls); }); }
+async function usSync(){
+  const b = $("#usSync"); b.disabled = true; $("#usSrc").classList.add("busy");
+  try { const r = await api("/api/usage/sync", {}); toast(`已同步：读了 ${r.files} 个文件，新增 ${r.added} 条（${r.ms} ms）`); await usLoad(); }
+  catch(e){ toast("同步失败：" + e.message); }
+  finally { b.disabled = false; $("#usSrc") && $("#usSrc").classList.remove("busy"); }
+}
+async function usLoad(quiet){
+  const qs = usQs();
+  try {
+    const [s, st] = await Promise.all([api("/api/usage/summary?" + qs), api("/api/usage/status")]);
+    if (!$("#usBox")) return;
+    US.sum = s; US.st = st; usHead(); usCards(); usChart(); usOpts(); usMissing();
+    if (!quiet || US.tab !== "logs") { US.off = 0; US.logs = []; }
+    await usTab(quiet); usCachePut();
+  } catch(e){ $("#usCards") && ($("#usCards").innerHTML = `<div class="miss">读不到用量数据：${esc(e.message)}</div>`); }
+}
+function usHead(){
+  const st = US.st; $("#usSrc").classList.toggle("busy", !!st.scanning || !st.first_done);
+  $("#usLast").textContent = st.scanning || !st.first_done ? "首次扫描中…" : st.last ? `上次同步 ${hm(st.last)} · 每分钟自动增量` : "";
+  if (st.error) $("#usLast").textContent = "扫描出错：" + st.error;
+}
+function usCards(){
+  const t = US.sum.totals, priced = t.n - t.unpriced;
+  const costNote = (t.sub ? '<div class="note">按 API 价折算，非实际账单</div>' : "") + (t.unpriced ? `<div class="note">${t.unpriced} 次请求的模型缺价格，未计入</div>` : "");
+  $("#usCards").innerHTML = [
+    ["总费用", t.n && !priced ? "—" : fmtC(t.cost), costNote],
+    ["请求数", fmtN(t.n), `<div class="s">${t.sub ? "订阅 " + fmtN(t.sub) + " 次" : ""}</div>`],
+    ["真实 Tokens", fmtN(t.real), `<div class="s">新输入 ${fmtN(t.inp)} · 输出 ${fmtN(t.out)} · 缓存写 ${fmtN(t.cw5 + t.cw1h)}</div>`],
+    ["缓存命中率", t.hit == null ? "—" : (t.hit*100).toFixed(1) + "%", `<div class="s">缓存读 ${fmtN(t.cr)}</div>`],
+  ].map(([k, v, s]) => `<div class="ucard"><div class="k">${k}</div><div class="v">${v}</div>${s}</div>`).join("");
+}
+function usChart(){
+  const s = US.sum; if (!s) return;
+  const [f] = usRange(), first = f || (s.series[0] ? s.series[0].h : Date.now()/1000), now = Date.now()/1000;
+  const byDay = now - first > 2.2 * 86400, step = byDay ? 86400 : 3600;
+  const key = ts => { const d = new Date(ts*1000); if (byDay) d.setHours(0,0,0,0); else d.setMinutes(0,0,0); return d.getTime()/1000; };
+  const buckets = new Map();
+  for (let ts = key(first); ts <= now; ts = key(ts + step + (byDay ? 7200 : 0))) buckets.set(ts, {n:0, tok:0, cost:0});
+  for (const r of s.series) { const k = key(r.h); const b = buckets.get(k) || {n:0, tok:0, cost:0}; b.n += r.n; b.tok += r.tok; b.cost += r.cost; buckets.set(k, b); }
+  const arr = [...buckets.entries()].sort((a, b) => a[0] - b[0]).slice(-120);
+  const mv = {tokens: b => b.tok, requests: b => b.n, cost: b => b.cost}[US.metric];
+  const max = Math.max(1e-9, ...arr.map(([, b]) => mv(b)));
+  const W = 1000, H = 170, L = 44, B = 18, bw = (W - L) / Math.max(1, arr.length);
+  const lab = ts => { const d = new Date(ts*1000); return byDay ? `${d.getMonth()+1}/${d.getDate()}` : `${pad(d.getHours())}:00`; };
+  const every = Math.ceil(arr.length / 12);
+  const val = v => US.metric === "cost" ? fmtC(v) : fmtN(v);
+  let g = [0, .5, 1].map(p => `<line x1="${L}" x2="${W}" y1="${(H-B) - p*(H-B-8)}" y2="${(H-B) - p*(H-B-8)}"/><text x="${L-4}" y="${(H-B) - p*(H-B-8) + 3}" text-anchor="end">${val(max*p)}</text>`).join("");
+  g += arr.map(([ts, b], i) => { const v = mv(b), h = v / max * (H - B - 8);
+    return `<rect class="b" x="${L + i*bw + bw*.15}" y="${H - B - h}" width="${Math.max(1, bw*.7)}" height="${Math.max(0, h)}"><title>${byDay ? new Date(ts*1000).toLocaleDateString("zh-CN") : new Date(ts*1000).toLocaleString("zh-CN", {hour12: false})}\n请求 ${b.n} · Tokens ${fmtN(b.tok)} · 费用 ${fmtC(b.cost)}</title></rect>` +
+      (i % every === 0 ? `<text x="${L + i*bw + bw/2}" y="${H-4}" text-anchor="middle">${lab(ts)}</text>` : ""); }).join("");
+  $("#usChart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}</svg>`;
+  $("#usChTitle").textContent = (byDay ? "按天" : "按小时") + "趋势" + (US.metric === "cost" && s.totals.sub ? "（按 API 价折算，非实际账单）" : "");
+}
+function usOpts(){
+  const o = US.sum.options, fill = (sel, list, cur, all) => { sel.innerHTML = `<option value="">${all}</option>` + list.map(v => `<option ${v===cur?"selected":""}>${esc(v)}</option>`).join(""); };
+  fill($("#usProv"), o.provider, US.provider, "全部供应商"); fill($("#usModel"), o.model, US.model, "全部模型");
+}
+function usMissing(){
+  const m = US.sum.missing;
+  $("#usMiss").innerHTML = m.length ? `<div class="miss">这些模型还没有价格，费用显示「—」、不按 $0 算：${m.slice(0, 8).map(x => `<b>${esc(x.model)}</b>（${x.n} 次）`).join("、")}${m.length > 8 ? " 等" : ""}。到「价格」页填上，或点「从 models.dev 更新」。</div>` : "";
+}
+async function usTab(quiet){
+  const el = $("#usTab"); if (!el) return;
+  if (US.tab === "logs") {
+    if (!quiet || !US.logs.length || quiet === "fresh") { const r = await api(`/api/usage/logs?${usQs()}&offset=0&limit=100`); US.logs = r.rows; US.total = r.total; US.off = r.rows.length; }
+    const row = r => `<tr><td class="l">${new Date(r.ts*1000).toLocaleString("zh-CN", {hour12: false})}</td><td class="l">${usApp(r.app)}${r.agent ? ' <span class="tag">子代理</span>' : ""}${r.src === "ccswitch" ? ' <span class="tag" title="从 CC Switch 导入的历史">导入</span>' : ""}</td>
+      <td class="l">${esc(r.provider)}</td><td class="l m" title="${esc(r.model)}">${esc(r.model)}</td><td>${fmtN(r.inp)}</td><td>${fmtN(r.cr)}</td>
+      <td title="5 分钟 ${r.cw5} · 1 小时 ${r.cw1h}">${fmtN(r.cw5)}${r.cw1h ? " / " + fmtN(r.cw1h) : ""}</td><td>${fmtN(r.out)}</td><td>${fmtC(r.cost)}</td></tr>`;
+    el.innerHTML = `<table><tr><th class="l">时间</th><th class="l">应用</th><th class="l">供应商</th><th class="l">模型</th><th>新输入</th><th>缓存读</th><th title="5 分钟 / 1 小时">缓存写</th><th>输出</th><th>费用</th></tr>${US.logs.map(row).join("")}</table>` +
+      (US.off < US.total ? `<div class="more"><button id="usMore">再加载 100 条（共 ${US.total}）</button></div>` : `<div class="more dim">共 ${US.total} 条</div>`);
+    const mb = $("#usMore"); if (mb) mb.onclick = async () => { const r = await api(`/api/usage/logs?${usQs()}&offset=${US.off}&limit=100`); US.logs.push(...r.rows); US.off += r.rows.length; usTab(true); };
+  } else if (US.tab === "providers" || US.tab === "models") {
+    const list = US.sum[US.tab], isP = US.tab === "providers";
+    let mult = {}; if (isP) { try { (await api("/api/usage/prices")).mult.forEach(x => mult[x.provider] = x.m); } catch(e){} }
+    el.innerHTML = `<table><tr><th class="l">${isP ? "供应商" : "模型"}</th><th class="l">应用</th><th>请求</th><th>新输入</th><th>缓存读</th><th>缓存写</th><th>输出</th><th>命中率</th><th>费用</th>${isP ? "<th>倍率</th>" : ""}</tr>` +
+      list.map(r => { const ia = r.inp + r.cr + r.cw5 + r.cw1h;
+        return `<tr><td class="l m" title="${esc(r.key)}">${esc(r.key)}${r.sub ? ' <span class="tag">订阅</span>' : ""}</td><td class="l">${r.apps.map(usApp).join(" ")}</td><td>${fmtN(r.n)}</td><td>${fmtN(r.inp)}</td><td>${fmtN(r.cr)}</td><td>${fmtN(r.cw5 + r.cw1h)}</td><td>${fmtN(r.out)}</td>
+        <td>${ia ? (r.cr/ia*100).toFixed(1) + "%" : "—"}</td><td>${r.unpriced === r.n ? "—" : fmtC(r.cost) + (r.unpriced ? ' <span class="note" title="有请求缺价格">*</span>' : "")}</td>
+        ${isP ? `<td><input class="pr" data-mult="${esc(r.key)}" value="${mult[r.key] ?? 1}" title="这个供应商的价格倍率（比如中转站打折 0.5）"></td>` : ""}</tr>`; }).join("") + "</table>";
+    $$("#usTab input[data-mult]").forEach(i => i.onchange = async () => { await api("/api/usage/mult", {provider: i.dataset.mult, m: i.value}); toast("倍率已保存"); usLoad(true); });
+  } else {
+    const p = await api("/api/usage/prices");
+    const num = (m, k, v) => `<input class="pr" data-m="${esc(m)}" data-k="${k}" value="${v ?? ""}" placeholder="—">`;
+    el.innerHTML = `<div class="ufl" style="margin:8px 0"><span class="dim">美元 / 百万 tokens。价格表 ${p.count} 个模型；手填 &gt; models.dev &gt; 内置。${p.modelsdev_at ? "models.dev 更新于 " + new Date(p.modelsdev_at*1000).toLocaleString("zh-CN", {hour12: false}) : ""}</span><span style="flex:1"></span><button id="usMD"><i data-ic="download"></i> 从 models.dev 更新</button></div>
+      <table><tr><th class="l">用到的模型</th><th class="l">匹配到</th><th>输入</th><th>输出</th><th>缓存读</th><th>缓存写 5m</th><th>缓存写 1h</th><th class="l">来源</th><th></th></tr>` +
+      p.used.map(r => `<tr><td class="l m" title="${esc(r.model)}">${esc(r.model)}</td><td class="l dim">${r.priced ? esc(r.match) : '<span class="note">缺价格</span>'}</td>
+        ${["inp","out","cr","cw5","cw1h"].map(k => `<td>${num(r.model, k, r.priced ? +(+r[k]).toFixed(4) : "")}</td>`).join("")}
+        <td class="l dim">${{builtin:"内置", modelsdev:"models.dev", manual:"手填"}[r.src] || ""}</td><td>${r.src === "manual" ? `<button class="ghost" data-reset="${esc(r.model)}" title="删掉手填的价格">还原</button>` : `<button class="ghost" data-save="${esc(r.model)}">保存</button>`}</td></tr>`).join("") + "</table>";
+    icons(el);
+    $("#usMD").onclick = async () => { const b = $("#usMD"); b.disabled = true; try { const r = await api("/api/usage/modelsdev", {}); toast(`已从 models.dev 取到 ${r.models} 个模型价格`); usLoad(true); usTab(); } catch(e){ toast("models.dev 更新失败：" + e.message); } finally { b.disabled = false; } };
+    $$("#usTab [data-save]").forEach(b => b.onclick = async () => { const m = b.dataset.save, v = {};
+      $$(`#usTab input[data-m="${CSS.escape(m)}"]`).forEach(i => v[i.dataset.k] = i.value);
+      if (!v.inp && !v.out) return toast("至少填输入和输出价格");
+      await api("/api/usage/price", {model: m, price: v}); toast("已保存手填价格：" + m); usLoad(true); usTab(); });
+    $$("#usTab [data-reset]").forEach(b => b.onclick = async () => { await api("/api/usage/price", {model: b.dataset.reset, price: null}); usLoad(true); usTab(); });
+  }
+}
+async function usSources(){
+  const st = await api("/api/usage/status");
+  const srcs = st.sources.map(s => `<tr><td class="l">${s.src === "log" ? "会话日志" : "CC Switch 导入"}</td><td class="l">${usApp(s.app)}</td><td>${s.n}</td><td class="l dim">${s.from ? new Date(s.from*1000).toLocaleDateString("zh-CN") + " – " + new Date(s.to*1000).toLocaleDateString("zh-CN") : ""}</td></tr>`).join("");
+  const px = st.proxies.map(p => `<li><b>${p.name}</b>（端口 ${p.port}）：${p.running ? '<span style="color:var(--ok)">在运行</span>' : p.running == null ? "检测中…" : p.configured ? "装了，没在运行" : "没检测到"}</li>`).join("");
+  const imp = st.ccswitch.imported;
+  openDlg("数据来源", `<div class="us">
+    <div>CC Session Sync 自己读这些会话日志（只读，不改），每分钟只读新增部分：</div>
+    <ul style="margin:0"><li>Claude Code / Claude 桌面：<code>${esc(st.claude_dir)}</code>（${st.files_known.claude || 0} 个文件）</li>
+    <li>Codex：<code>${esc(st.codex_dir)}\\sessions</code> 和 <code>archived_sessions</code>（${st.files_known.codex || 0} 个文件）</li></ul>
+    <div class="dim" style="font-size:12.5px">去重：Claude 按 message.id + requestId（同一次调用的多行只算一次，取最完整的那行；分叉 / 续接会话复制过来的旧行不重复算）；Codex 按每次响应的 response_id，老格式按「线程 + 累计值」，压缩 / 重启后开新段；归档前后算同一个线程。统计存在 <code>${esc(st.db)}</code>。</div>
+    <table><tr><th class="l">来源</th><th class="l">应用</th><th>请求</th><th class="l">时间范围</th></tr>${srcs}</table>
+    <div><b>本地代理</b>（opencodex / magpie 转发的请求也会写进 Claude / Codex 的会话日志，已经算在上面）：<ul style="margin:4px 0">${px}</ul></div>
+    <div><b>CC Switch 历史</b>：${st.ccswitch.exists ? (imp ? `已导入 ${imp.rows} 条（${new Date(imp.at*1000).toLocaleString("zh-CN", {hour12: false})}）。` : "检测到 CC Switch 的数据库。") : "没检测到 CC Switch。"}
+      ${st.ccswitch.exists ? '<div class="dim" style="font-size:12.5px">一次性只读导入：补回 Claude 已经清理掉的旧会话的用量。和会话日志里同一条消息 / 同一个 Codex 线程的会跳过；CC Switch 代理记的那份不导入（和会话日志重复）；费用按这里的价格表重算。</div>' : ""}</div>
+  </div>`, (st.ccswitch.exists ? `<button id="usImp">${imp ? "重新导入" : "导入 CC Switch 历史"}</button>` : "") + '<button onclick="usOpen()">返回</button>');
+  const b = $("#usImp"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "导入中…";
+    try { const r = await api("/api/usage/import_ccswitch", {}); toast(`已导入 ${r.imported} 条，跳过重复 ${r.skipped} 条`); usSources(); }
+    catch(e){ toast("导入失败：" + e.message); b.disabled = false; b.textContent = "导入 CC Switch 历史"; } };
+}
+// ---------- 模型与 API（0.7.1 简化版：打开就是供应商列表；其余收进 ⋯ 菜单 / 高级；项目覆盖在项目的右键菜单里） ----------
+// 后端：cc_sessionsync/modelcfg.py + providers.py（从 CC Msg 搬来）；只在本机，key 只显示打码
+const MC = {view:"list", scope:"user", d:null, p:null, sel:new Set(), ban:false};
+const CL_FIELDS = [["model","主模型","仅命令行 / 新会话默认；Claude 桌面版用它自己的模型选择"],["ANTHROPIC_DEFAULT_OPUS_MODEL","Opus 映射","opus 别名用哪个模型"],
+  ["ANTHROPIC_DEFAULT_SONNET_MODEL","Sonnet 映射","sonnet 别名"],["ANTHROPIC_DEFAULT_HAIKU_MODEL","Haiku 映射","haiku 别名，也用于后台小任务（旧名 ANTHROPIC_SMALL_FAST_MODEL）"],
+  ["ANTHROPIC_DEFAULT_FABLE_MODEL","Fable 映射","fable 别名"],["CLAUDE_CODE_SUBAGENT_MODEL","子代理模型","没单独指定模型的子代理 / 队友默认用它"]];
+const CX_FIELDS = [["model","主模型",""],["review_model","审查模型","/review 用"],["default_subagent_model","子代理模型","[agents] default_subagent_model"]];
+const MODEL_SUGG = ["opus","sonnet","haiku","fable","claude-opus-5-5","claude-sonnet-5-5","claude-haiku-5-5","claude-fable-5-1","claude-opus-5","claude-sonnet-5","gpt-6-sol","gpt-6.1-sol","gpt-6-astra","gpt-6-luna","gpt-5.5","gpt-5.6-sol"];
+const MC_DL = `<datalist id="mcModels">${MODEL_SUGG.map(m => `<option value="${m}">`).join("")}</datalist>`;
+async function mcOpen(view){
+  { const _m = $("#menu"); if (_m) _m.classList.remove("open"); }
+  if (typeof view === "string") MC.view = view;
+  MC.scope = "user";
+  const c = mcCacheGet();
+  openDlg("模型与 API", `<div class="us mc" id="mcBox">${c ? "" : '<div class="dim">读取中…</div>'}</div>`, '<span class="dim" style="margin-right:auto;font-size:12px">每次写配置之前都先备份（⋯ → 备份 / 恢复）</span><button onclick="closeDlg()">关闭</button>');
+  $("#dlg").classList.add("wide");
+  if (c) { [MC.d, MC.p] = c; mcRender(); }          // 先用上次的（内存 / 本地缓存）立刻画出来，后台再刷新
+  await mcLoad(!!c);
+}
+// 上次读到的「模型与 API」状态：内存里一份，localStorage 里一份（只有打码后的 key），重开时先画它
+const MC_CK = "ccss.mccache";
+function mcCacheKey(){ return cur ? cur.root : ""; }
+function mcCacheGet(){
+  if (MC.c && MC.c.k === mcCacheKey()) return [MC.c.d, MC.c.p];
+  try { const j = JSON.parse(localStorage.getItem(MC_CK) || "null"); if (j && j.k === mcCacheKey() && j.d && j.p) { MC.c = j; return [j.d, j.p]; } } catch(e){}
+  return null;
+}
+function mcCachePut(){ MC.c = {k: mcCacheKey(), d: MC.d, p: MC.p, at: Date.now()}; try { localStorage.setItem(MC_CK, JSON.stringify(MC.c)); } catch(e){} }
+async function mcLoad(bg){
+  const qs = cur ? "?root=" + encodeURIComponent(cur.root) : "";
+  let d, p;
+  try { [d, p] = await Promise.all([api("/api/modelcfg" + qs), api("/api/providers" + qs)]); }
+  catch(e){ if (!bg && $("#mcBox")) $("#mcBox").innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; else if (bg) toast("刷新失败：" + e.message); return; }
+  MC.d = d; MC.p = p; mcCachePut();
+  if (!$("#mcBox")) return;                          // 已经进了编辑表单 / 关了：只更新数据，不打断
+  const keep = $("#dlgBody").scrollTop; mcRender(); $("#dlgBody").scrollTop = keep;
+  // 代理端口第一次是后台测的：稍后再拉一次，把「检测中」换成结果
+  if ((d.proxies || []).some(x => x.running == null) && !MC.pxRetry) { MC.pxRetry = true; setTimeout(() => { MC.pxRetry = false; if ($("#mcBox")) mcLoad(true); }, 2000); }
+}
+// 有事才显示的一行提示（CC Switch / 要重开会话 / 明文 key / 配置被别的工具改过），点开看详情
+function mcNotes(){
+  const d = MC.d, cs = d.ccswitch, run = d.running || {}, out = [];
+  if (cs.installed) out.push({s: "检测到 CC Switch", h: `检测到 <b>CC Switch</b>${cs.current && Object.keys(cs.current).length ? "（当前 " + Object.entries(cs.current).filter(([a]) => a === "claude" || a === "codex").map(([a, n]) => `${esc(a)} → <b>${esc(n)}</b>`).join("，") + "）" : ""}。CC Session Sync 自己就能管供应商，CC Switch 不是必须的；但<b>在 CC Switch 里切换会覆盖 CC Session Sync 设的值</b>（Codex 的整个 config.toml 都会被它换掉）。<a href="#" data-mcgo="ccs">把它的供应商导入过来…</a>`});
+  for (const t of ["claude", "codex"]) if (MC.p[t + "_drift"]) out.push({s: `${PV_TOOL[t]} 配置被改过`, h: `${PV_TOOL[t]} 的全局配置已经被别的工具改过${cs.installed ? "（多半是 CC Switch 切换了）" : ""}，和 CC Session Sync 记的不一致，所以列表里没有标「在用」。要用 CC Session Sync 的，点一下那个供应商。`});
+  const on = [run.claude && "Claude", run.codex && "Codex"].filter(Boolean);
+  if (on.length) out.push({s: `${on.join("、")} 在运行，改动要重开会话`, h: `${on.join("、")} 正在运行：改动只对<b>之后新开的会话</b>生效；已经开着的会话要重开，Claude 桌面版 / Codex 桌面版要退出后重开。`});
+  if (d.plaintext.length) out.push({s: `${d.plaintext.length} 个明文 key`, h: `配置文件里有 <b>${d.plaintext.length}</b> 个明文 key：${d.plaintext.map(p => `${esc(p.tool)} <code>${esc(p.field)}</code>（${esc(p.masked)}）`).join("，")}。<a href="#" data-mcgo="migrate">挪进凭据管理器…</a>（先备份，你点了才做）`});
+  return out;
+}
+function mcBanner(){
+  const n = mcNotes(); if (!n.length) return ["", ""];
+  return [`<div class="mcban"><button class="mcbl${MC.ban ? " on" : ""}" id="mcBan" title="点开看详情">${ic("info")}<span>${n.map(x => esc(x.s)).join(" · ")}</span><span class="mcchev">${MC.ban ? "▾" : "▸"}</span></button></div>`,
+    `<div class="mcbx" id="mcBx"${MC.ban ? "" : " hidden"}>${n.map(x => `<div>${x.h}</div>`).join("")}</div>`];
+}
+const MC_VIEWS = {backups: ["备份 / 恢复", () => mcBackups()], proxy: ["代理（opencodex / magpie）", () => mcProxy()], migrate: ["迁移明文 key", () => mcMigrate()], keys: ["Key 列表", () => mcKeys()],
+  claude: ["Claude 配置文件（直接改）", () => mcClaude()], codex: ["Codex 配置文件（直接改）", () => mcCodex()], slot: ["Codex 对话列表 id", () => mcSlot()]};
+function mcMenuHtml(){
+  const d = MC.d, it = (k, t, extra = "") => `<button data-mcgo="${k}">${t}${extra}</button>`;
+  return `<div class="menu mcm" id="mcMenu"><button class="ghost mcmb" id="mcMenuBtn" title="更多：备份、代理、明文 key、导入、Key 列表…">${ic("more")}</button><div class="list">
+    ${it("backups", "备份 / 恢复…")}${it("proxy", "代理（opencodex / magpie）…")}${it("migrate", "迁移明文 key…", d.plaintext.length ? ` <span class="mcnb">${d.plaintext.length}</span>` : "")}
+    ${d.ccswitch.installed ? it("ccs", "从 CC Switch 导入…") : ""}${it("keys", "Key 列表…")}
+    <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">${it("claude", "Claude 配置文件（直接改）…")}${it("codex", "Codex 配置文件（直接改）…")}${it("slot", "Codex 对话列表 id…")}</div></div>`;
+}
+function mcGo(k){ if (k === "ccs") return pvCcs(); MC.view = k; MC.ban = false; mcRender(); }
+function mcRender(){
+  const sub = MC_VIEWS[MC.view];
+  if (!sub) MC.view = "list";
+  const [bl, bx] = sub ? ["", ""] : mcBanner();
+  $("#mcBox").innerHTML = `<div class="mctop">${sub ? `<button class="ghost mcback" data-mcgo="list">‹ 供应商</button><b class="mcvt">${sub[0]}</b>` : bl}<span style="flex:1"></span>${mcMenuHtml()}</div>${bx}<div id="mcTab"></div>${MC_DL}`;
+  $$("#mcBox [data-mcgo]").forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation(); $("#mcMenu").classList.remove("open"); mcGo(b.dataset.mcgo); });
+  $("#mcMenuBtn").onclick = e => { e.stopPropagation(); const m = $("#mcMenu"), l = m.querySelector(".list"); m.classList.toggle("open");
+    if (m.classList.contains("open")) { const r = e.currentTarget.getBoundingClientRect();
+      l.style.position = "fixed"; l.style.top = (r.bottom + 4) + "px"; l.style.right = (innerWidth - r.right) + "px"; } };   // fixed：不被对话框的滚动区裁掉
+  $("#mcBox").onclick = e => { if (!e.target.closest("#mcMenu")) { const m = $("#mcMenu"); if (m) m.classList.remove("open"); } };
+  const bn = $("#mcBan"); if (bn) bn.onclick = () => { MC.ban = !MC.ban; bn.classList.toggle("on", MC.ban); bn.querySelector(".mcchev").textContent = MC.ban ? "▾" : "▸"; $("#mcBx").hidden = !MC.ban; };
+  (sub ? sub[1] : mcList)();
+}
+const mcScopeSeg = () => "";
+function mcWireScope(){}
+const mcRow = (k, label, hint, val, extra = "") => `<div class="setrow"><div class="sl"><div><b>${label}</b><div class="sd">${hint}</div></div></div><span style="display:flex;gap:6px;align-items:center">${extra}<input data-f="${k}" list="mcModels" value="${esc(val ?? "")}" placeholder="（不设）" style="width:260px"></span></div>`;
+const mcSel = (k, label, hint, val, opts) => `<div class="setrow"><div class="sl"><div><b>${label}</b><div class="sd">${hint}</div></div></div><select data-f="${k}" style="width:260px">${opts.map(o => `<option value="${o}" ${String(val ?? "")===o?"selected":""}>${o || "（不设，用默认）"}</option>`).join("")}</select></div>`;
+function mcKeyOpts(selected){ return `<option value="">（不用 CC Session Sync 的 key）</option>` + MC.d.keys.map(k => `<option value="${esc(k.name)}" ${k.name===selected?"selected":""}>${esc(k.name)}  ${esc(k.masked)}</option>`).join(""); }
+function mcCollect(box = "#mcTab"){ const o = {}; $$(box + " [data-f]").forEach(i => o[i.dataset.f] = i.value.trim()); return o; }
+// ctx：{scope, root, file, box, back}；默认是用户级、⋯ 里的「配置文件（直接改）」
+async function mcSave(tool, base, extra = {}, ctx = null){
+  ctx = ctx || {scope: "user", root: cur && cur.root, file: MC.d[tool].user.file, box: "#mcTab", back: () => mcOpen()};
+  const now = mcCollect(ctx.box), changes = {};
+  for (const [k, v] of Object.entries(now)) if (k !== "_key" && String(base[k] ?? "") !== v) changes[k] = v || null;
+  if (tool === "claude" && "_key" in now && (base._key || "") !== now._key) changes.apiKeyHelper = now._key || null;
+  if (!Object.keys(changes).length && !extra.provider_auth) return toast("没有改动");
+  const lines = Object.entries(changes).map(([k, v]) => `<li><code>${esc(k)}</code>：${esc(String(base[k === "apiKeyHelper" ? "_key" : k] ?? "（不设）"))} → <b>${esc(v ?? "（删掉）")}</b></li>`).join("");
+  const warn = [];
+  if (changes.apiKeyHelper) warn.push("设了 apiKeyHelper 后，Claude Code 会<b>改用这个 key 按 API 计费</b>，不再走 claude.ai 订阅额度；Claude 桌面版的会话也会受影响。");
+  if ("ANTHROPIC_BASE_URL" in changes && MC.d.ccswitch.installed) warn.push("CC Switch 还装着：它下次切换供应商时会覆盖这里的改动。");
+  if (changes.model && tool === "claude") warn.push("主模型只对命令行和新会话生效；Claude 桌面版按它自己的模型选择。");
+  openDlg("确认写入", `<div>将改 <code>${esc(ctx.file)}</code>（先备份，写完核对）：</div><ul>${lines || "<li>供应商的取 key 方式</li>"}</ul>${warn.map(w => `<div class="miss" style="margin-top:6px">${w}</div>`).join("")}`,
+    '<button id="pvNo">取消</button><button class="primary" id="mcGo">写入</button>');
+  $("#pvNo").onclick = () => ctx.back();
+  $("#mcGo").onclick = async () => {
+    try { const r = await api("/api/modelcfg/" + tool, {scope: ctx.scope, root: ctx.root, changes, ...extra});
+      toast(r.ok ? `已写入，备份 ${r.backup || "（原来没有这个文件）"}` : "写入后核对不一致，请到 ⋯ →「备份 / 恢复」还原"); }
+    catch(e){ toast("没写成：" + e.message); }
+    await ctx.back();
+  };
+}
+function mcClaude(){
+  const st = MC.d.claude.user, v = st.values, h = st.apiKeyHelper;
+  const base = {...v, _key: h.ours ? h.key : ""};
+  let html = `<div class="dim" style="margin:6px 0;font-size:12px">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有，保存时新建）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
+  if (st.error) html += `<div class="miss">这个文件读不了：${esc(st.error)}（不会写）</div>`;
+  html += `<div class="setlist">` + CL_FIELDS.map(([k, l, hnt]) => mcRow(k, l, hnt, v[k])).join("") +
+    mcSel("effortLevel", "思考强度", "effortLevel；注意：用户级的这个键对 Opus 5.5 不生效（它按 /effort 记住的值），项目级对所有模型生效", v.effortLevel, ["", "low", "medium", "high", "xhigh"]);
+  html += `<div class="setrow"><div class="sl"><div><b>Base URL</b><div class="sd">ANTHROPIC_BASE_URL；空 = 官方。${MC.d.ccswitch.installed ? "CC Switch 切换时会覆盖" : ""}</div></div></div><input data-f="ANTHROPIC_BASE_URL" value="${esc(v.ANTHROPIC_BASE_URL ?? "")}" placeholder="https://api.anthropic.com" style="width:260px"></div>`;
+  html += `<div class="setrow"><div class="sl"><div><b>API Key</b><div class="sd">${h.other ? "apiKeyHelper 由别的工具设置（CC Session Sync 不动它）：<code>" + esc(h.other) + "</code>" : "通过 apiKeyHelper 从凭据管理器取；登录状态：" + (st.login.oauth ? "claude.ai 已登录（" + esc(st.login.billing || "") + "）" : "未用 claude.ai 登录")}</div></div></div>${h.other ? "" : `<select data-f="_key" style="width:260px">${mcKeyOpts(h.key)}</select>`}</div>`;
+  if (Object.keys(st.plaintext).length) html += `<div class="miss">settings.json 的 env 里有明文 ${Object.entries(st.plaintext).map(([k, m]) => `${k}（${esc(m)}）`).join("、")}，它们会优先于 OAuth 登录被使用。可以在 ⋯ →「迁移明文 key」挪走。</div>`;
+  html += `</div><div class="ufl" style="justify-content:flex-end;margin-top:8px"><button id="mcTest">测试连接</button><button class="primary" id="mcSave">保存</button></div><div id="mcTestOut"></div>`;
+  $("#mcTab").innerHTML = html;
+  $("#mcSave").onclick = () => mcSave("claude", base);
+  const tb = $("#mcTest"); tb.onclick = async () => { const f = mcCollect(); tb.disabled = true; $("#mcTestOut").innerHTML = '<div class="dim">测试中…</div>';
+    const r = await api("/api/modelcfg/test", {tool: "claude", base_url: f.ANTHROPIC_BASE_URL, key: f._key, model: f.ANTHROPIC_DEFAULT_HAIKU_MODEL || "claude-haiku-4-5", use_settings_key: !f._key}).catch(e => ({ok: false, error: e.message}));
+    tb.disabled = false; $("#mcTestOut").innerHTML = mcTestHtml(r); };
+}
+function mcTestHtml(r){
+  if (r.ok) return `<div class="miss" style="border-color:var(--ok);background:var(--ok-weak)">连通：HTTP ${r.status}，${r.ms} ms${r.note ? "；" + esc(r.note) : ""}<div class="dim" style="font-size:11.5px">${esc(r.url || "")}</div></div>`;
+  return `<div class="miss"><b>${r.status ? "HTTP " + r.status : "没连上"}</b>${r.reason ? " · " + esc(r.reason) : ""}${r.detail ? `<div style="font-size:12px">${esc(r.detail)}</div>` : ""}${r.hint ? `<div style="font-size:12px"><b>建议：</b>${esc(r.hint)}</div>` : ""}${r.url ? `<div class="dim" style="font-size:11.5px">${esc(r.url)}${r.ms != null ? "，" + r.ms + " ms" : ""}</div>` : ""}${!r.status && !r.reason && r.error ? esc(r.error) : ""}</div>`; }
+function mcCodex(){
+  const st = MC.d.codex.user, v = st.values;
+  const ef = ["", "minimal", "low", "medium", "high", "xhigh"];
+  let html = `<div class="dim" style="margin:6px 0;font-size:12px">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
+  if (st.error) html += `<div class="miss">这个文件读不了：${esc(st.error)}（不会写）</div>`;
+  html += `<div class="setlist">` + CX_FIELDS.map(([k, l, hnt]) => mcRow(k, l, hnt, v[k])).join("") +
+    mcSel("model_reasoning_effort", "思考强度", "model_reasoning_effort", v.model_reasoning_effort, ef) +
+    mcSel("default_subagent_reasoning_effort", "子代理思考强度", "[agents] default_subagent_reasoning_effort", v.default_subagent_reasoning_effort, ef);
+  html += `<div class="setrow"><div class="sl"><div><b>当前供应商</b><div class="sd">model_provider${MC.d.ccswitch.installed ? "（CC Switch 切换时会覆盖）" : ""}；登录方式：${st.auth.mode === "chatgpt" || st.auth.chatgpt ? "ChatGPT 登录" : st.auth.api_key ? "API key（auth.json，" + esc(st.auth.api_key) + "）" : "未登录"}</div></div></div><code>${esc(v.model_provider || "openai")}</code></div>`;
+  html += `</div>`;
+  if (st.providers.length) html += `<h4 style="margin:12px 0 4px">config.toml 里的供应商怎么取 key</h4><table><tr><th class="l">供应商</th><th class="l">Base URL</th><th class="l">现在怎么取 key</th><th class="l">改成凭据管理器里的</th><th></th></tr>` +
+    st.providers.map(p => `<tr><td class="l"><b>${esc(p.name)}</b> <span class="dim">${esc(p.id)}</span></td><td class="l m" title="${esc(p.base_url || "")}">${esc(p.base_url || "")}</td>
+      <td class="l">${p.auth_ours ? "CC Session Sync：" + esc(p.key) + " " + esc(p.key_masked || "（凭据里没有！）") : p.plaintext ? '<span class="note">明文 ' + esc(p.plaintext) + "</span>" : p.env_key ? "环境变量 " + esc(p.env_key) + (p.env_key_set ? "" : "（没设）") : p.auth_other ? "别的命令" : "—"}</td>
+      <td class="l"><select data-pk="${esc(p.id)}">${mcKeyOpts(p.key)}</select></td><td><button data-pt="${esc(p.id)}">测试</button></td></tr>`).join("") + "</table>";
+  html += `<div class="ufl" style="justify-content:flex-end;margin-top:8px"><button class="primary" id="mcSave">保存</button></div><div id="mcTestOut"></div>`;
+  $("#mcTab").innerHTML = html;
+  $("#mcSave").onclick = () => mcSave("codex", v);
+  $$("#mcTab [data-pk]").forEach(s => s.onchange = () => { const p = st.providers.find(x => x.id === s.dataset.pk);
+    openDlg("确认", `把 Codex 供应商 <b>${esc(p.name)}</b> 改成用 ${s.value ? "凭据管理器里的 <b>" + esc(s.value) + "</b>（[model_providers." + esc(p.id) + ".auth] → CCSessionSync key get）" : "（去掉 CC Session Sync 的取 key 命令）"}？先备份。${p.plaintext && s.value ? "<div class='miss'>原来的明文 key 保留不动；要删掉它请用 ⋯ →「迁移明文 key」。</div>" : ""}`,
+      '<button onclick="mcOpen()">取消</button><button class="primary" id="mcGo">写入</button>');
+    $("#mcGo").onclick = async () => { try { const r = await api("/api/modelcfg/codex", {scope: "user", changes: {}, provider_auth: {id: p.id, key: s.value || null}}); toast("已写入，备份 " + (r.backup || "")); } catch(e){ toast("没写成：" + e.message); } await mcOpen("codex"); }; });
+  $$("#mcTab [data-pt]").forEach(b => b.onclick = async () => { const p = st.providers.find(x => x.id === b.dataset.pt), k = $(`#mcTab [data-pk="${CSS.escape(p.id)}"]`).value;
+    $("#mcTestOut").innerHTML = '<div class="dim">测试中…</div>'; const r = await api("/api/modelcfg/test", {tool: "codex", base_url: p.base_url, key: k}).catch(e => ({ok: false, error: e.message})); $("#mcTestOut").innerHTML = mcTestHtml(r); });
+}
+function mcProxy(){
+  if (MC.d.proxies.some(p => p.running == null) && !MC.pxWait) {     // 端口还没测过：当场测一次再重画（只这一页等）
+    MC.pxWait = true; api("/api/modelcfg/proxies").then(r => { MC.d.proxies = r; MC.pxWait = false; if ($("#mcTab") && MC.view === "proxy") mcProxy(); }).catch(() => { MC.pxWait = false; });
+  }
+  const ps = MC.d.proxies, ocxAg = MC.d.agents.filter(a => a.ocx);
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">opencodex / magpie 是本地模型网关：把一个模型名路由到真正的供应商和模型（含 Anthropic ↔ OpenAI 格式转换）。CC Session Sync 不内置代理，只检测它们、显示路由，并能一键把 Claude / Codex 指过去（先备份，你确认才写）。</div>` +
+    ps.map(p => `<div class="ucard" style="margin-bottom:8px"><div class="ufl"><b>${p.name}</b><span class="tag">${p.running ? "在运行" : p.running == null ? "检测中…" : p.configured ? "装了，没在运行" : "没检测到"}</span><span class="dim">端口 ${p.port}</span><span style="flex:1"></span>
+      <button data-px="${p.name}" data-t="claude">Claude 指向它</button><button data-px="${p.name}" data-t="codex">Codex 加为供应商</button></div>
+      ${p.providers.length ? `<div class="s">上游供应商：${p.providers.map(esc).join("、")}${p.default_provider ? "（默认 " + esc(p.default_provider) + "）" : ""}</div>` : ""}
+      ${p.subagent_models.length ? `<div class="s">子代理模型：${p.subagent_models.map(esc).join("、")}</div>` : ""}
+      ${p.name === "opencodex" && ocxAg.length ? `<table style="margin-top:6px"><tr><th class="l">Claude 子代理</th><th class="l">实际模型</th></tr>${ocxAg.map(a => `<tr><td class="l">${esc(a.name)}</td><td class="l"><b>${esc(a.real_model)}</b></td></tr>`).join("")}</table>` : ""}</div>`).join("");
+  $$("#mcTab [data-px]").forEach(b => b.onclick = () => { const p = ps.find(x => x.name === b.dataset.px), claude = b.dataset.t === "claude";
+    openDlg("确认", claude ? `把 Claude 的 <code>ANTHROPIC_BASE_URL</code> 设成 <b>${esc(p.anthropic_base)}</b>？之后 Claude Code 的请求都经过 ${p.name}。先备份；${MC.d.ccswitch.installed ? "CC Switch 下次切换供应商会覆盖它。" : ""}${p.running ? "" : "<div class='miss'>" + p.name + " 现在没在运行，指过去之后 Claude 会连不上。</div>"}`
+      : `在 Codex 的 config.toml 里加 <code>[model_providers.${p.name}]</code>（base_url = ${esc(p.openai_base)}）？<b>不会切换</b>当前供应商；要用时在 Codex 的 profile 里选它，或者在 CC Session Sync 里加一个指向它的供应商。先备份。`,
+      '<button onclick="mcOpen()">取消</button><button class="primary" id="mcGo">写入</button>');
+    $("#mcGo").onclick = async () => { try { const r = claude ? await api("/api/modelcfg/claude", {scope: "user", changes: {ANTHROPIC_BASE_URL: p.anthropic_base}})
+        : await api("/api/modelcfg/codex", {scope: "user", changes: {}, add_provider: {id: p.name, name: p.name, base_url: p.openai_base, wire_api: "responses"}}); toast("已写入，备份 " + (r.backup || "")); } catch(e){ toast("没写成：" + e.message); } await mcOpen("proxy"); }; });
+}
+function mcKeys(){
+  const d = MC.d;
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">${d.keystore === "wincred" ? "key 存在 <b>Windows 凭据管理器</b>（按当前 Windows 用户加密）。" : "<span class='note'>这台机器不是 Windows：key 存在 ~/.agent-bridge/keys.json（仅测试用）。</span>"} Claude 通过 apiKeyHelper、Codex 通过 [model_providers.x.auth] 运行 <code>${esc(d.helper_example)}</code> 取 key；配置文件里不留明文。这里只显示打码后的样子。</div>
+    <table><tr><th class="l">名字</th><th class="l">key</th><th class="l">备注</th><th></th></tr>${d.keys.map(k => `<tr><td class="l"><b>${esc(k.name)}</b></td><td class="l">${esc(k.masked)}</td><td class="l dim">${esc(k.comment)}</td><td><button class="ghost" data-kd="${esc(k.name)}">删除</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有</td></tr>'}</table>
+    <div class="ufl" style="margin-top:8px"><input id="mcKn" placeholder="名字，如 claude-main" style="width:160px"><input id="mcKs" type="password" autocomplete="new-password" placeholder="粘贴 key（只写不读）" style="width:280px"><input id="mcKc" placeholder="备注（可空）" style="width:160px"><button class="primary" id="mcKsave">存入</button></div>`;
+  $("#mcKsave").onclick = async () => { const n = $("#mcKn").value.trim(), s = $("#mcKs").value; if (!n || !s) return toast("名字和 key 都要填");
+    try { const r = await api("/api/modelcfg/key-set", {name: n, secret: s, comment: $("#mcKc").value.trim()}); $("#mcKs").value = ""; toast(`已存入 ${r.name}（${r.masked}）`); } catch(e){ toast("没存成：" + e.message); } MC.view = "keys"; await mcLoad(); };
+  $$("#mcTab [data-kd]").forEach(b => b.onclick = async () => { if (!confirm(`删除凭据 ${b.dataset.kd}？用它的 Claude / Codex 配置会取不到 key。`)) return; await api("/api/modelcfg/key-delete", {name: b.dataset.kd}); MC.view = "keys"; await mcLoad(); });
+}
+function mcMigrate(){
+  const d = MC.d;
+  $("#mcTab").innerHTML = d.plaintext.length ? `<div class="dim" style="margin:6px 0;font-size:12px">把配置文件里的明文 key 存进凭据管理器，再把配置改成取 key 的命令。先备份原文件；存进去读回来一致才改配置。只显示打码后的样子。</div>
+    <table><tr><th class="l">工具</th><th class="l">位置</th><th class="l">key</th><th class="l">存成</th><th></th></tr>${d.plaintext.map((p, i) => `<tr><td class="l">${esc(p.tool)}</td><td class="l"><code>${esc(p.field)}</code></td><td class="l">${esc(p.masked)}</td><td class="l"><input data-mn="${i}" value="${p.tool === "claude" ? "claude-main" : "codex-" + esc(p.provider || "")}" style="width:150px"></td><td><button data-mg="${i}">迁移…</button></td></tr>`).join("")}</table>`
+    : `<div class="dim" style="margin:10px 0">配置文件里没有明文 key。</div>`;
+  $$("#mcTab [data-mg]").forEach(b => b.onclick = () => { const p = d.plaintext[+b.dataset.mg], name = $(`#mcTab [data-mn="${b.dataset.mg}"]`).value.trim();
+    openDlg("确认迁移明文 key", `把 <code>${esc(p.where)}</code> 里的 <code>${esc(p.field)}</code>（${esc(p.masked)}）存进凭据管理器的 <b>${esc(name)}</b>，再把配置改成取 key 的命令、删掉明文。<ul><li>先备份原文件，可在 ⋯ →「备份 / 恢复」一键还原</li><li>存进去读回来一致才改配置</li>${p.tool === "claude" ? "<li>Claude 会改用 apiKeyHelper：它对 Claude 桌面版的会话同样生效；已开的会话要重开</li>" : ""}</ul>`,
+      '<button onclick="mcOpen()">取消</button><button class="primary" id="mcGo">迁移</button>');
+    $("#mcGo").onclick = async () => { try { const r = await api("/api/modelcfg/migrate", {tool: p.tool, field: p.field, key: name}); toast("已迁移，备份 " + r.backup); } catch(e){ toast("没迁移：" + e.message); } await mcOpen("migrate"); }; });
+}
+function mcBackups(){
+  const b = MC.d.backups;
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">每次写之前的原文件。还原时会先把现在的文件也备份一份。</div><table><tr><th class="l">时间</th><th class="l">操作</th><th class="l">文件</th><th></th></tr>${b.map(x => `<tr><td class="l">${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})}</td><td class="l">${esc(x.label)}</td><td class="l m" title="${esc(x.file)}">${esc(x.file)}</td><td><button data-rb="${esc(x.id)}">还原</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有备份</td></tr>'}</table>`;
+  $$("#mcTab [data-rb]").forEach(btn => btn.onclick = async () => { const x = b.find(y => y.id === btn.dataset.rb); if (!confirm(`把 ${x.file} 还原成 ${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})} 的样子？`)) return;
+    try { await api("/api/modelcfg/restore", {id: x.id}); toast("已还原"); } catch(e){ toast("没还原：" + e.message); } MC.view = "backups"; await mcLoad(); });
+}
+function mcSlot(){
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">在 CC Session Sync 里切换 Codex 全局供应商时，写进 <code>[model_providers.&lt;id&gt;]</code>。Codex 按这个 id 分对话列表：沿用原来的 id，老对话不会「消失」。一般不用改。</div>
+    <div class="ufl"><code>[model_providers.</code><input id="pvSlot" value="${esc(MC.p.codex_slot)}" style="width:120px"><code>]</code><button class="primary" id="pvSlotSave">改</button></div>`;
+  $("#pvSlotSave").onclick = async () => { try { await pvApi("slot", {slot: $("#pvSlot").value.trim()}); toast("已改"); } catch(e){ toast("没改：" + e.message); } mcOpen("slot"); };
+}
+// ---------- 供应商（CC Session Sync 自己管；CC Switch 可选） ----------
+async function pvApi(act, body){
+  if (!["test", "models", "ccs-preview"].includes(act)) mcDirty();
+  const r = await fetch("/api/providers/" + act, {method:"POST", headers:{"Content-Type":"application/json","x-token":TOKEN}, body:JSON.stringify(body)});
+  const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || r.status); e.status = r.status; e.j = j; throw e; } return j;
+}
+const PV_TOOL = {claude: "Claude Code", codex: "Codex"};
+// 生效范围：淡淡的一句提示（鼠标放上去看原因）
+function pvHint(tool, lvl, P = MC.p){ const r = P.reach[tool][lvl]; const t = r.cli && r.desktop ? "命令行和桌面版都生效" : r.cli ? "仅命令行（桌面版不认）" : r.desktop ? "仅桌面版" : "不生效";
+  return `<span class="pvh" title="${esc(r.note)}">${t}</span>`; }
+const pvModels = (tool, p) => { const m = p.models || {}, ks = Object.keys(m); if (!ks.length && !p.effort) return '<span class="dim">（模型不改）</span>';
+  const lab = {model:"主", opus:"Opus", sonnet:"Sonnet", haiku:"Haiku", fable:"Fable", subagent:"子代理", review_model:"审查"};
+  return ks.map(k => `<span class="pvm">${lab[k]||k} <b>${esc(m[k])}</b></span>`).join("") + (p.effort ? `<span class="pvm">思考 <b>${esc(p.effort)}</b></span>` : ""); };
+const pvPresets = tool => [[tool === "claude" ? "login" : "chatgpt", tool === "claude" ? "官方登录" : "ChatGPT 登录"], ["official", "官方 API Key"], ["openkey", "OpenKey"], ["custom", "自定义"]];
+const pvLast4 = p => p.mode !== "key" ? "" : p.key_missing ? '<span class="note">缺 key</span>' : `<span class="pvkm" title="${esc(p.key_masked || "")}">…${esc((p.key_masked || "").slice(-4))}</span>`;
+function mcList(){
+  const P = MC.p;
+  let h = "";
+  for (const tool of ["claude", "codex"]) {
+    h += `<div class="pvsec"><div class="pvhd"><b>${PV_TOOL[tool]}</b>${pvHint(tool, "global")}</div><div class="pvl" role="radiogroup" aria-label="${PV_TOOL[tool]} 供应商">` +
+      P[tool].map(p => `<div class="pvrow${p.live ? " on" : ""}" data-pvsw="${esc(p.id)}" data-t="${tool}" role="radio" aria-checked="${p.live ? "true" : "false"}" tabindex="0" title="${p.live ? "当前在用" : "点一下切换到它"}">
+        <span class="pvrad"></span><span class="pvn">${esc(p.name)}${p.projects.length ? `<span class="pvh" title="${esc(p.projects.join("\n"))}">${p.projects.length} 个项目在用</span>` : ""}</span>
+        <span class="pvu" title="${esc(p.mode === "key" ? p.base_url : "")}">${p.mode === "key" ? esc(p.base_url || "（官方地址）") : `<span class="dim">${tool === "claude" ? "官方登录（claude.ai 订阅）" : "ChatGPT 登录"}</span>`}</span>
+        <span class="pvkey">${pvLast4(p)}</span>
+        <span class="pvb">${p.mode === "key" ? `<button class="pvmini" data-pvts="${esc(p.id)}" data-t="${tool}" title="测一下这个地址和 key 通不通">测试</button>` : ""}<button class="pvmini ghost" data-pved="${esc(p.id)}" data-t="${tool}" title="编辑 / 删除">编辑</button></span></div>
+        <div class="pvo" data-pvo="${tool}:${esc(p.id)}"></div>`).join("") +
+      `<div class="pvadd"><button class="ghost pvaddb" data-pvadd="${tool}" data-pre="custom">＋ 添加供应商</button><span class="dim">预设：</span>${pvPresets(tool).map(([k, t]) => `<button class="pvmini ghost" data-pvadd="${tool}" data-pre="${k}">${t}</button>`).join("")}</div></div></div>`;
+  }
+  $("#mcTab").innerHTML = h;
+  const row = (t, id) => P[t].find(p => p.id === id);
+  $$("#mcTab [data-pvadd]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.pvadd, null, b.dataset.pre); });
+  $$("#mcTab [data-pved]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.t, row(b.dataset.t, b.dataset.pved)); });
+  $$("#mcTab [data-pvts]").forEach(b => b.onclick = async e => { e.stopPropagation(); const o = $(`#mcTab [data-pvo="${b.dataset.t}:${CSS.escape(b.dataset.pvts)}"]`); o.innerHTML = '<div class="dim">测试中…</div>';
+    const r = await pvApi("test", {tool: b.dataset.t, id: b.dataset.pvts}).catch(e => ({ok: false, error: e.message})); o.innerHTML = mcTestHtml(r); });
+  $$("#mcTab .pvrow").forEach(r => { const go = () => pvPick(r.dataset.t, row(r.dataset.t, r.dataset.pvsw));
+    r.onclick = e => { if (!e.target.closest("button")) go(); };
+    r.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && e.target === r) { e.preventDefault(); go(); } }; });
+}
+// 点一行 = 切到它。只有两种情况先问：Claude 从登录改成按 API key 计费；配置里有明文 key 要拿掉（409）
+function pvPick(tool, p){
+  if (p.live) return toast(`${PV_TOOL[tool]} 已经在用「${p.name}」`);
+  const now = MC.p[tool].find(x => x.live);
+  if (tool === "claude" && p.mode === "key" && !(now && now.mode === "key")) return pvSwitch(tool, p);
+  pvDoSwitch(tool, p, null);
+}
+async function pvDoSwitch(tool, p, drop){
+  try { const r = await pvApi("switch", {tool, id: p.id, drop_plaintext: !!drop});
+    toast(r.live ? `${PV_TOOL[tool]} 已切到「${p.name}」（已备份，可在 ⋯ →「备份 / 恢复」还原）${(MC.d.running || {})[tool] ? "；开着的会话要重开" : ""}` : "写了，但核对不一致，请到 ⋯ →「备份 / 恢复」还原", 4200); }
+  catch(e){ if (e.status === 409 && e.j.plaintext) return pvSwitch(tool, p, e.j.plaintext); toast("没切换：" + e.message); }
+  mcOpen("list");
+}
+function pvSwitch(tool, p, drop){
+  const cl = tool === "claude", cs = MC.d.ccswitch, run = MC.d.running || {};
+  const warn = [];
+  if (cl && p.mode === "key") warn.push("Claude Code 会<b>改用这个 key 按 API 计费</b>，不走 claude.ai 订阅额度。");
+  if (cl) warn.push("Claude 桌面版不读这些设置（它走自己的登录 / 第三方推理配置），只影响命令行和 VS Code。");
+  else warn.push("Codex 桌面版也会用它，要退出重开桌面版。");
+  if (cs.installed) warn.push("CC Switch 还装着：在 CC Switch 里切换会<b>覆盖</b>这里的设置" + (cl ? "" : "（它会换掉整个 config.toml）") + "。");
+  if (run[tool]) warn.push("正在运行的会话要重开才生效。");
+  const f = cl ? "~/.claude/settings.json" : "~/.codex/config.toml";
+  const body = cl ? (p.mode === "key" ? `ANTHROPIC_BASE_URL = <b>${esc(p.base_url)}</b>；apiKeyHelper 从凭据管理器取 <b>${esc(p.key || "")}</b>（${esc(p.key_masked || "缺")}）；模型映射按这个供应商设，没填的删掉` : "去掉 Base URL、apiKeyHelper 和模型映射，回到 claude.ai 登录")
+    : (p.mode === "key" ? `model_provider = <b>${esc(MC.p.codex_slot)}</b>，[model_providers.${esc(MC.p.codex_slot)}] 改成 ${esc(p.base_url)}，key 从凭据管理器取 <b>${esc(p.key || "")}</b>` : "model_provider = <b>openai</b>（用 codex login 的 ChatGPT 登录；auth.json 不动）");
+  openDlg("切换全局供应商", `<div>把 ${PV_TOOL[tool]} 切到 <b>${esc(p.name)}</b>：改 <code>${f}</code>（先备份，写完核对）。</div><ul><li>${body}</li>${p.models && Object.keys(p.models).length ? "<li>模型：" + pvModels(tool, p) + "</li>" : ""}</ul>${warn.map(w => `<div class="miss" style="margin-top:6px">${w}</div>`).join("")}${drop ? `<div class="miss" style="margin-top:6px;border-color:var(--bad);background:var(--bad-weak)">${drop.map(x => `<code>${esc(x.field)}</code>（${esc(x.masked)}）`).join("、")} 是明文 key，会从配置里拿掉（备份里还在，不会存进凭据管理器）。</div>` : ""}`,
+    '<button id="pvNo">取消</button><button class="primary" id="mcGo">切换</button>');
+  $("#pvNo").onclick = () => mcOpen("list");
+  $("#mcGo").onclick = () => pvDoSwitch(tool, p, drop);
+}
+function pvEdit(tool, p, preset){
+  const isNew = !p; p = p || {mode: "key", models: {}, wire_api: "responses"};
+  const m = p.models || {}, cl = tool === "claude", login = cl ? "login" : "chatgpt";
+  const maps = cl ? [["opus","Opus","opus 别名用哪个模型"],["sonnet","Sonnet","sonnet 别名"],["haiku","Haiku","haiku 别名，也用于后台小任务"],["fable","Fable","fable 别名"],["subagent","子代理","没单独指定模型的子代理 / 队友"]]
+                  : [["review_model","审查","/review 用（review_model）"],["subagent","子代理","派出去的子代理没指定模型时用（[agents] default_subagent_model）"],
+                     ["mem_extract","记忆 · 提取","总结对话写记忆用（[memories] extract_model；开了记忆功能才用得到）"],["mem_consolidate","记忆 · 整合","整理记忆用（[memories] consolidation_model）"]];
+  const cxEf = ["", "minimal", "low", "medium", "high", "xhigh"]; for (const x of [p.effort, p.subagent_effort, ...(p.catalog || []).map(r => r.effort)]) if (x && !cxEf.includes(x)) cxEf.push(x);
+  const efSel = (attr, v) => `<select ${attr}>${cxEf.map(e => `<option value="${e}" ${(v || "") === e ? "selected" : ""}>${e || "（默认）"}</option>`).join("")}</select>`;
+  const ri = (attr, v, ph, w) => `<input ${attr} value="${esc(v || "")}" placeholder="${ph}" autocomplete="off" spellcheck="false"${w ? ` style="width:${w}"` : ""}>`;
+  const rowX = '<button class="pvmini ghost pvrx" data-rx title="删掉这一行">✕</button>';
+  const catRow = r => `<div class="pvtr" data-cat>${ri('data-c="slug" class="pvmi"', r.slug, "真实模型名")}${ri('data-c="name"', r.name, "显示名（可空）")}${efSel('data-c="effort"', r.effort)}${ri('data-c="ctx" inputmode="numeric"', r.ctx, "上下文（可空）")}${rowX}</div>`;
+  const pkRow = r => `<div class="pvtr" data-pk>${ri('data-c="model" class="pvmi"', r.model, "模型 ID 或别名")}${ri('data-c="label"', r.label, "显示名（可空）")}${rowX}</div>`;
+  const ovRow = r => `<div class="pvtr" data-ov>${ri('data-c="from" class="pvmi"', r.from, "Anthropic 模型 ID，如 claude-opus-5-5")}<span class="pvarr">→</span>${ri('data-c="to" class="pvmi"', r.to, "实际发给供应商的模型名")}${rowX}</div>`;
+  const tag = (t, c) => `<span class="pvtag ${c || ""}">${t}</span>`;
+  const extra = cl ? `
+    <div class="pvsub"><div class="pvsubh"><b>/model 选单里加的模型</b>${tag("modelPicker")}${tag("命令行 + VS Code")}<span class="pvh">Claude Code ≥ 2.1.242；只在全局切换和 CC Session Sync 开的会话里生效（项目层 Claude Code 不认）</span></div>
+      <div class="pvtbl" id="pvPk">${((p.picker || {}).rows || []).map(pkRow).join("")}</div>
+      <div class="pvtadd"><button class="pvmini" data-add="pk">＋ 添加</button><label class="pvchk"><input type="checkbox" id="pvPkR" ${(p.picker || {}).replace ? "checked" : ""}> 只显示这些（隐藏内置的那几行）</label></div></div>
+    <div class="pvsub"><div class="pvsubh"><b>模型 ID 改写</b>${tag("modelOverrides")}${tag("命令行 + VS Code")}<span class="pvh">左边必须是 Anthropic 官方模型 ID；选到它（/model、--model、上面的别名）时实际发出去的是右边的名字。这是真正的映射</span></div>
+      <div class="pvtbl" id="pvOv">${(p.overrides || []).map(ovRow).join("")}</div>
+      <div class="pvtadd"><button class="pvmini" data-add="ov">＋ 添加</button></div></div>`
+  : `
+    <div class="setrow"><div class="sl"><div><b>子代理思考强度</b><div class="sd">[agents] default_subagent_reasoning_effort</div></div></div>${efSel('id="pvSE" style="width:300px"', p.subagent_effort)}</div>
+    <div class="pvsub"><div class="pvsubh"><b>/model 选单（模型目录）</b>${tag("model_catalog_json")}${tag("命令行")}${tag("桌面版要官方登录", "warn")}</div>
+      <div class="pvnote">Codex <b>没有别名</b>：「显示名」只改 /model 里看到的名字，请求里发的永远是左边的真实模型名。有行时 CC Session Sync 生成 <code>ccss-models-${esc(p.id || "<id>")}.json</code> 并在切换时写 <code>model_catalog_json</code>，/model 里就只列这些（每个带默认思考强度和上下文窗口）。Codex 启动时才读，改了要重开。桌面版的选单没检测到官方登录时只显示默认模型（Codex 桌面版自己的限制）；命令行 <code>codex</code> 的 /model 一定生效。空表 = 不管（CC Switch 写的目录不动）。</div>
+      <div class="pvtbl pvcat" id="pvCat"><div class="pvth"><span>真实模型</span><span>显示名</span><span>思考强度</span><span>上下文窗口</span><span></span></div>${(p.catalog || []).map(catRow).join("")}</div>
+      <div class="pvtadd"><button class="pvmini" data-add="cat">＋ 添加</button><button class="pvmini ghost" id="pvCatAll" title="把「获取模型列表」拿到的模型都加进来">把获取到的全部加入</button></div></div>`;
+  const efs = cl ? ["", "low", "medium", "high", "xhigh"] : ["", "minimal", "low", "medium", "high", "xhigh"];
+  if (p.effort && !efs.includes(p.effort)) efs.push(p.effort);          // 导入来的少见值也留着，保存时不丢
+  const nAdv = (p.effort ? 1 : 0) + (!cl && p.wire_api && p.wire_api !== "responses" ? 1 : 0);
+  const mi = (k, v) => `<input data-pvf="${k}" value="${esc(v || "")}" placeholder="（不设）" autocomplete="off" spellcheck="false" style="width:300px">`;
+  let mode = p.mode;
+  openDlg((isNew ? "添加" : "编辑") + " " + PV_TOOL[tool] + " 供应商", `<div class="us mc pve">
+    <div class="ufl pvpre"><span class="dim">预设：</span>${pvPresets(tool).map(([k,t]) => `<button class="pvmini ghost" data-pre="${k}">${t}</button>`).join("")}</div>
+    <div class="setlist">
+    <div class="setrow"><div class="sl"><b>名称</b></div><input id="pvN" value="${esc(p.name || "")}" placeholder="比如：公司网关" style="width:300px"></div>
+    <div class="setrow pvlg"><div class="sl"><div><b>官方登录</b><div class="sd">${cl ? "用 claude.ai 订阅登录，不需要地址和 key" : "用 codex login 的 ChatGPT 登录，不需要地址和 key"}</div></div></div><button class="ghost pvmini" id="pvToKey">改用 API key</button></div>
+    <div class="setrow pvk"><div class="sl"><div><b>Base URL</b><div class="sd">${cl ? "空 = https://api.anthropic.com（不带 /v1）" : "OpenAI 兼容地址，一般以 /v1 结尾"}</div></div></div><input id="pvU" value="${esc(p.base_url || "")}" placeholder="${cl ? "https://api.anthropic.com" : "https://api.openai.com/v1"}" style="width:300px"></div>
+    <div class="setrow pvk"><div class="sl"><div><b>Key</b><div class="sd">存进凭据管理器，只写不读${p.key_masked ? "；已存 …" + esc(p.key_masked.slice(-4)) + "，留空不改" : ""}</div></div></div><input id="pvK" type="password" autocomplete="new-password" placeholder="${p.key_masked ? "（不改）" : "粘贴 key"}" style="width:300px"></div>
+    <div class="setrow"><div class="sl"><div><b>模型</b><div class="sd">${cl ? "主模型" : "model"}；可以直接输入，留空 = 不改</div></div></div><span class="pvmf">${mi("model", m.model)}<button class="pvmini" id="pvFetch" title="${cl ? "GET <Base URL>/v1/models" : "GET <Base URL>/models"}：拿到中转站有哪些模型，填进下拉">获取模型列表</button></span></div>
+    <div class="pvmst" id="pvMst"></div>
+    </div>
+    <div class="pvmap"><div class="pvmh"><b>模型映射</b><span class="pvh">留空 = 不设${cl ? "；Claude Code 里的 opus / sonnet / haiku / fable 别名和子代理用哪个模型" : ""}</span></div><div class="setlist">
+    ${maps.map(([k, l, hint]) => `<div class="setrow"><div class="sl"><div><b>${l}</b><div class="sd">${hint}</div></div></div>${mi(k, m[k])}</div>`).join("")}
+    ${extra}
+    </div></div>
+    <details class="pvadv" id="pvAdv"><summary>高级${nAdv ? `<span class="dim">（已设 ${nAdv} 项）</span>` : ""}</summary><div class="setlist">
+    <div class="setrow"><div class="sl"><div><b>思考强度</b><div class="sd">${cl ? "effortLevel" : "model_reasoning_effort"}</div></div></div><select id="pvE" style="width:300px">${efs.map(e => `<option value="${e}" ${(p.effort||"")===e?"selected":""}>${e || "（不改）"}</option>`).join("")}</select></div>
+    ${cl ? "" : `<div class="setrow pvk"><div class="sl"><div><b>wire_api</b><div class="sd">大多数是 responses；老的 OpenAI 兼容网关用 chat</div></div></div><select id="pvW" style="width:300px">${["responses","chat"].map(w => `<option ${p.wire_api===w?"selected":""}>${w}</option>`).join("")}</select></div>`}
+    </div></details>
+    <div class="pvfh">${cl ? '<span class="pvk">用 API key 时按 API 计费，不走 claude.ai 订阅额度。</span>切换后对命令行 / VS Code 生效，Claude 桌面版不读。' : "切换后命令行和 Codex 桌面版都生效。"}</div></div>`,
+    `${isNew ? "" : '<button class="ghost danger" id="pvDel" style="margin-right:auto">删除…</button>'}<button id="pvNo">取消</button><button class="primary" id="pvSave">保存</button>`);
+  $("#dlg").classList.add("wide");
+  // 下拉：拿到的模型列表在前，常见名字垫底；输入框照样能随便填
+  let got = [];
+  const fillDL = list => { got = list || []; };
+  pvCombo($$("#dlgBody [data-pvf], #dlgBody .pvmi"), () => got);
+  const addRow = (box, html) => { box.insertAdjacentHTML("beforeend", html); const r = box.lastElementChild; pvCombo.attach(r.querySelectorAll(".pvmi")); return r; };
+  $$("#dlgBody [data-add]").forEach(b => b.onclick = () => { const k = b.dataset.add;
+    const r = k === "cat" ? addRow($("#pvCat"), catRow({})) : k === "pk" ? addRow($("#pvPk"), pkRow({})) : addRow($("#pvOv"), ovRow({}));
+    r.querySelector("input").focus(); });
+  if (!pvEdit.rx) { pvEdit.rx = 1; $("#dlgBody").addEventListener("click", e => { const x = e.target.closest("[data-rx]"); if (x) { e.preventDefault(); x.closest(".pvtr").remove(); } }); }
+  if ($("#pvCatAll")) $("#pvCatAll").onclick = () => { if (!got.length) return toast("先点「获取模型列表」");
+    const have = new Set($$("#pvCat [data-c=slug]").map(i => i.value.trim())); let n = 0;
+    for (const x of got) if (!have.has(x)) { addRow($("#pvCat"), catRow({slug: x})); n++; }
+    toast(n ? `加了 ${n} 个` : "都已经在表里了"); };
+  const showList = (r, cached) => { fillDL(r.models); $("#pvMst").innerHTML = `<span class="pvh" style="margin:0">${cached ? "上次" : "已"}获取 ${r.models.length} 个模型${r.at ? "（" + new Date(r.at * 1000).toLocaleString("zh-CN", {hour12: false}) + "）" : ""}，在下拉里选，也可以直接输入</span>`; };
+  fillDL(null);
+  const sync = () => { $$("#dlgBody .pvk").forEach(r => r.style.display = mode === "key" ? "" : "none"); $$("#dlgBody .pvlg").forEach(r => r.style.display = mode === "key" ? "none" : "");
+    $("#pvFetch").style.display = mode === "key" ? "" : "none"; };
+  const okb = ((MC.d.codex.user.providers || []).find(x => /openkey/i.test((x.name || "") + (x.base_url || ""))) || {}).base_url;
+  const pre = k => { mode = k === login ? login : "key";
+    if (k === login && !$("#pvN").value) $("#pvN").value = cl ? "Claude 官方登录" : "ChatGPT 登录";
+    if (k === "official") { $("#pvU").value = cl ? "https://api.anthropic.com" : "https://api.openai.com/v1"; if (!$("#pvN").value) $("#pvN").value = cl ? "Anthropic API" : "OpenAI API"; }
+    if (k === "openkey") { $("#pvU").value = okb ? (cl ? okb.replace(/\/v1\/?$/, "") : okb) : "https://"; if (!$("#pvN").value) $("#pvN").value = "OpenKey"; }
+    if (k === "custom") $("#pvU").value = "";
+    sync(); };
+  $$("#dlgBody [data-pre]").forEach(b => b.onclick = () => pre(b.dataset.pre));
+  $("#pvToKey").onclick = () => { mode = "key"; sync(); $("#pvU").focus(); };
+  if (isNew && preset) pre(preset); else sync();
+  if (mode === "key") pvApi("models", {tool, id: p.id || null, base_url: $("#pvU").value.trim(), cached_only: true}).then(r => { if (r.ok && r.models && r.models.length) showList(r, true); }).catch(() => {});
+  $("#pvFetch").onclick = async () => { const b = $("#pvFetch"); b.disabled = true; $("#pvMst").innerHTML = '<span class="pvh" style="margin:0">获取中…</span>';
+    const r = await pvApi("models", {tool, id: p.id || null, base_url: $("#pvU").value.trim(), secret: $("#pvK").value || null}).catch(e => ({ok: false, error: e.message}));
+    b.disabled = false;
+    if (r.ok) { showList(r, false); pvCombo.refresh && pvCombo.refresh(); } else $("#pvMst").innerHTML = mcTestHtml(r); };
+  $("#pvNo").onclick = () => mcOpen("list");
+  if ($("#pvDel")) $("#pvDel").onclick = () => pvDelete(tool, p);
+  $("#pvSave").onclick = async () => { const models = {}; $$("#dlgBody [data-pvf]").forEach(i => { if (i.value.trim()) models[i.dataset.pvf] = i.value.trim(); });
+    const rows = (sel, keys) => $$(sel).map(r => Object.fromEntries(keys.map(k => [k, (r.querySelector(`[data-c="${k}"]`).value || "").trim()])));
+    const prov = {id: p.id, name: $("#pvN").value.trim(), mode, base_url: $("#pvU").value.trim(), wire_api: $("#pvW") ? $("#pvW").value : undefined, models, effort: $("#pvE").value || null, from: p.from};
+    if (cl) { prov.picker = {rows: rows("#pvPk [data-pk]", ["model", "label"]).filter(r => r.model), replace: $("#pvPkR").checked};
+      prov.overrides = rows("#pvOv [data-ov]", ["from", "to"]).filter(r => r.from || r.to); }
+    else { prov.subagent_effort = $("#pvSE").value || null; prov.catalog = rows("#pvCat [data-cat]", ["slug", "name", "effort", "ctx"]).filter(r => r.slug); }
+    try { const r = await pvApi("save", {tool, provider: prov, secret: $("#pvK").value || null}); $("#pvK").value = ""; toast(`已保存 ${r.name}${r.key_masked ? "（key …" + r.key_masked.slice(-4) + "）" : ""}`); mcOpen("list"); }
+    catch(e){ toast("没保存：" + e.message); } };
+}
+// 模型输入框的下拉：获取到的模型在前（可搜索），常见名字垫底；输入框本身照样能随便填
+function pvCombo(inputs, getList){
+  let dd = $("#pvDD"); if (!dd) { dd = document.createElement("div"); dd.id = "pvDD"; dd.className = "pvdd"; document.body.appendChild(dd);
+    document.addEventListener("scroll", e => { if (!dd.contains(e.target)) (pvCombo.onScroll || (() => dd.style.display = "none"))(e); }, true); }
+  let cur = null, sel = -1;
+  const hide = () => { dd.style.display = "none"; cur = null; sel = -1; };
+  const show = inp => { cur = inp; const q = inp.value.trim().toLowerCase(), got = getList(), seen = new Set(), rows = [];
+    for (const [x, g] of [...got.map(x => [x, 1]), ...MODEL_SUGG.map(x => [x, 0])]) if (!seen.has(x) && (!q || x.toLowerCase().includes(q))) { seen.add(x); rows.push([x, g]); }
+    if (!rows.length || (rows.length === 1 && rows[0][0] === inp.value)) { dd.style.display = "none"; return; }
+    const r = inp.getBoundingClientRect();
+    dd.style.cssText = `display:block;left:${r.left}px;top:${r.bottom + 2}px;min-width:${r.width}px`;
+    dd.innerHTML = (got.length ? "" : '<div class="pvddh">还没获取模型列表，下面是常见名字</div>') + rows.slice(0, 80).map(([x, g], i) => `<div class="pvddi${i === sel ? " on" : ""}" data-v="${esc(x)}">${esc(x)}${g ? "" : '<span class="dim">常见</span>'}</div>`).join("");
+    const b = dd.getBoundingClientRect(); if (b.bottom > innerHeight - 8) dd.style.top = Math.max(8, r.top - 2 - b.height) + "px"; };
+  dd.onmousedown = e => { const it = e.target.closest(".pvddi"); if (!it || !cur) return; e.preventDefault(); cur.value = it.dataset.v; cur.dispatchEvent(new Event("change")); hide(); };
+  const attach = list => { for (const inp of list) {
+    inp.addEventListener("focus", () => { sel = -1; show(inp); });
+    inp.addEventListener("input", () => { sel = -1; show(inp); });
+    inp.addEventListener("blur", () => setTimeout(() => { if (cur === inp) hide(); }, 120));
+    inp.addEventListener("keydown", e => { const its = [...dd.querySelectorAll(".pvddi")]; if (dd.style.display !== "block" || !its.length) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : its.length - 1)) % its.length; its.forEach((x, i) => x.classList.toggle("on", i === sel)); its[sel].scrollIntoView({block: "nearest"}); }
+      else if (e.key === "Enter" && sel >= 0) { e.preventDefault(); inp.value = its[sel].dataset.v; hide(); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); hide(); } });
+  } };
+  attach(inputs);
+  pvCombo.attach = attach;
+  pvCombo.onScroll = e => { if (cur && e.target.contains && e.target.contains(cur) && document.activeElement === cur) show(cur); else { dd.style.display = "none"; } };   // 对话框滚动：跟着输入框走                    // 表格里新加的行也接上同一个下拉
+  pvCombo.refresh = () => { if (cur) show(cur); };
+  return hide;
+}
+function pvDelete(tool, p){
+  openDlg("删除供应商", `删除 <b>${esc(p.name)}</b>？只删 CC Session Sync 里的这条记录，已经写进配置文件的不动。${p.key ? `<label style="display:block;margin-top:8px"><input type="checkbox" id="pvDk"> 同时从凭据管理器删掉它的 key（…${esc((p.key_masked || "").slice(-4))}）</label>` : ""}`, '<button id="pvNo">取消</button><button class="primary" id="mcGo">删除</button>');
+  $("#pvNo").onclick = () => mcOpen("list");
+  $("#mcGo").onclick = async () => { try { await pvApi("delete", {tool, id: p.id, drop_key: !!($("#pvDk") && $("#pvDk").checked)}); toast("已删除"); } catch(e){ toast("没删：" + e.message); } mcOpen("list"); };
+}
+async function pvCcs(){
+  let items; try { items = (await pvApi("ccs-preview", {})).items; } catch(e){ return toast("读不了 CC Switch：" + e.message); }
+  openDlg("从 CC Switch 导入供应商", `<div class="dim" style="margin-bottom:8px">只读打开 CC Switch 的数据库，不改它。导入的 key 存进凭据管理器；之后切换在 CC Session Sync 里做。</div>
+    <table><tr><th></th><th class="l">工具</th><th class="l">名称</th><th class="l">地址</th><th class="l">key</th><th class="l">模型</th></tr>${items.map(x => `<tr><td>${x.imported ? '<span class="dim">已导入</span>' : `<input type="checkbox" data-ci="${esc(x.ccs_id)}" checked>`}</td><td class="l">${PV_TOOL[x.tool]}</td><td class="l"><b>${esc(x.name)}</b>${x.current ? ' <span class="tag">CC Switch 当前</span>' : ""}</td>
+      <td class="l m">${x.mode === "key" ? esc(x.base_url || "官方") : "官方登录"}</td><td class="l">${esc(x.key_masked || "—")}</td><td class="l">${pvModels(x.tool, x)}</td></tr>`).join("") || '<tr><td colspan="6" class="dim">没有可导入的</td></tr>'}</table>`,
+    '<button id="pvNo">取消</button><button class="primary" id="mcGo">导入选中</button>');
+  $("#dlg").classList.add("wide");
+  $("#pvNo").onclick = () => mcOpen("list");
+  $("#mcGo").onclick = async () => { const ids = $$("#dlgBody [data-ci]").filter(c => c.checked).map(c => c.dataset.ci); if (!ids.length) return toast("没选");
+    try { const r = await pvApi("ccs-import", {ids}); toast(`导入 ${r.imported.length} 个${r.skipped.length ? "，跳过 " + r.skipped.length + " 个" : ""}`); } catch(e){ toast("没导入：" + e.message); } mcOpen("list"); };
+}
+
+// ---------- 账号同步 ----------
+const SY = {plan: null, st: null, sel: new Set(), source: "desktop"};
+function acctCard(label, a, running){
+  a = a || {};
+  const nm = a.email_masked || (a.accountUuid ? "账号 " + short(a.accountUuid) : "没认出来");
+  return `<div class="card"><h3>${label}${running != null ? `<span class="tag ${running ? "warn" : ""}">${running ? "在运行" : "没开"}</span>` : ""}</h3>
+    <div class="acct"><div class="av">${esc((a.email_masked || a.name || "?")[0].toUpperCase())}</div><div style="min-width:0">
+      <div class="nm">${esc(nm)}${a.stale ? ' <span class="tag warn">可能过期</span>' : ""}</div>
+      <div class="ds">${a.key ? `会话文件夹 <code>${esc(short(a.key))}…</code> · ${a.count ?? 0} 个会话` : "还没有会话文件夹"}${a.via ? " · 认自 " + esc(a.via) : ""}</div></div></div></div>`;
+}
+R.sync = async () => {
+  const pg = $("#pg-sync");
+  if (!SY.st) pg.innerHTML = '<div class="empty">读取中…</div>';
+  let st, pl;
+  try { [st, pl] = await Promise.all([api("/api/status"), api("/api/sync/plan?source=" + SY.source)]); }
+  catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  SY.st = st; SY.plan = pl;
+  const rows = pl.ok ? [...(pl.add || []).map(x => Object.assign({k: "add"}, x)), ...(pl.update || []).map(x => Object.assign({k: "update"}, x))] : [];
+  const live = new Set(rows.map(r => r.name)); for (const n of [...SY.sel]) if (!live.has(n)) SY.sel.delete(n);
+  if (!SY.touched) rows.forEach(r => SY.sel.add(r.name));
+  const cur = (pl.target || {}).key;
+  pg.innerHTML = `<h2>${ic("users")}账号同步</h2>
+    <p class="sub">Claude 桌面端换了账号，以前的会话就看不到了（会话记录其实还在 <code>~/.claude/projects</code>）。这里把别的账号下的会话补进当前账号的列表；先备份，可以撤回。</p>
+    <div class="grid2">${acctCard("Claude 桌面端当前账号", st.accounts.desktop, st.running.claude)}${acctCard("Claude Code 命令行当前账号", st.accounts.cli, null)}</div>
+    <div class="card"><h3>可以补进当前账号的会话 <span class="tag acc">${rows.length}</span><span class="sp"></span>
+      <span class="seg" id="sySrc"><button data-s="desktop" class="${SY.source === "desktop" ? "on" : ""}">按桌面端账号</button><button data-s="cli" class="${SY.source === "cli" ? "on" : ""}">按命令行账号</button></span>
+      <button class="ghost" id="syRef" title="重新看一遍">${ic("refresh")}</button></h3>
+      ${!pl.ok ? `<div class="miss">${esc(pl.error || "认不出当前账号")}</div>` : rows.length ? `<div class="scroll" style="max-height:340px"><table class="t"><tr><th style="width:28px"><input type="checkbox" id="syAll" ${SY.sel.size === rows.length ? "checked" : ""}></th><th>会话</th><th>来自账号</th><th>项目</th><th>最近</th><th></th></tr>
+        ${rows.map(r => `<tr><td><input type="checkbox" data-n="${esc(r.name)}" ${SY.sel.has(r.name) ? "checked" : ""}></td>
+          <td class="tl"><div class="ell">${esc(r.title || "（无标题）")}</div></td><td><code>${esc(short(r.from))}</code></td>
+          <td class="ell" title="${esc(r.cwd)}">${esc(projName(r.cwd))}</td><td class="n">${when(r.last)}</td>
+          <td>${r.k === "add" ? '<span class="tag ok">补进来</span>' : '<span class="tag warn">刷新</span>'}${r.archived ? ' <span class="tag">已归档</span>' : ""}</td></tr>`).join("")}</table></div>`
+        : '<div class="okbox">都齐了：当前账号已经能看到所有会话。</div>'}
+      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:12px">目标：<code>${esc(short(cur))}…</code>${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
+        <button class="primary" id="syGo" ${SY.sel.size ? "" : "disabled"}>${ic("sync")} 同步选中的 ${SY.sel.size} 个</button></div></div>
+    <div class="card"><h3>各账号的会话文件夹</h3><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
+      ${(pl.folders || st.folders || []).map(f => `<tr><td><code>${esc(f.key)}</code></td><td class="n">${f.count}</td><td>${when(f.latest)}</td>
+        <td>${f.key === (st.accounts.desktop || {}).key ? '<span class="tag acc">桌面端当前</span> ' : ""}${f.key === (st.accounts.cli || {}).key ? '<span class="tag">命令行当前</span>' : ""}</td></tr>`).join("")}</table></div>
+    <div class="card"><div class="setrow" style="border:0;padding:2px"><div class="sl">${ic("sync")}<div><b>自动同步</b><div class="sd">桌面端没开的时候，把别的账号新出现的会话自动补进当前账号（会弹通知）。缺省关；CC Msg 也开了自动同步的话两边都会补，开一个就够。</div></div></div>${sw("syAuto", st.settings.auto_sync)}</div>
+      ${st.auto && st.auto.last ? `<div class="dim" style="font-size:12px;margin-top:4px">上次自动同步：${when(st.auto.last.time)} · 补 ${st.auto.last.added} / 刷新 ${st.auto.last.updated}</div>` : ""}</div>`;
+  $$("#sySrc button").forEach(b => b.onclick = () => { SY.source = b.dataset.s; SY.touched = false; R.sync(); });
+  $("#syRef").onclick = () => { SY.touched = false; R.sync(); };
+  $$("#pg-sync [data-n]").forEach(c => c.onchange = () => { SY.touched = true; c.checked ? SY.sel.add(c.dataset.n) : SY.sel.delete(c.dataset.n); syBtn(); });
+  const all = $("#syAll"); if (all) all.onchange = () => { SY.touched = true; rows.forEach(r => all.checked ? SY.sel.add(r.name) : SY.sel.delete(r.name)); $$("#pg-sync [data-n]").forEach(c => c.checked = all.checked); syBtn(); };
+  const g = $("#syGo"); if (g) g.onclick = () => syncSelected(false);
+  $("#syAuto").onchange = e => saveSetting({auto_sync: e.target.checked});
+};
+function syBtn(){ const g = $("#syGo"); if (g) { g.disabled = !SY.sel.size; g.innerHTML = `${ic("sync")} 同步选中的 ${SY.sel.size} 个`; } }
+async function syncSelected(all){
+  try {
+    const only = all ? null : [...SY.sel];
+    const r = await api("/api/sync", {source: SY.source, only});
+    if (r.note) toast(r.note); else doneOrQueued(r, `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个（备份 ${r.backup || ""}）`);
+    SY.touched = false; R.sync();
+  } catch(e){ toast("❌ " + e.message, 5000); }
+}
+async function saveSetting(ch){
+  try { const s = await api("/api/settings", ch); toast("✅ 已保存"); return s; } catch(e){ toast("❌ " + e.message); }
+}
+
+// ---------- Codex → Claude Code ----------
+const CX = {rows: [], sel: new Set(), q: "", days: "30", cwd: "", state: "", all: false, pv: null, desktop: true, reasoning: false, plan: null};
+const CX_LAB = {new: ["ok", "新导入"], update: ["warn", "有新内容"], same: ["", "导过了"], diverged: ["bad", "Claude 里接着聊过"]};
+function cxQs(only){
+  const p = new URLSearchParams({days: CX.days, desktop: CX.desktop ? "1" : "0", reasoning: CX.reasoning ? "1" : "0"});
+  if (CX.all) p.set("all", "1"); if (only) p.set("only", only.join(","));
+  return p.toString();
+}
+R.codex = async (keep) => {
+  const pg = $("#pg-codex");
+  if (!CX.plan) pg.innerHTML = '<div class="empty">读取 Codex 对话…</div>';
+  let pl, s;
+  try { [pl, s] = await Promise.all([api("/api/codex/plan?" + cxQs()), api("/api/settings")]); }
+  catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  CX.plan = pl; CX.rows = pl.rows || []; CX.mark = !!s.codex_mark_imported;
+  const ids = new Set(CX.rows.map(r => r.thread)); for (const t of [...CX.sel]) if (!ids.has(t)) CX.sel.delete(t);
+  if (!CX.touched) CX.rows.forEach(r => { if (r.state === "new" || r.state === "update") CX.sel.add(r.thread); });
+  const projs = [...new Set(CX.rows.map(r => r.cwd).filter(Boolean))].sort();
+  const c = pl.counts || {};
+  pg.innerHTML = `<h2>${ic("codex", "logo")}Codex → Claude Code</h2>
+    <p class="sub">把 Codex 的对话转成 Claude Code 的会话记录，之后在 Claude Code 里 <code>/resume</code> 或桌面端列表里接着聊。只读 Codex 的数据；写之前先演练，看清楚会改哪些文件再导；每次导入都有账本，可以撤回。</p>
+    <div class="bar"><input type="search" id="cxQ" placeholder="搜标题 / 目录 / 线程号" value="${esc(CX.q)}">
+      <select id="cxDays">${[["7","最近 7 天"],["30","最近 30 天"],["90","最近 90 天"],["0","全部"]].map(([v,t]) => `<option value="${v}" ${CX.days===v?"selected":""}>${t}</option>`).join("")}</select>
+      <select id="cxCwd"><option value="">全部项目</option>${projs.map(p => `<option value="${esc(p)}" ${CX.cwd===p?"selected":""}>${esc(projName(p))}</option>`).join("")}</select>
+      <span class="seg" id="cxSt">${[["","全部"],["new","新"],["update","有新内容"],["same","导过了"],["diverged","不动"]].map(([v,t]) => `<button data-v="${v}" class="${CX.state===v?"on":""}">${t}${v && c[v] ? " " + c[v] : ""}</button>`).join("")}</span>
+      <label class="chk" title="连子代理 / codex exec / 从 Claude 导进 Codex 的也列出来"><input type="checkbox" id="cxAll" ${CX.all?"checked":""}> 含子代理等</label></div>
+    <div class="split"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="cxList" style="border:0;border-radius:0"></div>
+      <div class="batch"><span id="cxN"></span><span class="sp" style="flex:1"></span><button id="cxDry">${ic("eye")} 演练：看会改什么</button><button class="primary" id="cxGo">${ic("download")} 导入选中的</button></div></div>
+      <div class="card" id="cxPv"><div class="empty">点左边一行，在这里预览导过去的样子</div></div></div>
+    <div class="card"><h3>导入选项</h3><div class="setrow"><div class="sl">${ic("monitor")}<div><b>写进 Claude 桌面端的会话列表</b><div class="sd">关掉就只写命令行能 <code>claude --resume</code> 的记录；桌面端开着时写列表要等它退出（会排队）</div></div></div>${sw("cxDesk", CX.desktop)}</div>
+      <div class="setrow"><div class="sl">${ic("sparkles")}<div><b>带上 Codex 的思考摘要</b><div class="sd">只有明文摘要的才有；加密的思考内容永远导不过来</div></div></div>${sw("cxReas", CX.reasoning)}</div>
+      <div class="setrow"><div class="sl">${ic("shield")}<div><b>防止 Codex 再导回去（登记进 Codex 导入记录）</b><div class="sd">Codex 桌面端开了「从 Claude Code 导入」时，免得它把导过去的会话再导回一份重复的。会改 <code>~/.codex/external_agent_session_imports.json</code>（先备份，撤回时还原）。缺省关。</div></div></div>${sw("cxMark", CX.mark)}</div></div>`;
+  cxList();
+  $("#cxQ").oninput = e => { CX.q = e.target.value; cxList(); };
+  $("#cxDays").onchange = e => { CX.days = e.target.value; CX.touched = false; R.codex(); };
+  $("#cxCwd").onchange = e => { CX.cwd = e.target.value; cxList(); };
+  $$("#cxSt button").forEach(b => b.onclick = () => { CX.state = b.dataset.v; $$("#cxSt button").forEach(x => x.classList.toggle("on", x === b)); cxList(); });
+  $("#cxAll").onchange = e => { CX.all = e.target.checked; R.codex(); };
+  $("#cxDesk").onchange = e => { CX.desktop = e.target.checked; };
+  $("#cxReas").onchange = e => { CX.reasoning = e.target.checked; if (CX.pv) cxPreview(CX.pv); };
+  $("#cxMark").onchange = e => saveSetting({codex_mark_imported: e.target.checked}).then(() => { CX.mark = e.target.checked; });
+  $("#cxDry").onclick = () => cxDry(false);
+  $("#cxGo").onclick = () => cxDry(true);
+  if (CX.pv && ids.has(CX.pv)) cxPreview(CX.pv);
+};
+function cxVisible(){
+  const q = CX.q.trim().toLowerCase();
+  return CX.rows.filter(r => (!CX.state || r.state === CX.state) && (!CX.cwd || r.cwd === CX.cwd) &&
+    (!q || [r.title, r.cwd, r.thread].some(v => String(v || "").toLowerCase().includes(q))));
+}
+function cxList(){
+  const rows = cxVisible();
+  $("#cxList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="cxAllSel"></th><th>对话</th><th class="n">轮</th><th>最近</th><th>状态</th></tr>
+    ${rows.map(r => `<tr class="click${CX.pv === r.thread ? " sel" : ""}" data-t="${esc(r.thread)}"><td><input type="checkbox" data-c="${esc(r.thread)}" ${CX.sel.has(r.thread) ? "checked" : ""} ${r.state === "diverged" ? "disabled" : ""}></td>
+      <td class="tl"><div class="ell">${esc(r.title || "（无标题）")}${r.archived ? ' <span class="tag">已归档</span>' : ""}</div><span class="s">${esc(r.cwd || "")} · ${esc(r.thread.slice(-6))}</span></td>
+      <td class="n">${r.turns ?? "—"}</td><td class="n">${when(r.mtime)}</td><td><span class="tag ${CX_LAB[r.state][0]}">${CX_LAB[r.state][1]}</span></td></tr>`).join("")}</table>`
+    : `<div class="empty">${CX.rows.length ? "没有符合筛选的对话" : "这段时间里没有 Codex 对话（换个时间范围试试）"}</div>`;
+  $$("#cxList [data-c]").forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { CX.touched = true; c.checked ? CX.sel.add(c.dataset.c) : CX.sel.delete(c.dataset.c); cxN(); }; });
+  $$("#cxList tr[data-t]").forEach(tr => tr.onclick = () => cxPreview(tr.dataset.t));
+  const a = $("#cxAllSel"); if (a) { a.checked = rows.length && rows.every(r => CX.sel.has(r.thread) || r.state === "diverged");
+    a.onchange = () => { CX.touched = true; rows.forEach(r => { if (r.state !== "diverged") a.checked ? CX.sel.add(r.thread) : CX.sel.delete(r.thread); }); cxList(); }; }
+  cxN();
+}
+function cxN(){ const n = CX.sel.size; $("#cxN").textContent = n ? `已选 ${n} 个` : "勾选要导入的对话"; $("#cxGo").disabled = $("#cxDry").disabled = !n; }
+async function cxPreview(t){
+  CX.pv = t; $$("#cxList tr[data-t]").forEach(tr => tr.classList.toggle("sel", tr.dataset.t === t));
+  const box = $("#cxPv"); box.innerHTML = '<div class="empty">生成预览…</div>';
+  try {
+    const p = await api(`/api/codex/preview?id=${encodeURIComponent(t)}&reasoning=${CX.reasoning ? 1 : 0}`);
+    if (!p.ok) { box.innerHTML = `<div class="miss">${esc(p.error)}</div>`; return; }
+    const s = p.stats || {};
+    box.innerHTML = `<h3>${esc(p.title)}<span class="sp"></span><span class="tag">${p.turns_total} 轮</span></h3>
+      <div class="dim" style="font-size:12px;margin:-4px 0 8px">${esc(p.cwd)} → <code>${esc(p.target || "")}</code><br>工具调用 ${s.tools || 0}${s.images ? ` · 图片 ${s.images}（导不过去，留文字说明）` : ""}${s.reasoning_encrypted ? ` · 加密思考 ${s.reasoning_encrypted}（导不过去）` : ""}${s.compactions ? ` · 压缩过 ${s.compactions} 次` : ""}</div>
+      <div class="pv">${p.turns.map(m => `<div class="msg ${m.role === "user" ? "user" : "assistant"}"><div class="who">${m.role === "user" ? "你" : "Codex → Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>${esc(m.text)}${m.cut ? '<span class="dim">…（预览截短）</span>' : ""}</div>`).join("")}
+      ${p.more ? `<div class="dim" style="text-align:center;font-size:12px">后面还有 ${p.more} 轮（导入时全导）</div>` : ""}</div>`;
+  } catch(e){ box.innerHTML = `<div class="miss">预览失败：${esc(e.message)}</div>`; }
+}
+async function cxDry(thenApply){
+  const only = [...CX.sel];
+  let r;
+  try { r = await api("/api/codex/plan?" + cxQs(only) + (CX.mark ? "&mark=1" : "&mark=0")); } catch(e){ return toast("❌ " + e.message); }
+  const todo = r.rows.filter(x => x.state === "new" || x.state === "update");
+  const c = r.counts || {};
+  const mk = r.mark_check || {};
+  const html = `<div class="kv"><div>会新建</div><div><b>${c.new || 0}</b> 个 Claude Code 会话</div><div>会更新</div><div><b>${c.update || 0}</b> 个（Codex 那边有新内容，旧版本留在账本里）</div>
+      <div>不动</div><div>${(c.same || 0) + (c.diverged || 0)} 个（导过了没变 / 已在 Claude 里接着聊过）</div>
+      <div>桌面端列表</div><div>${r.desktop ? `写进当前账号 <code>${esc(short(r.desktop.key))}…</code>` : esc(r.desktop_note || "不写（只写命令行记录）")}</div>
+      <div>防重复导入</div><div>${r.mark ? (mk.ok ? `登记进 <code>${esc(mk.file)}</code>（${mk.exists ? "先备份再改" : "新建"}）` : `<span style="color:var(--bad)">${esc(mk.error || "")}</span>`) : "关"}</div></div>
+    <div class="diff updn" style="margin-top:10px">${todo.length ? todo.map(x => `<div class="${x.state === "new" ? "a" : "u"}">${x.state === "new" ? "+ 新建" : "~ 更新"}  ${esc(x.target || "")}/…jsonl   ${esc(x.title || "")}  (${x.turns} 轮 / ${Math.round((x.chars || 0) / 1000)}K 字)</div>`).join("") : "（没有要写的）"}</div>
+    <div class="dim" style="font-size:12px;margin-top:8px">这是演练，还什么都没写。${CX.desktop && SY.st && SY.st.running.claude ? "Claude 桌面端开着：确认后会排队，退出桌面端后自动导入。" : ""}</div>`;
+  openDlg(thenApply ? "确认导入" : "演练结果", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${todo.length && !(r.mark && !mk.ok) ? `<button class="primary" id="cxApply">${ic("download")} 确认导入 ${todo.length} 个</button>` : ""}`);
+  const b = $("#cxApply");
+  if (b) b.onclick = async () => {
+    b.disabled = true;
+    try {
+      const x = await api("/api/codex/import", {days: CX.days, only, all: CX.all ? 1 : 0, desktop: CX.desktop ? 1 : 0, reasoning: CX.reasoning ? 1 : 0, mark: CX.mark ? 1 : 0});
+      closeDlg();
+      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「备份与还原」撤回）`)) { CX.touched = false; R.codex(); }
+    } catch(e){ b.disabled = false; toast("❌ " + e.message, 5000); }
+  };
+}
+
+// ---------- 会话管理 ----------
+const SS = {d: null, sel: new Set(), agent: "", q: "", proj: "", acct: "", date: "", status: "live", cur: null, hits: null};
+const skey = x => x.agent + ":" + x.id;
+R.sessions = async (keep) => {
+  const pg = $("#pg-sessions");
+  if (!SS.d) pg.innerHTML = '<div class="empty">读取会话…</div>';
+  try { SS.d = await api("/api/sessions"); } catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  const live = new Set(SS.d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
+  pg.innerHTML = `<h2>${ic("list")}会话管理</h2>
+    <p class="sub">Claude Code 和 Codex 的会话都在这。改名缺省只改本程序里显示的名字；删除会先备份进会话备份库，再挪进回收站（不会直接删）；每个改动都记在账本里，可以撤回。</p>
+    <div class="bar"><input type="search" id="ssQ" placeholder="搜标题 / 第一句 / 目录 / id" value="${esc(SS.q)}"><button id="ssFt" title="在全部会话内容里搜（慢一点）">${ic("search")} 搜内容</button>
+      <span class="seg" id="ssAg">${[["","全部"],["claude","Claude Code"],["codex","Codex"]].map(([v,t]) => `<button data-v="${v}" class="${SS.agent===v?"on":""}">${t}</button>`).join("")}</span>
+      <select id="ssProj"><option value="">全部项目</option>${SS.d.projects.map(p => `<option value="${esc(p)}" ${SS.proj===p?"selected":""}>${esc(projName(p))}</option>`).join("")}</select>
+      <select id="ssAcct"><option value="">全部账号</option>${SS.d.accounts.map(a => `<option ${SS.acct===a?"selected":""}>${esc(a)}</option>`).join("")}</select>
+      <select id="ssDate">${[["","不限时间"],["1","今天"],["7","最近 7 天"],["30","最近 30 天"]].map(([v,t]) => `<option value="${v}" ${SS.date===v?"selected":""}>${t}</option>`).join("")}</select>
+      <select id="ssStat">${[["live","没归档的"],["archived","已归档"],["all","全部"]].map(([v,t]) => `<option value="${v}" ${SS.status===v?"selected":""}>${t}</option>`).join("")}</select>
+      <span class="sp"></span><button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
+    ${SS.hits ? `<div class="ban" style="margin:0 0 10px">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
+    <div class="split"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="ssList" style="border:0;border-radius:0"></div>
+      <div class="batch" id="ssBatch"></div></div>
+      <div class="card" id="ssView"><div class="empty">点左边一个会话，在这里看记录（只读）</div></div></div>`;
+  ssList();
+  $("#ssQ").oninput = e => { SS.q = e.target.value; ssList(); };
+  $("#ssQ").onkeydown = e => { if (e.key === "Enter" && e.ctrlKey) ssFulltext(); };
+  $("#ssFt").onclick = ssFulltext;
+  const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
+  $$("#ssAg button").forEach(b => b.onclick = () => { SS.agent = b.dataset.v; $$("#ssAg button").forEach(x => x.classList.toggle("on", x === b)); ssList(); });
+  for (const [id, k] of [["#ssProj", "proj"], ["#ssAcct", "acct"], ["#ssDate", "date"], ["#ssStat", "status"]]) $(id).onchange = e => { SS[k] = e.target.value; ssList(); };
+  $("#ssRef").onclick = () => R.sessions();
+  if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else SS.cur = null;
+};
+function ssVisible(){
+  const q = SS.q.trim().toLowerCase(), since = SS.date ? Date.now() / 1000 - (SS.date === "1" ? (Date.now() / 1000 - new Date().setHours(0, 0, 0, 0) / 1000) : SS.date * 86400) : 0;
+  return SS.d.items.filter(x => (!SS.agent || x.agent === SS.agent) && (!SS.proj || x.cwd === SS.proj) && (!SS.acct || (x.accounts || []).includes(SS.acct)) &&
+    (!since || (x.last || 0) >= since) && (SS.status === "all" || (SS.status === "archived") === !!x.archived) &&
+    (!SS.hits || SS.hits.set.has(skey(x))) &&
+    (!q || [x.title, x.first, x.cwd, x.id, x.alias].some(v => String(v || "").toLowerCase().includes(q))));
+}
+function ssList(){
+  const rows = ssVisible();
+  $("#ssList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="ssAllSel"></th><th>会话</th><th>项目</th><th>最近</th><th class="n">大小</th><th></th></tr>
+    ${rows.map(x => `<tr class="click${SS.cur && skey(SS.cur) === skey(x) ? " sel" : ""}" data-k="${esc(skey(x))}"><td><input type="checkbox" data-c="${esc(skey(x))}" ${SS.sel.has(skey(x)) ? "checked" : ""}></td>
+      <td class="tl"><div class="ell">${logo(x.agent)} ${esc(x.title || "（无标题）")}${x.alias ? ' <span class="tag" title="只在本程序里改的名字">别名</span>' : ""}</div><span class="s">${esc(x.first || "")}</span></td>
+      <td class="ell" title="${esc(x.cwd)}">${esc(projName(x.cwd))}</td><td class="n">${when(x.last)}</td><td class="n">${kb(x.size)}</td>
+      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? '<span class="tag codex">Codex 导入</span> ' : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数">${ic("history")}${x.backups}</span>` : ""}</td></tr>`).join("")}</table>`
+    : `<div class="empty">${SS.d.items.length ? "没有符合筛选的会话" : "还没有 Claude Code / Codex 会话"}</div>`;
+  $$("#ssList [data-c]").forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { c.checked ? SS.sel.add(c.dataset.c) : SS.sel.delete(c.dataset.c); ssBatch(); }; });
+  $$("#ssList tr[data-k]").forEach(tr => tr.onclick = () => { const [a, ...i] = tr.dataset.k.split(":"); ssView(a, i.join(":")); });
+  const a = $("#ssAllSel"); if (a) { a.checked = rows.length && rows.every(x => SS.sel.has(skey(x))); a.onchange = () => { rows.forEach(x => a.checked ? SS.sel.add(skey(x)) : SS.sel.delete(skey(x))); ssList(); }; }
+  ssBatch();
+}
+const ssItems = () => [...SS.sel].map(k => { const [agent, ...i] = k.split(":"); return {agent, id: i.join(":")}; });
+function ssBatch(){
+  const n = SS.sel.size, b = $("#ssBatch");
+  b.innerHTML = n ? `<span>已选 ${n} 个</span><span style="flex:1"></span><button data-b="archive">${ic("archive")} 归档</button><button data-b="unarchive">取消归档</button><button data-b="export">${ic("upload")} 导出</button><button class="danger" data-b="delete">${ic("trash")} 删除</button><button class="ghost" data-b="clear">${ic("x")}</button>`
+    : `<span class="dim">勾选多个可以批量归档 / 导出 / 删除</span><span style="flex:1"></span><span class="dim">${ssVisible().length} / ${SS.d.items.length} 个</span>`;
+  $$("#ssBatch [data-b]").forEach(x => x.onclick = () => ssAct(x.dataset.b, ssItems()));
+}
+async function ssFulltext(){
+  const q = SS.q.trim(); if (!q) return toast("先在搜索框里写要搜的字");
+  toast("在会话内容里搜「" + q + "」…", 8000);
+  try { const r = await api("/api/sessions/fulltext", {q}); SS.hits = {q, set: new Set(r.hits.map(skey)), partial: r.partial}; SS.q = ""; R.sessions(); toast(`找到 ${r.hits.length} 个`); }
+  catch(e){ toast("❌ " + e.message); }
+}
+async function ssView(agent, id){
+  SS.cur = {agent, id};
+  $$("#ssList tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === agent + ":" + id));
+  const x = SS.d.items.find(i => i.agent === agent && i.id === id) || {};
+  const box = $("#ssView"); box.innerHTML = '<div class="empty">读取…</div>';
+  let r; try { r = await api(`/api/sessions/read?agent=${agent}&id=${encodeURIComponent(id)}&limit=300`); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
+      <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="历史备份">${ic("history")}</button>
+      <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
+        <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
+        <button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button><button data-v="copy">${ic("copy")} 复制继续命令</button>
+        <button data-v="del" class="danger">${ic("trash")} 删除（进回收站）</button></div></span>
+      <button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button></h3>
+    <div class="dim" style="font-size:12px;margin:-4px 0 8px;word-break:break-all">${esc(x.cwd || "")} · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
+    <div class="pv">${r.entries.length ? r.entries.map(m => `<div class="msg ${m.role === "user" ? "user" : m.role === "tool" ? "tool" : "assistant"}">${m.role !== "tool" ? `<div class="who">${m.role === "user" ? "你" : agent === "codex" ? "Codex" : "Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>` : ""}${esc(m.text)}</div>`).join("") : '<div class="empty">（没有对话内容）</div>'}
+      ${r.cut ? `<div class="dim" style="text-align:center;font-size:12px">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条（导出能看全部）</div>` : ""}</div>`;
+  $("#svRen").onclick = () => ssRename(agent, id, x);
+  $("#svHist").onclick = () => ssSnaps(agent, id);
+  $("#svOpen").onclick = async () => { try { const o = await api("/api/sessions/open", {agent, id}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } };
+  $("#svMoreB").onclick = e => { e.stopPropagation(); $("#svMore").classList.toggle("open"); };
+  $$("#svMore [data-v]").forEach(b => b.onclick = () => { $("#svMore").classList.remove("open"); const v = b.dataset.v;
+    if (v === "md" || v === "jsonl") return ssExport([{agent, id}], v);
+    if (v === "arch") return ssAct(x.archived ? "unarchive" : "archive", [{agent, id}]);
+    if (v === "copy") return copyText(x.resume || id);
+    if (v === "del") return ssAct("delete", [{agent, id}]); });
+}
+document.addEventListener("click", () => $$(".menu.open").forEach(m => { if (m.id !== "mcMenu") m.classList.remove("open"); }));
+async function ssExport(items, fmt){
+  const out = [];
+  for (const i of items) { try { const r = await api("/api/sessions/export", Object.assign({fmt: fmt || "md"}, i)); if (r.ok) out.push(r.path); } catch(e){ toast("❌ " + e.message); } }
+  if (!out.length) return;
+  openDlg("✅ 已导出", `<div>导出了 ${out.length} 个：</div><div class="dgls">${out.map(p => `<div>${esc(p)}</div>`).join("")}</div>`,
+    `<button onclick="closeDlg()">关闭</button><button class="primary" id="exRev">${ic("folder")} 打开文件夹</button>`);
+  $("#exRev").onclick = () => api("/api/reveal", {path: out[0]}).catch(e => toast("❌ " + e.message));
+}
+function ssAct(act, items){
+  if (!items.length) return;
+  if (act === "clear") { SS.sel.clear(); return ssList(); }
+  if (act === "export") return openDlg("导出", `导出 ${items.length} 个会话到 <code>${esc((SY.st || {}).home || "~/.cc-sessionsync")}/exports</code>`,
+      `<button onclick="closeDlg()">取消</button><button id="ex1">原始 jsonl</button><button class="primary" id="ex2">Markdown</button>`) || ($("#ex1").onclick = () => ssExport(items, "jsonl"), $("#ex2").onclick = () => ssExport(items, "md"));
+  const names = items.map(i => (SS.d.items.find(x => x.agent === i.agent && x.id === i.id) || {}).title || i.id).slice(0, 8);
+  const lab = {archive: "归档", unarchive: "取消归档", delete: "删除"}[act];
+  const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:12.5px">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
+    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「备份与还原 → 回收站」还原，或在操作记录里撤回。</div>`
+      : `<div class="dim" style="font-size:12.5px">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
+    <div class="dim" style="font-size:12px;margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
+  confirmDlg(lab + "会话", html, lab, async () => {
+    const r = await api("/api/sessions/batch", {action: act, items});
+    closeDlg();
+    const q = r.results.filter(x => x.deferred), done = r.results.filter(x => !x.deferred);
+    const n = done.reduce((s, x) => s + (x.done || 0), 0), errs = done.flatMap(x => x.errors || []);
+    if (q.length) toast("⏸ " + q[0].hint, 7000); else if (errs.length) toast("⚠ " + errs[0], 6000); else toast(`✅ ${lab}了 ${n} 个（可以撤回）`);
+    SS.sel.clear(); R.sessions();
+  }, act === "delete");
+}
+function ssRename(agent, id, x){
+  const can = agent === "codex" ? "写进 Codex 的会话名（session_index.jsonl 追加一条 + state 数据库），Codex 里也会显示新名字"
+    : (x.registered ? "写进 Claude 桌面端的会话列表标题，并在会话记录末尾追加一条 custom-title（Claude Code 自己的改名格式）" : "在会话记录末尾追加一条 custom-title（Claude Code 自己的改名格式）");
+  openDlg("改名", `<input id="rnName" style="width:100%" value="${esc(x.title || "")}" placeholder="新名字（留空 = 恢复原名）">
+    <label class="chk" style="margin-top:12px;align-items:flex-start;flex-wrap:nowrap;gap:8px"><input type="checkbox" id="rnTool" style="margin-top:3px;flex:none"><span>也改 ${agent === "codex" ? "Codex" : "Claude"} 自己显示的名字<div class="dim" style="font-size:12px">${can}。改之前先备份，可以撤回；${agent === "codex" ? "Codex" : "Claude"} 桌面端开着会排队。不勾就只改本程序里的显示名，什么文件都不动。</div></span></label>`,
+    `<button onclick="closeDlg()">取消</button><button class="primary" id="rnGo">保存</button>`);
+  setTimeout(() => $("#rnName").select(), 30);
+  $("#rnName").onkeydown = e => { if (e.key === "Enter") $("#rnGo").click(); };
+  $("#rnGo").onclick = async () => {
+    try { const r = await api("/api/sessions/rename", {agent, id, name: $("#rnName").value.trim(), write_tool: $("#rnTool").checked});
+      closeDlg(); doneOrQueued(r, "已改名（可以撤回）"); R.sessions(); } catch(e){ toast("❌ " + e.message, 5000); }
+  };
+}
+async function ssSnaps(agent, id){
+  let r; try { r = await api(`/api/sessions/snapshots?agent=${agent}&id=${encodeURIComponent(id)}`); } catch(e){ return toast("❌ " + e.message); }
+  openDlg("历史备份", r.items.length ? `<div class="dim" style="font-size:12.5px;margin-bottom:6px">会话备份库里这个会话的各个版本。恢复：原文件不在了就放回原位，还在就另存一份新的（不覆盖）。</div>
+    <table class="t"><tr><th>备份时间</th><th>当时的修改时间</th><th class="n">大小</th><th>原因</th><th></th></tr>${r.items.map(s => `<tr><td>${when(s.at)}</td><td>${when(s.mtime)}</td><td class="n">${kb(s.size)}</td><td>${esc(s.why)}</td><td><button data-s="${s.id}">恢复</button></td></tr>`).join("")}</table>`
+    : `<div class="empty">还没有备份。到「备份与还原 → 会话备份库」点「立即备份」。</div>`);
+  $$("#dlgBody [data-s]").forEach(b => b.onclick = () => snapRestore(+b.dataset.s));
+}
+async function snapRestore(sid){
+  try { const r = await api("/api/sessions/restore-snapshot", {snap: sid});
+    if (r.ok === false) return toast("❌ " + r.error, 5000);
+    closeDlg(); toast(r.how === "original" ? "✅ 已放回原位" : `✅ 原文件还在，另存了一份：${r.path}`, 6000); if (PAGE === "sessions") R.sessions(); else R.backups(); }
+  catch(e){ toast("❌ " + e.message, 5000); }
+}
+
+// ---------- 备份与还原 ----------
+R.backups = async () => {
+  const pg = $("#pg-backups");
+  let bk, led, jobs, bs, snaps, trash, ops, s;
+  try { [bk, led, jobs, bs, snaps, trash, ops, s] = await Promise.all([api("/api/backups"), api("/api/codex/ledgers"), api("/api/jobs"), api("/api/sessions/backup-status"),
+      api("/api/sessions/snapshots"), api("/api/sessions/trash"), api("/api/sessions/ops"), api("/api/settings")]); }
+  catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  const waiting = jobs.filter(j => j.state === "waiting");
+  const JST = {waiting: ["warn", "排队中"], done: ["ok", "做完了"], failed: ["bad", "失败"], cancelled: ["", "已取消"]};
+  pg.innerHTML = `<h2>${ic("download")}备份与还原</h2><p class="sub">每次改动之前都先备份。这里能撤回同步 / 导入 / 会话操作，从回收站还原，或者从会话备份库恢复某个版本。</p>
+    <div class="card" id="bkJobs"><h3>排队中的改动 <span class="tag ${waiting.length ? "warn" : ""}">${waiting.length}</span></h3>
+      ${jobs.length ? `<table class="t">${jobs.slice().reverse().slice(0, 12).map(j => `<tr><td>${esc(j.title)}</td><td>${when(j.queued)}</td><td><span class="tag ${(JST[j.state] || [""])[0]}">${(JST[j.state] || ["", j.state])[1]}</span></td>
+        <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td>${j.state === "waiting" ? `<button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
+        : '<div class="dim" style="font-size:12.5px">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
+    <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkNow">${ic("download")} 立即备份</button></h3>
+      <div class="kv"><div>位置</div><div><code>${esc(bs.db)}</code></div><div>内容</div><div>${bs.sessions} 个会话 · ${bs.snapshots} 个版本 · 原始 ${kb(bs.raw_bytes)}，数据库文件 ${kb(bs.db_bytes)}</div>
+        <div>上次备份</div><div>${bs.last ? when(bs.last) : "还没备份过"}${bs.running ? ' <span class="tag warn">正在备份</span>' : ""}${bs.error ? ` <span class="tag bad">${esc(bs.error)}</span>` : ""}</div></div>
+      <div class="setrow" style="margin-top:6px"><div class="sl">${ic("sync")}<div><b>定时自动备份</b><div class="sd">只备份变过的会话（按修改时间 + 内容去重），完整原始 jsonl。</div></div></div>
+        <select id="bkHours">${[1,3,6,12,24].map(h => `<option value="${h}" ${(s.session_backup_hours || 6) == h ? "selected" : ""}>每 ${h} 小时</option>`).join("")}</select>${sw("bkAuto", s.session_backup_auto)}</div>
+      ${snaps.items.length ? `<details style="margin-top:6px"><summary class="dim" style="cursor:pointer;font-size:12.5px">最近的 ${Math.min(snaps.items.length, 50)} 个版本</summary><div class="scroll" style="max-height:300px;margin-top:6px"><table class="t"><tr><th>会话</th><th>备份时间</th><th class="n">大小</th><th>原文件</th><th></th></tr>
+        ${snaps.items.slice(0, 50).map(x => `<tr><td class="tl">${logo(x.agent)} <span class="ell" style="display:inline-block;vertical-align:bottom;max-width:300px">${esc(x.title || x.sid)}</span></td><td>${when(x.at)}</td><td class="n">${kb(x.size)}</td><td>${x.exists ? '<span class="tag ok">在</span>' : '<span class="tag warn">不在了</span>'}</td><td><button data-snap="${x.id}">恢复</button></td></tr>`).join("")}</table></div></details>` : ""}</div>
+    <div class="card"><h3>${ic("trash")}回收站 <span class="tag">${trash.items.length}</span></h3>
+      ${trash.items.length ? `<table class="t">${trash.items.map(t => `<tr><td><code>${esc(t.id)}</code></td><td>${when(t.time)}</td><td>${t.items.length} 个会话（${t.items.filter(i => i.agent === "claude").length} Claude / ${t.items.filter(i => i.agent === "codex").length} Codex）</td>
+        <td>${t.restored ? `<span class="tag ok">已还原</span>` : ""}</td><td style="white-space:nowrap">${t.restored ? "" : `<button data-tr="${esc(t.id)}">${ic("undo")} 还原</button> `}<button class="ghost danger" data-tp="${esc(t.id)}">彻底删除</button></td></tr>`).join("")}</table>`
+        : '<div class="dim" style="font-size:12.5px">空的。在会话管理里删除的会话会先放在这里。</div>'}</div>
+    <div class="card"><h3>${ic("list")}会话操作记录（可撤回）</h3>
+      ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
+        <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有。</div>'}</div>
+    <div class="grid2"><div class="card"><h3>${ic("users")}Claude 账号同步备份</h3>
+      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有同步过。</div>'}</div>
+      <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
+      ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有导入过。</div>'}</div></div>`;
+  $$("[data-cj]").forEach(b => b.onclick = async () => { await api("/api/jobs/cancel", {id: b.dataset.cj}); toast("已取消"); poll(); R.backups(); });
+  $("#bkNow").onclick = async () => { $("#bkNow").disabled = true; try { const r = await api("/api/sessions/backup", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } R.backups(); };
+  $("#bkAuto").onchange = e => saveSetting({session_backup_auto: e.target.checked});
+  $("#bkHours").onchange = e => saveSetting({session_backup_hours: +e.target.value});
+  $$("[data-snap]").forEach(b => b.onclick = () => snapRestore(+b.dataset.snap));
+  $$("[data-tr]").forEach(b => b.onclick = () => confirmDlg("从回收站还原", `把 <code>${esc(b.dataset.tr)}</code> 里的会话放回去：原位置空着就放回原位；原位置已经有文件了就另存一份新的（不覆盖）。桌面端开着会排队。`, "还原", async () => {
+    const r = await api("/api/sessions/trash-restore", {batch: b.dataset.tr}); closeDlg(); doneOrQueued(r, `还原了 ${r.restored || 0} 个${(r.copies || []).length ? `（${r.copies.length} 个另存为新副本）` : ""}`); R.backups(); }));
+  $$("[data-tp]").forEach(b => b.onclick = () => {
+    openDlg("彻底删除", `<div class="miss">彻底删除 <code>${esc(b.dataset.tp)}</code> 里的文件，<b>删了就找不回来了</b>（会话备份库里的版本不受影响）。</div>
+      <div style="margin-top:10px">确认请输入 <code>DELETE</code>：</div><input id="tpIn" style="width:100%;margin-top:6px" autocomplete="off">`,
+      `<button onclick="closeDlg()">取消</button><button class="primary danger" id="tpGo" disabled>彻底删除</button>`);
+    $("#tpIn").oninput = e => $("#tpGo").disabled = e.target.value !== "DELETE";
+    $("#tpGo").onclick = async () => { try { const r = await api("/api/sessions/trash-purge", {batch: b.dataset.tp, confirm: $("#tpIn").value}); closeDlg(); doneOrQueued(r, "已彻底删除"); R.backups(); } catch(e){ toast("❌ " + e.message); } };
+  });
+  $$("[data-op]").forEach(b => b.onclick = () => confirmDlg("撤回", "按账本把这次操作撤回去（改过的文件换回备份；新建的挪进回收站，不直接删）。", "撤回", async () => {
+    const r = await api("/api/sessions/undo", {op: b.dataset.op}); closeDlg(); doneOrQueued(r, "已撤回"); R.backups(); }));
+  $$("[data-bk]").forEach(b => b.onclick = () => confirmDlg("撤回同步", `撤回 <code>${esc(b.dataset.bk)}</code>：删掉那次补进来的登记、换回刷新前的版本（会话记录本身不动）。`, "撤回", async () => {
+    const r = await api("/api/restore", {backup: b.dataset.bk}); closeDlg(); doneOrQueued(r, "已撤回"); R.backups(); }));
+  $$("[data-led]").forEach(b => b.onclick = () => confirmDlg("撤回导入", `撤回 Codex 导入 <code>${esc(b.dataset.led)}</code>：新建的会话挪进回收站，更新过的换回原来的版本；导过来之后在 Claude 里接着聊过的不动。`, "撤回", async () => {
+    const r = await api("/api/codex/undo", {ledger: b.dataset.led}); closeDlg(); doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}）`); R.backups(); }));
+};
+
+// ---------- 设置 ----------
+const setRow = (icn, title, desc, ctl) => `<div class="setrow"><div class="sl">${ic(icn)}<div><b>${title}</b><div class="sd">${desc}</div></div></div>${ctl}</div>`;
+R.settings = async () => {
+  const pg = $("#pg-settings");
+  let s, u, st;
+  try { [s, u, st] = await Promise.all([api("/api/settings"), api("/api/update"), api("/api/status")]); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  ST.upd = u; setBadge(u.badge);
+  const th = store.get("ccss.theme") || "system";
+  const win = s.tray_supported, dis = win ? "" : "disabled";
+  pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。</p>
+    <div class="card"><h3>外观与窗口</h3><div class="setlist">
+      ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
+      ${setRow("x", "关窗口时缩到托盘", "关掉窗口后留在通知区域继续自动同步 / 检测账号切换；托盘菜单里「退出」才真正退出" + (win ? "" : "（只有 Windows 桌面版有托盘）"), sw("stTray", s.tray_close, dis))}
+      ${setRow("monitor", "启动时只放进托盘", "开机自启或双击图标时不弹窗口", sw("stMin", s.start_min, dis))}
+      ${setRow("power", "开机自动启动", win ? "登录 Windows 后自动在托盘里运行（写 HKCU\\…\\Run，卸载时会删掉）" : "只有 Windows 桌面版支持", sw("stAuto", s.autostart, s.autostart_supported ? "" : "disabled"))}
+      ${setRow("bell", "系统通知", "同步 / 导入做完、排队的改动做完、检测到账号切换、有新版本时在右下角弹通知", sw("stNotify", s.notify))}</div></div>
+    <div class="card"><h3>同步与导入</h3><div class="setlist">
+      ${setRow("sync", "自动同步 Claude 会话", "桌面端没开时把别的账号新出现的会话补进当前账号。CC Msg 里也开了的话开一个就够", sw("stSync", s.auto_sync))}
+      ${setRow("shield", "导入 Codex 时登记进 Codex 导入记录", "防止 Codex 桌面端把导过去的会话再导回来（会改 ~/.codex 里那个文件，先备份）", sw("stMark", s.codex_mark_imported))}
+      ${setRow("history", "会话定时自动备份", "把 Claude Code / Codex 的会话记录增量备份进 sessions.sqlite", `<select id="stBkH" ${s.session_backup_auto ? "" : "disabled"}>${[1,3,6,12,24].map(h => `<option value="${h}" ${(s.session_backup_hours || 6) == h ? "selected" : ""}>每 ${h} 小时</option>`).join("")}</select>${sw("stBk", s.session_backup_auto)}`)}</div></div>
+    <div class="card"><h3>更新</h3><div class="setlist">
+      ${setRow("refresh", "自动检查更新", "每 6 小时最多查一次 GitHub 发布页。<b>只提示，不会自动安装</b>：有新版本时托盘弹一次通知、按钮上出红点，点「立即更新」才下载安装", sw("stUpd", s.update_auto))}
+      ${setRow("info", `当前版本 v${esc(u.current)}`, u.checked ? `上次检查 ${when(u.checked)}：${u.error ? esc(u.error) : u.newer ? `有新版本 v${esc(u.latest)}${u.ignored === u.latest ? "（已忽略）" : ""}` : "已经是最新"}` : "还没检查过",
+        `<button class="tbx has-dot-able${u.badge ? " has-dot" : ""}" id="setUpd" style="position:relative;background:var(--hover);color:var(--text);padding:5px 12px">${ic("refresh")} 检查更新<span class="rdot"></span></button>`)}</div></div>
+    <div class="card"><h3>数据</h3><div class="kv"><div>本程序数据</div><div><code>${esc(st.home)}</code> <button class="ghost" id="stRev" style="padding:1px 6px">${ic("folder")}</button></div>
+      <div>Claude Code</div><div><code>${esc(st.claude_home)}</code></div><div>Codex</div><div><code>${esc(st.codex_home)}</code></div></div>
+      <div class="dim" style="font-size:12px;margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
+  $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
+  const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
+  bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
+  bind("#stMark", "codex_mark_imported"); bind("#stUpd", "update_auto");
+  $("#stBk").onchange = e => { $("#stBkH").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
+  $("#stBkH").onchange = e => saveSetting({session_backup_hours: +e.target.value});
+  $("#setUpd").onclick = () => updOpen(true);
+  $("#stRev").onclick = () => api("/api/reveal", {path: st.home}).catch(e => toast("❌ " + e.message));
+};
+
+// ---------- 诊断 ----------
+const SC_IC = {pass: "ok", warn: "warn", fail: "err"};
+function scHtml(r){
+  if (!r || r.never) return '<div class="dim">还没自检过。</div>';
+  const c = r.counts || {};
+  return `<div class="dim" style="font-size:12px;margin-bottom:4px">${when(r.time)} · 通过 ${c.pass || 0} / 注意 ${c.warn || 0} / 没通过 ${c.fail || 0}（${r.ms} ms）</div>` +
+    r.items.map(i => `<div class="sc ${i.status}">${ic(SC_IC[i.status])}<div style="min-width:0"><div class="nm">${esc(i.name)}</div><div class="dt">${esc(i.detail)}</div>${i.fix ? `<div class="fx">建议：${esc(i.fix)}</div>` : ""}</div></div>`).join("");
+}
+R.diag = async () => {
+  const pg = $("#pg-diag");
+  if (!pg.innerHTML) pg.innerHTML = '<div class="empty">检测中…</div>';
+  let d, sc;
+  try { [d, sc] = await Promise.all([api("/api/diag"), api("/api/selfcheck")]); if (sc.never) sc = await api("/api/selfcheck", {}); }
+  catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  diagCnt(sc);
+  const rep = d.report, ag = (k, name) => { const a = rep[k] || {};
+    return `<div class="dgag"><h4>${logo(k)} ${name} <span class="dgst${a.available ? "" : " none"}">${a.running ? "在运行" : a.available ? ({recent: "最近在用", idle: "装了"}[a.state] || "找到了") : "没找到"}</span></h4>
+      <div class="why">${esc(a.why || "")}</div>
+      ${a.kinds && a.kinds.length ? `<div class="dgls">认出来的形态：${esc(a.kinds.join("、"))}</div>` : ""}
+      <div class="dgls">${(a.dirs || []).map(x => `<div>${x.exists ? "✓" : "✗"} ${esc(x.label)}：${esc(x.path)}${x.recent ? " · 最近写入 " + when(x.recent) : ""}</div>`).join("")}</div>
+      ${(a.notes || []).length ? `<div class="dgls">${a.notes.map(n => `<div>· ${esc(n)}</div>`).join("")}</div>` : ""}</div>`; };
+  const acc = d.accounts || {}, w = d.watch || {};
+  const accRow = (lab, v, how) => `<tr><td>${lab}</td><td>${esc(v || "—")}</td><td class="dim">${esc(how || "")}</td></tr>`;
+  const dirRow = (lab, which, cur) => `<div class="dgrow"><b style="width:120px">${lab}</b><input data-dir="${which}" value="${esc(cur)}"><button data-pick="${which}">选择…</button><button data-save="${which}">保存</button><button class="ghost" data-clr="${which}" title="恢复自动检测">自动</button></div>`;
+  pg.innerHTML = `<h2>${ic("activity")}诊断</h2><p class="sub">本程序怎么找到 Claude / Codex、用的哪些目录、当前是哪个账号。报告里只有打码后的账号，没有 token / key，可以直接贴给别人看。</p>
+    <div class="grid2"><div class="card"><h3>${ic("ok")}自检<span class="sp"></span><button id="dgSc">${ic("refresh")} 重新自检</button><button class="ghost" id="dgScCp" title="复制自检结果">${ic("copy")}</button></h3><div id="dgScBox">${scHtml(sc)}</div></div>
+      <div><div class="card"><h3>${ic("users")}账号（打码）</h3><table class="t">
+        ${accRow("Claude 桌面端", (acc.desktop || {}).email_masked || short((acc.desktop || {}).accountUuid), (acc.desktop || {}).via && "认自 " + acc.desktop.via)}
+        ${accRow("Claude Code 命令行", (acc.cli || {}).email_masked || short((acc.cli || {}).accountUuid), (acc.cli || {}).via && "认自 " + acc.cli.via)}
+        ${accRow("Codex", (w.codex || {}).label, "auth.json + config.toml")}</table>
+        <div class="dim" style="font-size:12px;margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
+      <div class="card">${ag("claude", "Claude")}${ag("codex", "Codex")}</div></div></div>
+    <div class="card"><h3>${ic("folder")}数据目录</h3>
+      ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}
+      <div class="dgls" style="margin-top:8px">${(d.app_dirs.parts || []).map(p => `<div>桌面端${esc(p.name)}：${esc(p.path)}（${esc(p.why)}）</div>`).join("")}</div>
+      <div class="dim" style="font-size:12px">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME 优先。</div></div>
+    <div class="card"><h3>${ic("text")}诊断报告<span class="sp"></span><button class="primary" id="dgCp">${ic("copy")} 复制报告</button></h3><pre class="rep" id="dgRep">${esc(d.text + "\n\n" + (sc && !sc.never ? sc.text : ""))}</pre></div>`;
+  $("#dgCp").onclick = () => copyText($("#dgRep").textContent);
+  $("#dgScCp").onclick = () => copyText(sc.text || "");
+  $("#dgSc").onclick = async () => { $("#dgSc").disabled = true; $("#dgScBox").innerHTML = '<div class="empty">自检中…</div>'; try { sc = await api("/api/selfcheck", {}); } catch(e){ toast("❌ " + e.message); } R.diag(); };
+  $$("[data-pick]").forEach(b => b.onclick = async () => { const w = b.dataset.pick, inp = $(`[data-dir="${w}"]`);
+    try { const r = await api("/api/pickdir", {start: inp.value}); if (r.ok) inp.value = r.path; else if (!r.cancel) toast(r.error); } catch(e){ toast("❌ " + e.message); } });
+  const saveDir = async (w, v) => { try { const r = await api(w === "claude_app_dir" ? "/api/appdir" : "/api/datadir", w === "claude_app_dir" ? {path: v} : {which: w, path: v});
+      if (r.ok === false) return toast("❌ " + r.error); toast("✅ 已保存" + (r.note ? "，" + r.note : "")); SY.st = null; R.diag(); } catch(e){ toast("❌ " + e.message); } };
+  $$("[data-save]").forEach(b => b.onclick = () => saveDir(b.dataset.save, $(`[data-dir="${b.dataset.save}"]`).value.trim()));
+  $$("[data-clr]").forEach(b => b.onclick = () => saveDir(b.dataset.clr, ""));
+};
+function diagCnt(sc){ const n = sc && !sc.never ? (sc.counts.fail || 0) : 0, e = $("#diagCnt"); e.hidden = !n; e.textContent = n; }
+// 顶栏的「自检」：弹窗里跑一遍
+async function scOpen(run){
+  openDlg("✅ 自检", '<div class="empty">自检中…</div>', `<button onclick="closeDlg()">关闭</button><button id="scCp">${ic("copy")} 复制</button><button class="primary" id="scRe">${ic("refresh")} 重新自检</button>`);
+  let r;
+  const show = () => { $("#dlgBody").innerHTML = `<div class="dim" style="font-size:12.5px;margin-bottom:6px">程序文件、数据目录写权限、凭据管理器、Claude / Codex、数据目录、更新地址。第一次启动会自动跑一次。</div>${scHtml(r)}`; diagCnt(r); };
+  try { r = run ? await api("/api/selfcheck", {}) : await api("/api/selfcheck"); if (r.never) r = await api("/api/selfcheck", {}); show(); } catch(e){ $("#dlgBody").innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
+  $("#scRe").onclick = async () => { $("#dlgBody").innerHTML = '<div class="empty">自检中…</div>'; try { r = await api("/api/selfcheck", {}); show(); } catch(e){ toast("❌ " + e.message); } };
+  $("#scCp").onclick = () => r && copyText(r.text || "");
+}
+
+// ---------- 检查更新（只提示；点「立即更新」才装）----------
+async function updOpen(check){
+  openDlg("检查更新", '<div class="empty">' + (check ? "正在查 GitHub 上的最新版本…" : "读取中…") + '</div>');
+  let u;
+  try { u = check ? await api("/api/update/check", {}) : await api("/api/update"); } catch(e){ $("#dlgBody").innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  ST.upd = u; setBadge(u.badge); renderBans(); updRender(u);
+}
+function updRender(u){
+  const dl = u.download || {}, busy = ["downloading", "verifying", "installing"].includes(dl.state);
+  let body;
+  if (u.error && !u.latest) body = `<div class="miss">${esc(u.error)}</div>`;
+  else if (!u.newer) body = `<div class="okbox">已经是最新版 v${esc(u.current)}${u.checked ? `（${when(u.checked)} 查的）` : ""}</div>`;
+  else body = `<div style="display:flex;align-items:center;gap:10px"><span class="rdot" style="display:block;position:static;box-shadow:none"></span><b style="font-size:15px">有新版本 v${esc(u.latest)}</b><span class="dim">当前 v${esc(u.current)}${u.published ? " · 发布于 " + when(u.published) : ""}</span>${u.ignored === u.latest ? '<span class="tag">已忽略</span>' : ""}</div>
+    ${u.notes ? `<div class="updn" style="margin-top:10px">${esc(u.notes)}</div>` : ""}
+    <div class="dim" style="font-size:12.5px;margin-top:10px">${u.mode === "installer" ? (u.has_setup ? "点「立即更新」：下载安装包 → 校验 sha256 → 静默安装 → 自动重新打开。不点就不会装。" : "这个版本没有带校验文件的安装包，请到发布页手动下载。")
+      : "这是 pip / 源码版：请运行 <code>pip install -U cc-sessionsync</code>，或到发布页下载 Windows 安装版。"}</div>
+    ${busy || dl.state === "error" ? `<div style="margin-top:10px;font-size:12.5px">${{downloading: "下载中", verifying: "校验 sha256", installing: "正在安装，马上重新打开…", error: "出错了：" + esc(dl.error || "")}[dl.state]}${dl.total ? ` ${kb(dl.done)} / ${kb(dl.total)}` : ""}</div><div class="prog"><i style="width:${dl.total ? Math.round(dl.done / dl.total * 100) : busy ? 100 : 0}%"></i></div>` : ""}`;
+  const can = u.newer && u.mode === "installer" && u.has_setup;
+  $("#dlgTitle").innerHTML = ic("refresh") + " 检查更新";
+  $("#dlgBody").innerHTML = body;
+  $("#dlgFt").innerHTML = (u.page ? `<a href="${esc(u.page)}" target="_blank" style="margin-right:auto;font-size:12.5px" id="updPage">发布页</a>` : "") +
+    (u.newer && u.ignored !== u.latest ? `<button class="ghost" id="updIgn">忽略此版本</button><button id="updLater">稍后</button>` : u.newer ? `<button class="ghost" id="updUnign">取消忽略</button><button onclick="closeDlg()">关闭</button>` : `<button onclick="closeDlg()">关闭</button>`) +
+    `<button id="updRe">${ic("refresh")} 重新检查</button>` + (can ? `<button class="primary" id="updGo" ${busy ? "disabled" : ""}>${ic("download")} 立即更新</button>` : "");
+  const on = (id, fn) => { const e = $(id); if (e) e.onclick = fn; };
+  on("#updIgn", () => updIgnore(u.latest, true));
+  on("#updUnign", async () => { const x = await api("/api/update/ignore", {version: null}); ST.upd = x; setBadge(x.badge); renderBans(); updRender(x); });
+  on("#updLater", () => { ST.later = u.latest; sessionStorage.setItem("ccss.later", u.latest); renderBans(); closeDlg(); });
+  on("#updRe", () => updOpen(true));
+  on("#updGo", () => updInstall());
+  on("#updPage", e => { e.preventDefault(); window.open(u.page, "_blank"); });
+  if (busy) setTimeout(async () => { if (!$("#dlg").classList.contains("open")) return; try { updRender(await api("/api/update")); } catch(e){} }, 600);
+}
+async function updIgnore(v, inDlg){
+  try { const x = await api("/api/update/ignore", {version: v}); ST.upd = x; setBadge(x.badge); renderBans(); toast(`v${v} 不再提示（更新的版本出来照样会提示）`); if (inDlg) updRender(x); } catch(e){ toast("❌ " + e.message); }
+}
+async function updInstall(){
+  if (!$("#dlg").classList.contains("open")) openDlg("检查更新", '<div class="empty">准备…</div>');
+  try { const x = await api("/api/update/install", {}); updRender(x.current ? x : await api("/api/update")); }
+  catch(e){ toast("❌ " + e.message, 6000); try { updRender(await api("/api/update")); } catch(_){} }
+}
+
+// ---------- 启动 ----------
+(async () => {
+  const want = new URLSearchParams(location.search).get("page") || location.hash.replace("#", "") || store.get("ccss.page") || "sync";
+  go(R[want] ? want : "sync");
+  const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);
+  poll();
+  try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}
+})();
+
+</script>
+</body>
+</html>
