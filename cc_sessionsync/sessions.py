@@ -368,8 +368,102 @@ def list_all(agent: str | None = None) -> dict:
         x["backups"] = bk.get(f"{x['agent']}:{x['id']}", 0)
     projects = sorted({x["cwd"] for x in items if x.get("cwd")})
     accounts = sorted({a for x in items for a in x.get("accounts") or []})
+    groups = account_groups(items)
     return {"ok": True, "items": items, "projects": projects, "accounts": accounts, "account_labels": _account_labels(accounts),
-            "ms": int((time.time() - t0) * 1000)}
+            "groups": groups, "ms": int((time.time() - t0) * 1000)}
+
+
+def account_groups(items: list[dict]) -> list[dict]:
+    """这台电脑上找得到的所有账号（左侧「按账号」分组用），并给每个会话标上 gacct（分到哪个账号下）：
+    - Claude：每个桌面端会话列表目录（%APPDATA% 和商店版虚拟化目录都看）下的「账号 / 组织」文件夹、命令行登的号；
+      会话归到登记了它的账号（优先当前账号），没登记的（只在命令行）归到「未知账号」。
+    - Codex：按供应商分（Codex 的记录里不写账号）；当前登录的号标在它用的供应商上。
+    只给打码的邮箱和 rid，完整的要点眼睛走 /api/accounts/reveal。"""
+    from . import claude_sync, watch
+    from .watch import mask_email
+    names = {}
+    try:
+        names = {u: m.get("email") for u, m in claude_sync._load_names().items()}
+    except Exception:
+        pass
+    try:
+        acc = claude_sync.accounts()
+    except Exception:
+        acc = {}
+    cur_d = (acc.get("desktop") or {}).get("accountUuid")
+    cur_c = (acc.get("cli") or {}).get("accountUuid")
+    for a in acc.values():
+        if a.get("accountUuid") and a.get("email"):
+            names[a["accountUuid"]] = a["email"]
+    g: dict[str, dict] = {}
+
+    def claude_g(uuid_: str) -> dict:
+        k = uuid_[:8]
+        if k not in g:
+            full = next((u for u in list(names) + [cur_d or "", cur_c or ""] if u and u.startswith(k)), uuid_)
+            tags = (["桌面端当前"] if cur_d and cur_d.startswith(k) else []) + (["命令行当前"] if cur_c and cur_c.startswith(k) else [])
+            g[k] = {"key": k, "kind": "claude", "rid": full if len(full) > 8 else "", "masked": mask_email(names.get(full)) or f"账号 {k}",
+                    "tags": tags, "current": bool(tags), "folders": [], "n": 0}
+        return g[k]
+    alt: dict[str, str] = {}
+    try:
+        main = claude_sync.sessions_root()
+        roots = [(main, "")] + [(Path(c["path"]) / "claude-code-sessions", c["label"]) for c in claude_sync.app_dir_candidates()]
+        done = set()
+        for root, lab in roots:
+            try:
+                rp = root.resolve()
+            except OSError:
+                continue
+            if rp in done or not root.is_dir():
+                continue
+            done.add(rp)
+            for a in root.iterdir():
+                if not a.is_dir():
+                    continue
+                for o in a.iterdir():
+                    if o.is_dir():
+                        fs = list(o.glob("local_*.json"))
+                        claude_g(a.name)["folders"].append({"key": f"{a.name}/{o.name}", "where": lab or "当前使用的目录", "count": len(fs)})
+                        if root != main:
+                            for f in fs:
+                                try:
+                                    alt.setdefault(json.loads(f.read_text(encoding="utf-8")).get("cliSessionId") or "", a.name[:8])
+                                except Exception:
+                                    pass
+    except Exception:
+        pass
+    for u in (cur_d, cur_c):
+        if u:
+            claude_g(u)
+    try:
+        cx = watch._read_codex() or {}
+    except Exception:
+        cx = {}
+    for x in items:
+        if x["agent"] == "claude":
+            accs = x.get("accounts") or []
+            k = next((a for a in accs if cur_d and cur_d.startswith(a)), None) or (accs[0] if accs else alt.get(x["id"]))
+            x["gacct"] = k or "unknown"
+            if k:
+                claude_g(k)["n"] += 1
+        else:
+            prov = x.get("provider") or "openai"
+            k = "codex:" + prov
+            if k not in g:
+                lab = cx.get("label") or ""
+                mine = lab.endswith(" · " + prov)
+                g[k] = {"key": k, "kind": "codex", "rid": cx.get("rid", "") if mine else "", "provider": prov,
+                        "masked": (lab.rsplit(" · ", 1)[0] if mine else "") or f"供应商 {prov}", "tags": ["Codex 当前"] if mine else [],
+                        "current": mine, "folders": [], "n": 0}
+            g[k]["n"] += 1
+            x["gacct"] = k
+    unk = sum(1 for x in items if x.get("gacct") == "unknown")
+    out = sorted(g.values(), key=lambda v: (v["kind"] != "claude", not v["current"], -v["n"]))
+    if unk:
+        out.append({"key": "unknown", "kind": "unknown", "rid": "", "masked": "未知账号", "tags": [], "current": False,
+                    "folders": [], "n": unk, "hint": "只在命令行用过、没在任何桌面端账号里登记的会话"})
+    return out
 
 
 def _account_labels(prefixes: list[str]) -> dict:
@@ -436,7 +530,7 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
 
 
 def export(agent: str, sid: str, fmt: str = "md") -> dict:
-    """导出到 ~/.cc-sessionsync/exports/：md（人话 + 回复 + 工具摘要）或 jsonl（原样复制）。"""
+    """导出到 ~/.cc-sessionsync/exports/：md / html（排好版、带原始记录，能导回来；见 exports.py）或 jsonl（原样复制）。"""
     f = claude_file(sid) if agent == "claude" else codex_file(sid)
     if not f:
         return {"ok": False, "error": "找不到会话记录文件"}
@@ -446,17 +540,11 @@ def export(agent: str, sid: str, fmt: str = "md") -> dict:
         out = EXPORTS / f"{agent}-{sid[:8]}-{stamp}.jsonl"
         shutil.copy2(f, out)
         return {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size}
-    first, cwd, title = _first_user(f, agent)
-    lines = [f"# {(title or first)[:80] or sid}", "", f"- 来源：{'Claude Code' if agent == 'claude' else 'Codex'} `{sid}`",
-             f"- 目录：`{cwd or '—'}`", f"- 记录：`{f}`", f"- 导出：{datetime.now():%Y-%m-%d %H:%M}", ""]
-    for e in read(agent, sid, limit=10 ** 9)["entries"]:
-        if e["role"] == "tool":
-            lines.append(f"> 🔧 {e['text']}")
-            continue
-        when = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M") if e.get("ts") else ""
-        lines += ["", f"## {'🧑 我' if e['role'] == 'user' else '🤖 回复'}  {when}", "", e["text"], ""]
-    out = EXPORTS / f"{agent}-{sid[:8]}-{stamp}.md"
-    out.write_text("\n".join(lines), encoding="utf-8")
+    from . import exports
+    r = exports.export_many([{"agent": agent, "id": sid}], "html" if fmt == "html" else "md")
+    if not r["ok"]:
+        return {"ok": False, "error": "; ".join(r["errors"])}
+    out = Path(r["files"][0])
     return {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size}
 
 

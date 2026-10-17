@@ -322,7 +322,7 @@ def build_parser() -> argparse.ArgumentParser:
     x = ss.add_parser("export", help="导出一个会话（md / jsonl）")
     x.add_argument("agent", choices=("claude", "codex"))
     x.add_argument("id")
-    x.add_argument("--fmt", choices=("md", "jsonl"), default="md")
+    x.add_argument("--fmt", choices=("md", "html", "jsonl"), default="md")
     ss.add_parser("trash", help="回收站")
     ss.add_parser("ops", help="会话操作账本")
     se.set_defaults(fn=cmd_sessions)

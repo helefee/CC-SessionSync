@@ -357,7 +357,17 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/sessions/ops":
                 return {"items": sessions.ops_list()}
             if p == "/api/sessions/backup-status":
-                return sessions.backup_status()
+                return dict(sessions.backup_status(), sched=sessions.sched_status(backup_settings()))
+        if p.startswith("/api/timeline/"):
+            from . import timeline
+            if p == "/api/timeline/versions":
+                return timeline.versions(q["agent"], q["id"])
+            if p == "/api/timeline/view":
+                return timeline.view(int(q["snap"]), int(q.get("limit") or 400))
+            if p == "/api/timeline/runs":
+                return {"items": timeline.runs()}
+            if p == "/api/timeline/point":
+                return timeline.point(float(q["t"]))
         return None
 
     def do_POST(self):
@@ -497,6 +507,21 @@ class H(BaseHTTPRequestHandler):
                 return usage.import_ccswitch()
         if p.startswith("/api/sessions/"):
             return self._sessions(p.rsplit("/", 1)[1], b)
+        if p == "/api/timeline/restore":
+            from . import timeline
+            return timeline.restore([int(x) for x in b.get("snaps") or []], b.get("mode") or "copy", b.get("target") or "claude",
+                                    b.get("desktop", True) is not False)
+        if p == "/api/backup/now":
+            from . import sessions
+            return sessions.backup_now()
+        if p == "/api/backup/prune":
+            from . import sessions
+            return sessions.prune(backup_settings(), vacuum=bool(b.get("vacuum", True)))
+        if p == "/api/export":
+            from . import exports
+            return exports.export_many(list(b.get("items") or []), b.get("fmt") or "md", str(b.get("label") or ""))
+        if p == "/api/import":
+            return _import(b)
         return None
 
     def _sessions(self, act: str, b: dict):
@@ -504,9 +529,12 @@ class H(BaseHTTPRequestHandler):
         if act == "fulltext":
             return sessions.fulltext(b.get("q") or "")
         if act == "export":
+            if (b.get("fmt") or "md") in ("md", "html"):
+                from . import exports
+                return exports.export_many([{"agent": b["agent"], "id": b["id"]}], b.get("fmt") or "md")
             return sessions.export(b["agent"], b["id"], b.get("fmt") or "md")
         if act == "backup":
-            return sessions.backup(full=bool(b.get("full")), why="manual")
+            return sessions.backup_now() if not b.get("full") else sessions.backup(full=True, why="manual")
         if act == "open":
             x = sessions.find(b["agent"], b["id"])
             if not x or not x.get("file"):
@@ -546,6 +574,24 @@ class H(BaseHTTPRequestHandler):
                 return dict(sessions.undo(b["op"]), deferred=False)
             return apps.run_or_defer(kind, "sessions-undo", {"op": b["op"]}, f"撤回 {b['op']}")
         return None
+
+
+def _import(b: dict) -> dict:
+    """导入 .md / .html：页面把文件内容传过来（浏览器拿不到路径），先存进 ~/.cc-sessionsync/imports/ 再读。"""
+    from . import exports
+    d = paths.HOME / "imports" / time.strftime("%Y%m%d-%H%M%S")
+    files = []
+    for i, f in enumerate(b.get("files") or []):
+        name = Path(str(f.get("name") or f"file{i}.md")).name
+        if Path(name).suffix.lower() not in (".md", ".markdown", ".html", ".htm"):
+            raise ValueError(f"只认 .md / .html：{name}")
+        d.mkdir(parents=True, exist_ok=True)
+        p = d / f"{i:02d}-{name}"
+        p.write_text(str(f.get("text") or ""), encoding="utf-8")
+        files.append(str(p))
+    if not files:
+        raise ValueError("没选文件")
+    return exports.import_files(files, b.get("cwd") or None, b.get("desktop", True) is not False, bool(b.get("dry", True)))
 
 
 def _reveal(path: str) -> dict:
