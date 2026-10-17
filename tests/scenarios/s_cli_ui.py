@@ -26,7 +26,7 @@ for a, o, n in ((A1, O1, 2), (A2, O2, 0)):
 ldb = T / "cfg/Claude/Local Storage/leveldb"; ldb.mkdir(parents=True)
 (ldb / "000003.log").write_bytes(b'{"eventName":"e","clientTimestamp":"2026-10-16T00:00:00Z","accountUuid":"%s","organizationUuid":"%s"}' % (A2.encode(), O2.encode()))
 rollout(H / ".codex", str(T / "proj"))
-rc, out = cli("--version"); ok(rc == 0 and "0.1.0" in out, "--version")
+rc, out = cli("--version"); ok(rc == 0 and "0.1.1" in out, "--version")
 rc, out = cli("status"); ok(rc == 0 and A2 in out and "Codex 对话 1 个" in out, "status")
 rc, out = cli("sync", "--dry-run"); ok(rc == 0 and "可以补进来 2 个" in out and not list((root / A2 / O2).glob("local_*")), "sync --dry-run")
 (T / "desktop-running").write_text("1")
@@ -69,6 +69,13 @@ try:
     r = post("/api/codex/import", {"days": "0", "only": [cp["rows"][0]["thread"]], "desktop": "1"}); ok(r.get("done") == 1, "api/codex/import")
     r = post("/api/codex/undo", {"ledger": r["ledger"]}); ok(r.get("ok") and r["moved"] == 2, "api/codex/undo")
     d = g("/api/diag"); ok("[Codex]" in d["text"], "api/diag")
+    ok(g("/api/status")["settings"]["codex_mark_imported"] is False, "mark setting defaults off in UI")
+    ok(post("/api/settings", {"codex_mark_imported": True})["codex_mark_imported"] is True and g("/api/status")["settings"]["codex_mark_imported"] is True, "UI toggle persists the setting")
+    cp = g("/api/codex/plan?days=0&mark=1"); ok(cp["mark"] and cp["mark_check"]["ok"], "api/codex/plan reports the mark check")
+    r = post("/api/codex/import", {"days": "0", "desktop": "0"}); imp = H / ".codex/external_agent_session_imports.json"
+    ok(r.get("marked", {}).get("ok") and imp.exists(), "api/codex/import uses the saved setting → marked")
+    u = post("/api/codex/undo", {"ledger": r["ledger"]}); ok(u.get("codex_imports", {}).get("ok") and not imp.exists(), "api/codex/undo reverts the mark")
+    post("/api/settings", {"codex_mark_imported": False})
     rq = urllib.request.Request("http://127.0.0.1:8799/api/status", headers={"host": "evil.example"})
     try:
         urllib.request.urlopen(rq, timeout=5); ok(False, "foreign Host header refused")

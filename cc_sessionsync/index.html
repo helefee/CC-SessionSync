@@ -35,6 +35,7 @@ input[type=text],input[type=number],select{background:var(--bg);color:var(--fg);
   <div class="row"><label>最近 <input type="number" id="cdays" value="30" min="0" style="width:70px"> 天（0 = 不限）</label>
    <label>项目目录 <input type="text" id="ccwd" placeholder="（全部）" style="width:260px"></label>
    <label><input type="checkbox" id="cdesk" checked> 同时加进桌面端会话列表</label>
+   <label title="把导过去的会话登记进 Codex 的 external_agent_session_imports.json（先备份，撤回时还原），Codex 桌面端就不会再把它导回去一份重复的。这是唯一会写的 Codex 文件。"><input type="checkbox" id="cmark"> 登记进 Codex 导入记录（防止导回去重复）</label>
    <button class="g" id="cPlan">演练</button><button class="b" id="cGo" disabled>导入勾选的</button></div>
   <div id="cOut" class="mut">先点「演练」。</div></div>
  <div class="card"><h3>导入账本 / 撤回</h3><div id="leds" class="mut"></div></div>
@@ -72,23 +73,26 @@ $("#syncPlan").onclick=async()=>{$("#syncOut").textContent="计算中…";const 
  (r.add.length?`<table><tr><th>最近</th><th>标题</th><th>目录</th></tr>`+r.add.slice(0,60).map(a=>`<tr><td>${t(a.last)}</td><td>${esc(a.title)}${a.archived?' <span class="tag">已归档</span>':""}</td><td><code>${esc(a.cwd)}</code></td></tr>`).join("")+"</table>":"")};
 $("#syncGo").onclick=async()=>{const r=await post("/api/sync",{source:$("#src").value});msg(r.hint||(r.ok?`已补 ${r.done}、刷新 ${r.updated}。打开 Claude 桌面端就能看到。`:r.error),!r.ok&&!r.hint);$("#syncGo").disabled=true;loadSync()};
 const LAB={new:"新导入",update:"更新",same:"导过了",diverged:"已在 Claude 里接着聊过"};
-function ckw(){return {days:$("#cdays").value,cwd:$("#ccwd").value.trim(),desktop:$("#cdesk").checked?"1":"0"}}
+function ckw(){return {days:$("#cdays").value,cwd:$("#ccwd").value.trim(),desktop:$("#cdesk").checked?"1":"0",mark:$("#cmark").checked?"1":"0"}}
+$("#cmark").onchange=async()=>{const r=await post("/api/settings",{codex_mark_imported:$("#cmark").checked});msg(r.codex_mark_imported?"已打开：导入时登记进 Codex 导入记录（会先备份那个文件）":"已关闭登记")};
 $("#cPlan").onclick=async()=>{$("#cOut").textContent="计算中…";const q=new URLSearchParams(ckw());const r=await get("/api/codex/plan?"+q);
  const rows=r.rows||[];$("#cGo").disabled=!rows.some(x=>x.state==="new"||x.state==="update");
  $("#cOut").innerHTML=`Codex 数据 <code>${esc(r.codex_home)}</code> → Claude Code <code>${esc(r.claude_home)}</code>　`+
  (r.desktop?`桌面端列表写进 <code>${esc(r.desktop.key)}</code>`:esc(r.desktop_note||"不写桌面端列表"))+
+ (r.mark?(r.mark_check&&r.mark_check.ok?`<br>登记进 Codex 导入记录：<code>${esc(r.mark_check.file)}</code>（${r.mark_check.exists?"先备份再改":"会新建"}）`:`<br><span class="bad">${esc(r.mark_check&&r.mark_check.error)}——不能导入，修好或关掉登记</span>`):"")+
  `<br>新 ${r.counts.new} / 更新 ${r.counts.update} / 导过了 ${r.counts.same} / 不动 ${r.counts.diverged}`+
  (rows.length?`<table><tr><th></th><th>最近</th><th>标题</th><th>状态</th><th>内容</th><th>目录</th></tr>`+rows.map(x=>{const can=x.state==="new"||x.state==="update";const s=x.stats||{};
  return `<tr><td><input type="checkbox" class="cc" value="${esc(x.thread)}" ${can?"checked":"disabled"}></td><td>${t(x.mtime)}</td><td>${esc(x.title||"（无标题）")}</td><td>${LAB[x.state]}</td>
  <td>${x.turns?`${x.turns} 轮 · 工具 ${s.tools||0}${s.images?" · 图片 "+s.images:""}`:""}${x.error?'<span class="bad">'+esc(x.error)+"</span>":""}</td><td><code>${esc(x.cwd)}</code></td></tr>`}).join("")+"</table>":"<br>没找到 Codex 对话。")};
 $("#cGo").onclick=async()=>{const only=[...document.querySelectorAll(".cc:checked")].map(e=>e.value);if(!only.length)return msg("没勾选",1);
  const b=Object.assign(ckw(),{only});const r=await post("/api/codex/import",b);
- if(r.hint)msg(r.hint);else if(r.ok===false)msg(r.error,1);else{msg(`已导入 ${r.done} 个（账本 ${r.ledger}）。\n命令行：进对应目录 claude --resume，或在桌面端列表里找「（Codex）」开头的。`+(r.errors&&r.errors.length?"\n失败："+r.errors.join("\n"):""),r.errors&&r.errors.length);
+ if(r.hint)msg(r.hint);else if(r.ok===false)msg(r.error,1);else{msg(`已导入 ${r.done} 个（账本 ${r.ledger}）。`+(r.marked&&r.marked.ok?`已登记进 Codex 导入记录 ${r.marked.marked} 条。`:"")+`\n命令行：进对应目录 claude --resume，或在桌面端列表里找「（Codex）」开头的。`+(r.errors&&r.errors.length?"\n失败："+r.errors.join("\n"):""),r.errors&&r.errors.length);
  $("#cOut").innerHTML+=`<pre>${esc((r.rows||[]).filter(x=>x.resume).map(x=>x.title+"\n  "+x.resume).join("\n"))}</pre>`}$("#cGo").disabled=true;loadLeds()};
-async function loadLeds(){const l=await get("/api/codex/ledgers");$("#leds").innerHTML=l.length?`<table><tr><th>账本</th><th>导入</th><th>文件</th><th></th></tr>`+
+async function loadMark(){const s=await get("/api/status");$("#cmark").checked=!!s.settings.codex_mark_imported}
+async function loadLeds(){loadMark();const l=await get("/api/codex/ledgers");$("#leds").innerHTML=l.length?`<table><tr><th>账本</th><th>导入</th><th>文件</th><th></th></tr>`+
  l.slice(0,20).map(x=>`<tr><td><code>${esc(x.id)}</code></td><td>${x.threads} 个对话</td><td>新建 ${x.created} / 更新 ${x.updated}</td><td>${x.undone?"已撤回":`<button class="g" data-u="${esc(x.id)}">撤回</button>`}</td></tr>`).join("")+"</table>":"还没有导入过。";
  document.querySelectorAll("[data-u]").forEach(e=>e.onclick=async()=>{if(!confirm("撤回导入 "+e.dataset.u+"？新建的文件挪进回收站。"))return;const r=await post("/api/codex/undo",{ledger:e.dataset.u});
- msg(r.hint||(r.ok?`已撤回：挪走 ${r.moved}、换回 ${r.restored}`+(r.kept.length?`；${r.kept.length} 个已在 Claude 里接着聊过，没动`:""):r.error),!r.ok&&!r.hint);loadLeds()})}
+ msg(r.hint||(r.ok?`已撤回：挪走 ${r.moved}、换回 ${r.restored}`+(r.codex_imports?(r.codex_imports.ok?"；Codex 导入记录已还原":"；Codex 导入记录："+r.codex_imports.error):"")+(r.kept.length?`；${r.kept.length} 个已在 Claude 里接着聊过，没动`:""):r.error),!r.ok&&!r.hint);loadLeds()})}
 async function loadDiag(){const s=await get("/api/status");const d=s.app_dirs;
  $("#dirs").innerHTML=d.parts.map(p=>`${esc(p.name)}：<code>${esc(p.path)}</code> <span class="mut">${esc(p.why)}</span>`).join("<br>")+
  `<div class="row">手动指定：<select id="adSel"><option value="">自动（推荐）</option>${d.choices.map(c=>`<option value="${esc(c.path)}" ${d.override===c.path?"selected":""} ${c.exists?"":"disabled"}>${esc(c.label)}　${esc(c.path)}</option>`).join("")}</select>

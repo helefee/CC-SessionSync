@@ -16,6 +16,12 @@
 同一个 Codex 对话再导一次：Codex 那边有新内容、而导过去那份你没在 Claude 里接着聊过 → 先备份再更新同一份；
 你已经在 Claude 里接着聊过（文件被 Claude 改过）→ 不动它。
 
+可选（缺省关）：--mark-codex-imported / 界面开关 / 设置 codex_mark_imported。打开后，把导过去的 Claude 会话登记进
+Codex 自己的 <CODEX_HOME>/external_agent_session_imports.json（Codex「从 Claude Code 导入会话」用的导入记录），
+记成「这份 Claude 会话 = 原来那个 Codex 线程」，Codex 桌面端就不会再把它当成新的 Claude 会话导回去成一份重复的。
+这是本工具唯一会写的 Codex 文件：写之前先备份进账本，原子替换，只增 / 改我们自己那几条记录；undo 时还原。
+文件格式不对（不是 {"records": [...]}）就整个不动、报错。
+
 为什么是「文字摘要」而不是原样的工具调用：Codex 的工具（shell、apply_patch、update_plan…）和 Claude Code 的工具
 （Bash、Edit…）参数格式不一样，硬塞成 Claude 的 tool_use 有可能被 API 拒掉，整份会话就续不上了。所以工具过程折成
 助手回复里的一段文字（命令 + 截短的输出），思考过程（reasoning，大多加密）默认不带，图片换成「[图片]」占位。
@@ -45,6 +51,7 @@ KEEP_KEYS = ("model", "effort", "sessionSettings", "permissionMode", "remoteMcpS
 SKIP_USER = ("# AGENTS.md instructions", "<environment_context", "<app-context", "<user_instructions", "<INSTRUCTIONS",
              "<permissions", "<skills_instructions", "<turn_aborted", "<user_shell_command", "<subagent_notification")
 DESKTOP_ORIGINATORS = ("Codex Desktop", "codex_work_desktop")
+IMPORTS_NAME = "external_agent_session_imports.json"   # Codex 的「外部会话导入记录」（codex-rs/external-agent-migration/src/sessions/ledger.rs）
 
 
 def codex_home() -> Path:
@@ -163,10 +170,31 @@ def titles() -> dict:
     return out
 
 
+def _norm_src(p: str) -> str:
+    p = str(p or "")
+    if p.startswith("\\\\?\\UNC\\"):
+        p = "\\\\" + p[8:]
+    elif p.startswith("\\\\?\\"):
+        p = p[4:]
+    return os.path.normcase(os.path.normpath(p)) if p else ""
+
+
 def imported_from_claude() -> set[str]:
-    """Codex 从 Claude Code 导进来的线程（含我们导过去、又被 Codex 导回去的那份）：不再导回 Claude，免得来回套娃。"""
-    d = _load(codex_home() / "external_agent_session_imports.json", {})
-    return {r.get("imported_thread_id") for r in (d.get("records") or []) if isinstance(r, dict) and r.get("imported_thread_id")}
+    """Codex 从 Claude Code 导进来的线程：不再导回 Claude，免得来回套娃。
+    例外：我们自己登记的「导过去的那份 = 原来的 Codex 线程」（--mark-codex-imported）那条指回原线程，不算。"""
+    d = _load(codex_home() / IMPORTS_NAME, {})
+    ours = {}
+    for tid, v in _load(MAP, {}).items():         # 和登记时一样按真实路径比（Windows 上 8.3 短名 / 大小写会不一样）
+        if v.get("file"):
+            ours[_norm_src(codex_src_path(Path(v["file"])))] = tid
+    out = set()
+    for r in (d.get("records") or []) if isinstance(d, dict) else []:
+        if not isinstance(r, dict) or not r.get("imported_thread_id"):
+            continue
+        if ours.get(_norm_src(r.get("source_path", ""))) == r["imported_thread_id"]:
+            continue
+        out.add(r["imported_thread_id"])
+    return out
 
 
 def _user_thread(m: dict) -> bool:
@@ -478,10 +506,134 @@ def _desktop_entry(tdir: Path, cli_sid: str, cwd: str, title: str, mtime: float,
     return d
 
 
+# ---------- 登记进 Codex 的导入记录（可选） ----------
+# 格式（codex-rs/external-agent-migration/src/sessions/ledger.rs，serde）：
+#   {"records": [{"source_path": 规范化的绝对路径（Windows 是 \\?\C:\...）, "content_sha256": 文件内容 sha256（小写十六进制）,
+#                 "imported_thread_id": Codex 线程号, "imported_at": 秒, "source_modified_at": 文件修改时间（纳秒）,
+#                 "connector_names": [], "title": 标题}],
+#    "detected_connector_records": [...]}
+# Codex 扫 ~/.claude/projects 时：路径 + 修改时间对得上 → 跳过；路径对得上、内容 sha 不同 → 试着把新增的部分接到那个线程后面
+# （对不上就放弃，不会新建重复的）；没有记录 → 当新会话导入。所以登记了就不会出重复。
+
+def mark_setting() -> bool:
+    try:
+        return bool(json.loads((paths.HOME / "settings.json").read_text(encoding="utf-8")).get("codex_mark_imported"))
+    except Exception:
+        return False
+
+
+def set_mark_setting(on: bool) -> None:
+    f = paths.HOME / "settings.json"
+    d = _load(f, {})
+    d = d if isinstance(d, dict) else {}
+    d["codex_mark_imported"] = bool(on)
+    _save(f, d)
+
+
+def codex_src_path(f: Path) -> str:
+    """和 Codex（Rust fs::canonicalize）一样的路径写法。"""
+    p = os.path.realpath(f)
+    if os.name == "nt":
+        if p.startswith("\\\\?\\"):
+            return p
+        return "\\\\?\\UNC\\" + p[2:] if p.startswith("\\\\") else "\\\\?\\" + p
+    return p
+
+
+def imports_check() -> dict:
+    """Codex 导入记录文件现在能不能安全地改。→ {ok, exists, error?}"""
+    f = codex_home() / IMPORTS_NAME
+    if not f.exists():
+        return {"ok": True, "exists": False, "file": str(f)}
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except Exception as e:
+        return {"ok": False, "exists": True, "file": str(f), "error": f"Codex 的导入记录 {f} 不是合法的 JSON（{e}），没有动它"}
+    if not isinstance(d, dict) or not isinstance(d.get("records"), list) or \
+            not all(isinstance(r, dict) for r in d["records"]) or \
+            not isinstance(d.get("detected_connector_records", []), list):
+        return {"ok": False, "exists": True, "file": str(f), "error": f"Codex 的导入记录 {f} 格式不认识（应该是 {{\"records\": [...]}}），没有动它"}
+    return {"ok": True, "exists": True, "file": str(f)}
+
+
+def _write_imports(d: dict) -> None:
+    f = codex_home() / IMPORTS_NAME
+    tmp = f.with_name(f".{f.name}.cc-sessionsync-{os.getpid()}.tmp")
+    tmp.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(tmp, f)
+
+
+def _mark_imports(entries: list[dict], led: dict, led_dir: Path) -> dict:
+    """把这次导入的会话登记进 Codex 的导入记录。entries: [{file, thread, title}]。先备份原文件（进账本），再原子替换。"""
+    f = codex_home() / IMPORTS_NAME
+    chk = imports_check()
+    if not chk["ok"]:
+        return {"ok": False, "error": chk["error"]}
+    if chk["exists"]:
+        d = json.loads(f.read_text(encoding="utf-8"))
+        shutil.copy2(f, led_dir / "before" / IMPORTS_NAME)
+        before_sha = _sha(f)
+    else:
+        d = {"records": [], "detected_connector_records": []}
+        before_sha = None
+    prev = {}
+    for e in entries:
+        jf = Path(e["file"])
+        src = codex_src_path(jf)
+        old = [r for r in d["records"] if r.get("source_path") == src]
+        prev[src] = old[-1] if old else None
+        d["records"] = [r for r in d["records"] if r.get("source_path") != src]
+        st = jf.stat()
+        d["records"].append({"source_path": src, "content_sha256": _sha(jf), "imported_thread_id": e["thread"],
+                             "imported_at": int(time.time()), "source_modified_at": st.st_mtime_ns,
+                             "connector_names": [], "title": e.get("title")})
+    d.setdefault("detected_connector_records", [])
+    led["codex_imports"] = {"file": str(f), "existed": chk["exists"], "before": IMPORTS_NAME if chk["exists"] else None,
+                            "before_sha": before_sha, "after_sha": None, "entries": prev}
+    _save(led_dir / "ledger.json", led)        # 先记账再写
+    _write_imports(d)
+    led["codex_imports"]["after_sha"] = _sha(f)
+    _save(led_dir / "ledger.json", led)
+    return {"ok": True, "marked": len(entries), "file": str(f)}
+
+
+def _unmark_imports(ci: dict, led_dir: Path, keep_files: list[str], trash: Path) -> dict:
+    """撤回登记。文件从那以后没被别人改过、也没有要保留的 → 原样换回备份（原来没有就挪进回收站）；
+    否则只把我们那几条记录换回原来的样子（Codex 之后自己加的记录不动）。"""
+    f = Path(ci["file"])
+    if not f.exists():
+        return {"ok": True, "note": "Codex 的导入记录文件已经不在了，没什么要撤的"}
+    keep = {codex_src_path(Path(k)) for k in keep_files}
+    if ci.get("after_sha") and _sha(f) == ci["after_sha"] and not keep:
+        trash.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(f, trash / f"replaced-{f.name}")
+        if ci.get("existed"):
+            tmp = f.with_name(f".{f.name}.cc-sessionsync-{os.getpid()}.tmp")
+            shutil.copy2(led_dir / "before" / ci["before"], tmp)
+            os.replace(tmp, f)
+            return {"ok": True, "how": "restored"}
+        f.unlink()
+        return {"ok": True, "how": "removed"}
+    chk = imports_check()
+    if not chk["ok"]:
+        return {"ok": False, "error": chk["error"]}
+    d = json.loads(f.read_text(encoding="utf-8"))
+    trash.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(f, trash / f"replaced-{f.name}")
+    for src, old in (ci.get("entries") or {}).items():
+        if src in keep:
+            continue                               # 那份会话你在 Claude 里接着聊过、留着了：登记也留着，免得 Codex 把它导成重复的
+        d["records"] = [r for r in d["records"] if r.get("source_path") != src]
+        if old:
+            d["records"].append(old)
+    _write_imports(d)
+    return {"ok": True, "how": "entries"}
+
+
 # ---------- 计划 / 执行 / 撤回 ----------
 
 def plan(days: float = 30, cwd: str | None = None, only: list[str] | None = None, include_all: bool = False,
-         desktop: bool = True, target: str | None = None) -> dict:
+         desktop: bool = True, target: str | None = None, mark: bool | None = None) -> dict:
     mp = _load(MAP, {})
     rows = []
     keys = [k.strip().lower() for k in (only or []) if k.strip()]
@@ -510,14 +662,18 @@ def plan(days: float = 30, cwd: str | None = None, only: list[str] | None = None
         except Exception:
             dt = None
     counts = {k: sum(1 for r in rows if r["state"] == k) for k in ("new", "update", "same", "diverged")}
-    return {"ok": True, "rows": rows, "counts": counts, "desktop": dt,
+    mark = mark_setting() if mark is None else bool(mark)
+    mk = imports_check() if mark else None
+    return {"ok": True, "rows": rows, "counts": counts, "desktop": dt, "mark": mark, "mark_check": mk,
             "desktop_note": None if not desktop else (None if dt else "没找到 Claude 桌面端的会话列表目录，只写命令行能用的会话记录"),
             "codex_home": str(codex_home()), "claude_home": str(claude_home())}
 
 
 def run(days: float = 30, cwd: str | None = None, only: list[str] | None = None, include_all: bool = False,
-        desktop: bool = True, target: str | None = None, dry: bool = True, reasoning: bool = False) -> dict:
-    p = plan(days, cwd, only, include_all, desktop, target)
+        desktop: bool = True, target: str | None = None, dry: bool = True, reasoning: bool = False,
+        mark: bool | None = None) -> dict:
+    """mark：登记进 Codex 的导入记录（None = 按设置，缺省关）。"""
+    p = plan(days, cwd, only, include_all, desktop, target, mark)
     todo = [r for r in p["rows"] if r["state"] in ("new", "update")]
     ver = claude_version()
     mp = _load(MAP, {})
@@ -532,6 +688,8 @@ def run(days: float = 30, cwd: str | None = None, only: list[str] | None = None,
             except Exception as e:
                 r["error"] = repr(e)
         return dict(p, dry=True, done=0)
+    if p["mark"] and not p["mark_check"]["ok"]:     # 要登记、但 Codex 的记录文件格式不对：什么都不写
+        return dict(p, ok=False, dry=False, done=0, error=p["mark_check"]["error"] + "。修好它，或者关掉「登记进 Codex 导入记录」再导。")
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     led_dir = LEDGERS / stamp
     while led_dir.exists():
@@ -592,7 +750,16 @@ def run(days: float = 30, cwd: str | None = None, only: list[str] | None = None,
         save_led()
     _save(MAP, mp)
     save_led()
-    return dict(p, dry=False, done=done, errors=led["errors"], ledger=led_dir.name, ledger_path=str(led_dir))
+    mres = None
+    if p["mark"] and led["threads"]:
+        try:
+            mres = _mark_imports([{"file": t["file"], "thread": t["thread"], "title": PREFIX + t["title"]} for t in led["threads"]], led, led_dir)
+        except Exception as e:
+            mres = {"ok": False, "error": f"登记进 Codex 导入记录失败：{e!r}"}
+        if not mres["ok"]:
+            led["errors"].append(mres["error"])
+            save_led()
+    return dict(p, dry=False, done=done, errors=led["errors"], ledger=led_dir.name, ledger_path=str(led_dir), marked=mres)
 
 
 def resume_cmd(cwd: str, sid: str) -> str:
@@ -650,6 +817,12 @@ def undo(ledger_id: str) -> dict:
                 shutil.copy2(fp, trash / f"replaced-{restored}-{fp.name}")
             shutil.copy2(src, fp)
             restored += 1
+    mres = None
+    if led.get("codex_imports"):
+        try:
+            mres = _unmark_imports(led["codex_imports"], d, kept, trash)
+        except Exception as e:
+            mres = {"ok": False, "error": f"撤回 Codex 导入记录失败：{e!r}"}
     for tid, before in (led.get("map_before") or {}).items():
         if mp.get(tid, {}).get("ledger") != ledger_id:
             continue
@@ -659,6 +832,8 @@ def undo(ledger_id: str) -> dict:
             mp.pop(tid, None)
     _save(MAP, mp)
     led["undone"] = datetime.now().isoformat(timespec="seconds")
-    led["undo"] = {"moved": moved, "restored": restored, "kept": kept, "trash": str(trash) if moved else None}
+    led["undo"] = {"moved": moved, "restored": restored, "kept": kept, "trash": str(trash) if trash.exists() else None,
+                   "codex_imports": mres}
     _save(d / "ledger.json", led)
-    return {"ok": True, "moved": moved, "restored": restored, "kept": kept, "trash": str(trash) if moved else None}
+    return {"ok": True, "moved": moved, "restored": restored, "kept": kept, "trash": str(trash) if trash.exists() else None,
+            "codex_imports": mres}
