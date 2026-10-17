@@ -128,8 +128,60 @@ def diag() -> dict:
             "version": __version__, "frozen": paths.FROZEN, "exe": paths.EXE if paths.FROZEN else None}
 
 
-def _clean(o):
-    return json.loads(json.dumps(o, ensure_ascii=False, default=str))
+def _scrub(o):
+    """回给页面的东西里，账号的完整邮箱 / 名字 / 组织名一律换成打码的（rid 留着，点「显示完整账号」时按它去
+    /api/accounts/reveal 取）。只认带 email 键的字典（就是账号）。"""
+    from .watch import mask_email
+    if isinstance(o, list):
+        return [_scrub(x) for x in o]
+    if not isinstance(o, dict):
+        return o
+    if "email" in o and not isinstance(o.get("email"), (dict, list)):
+        o = dict(o)
+        em, nm, og = o.pop("email", None), o.pop("name", None), o.pop("org_name", None)
+        o["email_masked"] = mask_email(em) or None
+        o["name_masked"] = (nm[:1] + "**") if nm else None
+        o["has_full"] = bool(em or nm or og)
+        o.setdefault("rid", o.get("accountUuid") or "")
+    return {k: _scrub(v) for k, v in o.items()}
+
+
+def _clean(o, reveal: bool = False):
+    o = json.loads(json.dumps(o, ensure_ascii=False, default=str))
+    return o if reveal else _scrub(o)
+
+
+def reveal_accounts() -> dict:
+    """完整账号：{rid: {email, name, org, label}}。只在页面点了「显示完整账号」（或开了「总是显示完整账号」）时来取；
+    只从本机文件读，不联网；不写日志、不进诊断报告。"""
+    from . import watch
+    out: dict[str, dict] = {}
+
+    def put(rid, email=None, name=None, org=None, over=True):
+        if not rid or not (email or name or org) or (rid in out and not over):
+            return
+        out[rid] = {k: v for k, v in (("email", email), ("name", name), ("org", org)) if v}
+    try:
+        acc = claude_sync.accounts()
+        for k in ("cli", "desktop"):
+            a = acc.get(k) or {}
+            put(a.get("accountUuid"), a.get("email"), a.get("name"), a.get("org_name"))
+    except Exception:
+        pass
+    try:
+        for uuid, m in claude_sync._load_names().items():
+            put(uuid, m.get("email"), m.get("name"), None, over=False)
+    except Exception:
+        pass
+    try:
+        watch.tick()                                  # 把 Codex（和刚换的号）也读一遍
+    except Exception:
+        pass
+    for rid, m in watch.FULL.items():
+        put(rid, m.get("email"), m.get("name"), m.get("org"), over=rid.startswith("codex:"))
+    for v in out.values():
+        v["label"] = " · ".join(x for x in (v.get("email"), v.get("name"), v.get("org")) if x)
+    return {"ok": True, "accounts": out}
 
 
 class H(BaseHTTPRequestHandler):
@@ -138,8 +190,8 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
-    def _json(self, obj, code=200):
-        b = json.dumps(_clean(obj), ensure_ascii=False).encode("utf-8")
+    def _json(self, obj, code=200, reveal=False):
+        b = json.dumps(_clean(obj, reveal), ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("content-type", "application/json; charset=utf-8")
         self.send_header("cache-control", "no-store")
@@ -188,6 +240,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "app": "cc-sessionsync", "version": __version__})
             if p.startswith("/api/") and not self._tok_ok():
                 return self._json({"ok": False, "error": "口令不对（页面过期了？刷新一下）"}, 403)
+            if p == "/api/accounts/reveal":           # 唯一会回完整账号的地方（要口令）
+                return self._json(reveal_accounts(), reveal=True)
             r = self._get(p, q)
             if r is not None:
                 return self._json(r)

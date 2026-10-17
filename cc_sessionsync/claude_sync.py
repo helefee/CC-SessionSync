@@ -193,6 +193,7 @@ def cli_account() -> dict:
     name = o.get("displayName") or o.get("fullName")
     _remember(a, o.get("emailAddress"), name, "cli")      # 记下来：以后桌面端登这个号、又认不出邮箱时拿来推测
     return {"accountUuid": a, "organizationUuid": g, "email": o.get("emailAddress"), "name": name,
+            "org_name": o.get("organizationName"),
             "key": f"{a}/{g}" if a and g else None, "via": "claude.json" if a and g else None}
 
 
@@ -528,6 +529,8 @@ def accounts() -> dict:
     except Exception:
         pass
     d = dict(d, **desktop_freshness(d))
+    if not d.get("org_name") and c.get("org_name") and c.get("key") and c["key"] == d.get("key"):
+        d["org_name"] = c["org_name"]                    # 同一个号同一个组织：组织名借命令行那边的
     return {"desktop": _with_folder(d), "cli": _with_folder(c)}
 
 

@@ -368,7 +368,28 @@ def list_all(agent: str | None = None) -> dict:
         x["backups"] = bk.get(f"{x['agent']}:{x['id']}", 0)
     projects = sorted({x["cwd"] for x in items if x.get("cwd")})
     accounts = sorted({a for x in items for a in x.get("accounts") or []})
-    return {"ok": True, "items": items, "projects": projects, "accounts": accounts, "ms": int((time.time() - t0) * 1000)}
+    return {"ok": True, "items": items, "projects": projects, "accounts": accounts, "account_labels": _account_labels(accounts),
+            "ms": int((time.time() - t0) * 1000)}
+
+
+def _account_labels(prefixes: list[str]) -> dict:
+    """账号号前 8 位 → {masked: 打码邮箱, rid: 完整账号号}（筛选下拉框里用；完整邮箱要点眼睛去 /api/accounts/reveal 取）。"""
+    from . import claude_sync
+    from .watch import mask_email
+    known = {}
+    try:
+        for uuid, m in claude_sync._load_names().items():
+            known[uuid] = m.get("email")
+        for a in claude_sync.accounts().values():
+            if a.get("accountUuid"):
+                known[a["accountUuid"]] = a.get("email") or known.get(a["accountUuid"])
+    except Exception:
+        pass
+    out = {}
+    for p in prefixes:
+        hit = next((u for u in known if u.startswith(p)), None)
+        out[p] = {"masked": mask_email(known.get(hit)) if hit else "", "rid": hit or ""}
+    return out
 
 
 def find(agent: str, sid: str) -> dict | None:

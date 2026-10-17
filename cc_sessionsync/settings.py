@@ -22,9 +22,10 @@ from . import paths
 
 FILE = paths.HOME / "settings.json"
 DEFAULTS = {"auto_sync": False, "tray_close": True, "start_min": False, "notify": True, "update_auto": True,
-            "codex_mark_imported": False, "selfcheck_done": False}
+            "codex_mark_imported": False, "selfcheck_done": False,
+            "show_full_accounts": False}
 BOOL_KEYS = ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
-             "tray_hint_shown")
+             "tray_hint_shown", "show_full_accounts")
 _lock = threading.Lock()
 
 
