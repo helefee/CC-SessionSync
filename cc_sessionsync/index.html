@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CC Session Sync</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1d2330;--mut:#667085;--card:#fff;--line:#e3e6ea;--acc:#c96442;--ok:#1a7f37;--bad:#c62828}
+@media (prefers-color-scheme:dark){:root{--bg:#16181d;--fg:#e6e8eb;--mut:#9aa3af;--card:#1f2228;--line:#30343c;--acc:#e07a55;--ok:#4ac26b;--bad:#ef6b6b}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--fg)}
+header{display:flex;gap:16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+header b{font-size:16px}nav button{background:none;border:0;padding:8px 12px;color:var(--mut);cursor:pointer;font:inherit;border-bottom:2px solid transparent}
+nav button.on{color:var(--fg);border-color:var(--acc)}main{max-width:1000px;margin:0 auto;padding:16px 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 14px}
+h3{margin:0 0 8px;font-size:15px}.mut{color:var(--mut)}.ok{color:var(--ok)}.bad{color:var(--bad)}
+button.b{background:var(--acc);color:#fff;border:0;border-radius:7px;padding:7px 14px;cursor:pointer;font:inherit}
+button.g{background:none;color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer;font:inherit}
+button:disabled{opacity:.5;cursor:default}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:5px 6px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-weight:500}code,pre{font:12px/1.45 ui-monospace,Consolas,monospace}pre{white-space:pre-wrap;background:var(--bg);padding:10px;border-radius:8px;max-height:420px;overflow:auto}
+input[type=text],input[type=number],select{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0}.tag{font-size:12px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--mut)}
+#msg{position:fixed;right:16px;bottom:16px;max-width:460px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;box-shadow:0 4px 18px #0003;display:none;white-space:pre-wrap}
+</style></head><body>
+<header><b>CC Session Sync</b><span class="mut">v__VERSION__</span>
+<nav><button data-t="sync" class="on">换号后补齐会话</button><button data-t="codex">Codex → Claude Code</button><button data-t="diag">检测 / 目录</button></nav></header>
+<main>
+<section id="t-sync">
+ <div class="card"><h3>当前账号</h3><div id="acc" class="mut">读取中…</div></div>
+ <div class="card"><h3>补齐到当前账号</h3>
+  <div class="row"><label>按 <select id="src"><option value="desktop">桌面端</option><option value="cli">命令行（CLI）</option></select> 的当前账号算</label>
+  <button class="g" id="syncPlan">刷新 / 演练</button><button class="b" id="syncGo" disabled>补齐</button></div>
+  <div id="syncOut" class="mut">先点「刷新 / 演练」看会补哪些。</div></div>
+ <div class="card"><h3>备份 / 撤回</h3><div id="baks" class="mut"></div></div>
+</section>
+<section id="t-codex" hidden>
+ <div class="card"><h3>把 Codex 对话导进 Claude Code</h3>
+  <div class="mut">只读 Codex 的文件；新写一份 Claude Code 会话（原文件不动），写之前记账本，随时可撤回。工具调用 / 命令输出会折成文字摘要，图片不带。</div>
+  <div class="row"><label>最近 <input type="number" id="cdays" value="30" min="0" style="width:70px"> 天（0 = 不限）</label>
+   <label>项目目录 <input type="text" id="ccwd" placeholder="（全部）" style="width:260px"></label>
+   <label><input type="checkbox" id="cdesk" checked> 同时加进桌面端会话列表</label>
+   <button class="g" id="cPlan">演练</button><button class="b" id="cGo" disabled>导入勾选的</button></div>
+  <div id="cOut" class="mut">先点「演练」。</div></div>
+ <div class="card"><h3>导入账本 / 撤回</h3><div id="leds" class="mut"></div></div>
+</section>
+<section id="t-diag" hidden>
+ <div class="card"><h3>Claude 桌面端数据目录</h3><div id="dirs" class="mut"></div></div>
+ <div class="card"><h3>检测报告</h3><div class="row"><button class="g" id="dLoad">刷新</button><button class="g" id="dCopy">复制</button></div><pre id="dTxt"></pre></div>
+ <div class="card"><h3>排队中的任务</h3><div id="jobs" class="mut"></div></div>
+</section>
+</main><div id="msg"></div>
+<script>
+const TOKEN="__TOKEN__";const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const t=ts=>ts?new Date(ts*1000).toLocaleString():"—";
+async function get(u){const r=await fetch(u);return r.json()}
+async function post(u,b){const r=await fetch(u,{method:"POST",headers:{"content-type":"application/json","x-token":TOKEN},body:JSON.stringify(b||{})});return r.json()}
+let mt;function msg(s,bad){const m=$("#msg");m.textContent=s;m.style.display="block";m.style.color=bad?"var(--bad)":"";clearTimeout(mt);mt=setTimeout(()=>m.style.display="none",9000)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+ document.querySelectorAll("main section").forEach(s=>s.hidden=s.id!=="t-"+b.dataset.t);({sync:loadSync,codex:loadLeds,diag:loadDiag})[b.dataset.t]()});
+function accLine(n,a){if(!a||!a.key)return `${n}：<span class="bad">认不出来</span>`;const who=[a.name,a.email].filter(Boolean).join(" ");
+ return `${n}：<code>${esc(a.key)}</code> ${esc(who)}${a.email_guess?"（推测）":""} <span class="tag">${a.exists?"已有 "+a.count+" 个会话":"还没有文件夹"}</span>`}
+async function loadSync(){const s=await get("/api/status");
+ $("#acc").innerHTML=accLine("桌面端",s.accounts.desktop)+"<br>"+accLine("命令行",s.accounts.cli)+
+ `<br>Claude 桌面端：${s.running.claude?'<span class="bad">开着</span>（同步会排队，等它退出后自动做）':'<span class="ok">没开</span>'}`+
+ (s.jobs.length?`<br>排队中：${s.jobs.map(j=>esc(j.title)).join("；")}`:"");loadBaks()}
+async function loadBaks(){const b=await get("/api/backups");$("#baks").innerHTML=b.length?`<table><tr><th>备份</th><th>账号/组织</th><th>内容</th><th></th></tr>`+
+ b.slice(0,20).map(x=>`<tr><td><code>${esc(x.id)}</code></td><td><code>${esc((x.key||"?").slice(0,17))}</code></td><td>${x.ledger?(x.ledger.what==="restore"?"还原前的备份":"补 "+x.added+" / 刷新 "+x.updated):"老备份"}</td>
+ <td><button class="g" data-r="${esc(x.id)}">撤回</button></td></tr>`).join("")+"</table>":"还没有备份。";
+ document.querySelectorAll("[data-r]").forEach(e=>e.onclick=async()=>{if(!confirm("撤回 "+e.dataset.r+"？撤回前也会先备份。"))return;const r=await post("/api/restore",{backup:e.dataset.r});
+ msg(r.hint||(r.ok?`已撤回：挪走 ${r.removed} 个，换回 ${r.restored} 个`:r.error),!r.ok&&!r.hint);loadSync()})}
+$("#syncPlan").onclick=async()=>{$("#syncOut").textContent="计算中…";const r=await get("/api/sync/plan?source="+$("#src").value);
+ if(!r.ok){$("#syncOut").innerHTML=`<span class="bad">${esc(r.error)}</span>`;$("#syncGo").disabled=true;return}
+ $("#syncGo").disabled=!(r.add.length||r.update.length);
+ $("#syncOut").innerHTML=`目标 <code>${esc(r.target.key)}</code>（已有 ${r.target.count} 个）：可补 <b>${r.add.length}</b>、要刷新 ${r.update.length}；对话记录已不在跳过 ${r.skip_missing}、删过的不复活 ${r.skip_tomb}、已在跳过 ${r.skip_have}`+
+ (r.add.length?`<table><tr><th>最近</th><th>标题</th><th>目录</th></tr>`+r.add.slice(0,60).map(a=>`<tr><td>${t(a.last)}</td><td>${esc(a.title)}${a.archived?' <span class="tag">已归档</span>':""}</td><td><code>${esc(a.cwd)}</code></td></tr>`).join("")+"</table>":"")};
+$("#syncGo").onclick=async()=>{const r=await post("/api/sync",{source:$("#src").value});msg(r.hint||(r.ok?`已补 ${r.done}、刷新 ${r.updated}。打开 Claude 桌面端就能看到。`:r.error),!r.ok&&!r.hint);$("#syncGo").disabled=true;loadSync()};
+const LAB={new:"新导入",update:"更新",same:"导过了",diverged:"已在 Claude 里接着聊过"};
+function ckw(){return {days:$("#cdays").value,cwd:$("#ccwd").value.trim(),desktop:$("#cdesk").checked?"1":"0"}}
+$("#cPlan").onclick=async()=>{$("#cOut").textContent="计算中…";const q=new URLSearchParams(ckw());const r=await get("/api/codex/plan?"+q);
+ const rows=r.rows||[];$("#cGo").disabled=!rows.some(x=>x.state==="new"||x.state==="update");
+ $("#cOut").innerHTML=`Codex 数据 <code>${esc(r.codex_home)}</code> → Claude Code <code>${esc(r.claude_home)}</code>　`+
+ (r.desktop?`桌面端列表写进 <code>${esc(r.desktop.key)}</code>`:esc(r.desktop_note||"不写桌面端列表"))+
+ `<br>新 ${r.counts.new} / 更新 ${r.counts.update} / 导过了 ${r.counts.same} / 不动 ${r.counts.diverged}`+
+ (rows.length?`<table><tr><th></th><th>最近</th><th>标题</th><th>状态</th><th>内容</th><th>目录</th></tr>`+rows.map(x=>{const can=x.state==="new"||x.state==="update";const s=x.stats||{};
+ return `<tr><td><input type="checkbox" class="cc" value="${esc(x.thread)}" ${can?"checked":"disabled"}></td><td>${t(x.mtime)}</td><td>${esc(x.title||"（无标题）")}</td><td>${LAB[x.state]}</td>
+ <td>${x.turns?`${x.turns} 轮 · 工具 ${s.tools||0}${s.images?" · 图片 "+s.images:""}`:""}${x.error?'<span class="bad">'+esc(x.error)+"</span>":""}</td><td><code>${esc(x.cwd)}</code></td></tr>`}).join("")+"</table>":"<br>没找到 Codex 对话。")};
+$("#cGo").onclick=async()=>{const only=[...document.querySelectorAll(".cc:checked")].map(e=>e.value);if(!only.length)return msg("没勾选",1);
+ const b=Object.assign(ckw(),{only});const r=await post("/api/codex/import",b);
+ if(r.hint)msg(r.hint);else if(r.ok===false)msg(r.error,1);else{msg(`已导入 ${r.done} 个（账本 ${r.ledger}）。\n命令行：进对应目录 claude --resume，或在桌面端列表里找「（Codex）」开头的。`+(r.errors&&r.errors.length?"\n失败："+r.errors.join("\n"):""),r.errors&&r.errors.length);
+ $("#cOut").innerHTML+=`<pre>${esc((r.rows||[]).filter(x=>x.resume).map(x=>x.title+"\n  "+x.resume).join("\n"))}</pre>`}$("#cGo").disabled=true;loadLeds()};
+async function loadLeds(){const l=await get("/api/codex/ledgers");$("#leds").innerHTML=l.length?`<table><tr><th>账本</th><th>导入</th><th>文件</th><th></th></tr>`+
+ l.slice(0,20).map(x=>`<tr><td><code>${esc(x.id)}</code></td><td>${x.threads} 个对话</td><td>新建 ${x.created} / 更新 ${x.updated}</td><td>${x.undone?"已撤回":`<button class="g" data-u="${esc(x.id)}">撤回</button>`}</td></tr>`).join("")+"</table>":"还没有导入过。";
+ document.querySelectorAll("[data-u]").forEach(e=>e.onclick=async()=>{if(!confirm("撤回导入 "+e.dataset.u+"？新建的文件挪进回收站。"))return;const r=await post("/api/codex/undo",{ledger:e.dataset.u});
+ msg(r.hint||(r.ok?`已撤回：挪走 ${r.moved}、换回 ${r.restored}`+(r.kept.length?`；${r.kept.length} 个已在 Claude 里接着聊过，没动`:""):r.error),!r.ok&&!r.hint);loadLeds()})}
+async function loadDiag(){const s=await get("/api/status");const d=s.app_dirs;
+ $("#dirs").innerHTML=d.parts.map(p=>`${esc(p.name)}：<code>${esc(p.path)}</code> <span class="mut">${esc(p.why)}</span>`).join("<br>")+
+ `<div class="row">手动指定：<select id="adSel"><option value="">自动（推荐）</option>${d.choices.map(c=>`<option value="${esc(c.path)}" ${d.override===c.path?"selected":""} ${c.exists?"":"disabled"}>${esc(c.label)}　${esc(c.path)}</option>`).join("")}</select>
+ <button class="g" id="adSet">保存</button></div>`;
+ $("#adSet").onclick=async()=>{const r=await post("/api/appdir",{path:$("#adSel").value});msg(r.ok?"已保存":r.error,!r.ok);loadDiag()};
+ const j=await get("/api/jobs");$("#jobs").innerHTML=j.filter(x=>x.state==="waiting").map(x=>`${esc(x.title)} <button class="g" data-c="${esc(x.id)}">取消</button>`).join("<br>")||"没有。";
+ document.querySelectorAll("[data-c]").forEach(e=>e.onclick=async()=>{await post("/api/jobs/cancel",{id:e.dataset.c});loadDiag()});
+ const r=await get("/api/diag");$("#dTxt").textContent=r.text}
+$("#dLoad").onclick=loadDiag;
+$("#dCopy").onclick=async()=>{const s=$("#dTxt").textContent;try{await navigator.clipboard.writeText(s)}catch(e){const a=document.createElement("textarea");a.value=s;document.body.append(a);a.select();document.execCommand("copy");a.remove()}msg("已复制检测报告")};
+const h=location.hash.slice(1).split("-");const nb=document.querySelector(`nav button[data-t="${h[0]}"]`);
+if(nb){nb.click();if(h[1]==="plan")setTimeout(()=>(h[0]==="codex"?$("#cPlan"):$("#syncPlan")).click(),50)}else loadSync();
+</script></body></html>

@@ -1,0 +1,85 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: tag matches __version__
+        run: |
+          v=$(python3 -c "import re;print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', open('cc_sessionsync/__init__.py').read()).group(1))")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != __version__ $v"; exit 1; }
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+      - name: tests
+        run: python -m pip install -e . pytest && python -m pytest -q
+
+  dist:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.12"
+      - name: wheel + sdist
+        run: |
+          python -m pip install build
+          python -m build
+          python -m venv /tmp/v && /tmp/v/bin/pip install dist/*.whl && /tmp/v/bin/cc-sessionsync --version
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: python-dist
+          path: dist/*
+
+  windows-exe:
+    needs: check
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.11"
+          architecture: x64
+      - name: build + smoke test (Nuitka onefile)
+        shell: pwsh
+        run: tools\build_exe.ps1
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: windows-exe
+          path: dist/cc-sessionsync-*-windows-x64.exe*
+          if-no-files-found: error
+
+  release:
+    needs: [dist, windows-exe]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4.3.0
+        with:
+          path: out
+          merge-multiple: true
+      - name: SHA256SUMS
+        run: |
+          cd out
+          sha256sum *.whl *.tar.gz *.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2.3.2
+        with:
+          files: |
+            out/*.whl
+            out/*.tar.gz
+            out/*.exe
+            out/*.exe.sha256
+            out/SHA256SUMS.txt
+          generate_release_notes: true
