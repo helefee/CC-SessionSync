@@ -60,7 +60,8 @@ def jwt(claims: dict) -> str:
     return f"{b({'alg': 'none'})}.{b(claims)}.sig"
 
 
-def build(T: Path) -> dict:
+def build(T: Path, extra: bool = False) -> dict:
+    """extra=True（截图用）：再加一个商店版目录里的团队号、一个只在命令行用过的会话、账号名缓存。"""
     H = T / "home"
     H.mkdir(parents=True, exist_ok=True)
     (T / "noprocs.json").write_text("[]")
@@ -95,21 +96,24 @@ def build(T: Path) -> dict:
     # 第三个账号：商店版（MSIX）虚拟化目录里的一个团队号，有 1 个会话；再来一个只在命令行用过的会话（→ 未知账号）
     A3, O3 = U(), U()
     sid3 = U()
-    w3 = NOW - timedelta(days=4, hours=5)
-    claude_transcript(H / ".claude/projects/-work-mobile" / f"{sid3}.jsonl", sid3, "/work/mobile",
-                      [("App 启动白屏", "是 splash 里同步读了配置，改成异步。"), ("加个启动耗时埋点", "加好了，上报到 /metrics。")], w3)
-    d3 = T / "la/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Roaming/Claude/claude-code-sessions" / A3 / O3
-    d3.mkdir(parents=True, exist_ok=True)
-    ms3 = int(w3.timestamp() * 1000)
-    (d3 / f"local_{U()}.json").write_text(json.dumps({"sessionId": "local_m", "cliSessionId": sid3, "title": "App 启动白屏", "cwd": "/work/mobile",
-                                                       "createdAt": ms3, "lastActivityAt": ms3 + 600000, "isArchived": False}, ensure_ascii=False), encoding="utf-8")
-    sid4 = U()
-    claude_transcript(H / ".claude/projects/-work-scratch" / f"{sid4}.jsonl", sid4, "/work/scratch",
-                      [("随手写个正则：匹配手机号", "^1[3-9]\\d{9}$")], NOW - timedelta(hours=7))
-    ssd = T / "ss"
-    ssd.mkdir(parents=True, exist_ok=True)
-    (ssd / "claude-accounts.json").write_text(json.dumps({A1: {"email": "old.account@example.com", "name": "Old Account", "from": "demo"},
-                                                          A3: {"email": "team@corp.example", "name": "Team Corp", "from": "demo"}}), encoding="utf-8")
+    if extra:
+        w3 = NOW - timedelta(days=4, hours=5)
+        claude_transcript(H / ".claude/projects/-work-mobile" / f"{sid3}.jsonl", sid3, "/work/mobile",
+                          [("App 启动白屏", "是 splash 里同步读了配置，改成异步。"), ("加个启动耗时埋点", "加好了，上报到 /metrics。")], w3)
+        d3 = T / "la/Packages/Claude_pzs8sxrjxfjjc/LocalCache/Roaming/Claude/claude-code-sessions" / A3 / O3
+        d3.mkdir(parents=True, exist_ok=True)
+        ms3 = int(w3.timestamp() * 1000)
+        (d3 / f"local_{U()}.json").write_text(json.dumps({"sessionId": "local_m", "cliSessionId": sid3, "title": "App 启动白屏", "cwd": "/work/mobile",
+                                                           "createdAt": ms3, "lastActivityAt": ms3 + 600000, "isArchived": False}, ensure_ascii=False), encoding="utf-8")
+        sid4 = U()
+        claude_transcript(H / ".claude/projects/-work-scratch" / f"{sid4}.jsonl", sid4, "/work/scratch",
+                          [("随手写个正则：匹配手机号", "^1[3-9]\\d{9}$")], NOW - timedelta(hours=7))
+        ssd = T / "ss"
+        ssd.mkdir(parents=True, exist_ok=True)
+        (ssd / "claude-accounts.json").write_text(json.dumps({A1: {"email": "old.account@example.com", "name": "Old Account", "from": "demo"},
+                                                              A3: {"email": "team@corp.example", "name": "Team Corp", "from": "demo"}}), encoding="utf-8")
+    else:
+        A3 = None
     ldb = T / "cfg/Claude/Local Storage/leveldb"
     ldb.mkdir(parents=True, exist_ok=True)
     (ldb / "000003.log").write_bytes(b'{"eventName":"e","clientTimestamp":"%s","accountUuid":"%s","organizationUuid":"%s"}'
@@ -147,7 +151,7 @@ def build(T: Path) -> dict:
 
 if __name__ == "__main__":
     T = Path(sys.argv[1]).resolve()
-    info = build(T)
+    info = build(T, extra="--serve" in sys.argv or "--extra" in sys.argv)
     if "--serve" in sys.argv:
         port = sys.argv[sys.argv.index("--serve") + 1]
         env = dict({k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_", "CODEX_", "CC_SESSIONSYNC_")) or k == "CC_SESSIONSYNC_FAKE_INSTALL"}, **env_for(T))

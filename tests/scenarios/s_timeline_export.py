@@ -222,6 +222,11 @@ ok(not any("FAKE-NOT-A-TOKEN" in json.dumps(v) for v in rv.values()), "reveal ne
 tl = get(f"/api/timeline/versions?agent=claude&id={sid}")
 ok(tl.get("items") and get(f"/api/timeline/view?snap={tl['items'][0]['id']}")["ok"], "timeline API")
 ok(get("/api/sessions/backup-status")["sched"]["auto"] is True, "backup status API has schedule")
+page = (Path(ui.__file__).parent / "index.html").read_text(encoding="utf-8")
+ok(all(k in page for k in ('id="side"', 'id="tree"', 'id="trMode"', 'id="tbEye"', 'id="pg-timeline"', 'id="sideGrip"', "/api/accounts/reveal",
+                           "/api/timeline/restore", "/api/import", "/api/export", "/api/backup/now", "恢复到 Claude", "按账号", "按项目")),
+   "UI: left panel, tree, reveal eye, timeline, import/export wired")
+ok('class="tabs"' not in page, "UI: old top tabs gone")
 srv.shutdown()
 print("FAILS", FAILS)
 sys.exit(1 if FAILS else 0)
