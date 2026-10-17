@@ -468,6 +468,25 @@ def build(p: Path, sid: str, version: str = DEFAULT_VERSION, title: str | None =
             "chars": sum(len(json.dumps(r, ensure_ascii=False)) for r in recs)}
 
 
+def preview(thread: str, days: float = 3650, reasoning: bool = False, max_turns: int = 60, max_chars: int = 4000) -> dict:
+    """界面的「预览」：按导入时的样子拼一遍（只算，不写），返回前 max_turns 轮的文字（每轮截到 max_chars）。"""
+    hit = next((t for t in threads(days, include_all=True) if t["thread"] == thread or t["path"] == thread), None)
+    if not hit:
+        return {"ok": False, "error": f"没找到 Codex 线程 {thread}"}
+    b = build(Path(hit["path"]), "00000000-0000-0000-0000-000000000000", claude_version(), hit.get("title") or None,
+              reasoning=reasoning)
+    turns = []
+    for r in b["records"]:
+        if r.get("type") not in ("user", "assistant"):
+            continue
+        c = r["message"]["content"]
+        text = c if isinstance(c, str) else "\n\n".join(x.get("text", "") for x in c if isinstance(x, dict))
+        turns.append({"role": r["type"], "ts": r.get("timestamp"), "text": text[:max_chars], "cut": len(text) > max_chars})
+    return {"ok": True, "thread": b["thread"], "title": PREFIX + b["title"], "cwd": b["cwd"], "turns_total": b["turns"],
+            "turns": turns[:max_turns], "more": max(0, len(turns) - max_turns), "stats": b["stats"], "chars": b["chars"],
+            "target": str(claude_home() / "projects" / project_slug(b["cwd"])), "path": hit["path"]}
+
+
 def _dump(recs: list[dict]) -> str:
     return "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in recs)
 
@@ -516,18 +535,13 @@ def _desktop_entry(tdir: Path, cli_sid: str, cwd: str, title: str, mtime: float,
 # （对不上就放弃，不会新建重复的）；没有记录 → 当新会话导入。所以登记了就不会出重复。
 
 def mark_setting() -> bool:
-    try:
-        return bool(json.loads((paths.HOME / "settings.json").read_text(encoding="utf-8")).get("codex_mark_imported"))
-    except Exception:
-        return False
+    from . import settings
+    return bool(settings.get("codex_mark_imported", False))
 
 
 def set_mark_setting(on: bool) -> None:
-    f = paths.HOME / "settings.json"
-    d = _load(f, {})
-    d = d if isinstance(d, dict) else {}
-    d["codex_mark_imported"] = bool(on)
-    _save(f, d)
+    from . import settings
+    settings.update(codex_mark_imported=bool(on))
 
 
 def codex_src_path(f: Path) -> str:

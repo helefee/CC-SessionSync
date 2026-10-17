@@ -1,42 +1,89 @@
 # CC Session Sync
 
-两件事，都带备份 / 账本 / 撤回，都先演练再动手：
+Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、命令行用）。所有改动都先备份、记账本、能撤回，能演练的先演练：
 
-1. **Claude Code 换账号后，旧会话「不见了」→ 补回来。** Claude 桌面端的会话列表按「账号 / 组织」分文件夹存，换号后新号的列表是空的，
-   但对话内容其实都还在本机。这里把别的账号文件夹里的会话登记补进当前账号（桌面端 + 命令行两套登录都能认）。
-2. **把 Codex 的对话导进 Claude Code。** 把 Codex 的线程（`~/.codex/sessions/**/rollout-*.jsonl`）转成一份 Claude Code 会话
+1. **账号同步**：Claude Code 换账号后，旧会话「不见了」→ 补回来。Claude 桌面端的会话列表按「账号 / 组织」分文件夹存，换号后新号的列表是空的，
+   但对话内容其实都还在本机。这里把别的账号文件夹里的会话登记补进当前账号（桌面端 + 命令行两套登录都能认）。**检测到换号会弹通知**。
+2. **Codex → Claude Code**：把 Codex 的线程（`~/.codex/sessions/**/rollout-*.jsonl`）转成一份 Claude Code 会话
    （`~/.claude/projects/<项目>/<会话号>.jsonl`，可选再加一条桌面端会话列表登记），然后 `claude --resume` 或在桌面端里接着聊。
    **Codex 的对话文件只读，一个字节都不改**；只写新文件。（唯一的例外是可选的「登记进 Codex 导入记录」，缺省关，见下文。）
+3. **会话管理**：Claude Code 和 Codex 的会话放一起看、搜（标题 / 全文）、筛，只读查看对话；改名、归档、导出 md / jsonl、在终端里接着聊、
+   删除（先备份进会话备份库，再挪进回收站，不直接删）。
+4. **备份与还原**：会话备份库（`~/.cc-sessionsync/sessions.sqlite`，增量、去重、可定时）、回收站、操作记录（每一步都能撤回）。
+5. **用量统计**、**模型与 API**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
-只用 Python 标准库，Windows / Linux / macOS 都能跑（MSIX 商店版 Claude 桌面端的虚拟化目录也认）。
+> 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
+> （本程序的数据都在 `~/.cc-sessionsync`）。
 
-> 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg。
+![账号同步](docs/screenshots/01-sync-light.png)
 
 ## 安装
 
-- **Windows**：在 [Releases](https://github.com/helefee/CC-SessionSync/releases) 下载 `cc-sessionsync-<版本>-windows-x64.exe`，
-  双击打开本地界面；也可以在命令行里 `cc-sessionsync-….exe <命令>`。（单文件程序，没签名，SmartScreen 可能提示，点「仍要运行」。）
-- **pip**（Python 3.10+）：
+- **Windows（推荐）**：在 [Releases](https://github.com/helefee/CC-SessionSync/releases) 下载 `CCSessionSync-Setup-<版本>.exe`，双击安装。
+  - 装到当前用户目录 `%LOCALAPPDATA%\Programs\CCSessionSync`，**不要管理员权限**；开始菜单（可选桌面）有快捷方式；「设置 → 应用」里能卸载。
+  - 界面用系统自带的 Edge WebView2（Windows 10/11 一般都有）。不弹任何黑框。
+  - 安装包没签名，SmartScreen 可能提示，点「更多信息 → 仍要运行」。发布页有 `.sha256` 可以核对。
+  - 装好的 `CCSessionSync.exe` 也是命令行：`"%LOCALAPPDATA%\Programs\CCSessionSync\CCSessionSync.exe" status`。
+- **pip**（Python 3.10+，Windows / Linux / macOS）：
   ```bash
-  pip install https://github.com/helefee/CC-SessionSync/releases/download/v0.1.1/cc_sessionsync-0.1.1-py3-none-any.whl
-  # 或者从源码
+  pip install "cc-sessionsync[desktop] @ https://github.com/helefee/CC-SessionSync/releases/download/v0.2.0/cc_sessionsync-0.2.0-py3-none-any.whl"
+  # 只要命令行 / 浏览器界面，不要窗口：去掉 [desktop]
   pip install git+https://github.com/helefee/CC-SessionSync
   ```
-  装完有 `cc-sessionsync` 命令；也可以 `python -m cc_sessionsync`。
+  装完有 `cc-sessionsync` 命令；也可以 `python -m cc_sessionsync`。Linux 上窗口要 pywebview 的 GTK 或 Qt 后端；没有就自动用浏览器打开。
 
-## 界面
+## 桌面程序
 
-```bash
-cc-sessionsync            # 等于 cc-sessionsync ui，打开 http://127.0.0.1:8766
-cc-sessionsync ui --port 8766 --no-browser
-cc-sessionsync ui --auto  # 界面开着时顺便自动同步（桌面端没开时补齐）
-```
+- 只开一个：再点快捷方式会把已经开着的窗口叫出来。关窗口缺省缩到托盘（设置里能改），托盘菜单：显示 / 隐藏窗口、立即同步 Claude 会话、
+  自动同步、Codex → Claude Code、会话管理、用量统计、模型与 API、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
+  检查更新、自检、退出。
+- 界面只听 `127.0.0.1:8766`，每个请求都要带页面里的一次性口令（别的网页 / 程序调不了）。
+- **系统通知**：同步 / 导入做完、排队的改动做完、检测到换号、有新版本。可以在设置里关。
 
-三页：「换号后补齐会话」「Codex → Claude Code」「检测 / 目录」。只听 `127.0.0.1`，写操作要带页面里的一次性口令。
+### 检测到换号
+
+每 10 秒看一眼 Claude 桌面端 / 命令行 / Codex 的登录信息（只看文件修改时间，变了才读，几乎不占 CPU），确认稳定后弹一次通知
+「检测到 Claude Code/Codex 账号已切换：旧 → 新」，窗口顶部出现提示条，带「立即同步」「打开」。通知和界面里只显示打码的账号（`z***@example.com`），
+从不读、不显示 token。Windows 的托盘气泡不能放按钮，所以点通知 = 打开窗口，按钮在窗口的提示条上。
+
+### 检查更新（不会自动安装）
+
+- 启动后、之后每 6 小时最多查一次 GitHub 的最新发布（公开接口，不用登录）。
+- 有新版本：**同一个版本只弹一次**托盘通知；顶栏「检查更新」按钮和设置里的检查更新上出现**小红点**，托盘菜单那一项变成
+  「● 有新版本 x.y.z…」、托盘图标也带红点，
+  窗口顶部有提示条（「立即更新」「看看更新了什么」「稍后」「忽略此版本」）。红点一直在，直到你装了这个版本或点了「忽略此版本」。
+- **只有你点「立即更新」才装**：下载安装包 → 核对 sha256（对不上就不装）→ 静默安装 → 重新打开。pip 装的版本只提示 `pip install -U` 命令。
+
+![检查更新](docs/screenshots/22-update-dialog-light.png)
+
+### 各页
+
+| | |
+|---|---|
+| ![Codex → Claude Code](docs/screenshots/03-codex-light.png) | ![演练](docs/screenshots/04-codex-dryrun-light.png) |
+| **Codex → Claude Code**：搜索 / 按时间、项目、状态筛，勾选，右边预览转换后的样子；先「演练」看会新建 / 更新哪些文件，再确认导入。 | 演练结果：每个要写的文件、桌面端列表写进哪个账号、防重复导入开没开。 |
+| ![会话管理](docs/screenshots/07-sessions-dark.png) | ![备份与还原](docs/screenshots/10-backups-light.png) |
+| **会话管理**（深色）：只读查看、改名、归档、导出、在终端里接着聊、删除进回收站，可批量。 | **备份与还原**：排队中的改动、会话备份库、回收站、操作记录、同步备份、导入账本，都能撤回。 |
+| ![用量统计](docs/screenshots/18-usage-light.png) | ![模型与 API](docs/screenshots/20-models-light.png) |
+| **用量统计**：读本机会话日志（同一次请求只算一次），缓存读 / 写分开算；费用「按 API 价折算」，不是实际账单；没价格的模型显示「—」。 | **模型与 API**：Claude Code / Codex 的供应商、模型映射、连通测试；key 存 Windows 凭据管理器，配置文件改之前先备份。 |
+| ![设置](docs/screenshots/13-settings-light.png) | ![诊断](docs/screenshots/15-diag-light.png) |
+| **设置**：主题、托盘、开机自启、通知、自动同步、定时备份、检查更新。 | **诊断 / 自检**：每一项通过 / 注意 / 没通过，附建议；第一次启动自动跑一次。报告里账号打码，可以直接复制发出来。 |
+
+### 会话管理怎么改文件
+
+- **改名**：缺省只改本程序里的显示名（别名），什么文件都不动。勾「也改 Claude/Codex 自己显示的名字」才写：Claude 在会话记录末尾追加一条
+  `custom-title`（Claude Code 自己的改名格式），登记过的再改桌面端列表标题；Codex 在 `session_index.jsonl` 追加一条、并改 state 数据库里的名字
+  （和 Codex 自己改名的做法一样）。改之前先备份。
+- **归档**：Claude 改桌面端列表里的「已归档」；Codex 跟 Codex 自己一样，把会话文件挪进 `archived_sessions/` 并更新数据库。
+- **删除**：先把会话记录完整存进会话备份库，再把文件（和桌面端列表那一条）挪进 `~/.cc-sessionsync/trash/`。回收站里「彻底删除」要再输入 `DELETE` 确认。
+- **还原**：原位置空着就放回原位；原位置已经有文件了就另存一份新的，不覆盖。
+- 要改 Claude 桌面端列表、它又开着：排队，等它退出后再做（见下文「怎么保证安全」）。每一步都进操作记录，可以撤回。
 
 ## 命令行
 
 ```bash
+cc-sessionsync                            # 打开桌面窗口（= cc-sessionsync desktop）
+cc-sessionsync ui --port 8766 --no-browser  # 只起本地网页界面，不开窗口
 cc-sessionsync status                     # 桌面端 / 命令行当前登的号、各账号文件夹、Codex 对话数
 
 # ① 换号后补齐
@@ -61,6 +108,15 @@ cc-sessionsync codex undo 20261017-101800              # 撤回一次导入
 
 cc-sessionsync jobs [--cancel ID]         # 等桌面端退出再做的任务
 cc-sessionsync diag                       # 检测报告（家目录已打码，可以直接发出来）
+cc-sessionsync selfcheck [--offline] [--json]   # 自检；有没通过的项返回 1
+
+# ③ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
+cc-sessionsync sessions list [--agent claude|codex] [-n 50]
+cc-sessionsync sessions backup            # 增量备份进 ~/.cc-sessionsync/sessions.sqlite
+cc-sessionsync sessions export claude <会话号> --fmt md
+cc-sessionsync sessions trash             # 回收站
+cc-sessionsync sessions ops               # 操作记录
+cc-sessionsync usage [--full]             # 用量汇总
 ```
 
 导入后命令行会打印每个会话的打开方式，例如：
@@ -142,9 +198,13 @@ pip install -e . pytest
 python -m pytest -v                                    # 场景测试，全在临时目录里跑
 npm i -g @anthropic-ai/claude-code
 python tools/verify_resume.py "$(command -v claude)"   # 真的 claude --resume 打开导入的会话（本机假 API，不联网不登录）
+python tests/demo_env.py /tmp/demo --serve 8797        # 假数据 + 界面，截图用（只写 /tmp/demo）
 ```
 
-发版：改 `cc_sessionsync/__init__.py` 的 `__version__`，打 `v<版本>` 标签，`release` 工作流会出 Windows exe、wheel、sdist 和 `SHA256SUMS.txt`。
+Windows 安装包：`tools/build_desktop.ps1`（Nuitka 编译 + 隐藏窗口冒烟测试 + Inno Setup），CI 里还会真装一遍、跑自检、再卸载。
+
+发版：改 `cc_sessionsync/__init__.py` 的 `__version__`，打 `v<版本>` 标签，`release` 工作流会出 `CCSessionSync-Setup-<版本>.exe`（+ `.sha256`）、
+wheel、sdist 和 `SHA256SUMS.txt`。
 
 许可：MIT，见 [LICENSE](LICENSE)；第三方声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -152,7 +212,35 @@ python tools/verify_resume.py "$(command -v claude)"   # 真的 claude --resume 
 
 ## English
 
-**CC Session Sync** does two things, both with dry runs, backups, ledgers and undo:
+**CC Session Sync** is a Windows desktop app (also a pip-installable CLI for Windows / Linux / macOS) that manages Claude Code and
+Codex sessions. Everything is backed up, recorded in a ledger and undoable; anything that can be dry-run is.
+
+**Install:** download `CCSessionSync-Setup-<version>.exe` from Releases (per-user install to `%LOCALAPPDATA%\Programs\CCSessionSync`,
+no admin, Start-menu shortcut, uninstaller; uses the system Edge WebView2; unsigned, so SmartScreen may warn; a `.sha256` is published).
+Or `pip install "cc-sessionsync[desktop]"` from the wheel / `pip install git+https://github.com/helefee/CC-SessionSync` (CLI + browser UI).
+
+**Desktop app:** single instance, tray icon (minimize/close to tray, autostart, start hidden), system notifications. The UI listens on
+127.0.0.1:8766 only and every request needs a per-launch token. Pages: Account sync, Codex → Claude Code, Sessions, Backups & restore,
+Settings, Diagnostics; dialogs for Usage, Model & API and Self-check.
+
+- **Account-switch detection:** polls login files by mtime (cheap), debounces, then shows one notification
+  "检测到 Claude Code/Codex 账号已切换：old → new" plus an in-window banner with Sync now / Open. Only masked emails are shown; tokens are
+  never read. Tray balloons cannot carry buttons, so clicking the notification opens the window where the banner has the actions.
+- **Updates are never installed automatically.** At most every 6 hours the app checks the latest GitHub release. A new version gives one tray
+  notification per version, a red dot on the top-bar / settings "Check for updates" buttons and the tray icon, "● 有新版本 …" in the tray menu, and a banner (Update now / What's new /
+  Later / Ignore this version) until you install or ignore it. Only **Update now** downloads the installer, verifies its SHA-256, installs
+  silently and restarts.
+- **Sessions:** list/search/filter Claude Code and Codex sessions, read-only viewer, rename (alias by default; optionally the tool's own
+  title via `custom-title` / Codex `session_index.jsonl` + state DB), archive, export md/jsonl, resume in a terminal, delete (backed up to
+  the session DB, then moved to `~/.cc-sessionsync/trash`; purging needs typing `DELETE`), restore to the original path only if it is free,
+  otherwise as a new copy. Claude Desktop index edits are queued while Desktop runs.
+- **Backups:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
+  operation ledger with undo.
+- **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code
+  and Codex providers, keys in Windows Credential Manager, `apiKeyHelper` / `model_providers`, model list, mapping, connection test, backups
+  before every config write), **Diagnostics / Self-check** (pass / warn / fail with suggested fixes; runs on first launch).
+
+The original two features:
 
 1. **Bring back Claude Code sessions after switching accounts.** Claude Desktop keeps its session list per account/organization
    folder (`claude-code-sessions/<account>/<org>/local_*.json`); after an account switch the new folder is empty although the
@@ -177,8 +265,7 @@ only our records.
 Changes to Claude Desktop's data are deferred while Desktop is running (it would overwrite them on exit): the job is queued,
 a background process waits for Desktop to quit, applies it and relaunches Desktop.
 
-**Install:** download the Windows exe from Releases, or `pip install` the wheel / `pip install git+https://github.com/helefee/CC-SessionSync`.
-Run `cc-sessionsync` for the local web UI (127.0.0.1:8766) or see the command list above.
+Run `cc-sessionsync` for the desktop window (falls back to the browser without pywebview) or see the command list above.
 
 **Conversion limitations:** tool calls are rendered as text (command + truncated output) rather than native `tool_use` blocks;
 reasoning is dropped by default (mostly encrypted; `--reasoning` keeps plaintext summaries); images become placeholders;

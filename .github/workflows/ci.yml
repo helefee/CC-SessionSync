@@ -66,26 +66,43 @@ jobs:
           python -m pip install build
           python -m build
           python -m venv /tmp/v && /tmp/v/bin/pip install dist/*.whl && /tmp/v/bin/cc-sessionsync --version
-          /tmp/v/bin/python -c "import cc_sessionsync, pathlib; assert (pathlib.Path(cc_sessionsync.__file__).parent / 'index.html').exists()"
+          /tmp/v/bin/python -c "import cc_sessionsync, pathlib; d = pathlib.Path(cc_sessionsync.__file__).parent; assert all((d / f).exists() for f in ('index.html', 'icon.ico', 'icon.png', 'tray-badge.ico', 'usage_prices.json', 'fonts/inter-regular.woff2'))"
+          /tmp/v/bin/cc-sessionsync selfcheck --offline
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: python-dist
           path: dist/*
 
-  windows-exe:
+  windows-desktop:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      NUITKA_CACHE_DIR: ${{ github.workspace }}\.nuitka-cache
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: actions/setup-python@v5.6.0
         with:
           python-version: "3.11"
           architecture: x64
-      - name: build + smoke test (Nuitka onefile)
+      - name: Cache Nuitka (C compile cache, downloads)
+        uses: actions/cache@v4.2.3
+        with:
+          path: .nuitka-cache
+          key: nuitka-${{ runner.os }}-${{ hashFiles('tools/requirements-build.txt') }}-${{ hashFiles('cc_sessionsync/**') }}
+          restore-keys: |
+            nuitka-${{ runner.os }}-${{ hashFiles('tools/requirements-build.txt') }}-
+            nuitka-${{ runner.os }}-
+      - name: Inno Setup
         shell: pwsh
-        run: tools\build_exe.ps1
+        run: tools\ci_iscc.ps1
+      - name: Build (Nuitka app, hidden smoke test, Inno Setup installer)
+        shell: pwsh
+        run: tools\build_desktop.ps1
+      - name: Installer smoke test (silent install to a temp dir, run the installed exe, silent uninstall)
+        shell: pwsh
+        run: tools\ci_install_smoke.ps1
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: windows-exe
-          path: dist/cc-sessionsync-*-windows-x64.exe*
+          name: windows-setup
+          path: dist/CCSessionSync-Setup-*.exe*
           if-no-files-found: error
