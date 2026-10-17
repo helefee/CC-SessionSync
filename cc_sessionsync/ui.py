@@ -49,6 +49,43 @@ def _mask_accounts(acc: dict) -> dict:
     return out
 
 
+def backup_settings() -> dict:
+    """自动备份用的设置；0.2.0 设过 session_backup_hours、又没设新键的，按原来的小时数。"""
+    s = settings.load()
+    try:
+        raw = json.loads(settings.FILE.read_text(encoding="utf-8"))
+    except Exception:
+        raw = {}
+    if isinstance(raw, dict) and "session_backup_every" not in raw and raw.get("session_backup_hours") is not None:
+        s["_legacy_hours"] = raw["session_backup_hours"]
+    return s
+
+
+def _check_backup_settings(ch: dict) -> None:
+    from . import sessions
+    if "session_backup_unit" in ch and ch["session_backup_unit"] not in sessions.UNITS:
+        raise ValueError("单位只能是 分钟 / 小时 / 天")
+    if "session_backup_every" in ch or "session_backup_unit" in ch:
+        s = settings.load()
+        every = ch.get("session_backup_every", s.get("session_backup_every"))
+        unit = ch.get("session_backup_unit", s.get("session_backup_unit") or "min")
+        try:
+            every = float(every)
+        except (TypeError, ValueError):
+            raise ValueError("间隔要填数字")
+        if every <= 0 or every * sessions.UNITS[unit] < sessions.MIN_INTERVAL:
+            raise ValueError("间隔最少 5 分钟")
+        ch["session_backup_every"] = int(every) if every == int(every) else every
+        ch["session_backup_unit"] = unit
+        ch["session_backup_hours"] = None                      # 换成新键了，老的删掉
+    for k in ("retention_all_days", "retention_daily_days"):
+        if k in ch:
+            try:
+                ch[k] = max(1, int(ch[k]))
+            except (TypeError, ValueError):
+                raise ValueError("保留天数要填整数")
+
+
 def settings_view() -> dict:
     s = settings.load()
     try:
@@ -366,7 +403,9 @@ class H(BaseHTTPRequestHandler):
             return codex_import.undo(str(b.get("ledger")))
         if p == "/api/settings":
             ch = {k: b[k] for k in ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
-                                    "session_backup_auto", "session_backup_hours", "selfcheck_done") if k in b}
+                                    "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
+                                    "show_full_accounts", "retention_all_days", "retention_daily_days") if k in b}
+            _check_backup_settings(ch)
             if ch:
                 settings.update(**ch)
             if "autostart" in b and os.name == "nt":
@@ -558,7 +597,7 @@ def start_background(auto_sync: bool | None = None) -> None:
     watch.start()
     if not os.environ.get("CC_SESSIONSYNC_NO_USAGE"):
         usage.start_background()
-    sessions.start_auto(settings.get)
+    sessions.start_auto(backup_settings)
     update.auto_check_later(lambda: settings.get("update_auto", True))
     if MODE["desktop"] and not settings.get("selfcheck_done") and not os.environ.get("CC_SESSIONSYNC_NO_SELFCHECK"):
         def first():
