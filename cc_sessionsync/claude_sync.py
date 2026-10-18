@@ -825,7 +825,7 @@ def _model_warn(model: str | None, to_profile: str, from_profile: str) -> str | 
 
 def plan(target: str | None = None, source: str = "desktop") -> dict:
     if source not in SOURCES:
-        return {"ok": False, "error": f"不认识的来源：{source}（只能是 desktop / cli）", "source": source}
+        return {"ok": False, "error": f"不认识的来源：{source}（只能是 desktop / cli / api）", "source": source}
     acc = accounts()[source]
     base = {"source": source, "account": acc, "mode": desktop_mode()}
     fs = all_folders()

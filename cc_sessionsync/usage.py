@@ -746,6 +746,11 @@ def summary(f: dict) -> dict:
                 e[x] += tk[x]
             for x in CPARTS:
                 e[x] += cp[x]
+            if d is by_d:
+                s = e.setdefault("projs", {}).setdefault(proj, [0, 0, 0.0])
+                s[0] += n
+                s[1] += sum(tk.values())
+                s[2] += sum(cp.values())
             for sub_d, k2 in ((e["apps"], "codex" if app == "codex" else "claude"), (e["models"], model)):
                 s = sub_d.setdefault(k2, [0, 0, 0.0])
                 s[0] += n
@@ -757,7 +762,17 @@ def summary(f: dict) -> dict:
     r6 = lambda v: round(v, 6)
     fin = lambda d: [{"key": k, **{x: v[x] for x in ("n", *TOK, "unpriced", "sub", "est")}, **{x: r6(v[x]) for x in CPARTS},
                       "cost": r6(v["cost"]), "apps": sorted(v["app"])} for k, v in sorted(d.items(), key=lambda kv: -kv[1]["n"])]
-    ser = lambda d, kf: [{"h": kf(k), "d": k[:10], **{x: (r6(v[x]) if isinstance(v[x], float) else v[x]) for x in v if x not in ("apps", "models")},
+    top_proj = [k for k, _ in sorted(by_proj.items(), key=lambda kv: -kv[1]["n"])[:8]]
+    for v in by_d.values():                  # 按天的项目分布：只留前 8 个项目，其余并进「其他」（项目可能上千个）
+        pj, other = v.pop("projs", {}), [0, 0, 0.0]
+        v["projs_"] = {k: pj[k] for k in top_proj if k in pj}
+        for k, s in pj.items():
+            if k not in v["projs_"]:
+                other = [other[0] + s[0], other[1] + s[1], other[2] + s[2]]
+        if other[0]:
+            v["projs_"]["\x00other"] = other
+    ser = lambda d, kf: [{"h": kf(k), "d": k[:10], **{x: (r6(v[x]) if isinstance(v[x], float) else v[x]) for x in v if x not in ("apps", "models", "projs_")},
+                          **({"projs": {p2: [s[0], s[1], r6(s[2])] for p2, s in v["projs_"].items()}} if "projs_" in v else {}),
                           "apps": {a2: [s[0], s[1], r6(s[2])] for a2, s in v["apps"].items()},
                           "models": {m2: [s[0], s[1], r6(s[2])] for m2, s in v["models"].items()}} for k, v in sorted(d.items())]
     return {"totals": {**{x: tot[x] for x in ("n", *TOK)}, **{x: r6(tot[x]) for x in CPARTS}, "real": inp_all + tot["out"],

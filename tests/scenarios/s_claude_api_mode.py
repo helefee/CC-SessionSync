@@ -80,6 +80,17 @@ led = json.loads((Path(r["backup"]) / "ledger.json").read_text(encoding="utf-8")
 ok(led["key"].startswith("3p:") and led["profile"] == "3p", "账本记的是 API 模式")
 rr = C.restore(Path(r["backup"]).name)
 ok(rr["ok"] and rr["removed"] == 2 and len(list(B3.glob("local_*.json"))) == 2, "撤回 API 模式的同步")
+# 关闭并同步：桌面端开着 → 排队（任务带 source=api），退出后照队列做，写进 API 模式文件夹
+os.environ["CC_SESSIONSYNC_NO_WATCHER"] = "1"
+from cc_sessionsync import apps, ui as UI
+(T / "running").write_text("1")
+r = UI.sync_now()
+q = apps._load_q()[-1]
+ok(r.get("deferred") and q["args"]["source"] == "api" and "API 模式" in q["title"], "桌面端开着：同步到 API 模式的任务排队（source=api）")
+(T / "running").unlink()
+rr = apps._ops()[q["op"]](**q["args"])
+ok(rr.get("done") == 2 and len(list(B3.glob("local_*.json"))) == 4, "退出后按队列做：写进 API 模式文件夹")
+C.restore(Path(rr["backup"]).name)
 # 文件夹还没建：不自己建
 import shutil
 shutil.rmtree(P3 / "claude-code-sessions"); C.forget()
@@ -89,6 +100,4 @@ ok((P3 / "ant-did").exists() and not (AD / "Claude-3p/ant-did").exists(), "不�
 # 自动同步跟着模式走（3p 没文件夹 → 不写）
 ok(C.auto_tick(force=True) is None, "自动同步：API 模式没文件夹时什么都不写")
 # 关闭并同步：apps 里 claude-sync 带 source=api
-from cc_sessionsync import apps
-ok("api" in C.SOURCES and callable(apps._runners()["claude-sync"]) if hasattr(apps, "_runners") else "api" in C.SOURCES, "claude-sync 任务认 source=api")
 print("FAILS", len(FAILS)); sys.exit(1 if FAILS else 0)
