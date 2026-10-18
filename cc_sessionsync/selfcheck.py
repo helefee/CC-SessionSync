@@ -125,6 +125,21 @@ def check_dirs() -> list[dict]:
             out.append(_item(i, name, "pass", f"{p}（{n}{'+' if n >= 2000 else ''} 项）"))
         except Exception as e:
             out.append(_item(i, name, "fail", f"{p}：{type(e).__name__}: {e}", "检查目录权限"))
+    try:                                   # API 模式（3P）：数据目录、桌面端当前模式、用哪个目录
+        i = claude_sync.api_info()
+        m = claude_sync.desktop_mode()
+        mode = "API 模式（3P）" if m["mode"] == "3p" else "订阅登录"
+        if not i["base"]:
+            out.append(_item("claude-api-mode", "Claude 桌面端 API 模式", "pass", f"桌面端：{mode}；没用过 API 模式（没有 Claude-3p 数据目录）"))
+        else:
+            b = i["bucket"]
+            det = (f"桌面端：{mode}（{m['why']}）；数据目录 {i['base']}（{i['why']}）；供应商 {i['provider'] or '—'}；"
+                   + (f"会话列表 {b['count']} 个（所有供应商共用）" if b else "还没有会话列表文件夹"))
+            warn = m["mode"] == "3p" and not b
+            out.append(_item("claude-api-mode", "Claude 桌面端 API 模式", "warn" if warn else "pass", det,
+                             "在桌面端的 API 模式里开一个 Claude Code 会话后才能往里同步" if warn else ""))
+    except Exception as e:
+        out.append(_item("claude-api-mode", "Claude 桌面端 API 模式", "warn", f"{type(e).__name__}: {e}", ""))
     return out
 
 
