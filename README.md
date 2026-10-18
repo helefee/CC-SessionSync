@@ -16,7 +16,9 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    操作记录（每一步都能撤回）。
 6. **DeepSeek Harness ⇄ Claude Code（0.2.5）**：DeepSeek Harness（dsh）的会话也在会话管理里（只读），能导成 Claude Code 会话接着聊，
    也能把 Claude Code 会话导成一个**新的** dsh 会话；dsh 已有的会话一个字节都不改。用量统计也算 dsh 的。
-7. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
+7. **Cursor ⇄ Claude Code（0.2.6）**：Cursor 的对话（编辑器里的 Agent / Chat、agent 记录、`cursor-agent` 命令行）也在会话管理里（只读），
+   能导成 Claude Code 会话接着聊；反方向导出一份给 Cursor 的上下文文件（不写 Cursor 的数据库，原因见下）。界面字号和缩放可调（0.2.6）。
+8. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
 > 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
 > （本程序的数据都在 `~/.cc-sessionsync`）。
@@ -220,6 +222,88 @@ DeepSeek Harness 分开的细线也画出来；每次备份一个点，拖竖线
 |---|---|
 | ![增长曲线](docs/screenshots/v025-timeline-growth-light.png) | ![拖到某个时间点](docs/screenshots/v025-timeline-growth-drag.png) |
 
+### Cursor ⇄ Claude Code（0.2.6）
+
+**Cursor 把对话存在哪**（按本机 Cursor 3.25 看到的结构；只看键名 / 字段名，不看内容）：
+
+- **编辑器**：`%APPDATA%\Cursor\User\globalStorage\state.vscdb`（macOS `~/Library/Application Support/Cursor/User/…`，Linux `~/.config/Cursor/User/…`），
+  一个 SQLite（常常上 GB）。表 `cursorDiskKV` 里：`composerData:<对话号>` 是一个对话的头（标题、时间、模式 agent / chat、模型、所在工作区、
+  子代理的父对话、按顺序的消息号列表 `fullConversationHeadersOnly`），`bubbleId:<对话号>:<消息号>` 是一条条消息（`type` 1 = 你、2 = Cursor；
+  文字、思考、工具调用 `toolFormerData`（名字、参数、结果、状态）、图片、token 数）。表 `composerHeaders` 是列表用的索引（归档、子代理）。
+  `agentKv:blob:<sha>` 是新版 agent 的内部状态（protobuf，按内容寻址），对话头里还有 `conversationState` / `blobEncryptionKey`——这些本程序不读也不碰。
+- **工作区**：`…\User\workspaceStorage\<hash>\workspace.json` 记着这个工作区对应哪个文件夹，用来按项目分组。
+- **agent 记录**：`~/.cursor/projects/<项目>/agent-transcripts/<对话号>/<对话号>.jsonl`（子代理在 `subagents/` 里），每行一条
+  `{role, message:{content:[text | tool_use]}}`；只有文字和工具调用，没有工具结果、没有时间。编辑器数据库里找得到同一个对话时用数据库那份。
+- **`cursor-agent` 命令行**：`~/.cursor/chats/<md5(目录)>/<对话号>/store.db`（`meta` 表 + 内容寻址的 `blobs`，根是 protobuf，消息是 JSON）。
+  本机没装命令行，这个格式是照公开资料和样本做的，测试里有样本。
+
+本程序只读这些文件：Cursor 没开时按 `immutable` 打开（不建锁文件、不碰 WAL），开着时按只读打开；每次只按键名前缀取需要的那几段。
+读出来的东西整理成一份统一格式的副本 `~/.cc-sessionsync/cursor-mirror/`（没变就不重写），会话备份、时间线、查看、导入都用这份副本。
+
+- **检测**：装在哪 / 版本、开没开（只看进程名）、数据库和 `~/.cursor` 在哪、找到几个对话。「诊断 → 数据目录」里可以手动指定；环境变量 `CURSOR_USER_DIR` /
+  `CURSOR_CONFIG_DIR` 优先。
+- **会话管理**：多一个来源「Cursor」（筛选 + 左侧分组「Cursor · 项目」），只读看对话；可以导出、改显示名（只改本程序里的名字）；
+  **不能**归档 / 删除 / 原地恢复。Cursor 的对话也进会话备份库和时间线，时间线里只能「另存为新的 Claude Code 会话」。
+- **Cursor → Claude Code**（页面「Cursor⇄Claude」、会话的「导进 Claude Code…」，或 `cc-sessionsync cursor to-claude`）：每个对话写成一份新的
+  Claude Code 会话（标题带「（Cursor）」，可选登记进桌面端列表；桌面端开着时排队）。再导一次：Cursor 那边有新内容 → 原地更新；没变 → 跳过；
+  你已经在 Claude 里接着聊过 → 不动。先演练，账本在 `~/.cc-sessionsync/cursor-import/`，能撤回（新建的挪进回收站，之后又聊过的不动）。
+- **Claude Code / Codex / DeepSeek Harness → Cursor**：任何一个会话的「…」→「给 Cursor 用（导出上下文文件）…」（或 `cc-sessionsync cursor context`）。
+  写一份 Markdown（对话文字 + 一行一个的工具摘要）：缺省写到 `~/.cc-sessionsync/exports/cursor/`；勾「写进项目」就写到项目里的
+  `.cursor/sessionsync/<标题>-<号>.md`。然后在 Cursor 里新开一个对话，粘贴提示的那句（`@.cursor/sessionsync/….md 这是之前的对话记录…`，写好时自动复制）。
+  也有账本、能撤回。要一直带着的话，可以自己把这份文件挪进 `.cursor/rules/`。
+
+**为什么不直接写进 Cursor 的对话列表**：试过评估，结论是做不安全——
+
+1. 格式没公开、每个版本都在变（本机这版的对话头是第 18 版），一个对话要同时改三处（`composerData` + 每条 `bubbleId`、`composerHeaders`、工作区里的
+   `composer.composerData`），漏一处 Cursor 就不显示或显示不全；
+2. 新版 agent 对话的真正状态在 `conversationState` / `agentKv` 里（protobuf + 加密 key），本程序造不出来；只有消息、没有这个状态的对话，
+   就算列表里看得到，接着聊也接不上；
+3. 数据库是 Cursor 自己的、常常上 GB，Cursor 一开就在写；写坏了影响的是 Cursor 本身；
+4. 不登录 Cursor、不真调模型，没法验证「打开能接着聊」。
+
+所以只给它一份能 @ 的文件：不碰 Cursor 的数据，效果是「新对话里带着之前的上下文」。
+
+**转换是有损的**：
+
+| | Cursor → Claude Code | Claude Code / Codex / dsh → Cursor（上下文文件） |
+|---|---|---|
+| 文字 | 带 | 带 |
+| 工具调用 / 结果 | 变成文字（「〔Cursor 调用了 …〕」+ 参数 + 截短的输出，缺省 20 行 / 2000 字；出错的标「出错」） | 一行一个工具摘要 |
+| 代码块 / 改动（diff） | 当文字带（在回复或工具结果里） | 当文字带 |
+| 思考 | 缺省丢；可选当普通文字带上（不是 Claude 的思考块） | 丢 |
+| 图片 | 「[图片 ×N，没有带过来]」占位 | 占位文字（和会话管理里看到的一样） |
+| Cursor 塞的上下文（规则、打开的文件、`<user_info>` 等） | 不带 | — |
+| 模型 / token | 助手消息记成 `cursor-import`，0 token | — |
+| 接着聊 | `claude --resume` / 桌面端列表 | 在 Cursor 里新开对话 @ 这份文件 |
+
+- agent 记录里没有工具结果和时间，导过去只有工具调用；只有 agent 记录的对话，工作目录按项目名去对编辑器里认识的工作区，对不上就记成家目录。
+- 子代理的对话缺省不列（父对话里有它的结果）；只有 `agentKv` 状态、没有消息的对话（极少见）不读。
+- Cursor 的用量 / 价格不算（本地没有可靠的数据）。
+- CI 每次用最新的 Claude Code 在临时目录里、连本机的假模型，把编辑器 / agent 记录 / 命令行三种来源导过来的会话都 `claude --resume` 接着聊一遍
+  （`tools/verify_cursor.py`），并检查 Cursor 的文件一个字节都没变。
+
+| | |
+|---|---|
+| ![Cursor⇄Claude](docs/screenshots/v026-cursor-page.png) | ![演练](docs/screenshots/v026-cursor-dryrun.png) |
+| 检测 + 选对话 + 选项。 | 演练：写到哪、几个、每个带了什么。 |
+| ![只读看 Cursor 对话](docs/screenshots/v026-sessions-cursor-view.png) | ![给 Cursor 用](docs/screenshots/v026-context-dialog.png) |
+| 会话管理里的 Cursor 对话（只读）。 | 反方向：导出一份给 Cursor @ 的上下文文件。 |
+
+### 字号与界面缩放（0.2.6）
+
+- 缺省字号调大了一号（正文 15px，最小的标签 12px）。
+- 「设置 → 外观与窗口」：**字号** 小 / 标准 / 大 / 特大；**界面缩放** 80%–200%（每次 10%），快捷键 `Ctrl` + `=` 放大、`Ctrl` + `-` 缩小、
+  `Ctrl` + `0` 还原，也可以按住 `Ctrl` 滚滚轮。两个都会记住。
+- Windows 桌面版按显示器的缩放（125% / 150%）清晰显示（DPI 感知），上面的缩放是在这之外再放大。顶栏放不下时只留图标（鼠标停上去看名字）。
+
+| 100% | 125% | 150% |
+|---|---|---|
+| ![](docs/screenshots/v026-settings-dpi1.png) | ![](docs/screenshots/v026-settings-dpi1.25.png) | ![](docs/screenshots/v026-settings-dpi1.5.png) |
+
+| 界面缩放 150% | 字号「特大」 |
+|---|---|
+| ![](docs/screenshots/v026-zoom150.png) | ![](docs/screenshots/v026-font-xl.png) |
+
 ### 检查更新（不会自动安装）
 
 - 启动后、之后每 6 小时最多查一次 GitHub 的最新发布（公开接口，不用登录）。
@@ -293,11 +377,19 @@ cc-sessionsync dsh from-claude [--only 末几位] [--again] [--apply]   # 只新
 cc-sessionsync dsh ledgers                             # 导入账本
 cc-sessionsync dsh undo 20261018-151308               # 撤回一次导入
 
+# ④ Cursor ⇄ Claude Code（Cursor 的数据只读）
+cc-sessionsync cursor detect                           # 装在哪、数据库 / ~/.cursor 在哪、开没开、几个对话
+cc-sessionsync cursor list [-n 50]                     # 列出 Cursor 对话
+cc-sessionsync cursor to-claude [--only 末几位] [--reasoning] [--subagents] [--no-desktop] [--apply]
+cc-sessionsync cursor context <claude|codex|dsh|cursor> <会话号> [--project] [--apply]   # 给 Cursor 用的上下文文件
+cc-sessionsync cursor ledgers                          # 账本
+cc-sessionsync cursor undo 20261018-201957            # 撤回
+
 cc-sessionsync jobs [--cancel ID]         # 等桌面端退出再做的任务
 cc-sessionsync diag                       # 检测报告（家目录已打码，可以直接发出来）
 cc-sessionsync selfcheck [--offline] [--json]   # 自检；有没通过的项返回 1
 
-# ④ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
+# ⑤ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
 cc-sessionsync sessions list [--agent claude|codex] [-n 50]
 cc-sessionsync sessions backup            # 增量备份进 ~/.cc-sessionsync/sessions.sqlite
 cc-sessionsync sessions export claude <会话号> --fmt md
@@ -462,6 +554,19 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Cursor ⇄ Claude Code (0.2.6):** reads Cursor's editor DB (`User/globalStorage/state.vscdb`: `cursorDiskKV` `composerData:<id>` +
+  `bubbleId:<id>:<bubble>`, `composerHeaders`; `workspaceStorage/<hash>/workspace.json` for grouping), agent transcripts
+  (`~/.cursor/projects/*/agent-transcripts`) and `cursor-agent` CLI stores (`~/.cursor/chats/<md5(cwd)>/<id>/store.db`) strictly read-only
+  (`immutable=1` when Cursor is closed, `mode=ro` otherwise, prefix range queries) into a normalized mirror used for viewing, backups, timeline
+  and import. Cursor → Claude Code: text, tool calls/results as text (clipped), code/diffs as text, reasoning opt-in as text, images as
+  placeholders, injected context dropped; dry-run, ledger + hash-checked undo, idempotent update; verified in CI with `claude --resume`
+  for all three sources (`tools/verify_cursor.py`). Claude Code / Codex / dsh → Cursor is an exported Markdown context file (optionally in
+  `<project>/.cursor/sessionsync/`) that you @-mention in a new Cursor chat — writing into Cursor's DB is not done because the format is
+  undocumented and versioned, a chat spans three stores, new agent chats depend on opaque/encrypted `conversationState`/`agentKv` state,
+  and it cannot be verified without logging in.
+- **Font size & zoom (0.2.6):** larger default text (15px body, ≥12px labels), font size presets, 80–200% UI zoom (Ctrl+= / Ctrl+- / Ctrl+0,
+  Ctrl+wheel), remembered; per-monitor DPI awareness on Windows; top nav collapses to icons when it doesn't fit.
+- **Fix (0.2.6):** dsh → Claude Code with "register in desktop list" crashed (`_desktop_entry() got an unexpected keyword argument 'prefix'`).
 - **Timeline growth curve (0.2.5):** total messages across all backed-up sessions per backup run (with per-app lines), draggable cursor.
 - **Account-switch false positive fixed (0.2.5):** a months-old `000005.ldb` in Claude Desktop's Local Storage still held another account's
   telemetry; whenever the current account's records were uploaded/compacted away, "newest record wins" picked the stale account and the
