@@ -344,6 +344,52 @@ def _codex_lines(lines, st: dict, fid: str, ctx: dict, hours: set, rows: list, p
             hours.add(int(ts // 3600))
 
 
+DSH_PROV = {"deepseek-account": "DeepSeek（账号登录）", "deepseek": "DeepSeek API"}
+
+
+def _dsh_rows(L: dict, fid: str, hours: set, rows: list, pt=None, mults=None) -> None:
+    """DeepSeek Harness 的一个会话 → 每次模型调用一行。dsh 的 inputTokens 不含缓存命中（缓存读 / 写另记），和 Claude 的口径一样。"""
+    from . import dsh
+    for ev in dsh.usage_of(L):
+        t = (ev["input"], ev["cache_read"], ev["cache_write"], 0, ev["output"])
+        if not sum(t):
+            continue
+        prov = ev["provider"] or "dsh"
+        prov = DSH_PROV.get(prov, "dsh · " + prov)
+        rows.append(mkrow(f"ds:{ev['sid']}:{ev['msg']}", "dsh", "log", ev["ts"], ev["sid"], prov, 0, ev["model"] or "", t,
+                          ev["reasoning"], 0, fid, stop=1, proj=ev.get("cwd") or "", pt=pt, mults=mults))
+        hours.add(int(ev["ts"] // 3600))
+
+
+def _scan_dsh(c, known: dict, full: bool, pt, mults, hours: set) -> int:
+    """dsh 的会话文件是 zstd 压缩的，不能从中间接着读：变了就整个解一遍（键会去重）。只读，从不写 dsh 的文件。"""
+    from . import dsh
+    n = 0
+    for sf in dsh.session_files():
+        p = sf["file"]
+        if sf["version"] != dsh.FORMAT:
+            continue
+        try:
+            stt = p.stat()
+        except OSError:
+            continue
+        fid = _fid(p, stt)
+        row = known.get(fid)
+        if row and not full and row[3] == stt.st_size and row[4] == stt.st_mtime and row[1] == str(p):
+            continue
+        try:
+            L = dsh.load(p)
+        except Exception:
+            continue                                   # 正在写 / 坏了：下次再看
+        rows: list = []
+        _dsh_rows(L, fid, hours, rows, pt, mults)
+        if rows:
+            c.executemany(UPSERT, rows)
+        c.execute("INSERT OR REPLACE INTO files VALUES(?,?,?,?,?,?,?)", (fid, str(p), "dsh", stt.st_size, stt.st_mtime, stt.st_size, "{}"))
+        n += 1
+    return n
+
+
 def _migrate(c: sqlite3.Connection) -> dict | None:
     """库是老版本（0.2.3 及以前）：把还在的文件从头重读一遍（新口径 + 每条的费用拆分）；已经删掉的文件留下的老记录不丢，
     按存着的 token 重算费用。Codex 的键改了，还在的文件对应的老记录先删掉（重读时按新键写回）。"""
@@ -421,6 +467,11 @@ def scan(full: bool = False) -> dict:
                 c.execute("INSERT OR REPLACE INTO files VALUES(?,?,?,?,?,?,?)",
                           (fid, str(p), kind, stt.st_size, stt.st_mtime, off + end, json.dumps(state, separators=(",", ":"))))
                 nfiles += 1
+            try:
+                nfiles += _scan_dsh(c, known, full, pt, mults, hours)
+                STATE.pop("dsh_error", None)
+            except Exception as e:                     # dsh 读不了不影响 Claude / Codex 的统计
+                STATE["dsh_error"] = f"{type(e).__name__}: {e}"
             _dedupe_ridless(c)
             c.commit()
             if mig or c.execute("SELECT 1 FROM calls WHERE coalesce(ver,0) < ? LIMIT 1", (SCHEMA,)).fetchone():
@@ -752,7 +803,7 @@ def summary(f: dict) -> dict:
                 s[0] += n
                 s[1] += sum(tk.values())
                 s[2] += sum(cp.values())
-            for sub_d, k2 in ((e["apps"], "codex" if app == "codex" else "claude"), (e["models"], model)):
+            for sub_d, k2 in ((e["apps"], app if app in ("codex", "dsh") else "claude"), (e["models"], model)):
                 s = sub_d.setdefault(k2, [0, 0, 0.0])
                 s[0] += n
                 s[1] += sum(tk.values())

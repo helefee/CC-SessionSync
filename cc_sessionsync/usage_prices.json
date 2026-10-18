@@ -288,6 +288,17 @@
 0.014,
 0.0
 ],
+"deepseek-flash": {
+"p": [
+0.3,
+1.2,
+0.006,
+0,
+0
+],
+"verified": "2026-10-18",
+"ref": "deepseek"
+},
 "deepseek-reasoner": [
 0.44,
 1.32,
@@ -312,18 +323,28 @@
 0.028,
 0.0
 ],
-"deepseek-v4-flash": [
+"deepseek-v4-flash": {
+"p": [
 0.3,
 1.2,
 0.006,
-0.0
+0,
+0
 ],
-"deepseek-v4-pro": [
+"verified": "2026-10-18",
+"ref": "deepseek"
+},
+"deepseek-v4-pro": {
+"p": [
 1.32,
 3.96,
 0.044,
-0.0
+0,
+0
 ],
+"verified": "2026-10-18",
+"ref": "deepseek"
+},
 "devstral-2-2512": [
 0.4,
 2.0,
@@ -1165,6 +1186,7 @@
 },
 "_refs": {
 "anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
-"openai": "https://platform.openai.com/docs/pricing"
+"openai": "https://platform.openai.com/docs/pricing",
+"deepseek": "https://api-docs.deepseek.com/quick_start/pricing（按高峰价；错峰时段官方半价，这里没算）"
 }
 }

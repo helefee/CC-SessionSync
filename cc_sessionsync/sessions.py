@@ -512,6 +512,15 @@ def account_groups(items: list[dict]) -> list[dict]:
                 g["3p"]["n"] += 1
             elif k:
                 claude_g(k)["n"] += 1
+        elif x["agent"] == "dsh":                # DeepSeek Harness：按供应商分（记录里只有 provider id，没有账号）
+            prov = x.get("provider") or ""
+            k = "dsh:" + (prov or "-")
+            if k not in g:
+                g[k] = {"key": k, "kind": "dsh", "rid": "", "provider": prov or None,
+                        "masked": "DeepSeek Harness" + (f" · {prov}" if prov else ""), "tags": [], "current": False,
+                        "folders": [], "n": 0, "hint": "DeepSeek Harness 的会话（~/.dsh/sessions），按记录里的供应商分"}
+            g[k]["n"] += 1
+            x["gacct"] = k
         else:
             prov = x.get("provider") or "openai"
             k = "codex:" + prov
@@ -524,7 +533,7 @@ def account_groups(items: list[dict]) -> list[dict]:
             g[k]["n"] += 1
             x["gacct"] = k
     unk = sum(1 for x in items if x.get("gacct") == "unknown")
-    out = sorted(g.values(), key=lambda v: ({"claude": 0, "api": 1}.get(v["kind"], 2), not v["current"], -v["n"]))
+    out = sorted(g.values(), key=lambda v: ({"claude": 0, "api": 1, "codex": 2}.get(v["kind"], 3), not v["current"], -v["n"]))
     if unk:
         out.append({"key": "unknown", "kind": "unknown", "rid": "", "masked": "未知账号", "tags": [], "current": False,
                     "folders": [], "n": unk, "hint": "只在命令行用过、没在任何桌面端账号里登记的会话"})

@@ -510,7 +510,7 @@ def summary(sf: dict) -> dict:
                      subagent=h.get("origin") == "subagent", parent=h.get("parentSession"))
             if h.get("version") != FORMAT:
                 s["error"] = f"头里写的是第 {h.get('version')} 版"
-            title, model, last = None, None, 0.0
+            title, model, provider, last = None, None, None, 0.0
             usage = {"input": 0, "output": 0, "cache_read": 0, "cache_write": 0, "reasoning": 0, "calls": 0}
             for e in evs:
                 t = e.get("type")
@@ -519,7 +519,10 @@ def summary(sf: dict) -> dict:
                     title = (e.get("data") or {}).get("title") or title
                 elif t == "assistant/message":
                     d = e.get("data") or {}
-                    model = ((d.get("message") or {}).get("source") or {}).get("model") or model
+                    src = (d.get("message") or {}).get("source") or {}
+                    model = src.get("model") or model
+                    if src.get("provider") and src.get("provider") != IMPORT_PROVIDER:
+                        provider = src["provider"]
                     u = d.get("usage")
                     if isinstance(u, dict):
                         usage["calls"] += 1
@@ -530,7 +533,7 @@ def summary(sf: dict) -> dict:
                         usage["reasoning"] += int(u.get("reasoningTokens") or 0)
             ents = entries(evs)
             first = next((" ".join(x["text"].split())[:200] for x in ents if x["role"] == "user"), "")
-            s.update(title=title, first=first, model=model, last=max(last, s["created"]), usage=usage, events=len(evs),
+            s.update(title=title, first=first, model=model, provider=provider, last=max(last, s["created"]), usage=usage, events=len(evs),
                      msgs=sum(1 for x in ents if x["role"] in ("user", "assistant")), frames=L["frames"])
         except Exception as e:
             s["error"] = f"读不了：{e}"
@@ -558,7 +561,7 @@ def sessions(names: dict | None = None) -> list[dict]:
                     "tool_title": tool_title, "first": s.get("first") or "", "cwd": s.get("cwd"),
                     "last": max(s.get("last") or 0, s["mtime"]), "size": s["size"], "archived": False, "registered": True,
                     "visible": not s.get("error"), "why": s.get("error"), "file": str(sf["file"]), "model": s.get("model"),
-                    "format": s.get("format"), "subagent": s.get("subagent", False), "msgs": s.get("msgs"),
+                    "provider": s.get("provider"), "format": s.get("format"), "subagent": s.get("subagent", False), "msgs": s.get("msgs"),
                     "imported": (tool_title or "").startswith(TO_DSH_PREFIX), "accounts": [],
                     "resume": None if s.get("error") else resume_cmd(s.get("cwd"), sid)})
     return out
@@ -596,22 +599,28 @@ def usage_events() -> list[dict]:
             L = load(sf["file"])
         except Exception:
             continue
-        sid = L["header"].get("id") or sf["dir"].name
-        for e in L["events"]:
-            if e.get("type") != "assistant/message":
-                continue
-            d = e.get("data") or {}
-            u = d.get("usage")
-            if not isinstance(u, dict):
-                continue
-            src = (d.get("message") or {}).get("source") or {}
-            if src.get("provider") == IMPORT_PROVIDER:
-                continue
-            out.append({"sid": sid, "ts": (e.get("time") or 0) / 1000, "provider": src.get("provider"), "model": src.get("model"),
-                        "input": int(u.get("inputTokens") or 0), "output": int(u.get("outputTokens") or 0),
-                        "cache_read": int(u.get("cacheReadTokens") or 0), "cache_write": int(u.get("cacheWriteTokens") or 0),
-                        "reasoning": int(u.get("reasoningTokens") or 0),
-                        "msg": (d.get("message") or {}).get("id") or f"{sid}:{e.get('seq')}", "cwd": L["header"].get("cwd")})
+        out += usage_of(L, sf["dir"].name)
+    return out
+
+
+def usage_of(L: dict, fallback_id: str = "") -> list[dict]:
+    out = []
+    sid = L["header"].get("id") or fallback_id
+    for e in L["events"]:
+        if e.get("type") != "assistant/message":
+            continue
+        d = e.get("data") or {}
+        u = d.get("usage")
+        if not isinstance(u, dict):
+            continue
+        src = (d.get("message") or {}).get("source") or {}
+        if src.get("provider") == IMPORT_PROVIDER:
+            continue
+        out.append({"sid": sid, "ts": (e.get("time") or 0) / 1000, "provider": src.get("provider"), "model": src.get("model"),
+                    "input": int(u.get("inputTokens") or 0), "output": int(u.get("outputTokens") or 0),
+                    "cache_read": int(u.get("cacheReadTokens") or 0), "cache_write": int(u.get("cacheWriteTokens") or 0),
+                    "reasoning": int(u.get("reasoningTokens") or 0),
+                    "msg": (d.get("message") or {}).get("id") or f"{sid}:{e.get('seq')}", "cwd": L["header"].get("cwd")})
     return out
 
 
