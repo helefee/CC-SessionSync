@@ -145,7 +145,7 @@ def cli_store(home: Path, cwd: str, msgs: list[dict], name="New Agent", agent_id
         h = hashlib.sha256(b).digest()
         c.execute("insert or ignore into blobs values(?, ?)", (h.hex(), b))
         ids.append(h)
-    root = b"".join(_pb_bytes(1, h) for h in ids) + _pb_bytes(9, ("file://" + cwd).encode())
+    root = b"".join(_pb_bytes(1, h) for h in ids) + _pb_bytes(9, (Path(cwd).as_uri() if Path(cwd).is_absolute() else "file://" + cwd).encode())
     rid = hashlib.sha256(root).hexdigest()
     c.execute("insert into blobs values(?, ?)", (rid, root))
     meta = {"agentId": aid, "latestRootBlobId": rid, "name": name, "mode": "auto-run", "createdAt": 1_760_000_500_000, "lastUsedModel": "gpt-5"}

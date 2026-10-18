@@ -156,6 +156,7 @@ rows2 = C.refresh(force=True)
 ok(len(rows2) == 6 and C._STATE["error"], "broken store.db skipped with an error note")
 ok(C.pb_fields(b"\x0a\x02hi\x10\x05") == [(1, 2, b"hi"), (2, 0, 5)], "protobuf reader")
 ok(C.uri_path("file:///c%3A/Users/x/proj") == "C:\\Users\\x\\proj" and C.uri_path("file:///home/x") == "/home/x", "uri → path")
+ok(C.uri_path("file://D:\\a\\b") == "D:\\a\\b" and C.uri_path("file:///D:/a/b%20c") == "D:\\a\\b c", "uri → path (windows forms)")
 ok(C.user_text("<user_info>a</user_info>") is None and C.user_text("<user_query>\nhi\n</user_query>") == "hi", "user_query unwrap")
 
 env = dict(os.environ)

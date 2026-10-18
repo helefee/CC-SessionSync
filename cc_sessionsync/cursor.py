@@ -209,6 +209,9 @@ def uri_path(u) -> str | None:
         return None
     if not u.startswith("file:"):
         return u
+    m = re.match(r"^file:/{0,2}([A-Za-z]:[\\/].*)$", u)      # 不规范的 file://C:\x 写法
+    if m:
+        return m.group(1)[0].upper() + urllib.parse.unquote(m.group(1)[1:]).replace("/", "\\")
     p = urllib.parse.unquote(urllib.parse.urlparse(u).path)
     m = re.match(r"^/([A-Za-z]):(/.*)?$", p)
     if m:
