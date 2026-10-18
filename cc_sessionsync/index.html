@@ -2469,9 +2469,9 @@ R.diag = async () => {
         <div class="dim" style="font-size:12px;margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
       <div class="card">${ag("claude", "Claude")}${ag("codex", "Codex")}</div></div></div>
     <div class="card"><h3>${ic("folder")}数据目录</h3>
-      ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}
+      ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}${dirRow("DeepSeek Harness", "dsh_home", d.dsh_home || "")}
       <div class="dgls" style="margin-top:8px">${(d.app_dirs.parts || []).map(p => `<div>桌面端${esc(p.name)}：${esc(p.path)}（${esc(p.why)}）</div>`).join("")}</div>
-      <div class="dim" style="font-size:12px">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME 优先。</div></div>
+      <div class="dim" style="font-size:12px">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME / DSH_HOME 优先。</div></div>
     ${apiCard(d.api)}
     <div class="card"><h3>${ic("text")}诊断报告<span class="sp"></span><button class="primary" id="dgCp">${ic("copy")} 复制报告</button></h3><pre class="rep" id="dgRep">${esc(d.text + "\n\n" + (sc && !sc.never ? sc.text : ""))}</pre></div>`;
   $("#dgCp").onclick = () => copyText($("#dgRep").textContent);

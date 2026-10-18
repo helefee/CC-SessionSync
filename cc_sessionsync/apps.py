@@ -166,6 +166,11 @@ def _timeline():
     return timeline
 
 
+def _dsh():
+    from . import dsh
+    return dsh
+
+
 def _ops():
     """op 名 → 函数(**args) -> dict。放在函数里导入，免得循环引用。"""
     from . import claude_sync, codex_import
@@ -174,6 +179,8 @@ def _ops():
         "claude-restore": lambda **a: claude_sync.restore(a["backup"]),
         "codex-import": lambda **a: codex_import.run(dry=False, **a),
         "codex-undo": lambda **a: codex_import.undo(a["ledger"]),
+        "dsh-to-claude": lambda **a: _dsh().run_to_claude(dry=False, **a),
+        "dsh-undo": lambda **a: _dsh().undo(a["ledger"]),
         "sessions-batch": lambda **a: _sessions().batch(a["action"], a["items"]),
         "sessions-rename": lambda **a: _sessions().rename(a["agent"], a["id"], a["name"], bool(a.get("write_tool"))),
         "sessions-trash-restore": lambda **a: _sessions().trash_restore(a["batch"], a.get("only")),

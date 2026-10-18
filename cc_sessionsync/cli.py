@@ -149,6 +149,65 @@ def cmd_codex(a) -> int:
     return 0 if not r.get("errors") else 1
 
 
+DLAB = {"new": "新导入", "update": "更新（那边有新内容）", "same": "导过了、没变", "diverged": "已经接着聊过，不动",
+        "changed": "Claude 那边又聊过（加 --again 再导一份新的）", "error": "读不了", "empty": "空会话"}
+
+
+def cmd_dsh(a) -> int:
+    from . import dsh
+    if a.dsh_cmd == "detect":
+        print(json.dumps(dsh.detect(), ensure_ascii=False, indent=1))
+        return 0
+    if a.dsh_cmd == "list":
+        rows = dsh.sessions()
+        rows.sort(key=lambda x: -(x["last"] or 0))
+        for x in rows[: a.n]:
+            print(f"{_t(x['last'])}  {x['id'][8:16]}  {x['msgs'] or 0:>4} 条  {x['title'][:50]}  ·  {x.get('cwd') or ''}"
+                  + (f"  [{x['why']}]" if x.get("why") else ""))
+        print(f"\n共 {len(rows)} 个（{dsh.home()}）")
+        return 0
+    if a.dsh_cmd == "validate":
+        f = Path(a.path) if a.path and Path(a.path).exists() else dsh.find_file(a.path)
+        if not f:
+            print("✗ 找不到")
+            return 1
+        v = dsh.validate(f)
+        print(("✓ " if v["ok"] else "✗ ") + f"{f}  事件 {v.get('events')}  帧 {v.get('frames')}（带校验和 {v.get('checksums')}）")
+        for e in v["errors"]:
+            print("  错：" + e)
+        for w in v["warnings"]:
+            print("  注意：" + w)
+        return 0 if v["ok"] else 1
+    if a.dsh_cmd in ("to-claude", "from-claude"):
+        only = [x for x in (a.only or "").split(",") if x.strip()] or None
+        if a.dsh_cmd == "to-claude":
+            r = dsh.run_to_claude(only, dry=not a.apply, reasoning=a.reasoning, images="embed" if a.images else "placeholder",
+                                  desktop=not a.no_desktop)
+        else:
+            r = dsh.run_to_dsh(only, dry=not a.apply, again=a.again)
+            if r.get("error"):
+                print("✗ " + r["error"])
+        for x in r["rows"]:
+            print(f"  [{DLAB.get(x['state'], x['state'])}]  {x['id']}  {(x.get('title') or '')[:50]}"
+                  + (f"  → {x.get('turns')} 轮" if x.get("turns") is not None else "") + (f"  ✗ {x['error']}" if x.get("error") else "")
+                  + (f"\n      {x['resume']}" if x.get("resume") else ""))
+        print(("演练（加 --apply 才写）" if r.get("dry") else f"✓ 写了 {r.get('done', 0)} 个，账本 {r.get('ledger')}"))
+        return 0 if r.get("ok", True) and not r.get("errors") else 1
+    if a.dsh_cmd == "ledgers":
+        for l in dsh.ledgers():
+            print(f"{l['id']}  {l['what']}  {l['items']} 个  新建 {l['created']} / 更新 {l['updated']}"
+                  + (f"  （已撤回 {l['undone']}）" if l["undone"] else ""))
+        return 0
+    if a.dsh_cmd == "undo":
+        r = dsh.undo(a.ledger)
+        if not r.get("ok"):
+            print("✗ " + r["error"])
+            return 1
+        print(f"✓ 挪进回收站 {r['moved']} 个，换回 {r['restored']} 个" + (f"；没动（之后又改过 / 正开着）：{len(r['kept'])} 个" if r["kept"] else ""))
+        return 0
+    return 2
+
+
 def cmd_backups(a) -> int:
     return claude_sync.main(["--backups"])
 
@@ -295,6 +354,28 @@ def build_parser() -> argparse.ArgumentParser:
     u = cs.add_parser("undo", help="按账本撤回一次导入")
     u.add_argument("ledger")
     c.set_defaults(fn=cmd_codex)
+    d = sub.add_parser("dsh", help="DeepSeek Harness 的会话：列出、校验、和 Claude Code 互相导入")
+    ds = d.add_subparsers(dest="dsh_cmd", required=True)
+    ds.add_parser("detect", help="dsh 装在哪、数据目录、会话根和压缩方式、开没开")
+    x = ds.add_parser("list", help="列出 dsh 会话")
+    x.add_argument("-n", type=int, default=40)
+    x = ds.add_parser("validate", help="按 dsh 的规则离线校验一个会话（会话号或文件路径）")
+    x.add_argument("path")
+    for name in ("to-claude", "from-claude"):
+        x = ds.add_parser(name, help={"to-claude": "dsh → Claude Code（缺省演练；--apply 才写）",
+                                      "from-claude": "Claude Code → dsh，只新建会话（缺省演练；--apply 才写）"}[name])
+        x.add_argument("--only", help="只导这几个（会话号或末尾几位，逗号分隔）")
+        x.add_argument("--apply", action="store_true", help="真正写（不加就是演练）")
+        if name == "to-claude":
+            x.add_argument("--reasoning", action="store_true", help="把 dsh 里的思考当文字带上（缺省丢掉）")
+            x.add_argument("--images", action="store_true", help="图片内嵌进 Claude 会话（缺省只放占位文字）")
+            x.add_argument("--no-desktop", action="store_true", help="不写 Claude 桌面端会话列表")
+        else:
+            x.add_argument("--again", action="store_true", help="Claude 那边又聊过的，再导一份新的（旧的那份不动）")
+    ds.add_parser("ledgers", help="导入账本")
+    x = ds.add_parser("undo", help="按账本撤回一次导入")
+    x.add_argument("ledger")
+    d.set_defaults(fn=cmd_dsh)
     st = sub.add_parser("settings", help="看 / 改设置")
     st.add_argument("--codex-mark-imported", choices=("on", "off"), help="codex import 缺省要不要登记进 Codex 导入记录")
     st.set_defaults(fn=cmd_settings)

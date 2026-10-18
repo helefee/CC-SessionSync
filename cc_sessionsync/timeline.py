@@ -28,16 +28,7 @@ def _when(ts: float) -> str:
 
 
 def _parse(agent: str, data: bytes) -> list[dict]:
-    parse = S.parse_claude if agent == "claude" else S.parse_codex
-    out = []
-    for line in data.splitlines():
-        if not line.strip():
-            continue
-        try:
-            out += parse(json.loads(line))
-        except Exception:
-            continue
-    return out
+    return S.parse_bytes(agent, data)
 
 
 def _snap(snap_id: int) -> dict:
@@ -52,7 +43,7 @@ def _snap(snap_id: int) -> dict:
 
 
 def _current(agent: str, sid: str) -> Path | None:
-    return S.claude_file(sid) if agent == "claude" else S.codex_file(sid)
+    return S.agent_file(agent, sid)
 
 
 def _sha_file(f: Path) -> str | None:
@@ -192,6 +183,11 @@ def _claude_records_from(agent: str, data: bytes, new_sid: str, title: str) -> t
             lines.append(json.dumps(j, ensure_ascii=False))
         lines.append(json.dumps({"type": "custom-title", "customTitle": title, "sessionId": new_sid}, ensure_ascii=False))
         return lines, cwd
+    if agent == "dsh":                                         # DeepSeek Harness：走 dsh → Claude Code 的转换器
+        from . import dsh
+        b = dsh.build_claude_bytes(data, new_sid, title)
+        b["records"][-1]["customTitle"] = title
+        return [json.dumps(r, ensure_ascii=False) for r in b["records"]], b["cwd"]
     from . import codex_import as CI
     fd, tmp = tempfile.mkstemp(prefix="ccss-rollout-", suffix=".jsonl")
     try:
@@ -278,6 +274,8 @@ def restore(snaps: list[int], mode: str = "copy", target: str = "claude", deskto
     rs = [_snap(i) for i in snaps]
     if not rs:
         return {"ok": False, "error": "没选版本"}
+    if (mode == "replace" or target == "codex") and any(r["agent"] == "dsh" for r in rs):
+        return {"ok": False, "error": "DeepSeek Harness 的会话不在原处替换（本程序从不改已有的 dsh 会话）；用「另存为新的 Claude Code 会话」"}
     if mode == "replace" or target == "codex":
         kinds = {r["agent"] for r in rs}
         if target == "codex" and kinds != {"codex"}:
@@ -311,6 +309,8 @@ def restore(snaps: list[int], mode: str = "copy", target: str = "claude", deskto
 def replace(snaps: list[int]) -> dict:
     """替换当前：先把现在的记录存进备份库 + 账本里留一份，再原子换成那一版（Codex 原文件没了就写回原处）。"""
     rs = [_snap(i) for i in snaps]
+    if any(r["agent"] == "dsh" for r in rs):
+        return {"ok": False, "error": "DeepSeek Harness 的会话不在原处替换", "done": [], "errors": ["dsh"], "op": None}
     od, led = S._new_op("timeline-replace", items=[{"agent": r["agent"], "id": r["sid"]} for r in rs],
                         summary=f"把 {len(rs)} 个会话换回备份里的版本")
     done, errors = [], []
