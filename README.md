@@ -107,6 +107,57 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 | ![做完了](docs/screenshots/v023-11-done-relaunched-light.png) | |
 | 做完后按原来的方式重新打开，并确认它已经起来了。 | |
 
+### API 模式（第三方供应商 / 3P，0.2.4）
+
+Claude 桌面端可以不用订阅登录，改走自己的推理网关 / 第三方供应商（API 模式）。这时它把数据放在另一个目录：
+
+- 目录：`%LOCALAPPDATA%\Claude-3p`（旧位置 `%APPDATA%\Claude-3p`；商店版在 `Packages\Claude_*\LocalCache\{Local,Roaming}\Claude-3p`）；
+  设了 `CLAUDE_USER_DATA_DIR` 也认（签名版桌面端会忽略它，诊断里会注明）。
+- 会话列表在 `Claude-3p\claude-code-sessions\<设备号>\<组织>\`：设备号来自 `ant-did`，组织一般是占位的 `00000000-0000-4000-8000-000000000001`，
+  **所有供应商共用这一个**。
+- 会话页多一个分组「API / 第三方供应商（3P）· 供应商类型」：只显示类型（比如 gateway），**不显示 key 和网关地址**。只在 API 模式里登记过的会话归到这组，不算「未知账号」。
+- 登记着但对话文件已经没了的条目照样列出来，标「无法打开（对话文件不存在）」：不能继续 / 导出 / 复制命令，可以改显示名、归档、删掉这条登记（进回收站）。
+- 「账号同步」多一个目标「API 模式」：只写进桌面端**已经建好**的那个文件夹，本程序不会自己建设备号文件或文件夹。缺省目标跟着桌面端的
+  `deploymentMode`（再看哪边最近写过），可以手动换。会话用的模型在另一边可能没有时，每一行会提醒。关闭并同步、撤回、自动同步都支持。
+- 诊断 / 自检里有一节「Claude 桌面端 API 模式」：现在是什么模式、怎么判断的、用的哪个目录、候选目录。
+
+| | |
+|---|---|
+| ![API 模式分组和无法打开的条目](docs/screenshots/v024-p-orphan.png) | ![同步到 API 模式](docs/screenshots/v024-p-sync-api.png) |
+| 分组「API / 第三方供应商（3P）」；对话文件不在的条目照样显示、只给能做的操作。 | 同步目标「API 模式（所有供应商共用）」。 |
+| ![诊断](docs/screenshots/v024-p-diag-3p.png) | |
+| 诊断：模式、在用的目录、候选目录；只有供应商类型。 | |
+
+### 用量怎么算（0.2.4）
+
+- **Claude 缓存写**分 5 分钟 / 1 小时两种（`usage.cache_creation.ephemeral_5m/1h_input_tokens`）：5 分钟按输入价 1.25 倍、1 小时按 2 倍；日志里没拆分才全按 5 分钟，拆分比合计大就封顶。
+- **Claude Code 去重**：同一个 `message.id` + `requestId` 流式写了好几行时，留**最完整**的那份（用量最大 / 有 `stop_reason`），不是第一行；没有 `requestId` 的行按 `message.id` 算，不丢。
+- **Codex**：按累计值 `total_token_usage` 算每次的差值（累计没变算 0；变小了就退回这一次的 `last_token_usage` 并以它为新基线），不直接把 `last_token_usage` 加起来；续接 / 分叉文件重放的旧记录只算一次。
+  新输入 = 输入 − 缓存读 − 缓存写；reasoning 已经在输出里，不另加。
+- **长上下文**按每次请求的提示长度分档、整条请求加价：OpenAI 超过 272K 输入侧 2 倍、输出 1.5 倍；Haiku 5.5 超过 100K 全部 5 倍；Sonnet 4 / 4.5 超过 200K 输入 2 倍、输出 1.5 倍。
+- **fast / priority / flex / batch** 档、Claude `inference_geo=us` 按官方倍率；没有官方倍率的档按标准价算并标「估」。
+- **价格表**每一条带「核对日期」（按 Anthropic / OpenAI 官方价格页核对），价格页看得到；模型名先规范化（日期、`-thinking`、`[1m]`、档位后缀、Bedrock / Vertex 前缀）再精确查。
+  没价格的显示「—」，总数里有没价格的部分就标「部分」。
+- 按本机时区的**日历日**汇总；每条记录存好费用拆分（新输入 / 缓存读 / 缓存写 5m / 1h / 输出），悬停能看到。
+- 也扫桌面端 Cowork 自带的 `local-agent-mode-sessions\…\.claude\projects`；API 模式里的会话算到「API 模式 · 供应商类型」，不算订阅。
+- 升级时自动把老的用量库按新口径重读一遍；已经删掉的会话文件留下的老记录保留、按新价格表重算。
+- 图表：「用量趋势」和新加的「按模型 / 按项目分布」都可以在「原样式 / 曲线图」之间切换（缺省原样式，会记住）。曲线图是平滑曲线 + 渐变填充，
+  可以按类型（新输入 / 输出 / 缓存读 / 缓存写 / 费用）、Claude / Codex、按模型分，悬停显示准确数值和费用拆分，点图例开关，跟着时间范围、深浅色走。
+
+| | |
+|---|---|
+| ![曲线图](docs/screenshots/v024-u-curve-light.png) | ![曲线图（深色）](docs/screenshots/v024-u-curve-dark.png) |
+| 用量趋势 · 曲线图：按类型，悬停看准确数值和费用拆分。 | 深色。 |
+| ![按模型](docs/screenshots/v024-u-curve-model.png) | ![按项目](docs/screenshots/v024-u-dist-project-curve.png) |
+| 按模型的趋势和分布。 | 按项目分布 · 曲线图。 |
+
+### 时间线（0.2.4 改进）
+
+左边是按天分组的竖向时间线（今天 / 昨天 / 日期），上面可以显示对话增长曲线：每个版本一个点，拖竖线选版本；`←` / `→` 切换版本。
+右边预览顶上就是「恢复到 Claude」（另存成新会话，现在的不动），下面的差别用一条「一样 / 只在这一版 / 只在现在」的比例条，加 −/+ 标记的对照。读取中有骨架屏，读不到有重试。
+
+![时间线](docs/screenshots/v024-t-timeline-light.png)
+
 ### 检查更新（不会自动安装）
 
 - 启动后、之后每 6 小时最多查一次 GitHub 的最新发布（公开接口，不用登录）。
@@ -214,6 +265,7 @@ cd D:\work\shop && claude --resume 8d7c1c3e-…
 | Claude Code 数据 | `~/.claude` | `CLAUDE_CONFIG_DIR` |
 | Codex 数据 | `~/.codex`（商店版 Codex 的虚拟化目录里有会话、`~/.codex` 没有时用那边） | `CODEX_HOME` |
 | Claude 桌面端数据 | Windows `%APPDATA%\Claude`；商店（MSIX）版 `%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\Claude`；macOS `~/Library/Application Support/Claude`；Linux `~/.config/Claude` | 界面「检测 / 目录」里手动选 |
+| Claude 桌面端 API 模式（3P） | `%LOCALAPPDATA%\Claude-3p`（旧位置 `%APPDATA%\Claude-3p`，商店版虚拟化目录里的也认） | `CLAUDE_USER_DATA_DIR`（签名版桌面端会忽略） |
 | 本工具自己的数据 | `~/.cc-sessionsync` | `CC_SESSIONSYNC_HOME` |
 
 两个桌面端目录都有时：会话列表、Local Storage（账号）、IndexedDB 各自看哪边最近有写入；一样新时，桌面端是从 WindowsApps（商店版）跑的就用 MSIX 那边。
@@ -323,6 +375,14 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   progress), force-kills only after a second confirmation (and only Desktop's own process tree), warns about Claude Code sessions started by
   Desktop that would be interrupted, never touches other CLI `claude` processes, runs the queued jobs, relaunches Desktop the same way, verifies
   it started and reports the result (dialog + notification).
+- **API mode / 3P (0.2.4):** discovers Claude Desktop's API-mode data dir (`%LOCALAPPDATA%\Claude-3p`, legacy `%APPDATA%\Claude-3p`, MSIX
+  copies, `CLAUDE_USER_DATA_DIR`), groups its sessions as "API / 第三方供应商（3P）" (provider type only, never the key or gateway URL),
+  shows entries whose transcript is missing as "无法打开" with limited actions, and adds an "API 模式" sync target that only writes into the
+  bucket Desktop already created (never creates `ant-did` or folders). Diagnostics show the mode, active dir and candidates.
+- **Usage accuracy (0.2.4):** 5m/1h cache-write pricing, most-complete streaming snapshot per `message.id:requestId`, Codex per-event deltas
+  from `total_token_usage`, long-context tiers per request, fast/priority/flex multipliers, verified price table with dates, local-day
+  buckets, per-row cost breakdown, Cowork / 3P logs, migration of the existing DB. Curve chart style (toggle, remembered) and per-model /
+  per-project distribution charts; timeline grouped by day with a growth sparkline and ←/→ keys.
 - **Backups:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
   operation ledger with undo.
 - **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code

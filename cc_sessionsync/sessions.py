@@ -173,27 +173,29 @@ def _claude_registry() -> dict[str, list[dict]]:
     """cliSessionId → [{key 账号/组织, path, data}]（每个账号文件夹各一份登记）。"""
     from . import claude_sync
     reg: dict[str, list[dict]] = {}
-    root = claude_sync.sessions_root()
-    if not root.exists():
-        return reg
-    for acct in root.iterdir():
-        if not acct.is_dir():
-            continue
-        for org in acct.iterdir():
-            if not org.is_dir():
-                continue
+    # 订阅登录的文件夹 + API 模式（3P）的文件夹（key 带 3p: 前缀）
+    dirs = [(Path(f["path"]), f["key"]) for f in claude_sync.all_folders()]
+    for org, key in dirs:
+        try:
+            idx = set(json.loads((org / "archived-sessions.idx").read_text(encoding="utf-8")).get("archived") or [])
+        except Exception:
+            idx = set()
+        for f in org.glob("local_*.json"):
             try:
-                idx = set(json.loads((org / "archived-sessions.idx").read_text(encoding="utf-8")).get("archived") or [])
+                d = json.loads(f.read_text(encoding="utf-8"))
             except Exception:
-                idx = set()
-            for f in org.glob("local_*.json"):
-                try:
-                    d = json.loads(f.read_text(encoding="utf-8"))
-                except Exception:
-                    continue
-                d["_archived"] = bool(d.get("isArchived")) or f.stem in idx
-                reg.setdefault(d.get("cliSessionId") or f.stem, []).append({"key": f"{acct.name}/{org.name}", "path": str(f), "data": d})
+                continue
+            d["_archived"] = bool(d.get("isArchived")) or f.stem in idx
+            reg.setdefault(d.get("cliSessionId") or f.stem, []).append({"key": key, "path": str(f), "data": d})
     return reg
+
+
+def _acct_tag(key: str) -> str:
+    """登记的 key → 分组用的账号短号；API 模式的统一是 '3p'。"""
+    return "3p" if key.startswith("3p:") else key.split("/")[0][:8]
+
+
+ORPHAN_WHY = "无法打开（对话文件不存在）"
 
 
 def claude_file(sid: str) -> Path | None:
@@ -206,7 +208,7 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
     from . import claude_sync
     names = names if names is not None else _aliases()
     try:
-        cur = claude_sync.current_key()
+        cur = claude_sync.visible_key()
     except Exception:
         cur = None
     reg = _claude_registry()
@@ -223,7 +225,7 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
         if mine:
             why = "已归档" if d.get("_archived") else None
         elif regs:
-            why = "在别的账号里"
+            why = "在 API 模式里" if all(r["key"].startswith("3p:") for r in regs) else "在别的账号里"
         else:
             why = "只在命令行（桌面端没登记）"
         cwd = d.get("cwd") or cwd
@@ -232,7 +234,7 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
                     "tool_title": d.get("title") or ctitle, "first": first, "cwd": cwd,
                     "last": max(d.get("lastActivityAt", 0) / 1000, st.st_mtime), "size": st.st_size,
                     "archived": bool(d.get("_archived")), "registered": bool(regs),
-                    "accounts": sorted({r["key"].split("/")[0][:8] for r in regs}), "visible": bool(mine) and not d.get("_archived"),
+                    "accounts": sorted({_acct_tag(r["key"]) for r in regs}), "visible": bool(mine) and not d.get("_archived"),
                     "why": why, "file": str(f), "imported": (ctitle or "").startswith("（Codex）"),
                     "resume": (f"cd {_q(cwd)} && " if cwd else "") + f"claude --resume {sid}"})
     for sid, regs in reg.items():          # 登记了但记录文件已经不在
@@ -241,8 +243,8 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
         d = max(regs, key=lambda r: r["data"].get("lastActivityAt", 0))["data"]
         out.append({"agent": "claude", "id": sid, "title": names.get(f"claude:{sid}") or d.get("title") or "（无标题）", "first": "",
                     "cwd": d.get("cwd"), "last": d.get("lastActivityAt", 0) / 1000, "size": 0, "archived": bool(d.get("_archived")),
-                    "registered": True, "accounts": sorted({r["key"].split("/")[0][:8] for r in regs}), "visible": False,
-                    "why": "记录文件已不在", "file": None, "resume": None, "orphan": True})
+                    "registered": True, "accounts": sorted({_acct_tag(r["key"]) for r in regs}), "visible": False,
+                    "why": ORPHAN_WHY, "file": None, "resume": None, "orphan": True, "model": d.get("model")})
     return out
 
 
@@ -352,7 +354,7 @@ def codex_sessions(names: dict | None = None) -> list[dict]:
                     "first": first, "cwd": r.get("cwd"), "last": float(r.get("updated_at") or 0),
                     "size": f.stat().st_size if exists else 0, "archived": bool(r.get("archived")), "registered": bool(db),
                     "provider": r.get("model_provider"), "visible": exists and not r.get("archived"),
-                    "why": None if exists else "记录文件已不在", "file": str(f) if exists else None, "orphan": not exists,
+                    "why": None if exists else ORPHAN_WHY, "file": str(f) if exists else None, "orphan": not exists,
                     "resume": (f"cd {_q(r['cwd'])} && " if r.get("cwd") else "") + f"codex resume {tid}"})
     return out
 
@@ -418,8 +420,9 @@ def account_groups(items: list[dict]) -> list[dict]:
             if rp in done or not root.is_dir():
                 continue
             done.add(rp)
+            dev = claude_sync.device_id(root.parent)
             for a in root.iterdir():
-                if not a.is_dir():
+                if not a.is_dir() or (dev and a.name.lower() == dev):
                     continue
                 for o in a.iterdir():
                     if o.is_dir():
@@ -436,6 +439,17 @@ def account_groups(items: list[dict]) -> list[dict]:
     for u in (cur_d, cur_c):
         if u:
             claude_g(u)
+    try:                                         # API 模式（3P）：一个分组，所有供应商共用
+        ai, mode = claude_sync.api_info(), claude_sync.desktop_mode()["mode"]
+        if ai["buckets"]:
+            prov = ai.get("provider")
+            g["3p"] = {"key": "3p", "kind": "api", "rid": "", "provider": prov,
+                       "masked": "API / 第三方供应商（3P）" + (f" · {prov}" if prov else ""),
+                       "tags": ["桌面端当前"] if mode == "3p" else [], "current": mode == "3p",
+                       "folders": [{"key": b["key"], "where": "API 模式（所有供应商共用）", "count": b["count"]} for b in ai["buckets"]],
+                       "n": 0, "hint": "Claude 桌面端 API 模式（API key / 第三方供应商）的会话列表：换供应商不分开，所有供应商共用这一个"}
+    except Exception:
+        pass
     try:
         cx = watch._read_codex() or {}
     except Exception:
@@ -443,9 +457,12 @@ def account_groups(items: list[dict]) -> list[dict]:
     for x in items:
         if x["agent"] == "claude":
             accs = x.get("accounts") or []
-            k = next((a for a in accs if cur_d and cur_d.startswith(a)), None) or (accs[0] if accs else alt.get(x["id"]))
+            k = next((a for a in accs if cur_d and cur_d.startswith(a)), None) or next((a for a in accs if a != "3p"), None) \
+                or ("3p" if "3p" in accs and "3p" in g else None) or alt.get(x["id"])
             x["gacct"] = k or "unknown"
-            if k:
+            if k == "3p":
+                g["3p"]["n"] += 1
+            elif k:
                 claude_g(k)["n"] += 1
         else:
             prov = x.get("provider") or "openai"
@@ -459,7 +476,7 @@ def account_groups(items: list[dict]) -> list[dict]:
             g[k]["n"] += 1
             x["gacct"] = k
     unk = sum(1 for x in items if x.get("gacct") == "unknown")
-    out = sorted(g.values(), key=lambda v: (v["kind"] != "claude", not v["current"], -v["n"]))
+    out = sorted(g.values(), key=lambda v: ({"claude": 0, "api": 1}.get(v["kind"], 2), not v["current"], -v["n"]))
     if unk:
         out.append({"key": "unknown", "kind": "unknown", "rid": "", "masked": "未知账号", "tags": [], "current": False,
                     "folders": [], "n": unk, "hint": "只在命令行用过、没在任何桌面端账号里登记的会话"})
@@ -832,7 +849,7 @@ def rename(agent: str, sid: str, name: str, write_tool: bool = False) -> dict:
 
 def _rename_claude(sid: str, name: str, d: Path, led: dict) -> None:
     from . import claude_sync
-    cur = claude_sync.current_key()
+    cur = claude_sync.visible_key()
     regs = [r for r in _claude_registry().get(sid, []) if r["key"] == cur]
     if regs:
         for r in regs:

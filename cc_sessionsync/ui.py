@@ -32,7 +32,7 @@ def _status() -> dict:
     acc = claude_sync.accounts()
     return {"version": __version__, "home": str(paths.HOME), "claude_home": str(paths.CLAUDE_HOME),
             "codex_home": str(paths.CODEX_HOME), "accounts": _mask_accounts(acc), "folders": claude_sync.folders(),
-            "app_dirs": claude_sync.app_dirs_brief(), "running": apps.status(),
+            "app_dirs": claude_sync.app_dirs_brief(), "api": api_brief(), "default_source": claude_sync.default_source(), "running": apps.status(),
             "jobs": [j for j in apps.pending() if j["state"] == "waiting"],
             "settings": settings_view(), "auto": claude_sync.auto_status(), "desktop": MODE["desktop"],
             "platform": os.name, "frozen": paths.FROZEN}
@@ -112,15 +112,31 @@ def tray_state(since: int = -1) -> dict:
             "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600 for e in events.recent(10))}
 
 
-def sync_now(to: str | None = None, only=None, source: str = "desktop") -> dict:
+def api_brief() -> dict:
+    """给页面 / 诊断：API 模式（3P）的数据目录、桌面端当前模式、用哪个目录、供应商类型（只给类型，不给 key / 地址）。"""
+    try:
+        i = claude_sync.api_info()
+        m = claude_sync.desktop_mode()
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}
+    b = i.get("bucket")
+    return {"mode": m["mode"], "mode_why": m["why"], "mode_file": i.get("mode_file"), "base": i.get("base"), "why": i.get("why"),
+            "provider": i.get("provider"), "device": (i.get("device") or "")[:8] or None,
+            "bucket": {"key": b["key"], "count": b["count"], "path": b["path"], "placeholder": b["placeholder"]} if b else None,
+            "cands": [{"label": c["label"], "path": c["base"], "exists": c["exists"], "sessions": c["has_sessions"],
+                       "buckets": len(c["buckets"]), "active": c["base"] == i.get("base")} for c in i["cands"]]}
+
+
+def sync_now(to: str | None = None, only=None, source: str | None = None) -> dict:
     claude_sync.forget()
+    source = source or claude_sync.default_source()
     pl = claude_sync.run(to or None, True, None, source)
     if not pl.get("ok"):
         return pl
     if not (pl.get("add") or pl.get("update")):
         return dict(pl, done=0, updated=0, deferred=False, note="没有要补的会话")
     r = apps.run_or_defer("claude", "claude-sync", {"target": to or pl["target"]["key"], "only": only, "source": source},
-                          "同步 Claude 会话到当前账号")
+                          "同步 Claude 会话到 API 模式" if source == "api" else "同步 Claude 会话到当前账号")
     if not r.get("deferred"):
         events.add("auto-sync", "同步完成", f"补了 {r.get('done', 0)} 个、刷新 {r.get('updated', 0)} 个会话", {"page": "sync"}, manual=True)
     return r
@@ -163,7 +179,14 @@ def diag() -> dict:
     ad = claude_sync.app_dirs_brief()
     for x in ad.get("parts") or []:
         lines.append(f"  桌面端 {x.get('name')}：{x.get('path')}（{x.get('why') or ''}）")
-    return {"report": r, "accounts": acc, "watch": w, "app_dirs": ad, "text": "\n".join(lines),
+    ab = api_brief()
+    lines += ["", f"桌面端模式：{'API 模式（3P）' if ab.get('mode') == '3p' else '订阅登录'}（{ab.get('mode_why') or ''}）",
+              f"  API 模式数据目录：{ab.get('base') or '没找到'}（{ab.get('why') or ''}）  供应商：{ab.get('provider') or '—'}"]
+    if ab.get("bucket"):
+        lines.append(f"  API 模式会话列表：{ab['bucket']['key'][:14]}…  {ab['bucket']['count']} 个（所有供应商共用）")
+    for c in ab.get("cands") or []:
+        lines.append(f"    {'→' if c['active'] else ' '} {c['label']}：{'有' if c['exists'] else '没有'}" + (f"，{c['buckets']} 个会话列表文件夹" if c["buckets"] else ""))
+    return {"report": r, "accounts": acc, "watch": w, "app_dirs": ad, "api": ab, "text": "\n".join(lines),
             "claude_home": str(paths.CLAUDE_HOME), "codex_home": str(paths.CODEX_HOME),
             "version": __version__, "frozen": paths.FROZEN, "exe": paths.EXE if paths.FROZEN else None}
 
@@ -298,7 +321,7 @@ class H(BaseHTTPRequestHandler):
             return _status()
         if p == "/api/sync/plan":
             claude_sync.forget()
-            return claude_sync.run(q.get("to") or None, True, None, q.get("source") or "desktop")
+            return claude_sync.run(q.get("to") or None, True, None, q.get("source") or claude_sync.default_source())
         if p == "/api/backups":
             return claude_sync.list_backups()
         if p == "/api/codex/plan":
@@ -401,7 +424,7 @@ class H(BaseHTTPRequestHandler):
 
     def _post(self, p: str, b: dict):
         if p == "/api/sync":
-            return sync_now(b.get("to") or None, b.get("only"), b.get("source") or "desktop")
+            return sync_now(b.get("to") or None, b.get("only"), b.get("source") or None)
         if p == "/api/restore":
             return apps.run_or_defer("claude", "claude-restore", {"backup": b["backup"]}, f"撤回 Claude 同步 {b['backup']}")
         if p == "/api/codex/import":

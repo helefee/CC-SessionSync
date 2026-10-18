@@ -112,6 +112,40 @@ def build(T: Path, extra: bool = False) -> dict:
         ssd.mkdir(parents=True, exist_ok=True)
         (ssd / "claude-accounts.json").write_text(json.dumps({A1: {"email": "old.account@example.com", "name": "Old Account", "from": "demo"},
                                                               A3: {"email": "team@corp.example", "name": "Team Corp", "from": "demo"}}), encoding="utf-8")
+        # 用量图表（截图用）：各会话的子代理记录里放两周的请求，多个模型 / 项目；不会出现在会话列表里
+        import random
+        rnd = random.Random(7)
+        models = [("claude-opus-5-5", 5), ("claude-sonnet-5-5", 3), ("claude-haiku-4-5-20251001", 2)]
+        for k, (sid, title, cwd, when) in enumerate(sessions):
+            sub = H / ".claude/projects" / cwd.replace("/", "-") / sid / "subagents" / "agent-demo.jsonl"
+            sub.parent.mkdir(parents=True, exist_ok=True)
+            L = []
+            for n in range(60 + 25 * (k % 3)):
+                t = NOW - timedelta(days=rnd.uniform(0, 14) ** 1.15 % 14, minutes=rnd.uniform(0, 600))
+                m = rnd.choices([x for x, _ in models], [w for _, w in models])[0]
+                cw = rnd.randint(0, 9000)
+                L.append({"type": "assistant", "uuid": U(), "sessionId": sid, "cwd": cwd, "isSidechain": True, "timestamp": iso(t), "requestId": "req_" + U()[:12],
+                          "message": {"id": "msg_" + U()[:12], "model": m, "stop_reason": "end_turn", "usage": {
+                              "input_tokens": rnd.randint(5, 900), "output_tokens": rnd.randint(200, 6000), "cache_read_input_tokens": rnd.randint(20000, 220000),
+                              "cache_creation_input_tokens": cw, "cache_creation": {"ephemeral_5m_input_tokens": cw // 3, "ephemeral_1h_input_tokens": cw - cw // 3}}}})
+            sub.write_text("\n".join(json.dumps(x) for x in L) + "\n", encoding="utf-8")
+        # API 模式（3P）：桌面端的 Claude-3p 目录，设备号 + 占位组织；一个能打开的会话、一个对话文件已经没了的
+        P3 = T / "la/Claude-3p"
+        dev = "d838cbef-0000-4c1c-987b-000000000001"
+        (P3 / "configLibrary").mkdir(parents=True, exist_ok=True)
+        (P3 / "ant-did").write_text(base64.b64encode(dev.encode()).decode())
+        (P3 / "configLibrary/_meta.json").write_text('{"appliedId":"demo"}')
+        (P3 / "configLibrary/demo.json").write_text(json.dumps({"inferenceProvider": "gateway", "inferenceGatewayApiKey": "sk-demo-NOT-SHOWN", "inferenceGatewayBaseUrl": "https://gw.example.invalid"}))
+        (P3 / "claude_desktop_config.json").write_text(json.dumps({"deploymentMode": "1p"}))
+        b3 = P3 / "claude-code-sessions" / dev / "00000000-0000-4000-8000-000000000001"
+        b3.mkdir(parents=True, exist_ok=True)
+        sid5, w5 = U(), NOW - timedelta(days=2, hours=3)
+        claude_transcript(H / ".claude/projects/-work-gateway" / f"{sid5}.jsonl", sid5, "/work/gateway",
+                          [("用公司网关跑一下这个脚本", "跑完了：12 个用例全过。")], w5, model="claude-sonnet-4-6")
+        for nm, sid, title, w in (("a", sid5, "网关上试跑脚本", w5), ("b", U(), "以前在网关上聊的（文件没了）", NOW - timedelta(days=9))):
+            ms5 = int(w.timestamp() * 1000)
+            (b3 / f"local_{U()}.json").write_text(json.dumps({"sessionId": "local_3p" + nm, "cliSessionId": sid, "title": title, "cwd": "/work/gateway",
+                                                              "model": "claude-sonnet-4-6", "createdAt": ms5, "lastActivityAt": ms5 + 600000, "isArchived": False}, ensure_ascii=False), encoding="utf-8")
     else:
         A3 = None
     ldb = T / "cfg/Claude/Local Storage/leveldb"
@@ -131,6 +165,13 @@ def build(T: Path, extra: bool = False) -> dict:
             fh.write(json.dumps({"timestamp": iso(NOW - timedelta(days=days)), "type": "event_msg", "payload": {"type": "token_count", "info": {
                 "total_token_usage": {"input_tokens": 42000 + j * 900, "cached_input_tokens": 30000, "output_tokens": 2100 + j * 50, "reasoning_output_tokens": 600, "total_tokens": 44100},
                 "last_token_usage": {"input_tokens": 42000, "cached_input_tokens": 30000, "output_tokens": 2100, "reasoning_output_tokens": 600, "total_tokens": 44100}}}}) + "\n")
+            if extra:                                    # 截图用：多几次累计值增长，Codex 曲线不至于只有几个点
+                tot = [42000 + j * 900, 30000, 2100 + j * 50]
+                for e in range(18):
+                    tot = [tot[0] + 9000 + 700 * e, tot[1] + 6000 + 500 * e, tot[2] + 400 + 30 * e]
+                    tu = {"input_tokens": tot[0], "cached_input_tokens": tot[1], "output_tokens": tot[2], "reasoning_output_tokens": 300, "total_tokens": tot[0] + tot[2]}
+                    fh.write(json.dumps({"timestamp": iso(NOW - timedelta(days=(days + e * 0.7) % 13, hours=e)), "type": "event_msg", "payload": {"type": "token_count", "info": {
+                        "total_token_usage": tu, "last_token_usage": tu}}}) + "\n")
         t = (NOW - timedelta(days=days, hours=j)).timestamp() + 1800
         os.utime(f, (t, t))
     (cx / "config.toml").write_text('model = "gpt-5.5"\nmodel_provider = "openai"\n', encoding="utf-8")

@@ -73,12 +73,201 @@ def _desktop_msix() -> bool | None:
     return any("/windowsapps/claude_" in (p.get("exe") or "").replace("\\", "/").lower() for p in ps)
 
 
-def app_dir_candidates() -> list[dict]:
+def _env_dir() -> Path | None:
+    """CLAUDE_USER_DATA_DIR：设了就把它也当一个候选（两种模式共用这一个目录；注意签名版桌面端会忽略这个变量）。"""
+    v = os.environ.get("CLAUDE_USER_DATA_DIR") or ""
+    return Path(v) if v and Path(v).is_dir() else None
+
+
+def app_dir_candidates(profile: str = "1p") -> list[dict]:
+    """profile='1p'：订阅登录用的数据目录；'3p'：API 模式（第三方供应商 / API key）用的另一套数据目录 Claude-3p。"""
+    if profile == "3p":
+        return api_dir_candidates()
     from . import detect
     out = [{"id": "appdata", "label": "%APPDATA%\\Claude", "path": _real_app_dir()}]
     if sys.platform == "win32" or os.environ.get("LOCALAPPDATA"):
         for d in detect.msix_claude_dirs():
             out.append({"id": "msix:" + d.parent.parent.parent.name, "label": "商店版虚拟化目录（" + d.parent.parent.parent.name + "）", "path": d})
+    e = _env_dir()
+    if e:
+        out.append({"id": "env", "label": "CLAUDE_USER_DATA_DIR（签名版桌面端会忽略）", "path": e})
+    return out
+
+
+# ---------- API 模式（3P：API key / 第三方供应商）----------
+# 桌面端切到 API 模式后用另一套数据目录（代码里叫 3p）：Windows 上是 %LOCALAPPDATA%\Claude-3p（老版本在 %APPDATA%\Claude-3p，
+# 会被桌面端挪过去；商店版可能写进 Packages\Claude_*\LocalCache\{Local,Roaming}\Claude-3p）。会话列表一样是
+# claude-code-sessions\<账号>\<组织>\local_*.json，只是「账号」是这台机器的设备号（数据目录里 ant-did 文件，base64 的 UUID），
+# 「组织」没配部署组织号时是固定的占位号 00000000-0000-4000-8000-000000000001。换供应商（gateway / Bedrock / Vertex …）
+# 设备号和组织号都不变：所有供应商共用这一个列表。桌面端当前用哪种模式记在 Claude-3p\claude_desktop_config.json 的 deploymentMode。
+# 这里只读：不建 ant-did、不建文件夹；供应商只读 configLibrary 里当前那条的 inferenceProvider（不碰 key / 地址）。
+PLACEHOLDER_ORG = "00000000-0000-4000-8000-000000000001"
+API_PREFIX = "3p:"
+_UUID_S = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
+_API_RES: dict = {"t": 0.0, "v": None}
+
+
+def api_dir_candidates() -> list[dict]:
+    out = []
+    e = _env_dir()
+    if e:
+        out.append({"id": "env", "label": "CLAUDE_USER_DATA_DIR（签名版桌面端会忽略）", "path": e})
+    la, ad = os.environ.get("LOCALAPPDATA"), os.environ.get("APPDATA")
+    if sys.platform == "win32" or la or ad:
+        la = Path(la or Path.home() / "AppData" / "Local")
+        ad = Path(ad or Path.home() / "AppData" / "Roaming")
+        out.append({"id": "local3p", "label": "%LOCALAPPDATA%\\Claude-3p", "path": la / "Claude-3p"})
+        out.append({"id": "appdata3p", "label": "%APPDATA%\\Claude-3p（旧位置）", "path": ad / "Claude-3p"})
+        try:
+            pks = sorted((la / "Packages").glob("Claude_*")) + sorted((la / "Packages").glob("AnthropicPBC.Claude_*"))
+        except OSError:
+            pks = []
+        for pk in pks:
+            for sub in ("Local", "Roaming"):
+                out.append({"id": f"msix3p:{pk.name}:{sub}", "label": f"商店版虚拟化目录（{pk.name}\\{sub}）",
+                            "path": pk / "LocalCache" / sub / "Claude-3p"})
+    else:
+        b = _real_app_dir()
+        out.append({"id": "local3p", "label": str(b) + "-3p", "path": b.with_name(b.name + "-3p")})
+    return out
+
+
+def device_id(base: Path) -> str | None:
+    """数据目录里 ant-did 记的设备号（base64 的 UUID）；没有 / 读不了 → None。只读，不建。"""
+    import base64
+    try:
+        t = base64.b64decode((Path(base) / "ant-did").read_text(encoding="utf-8").strip()).decode("utf-8").strip()
+    except Exception:
+        return None
+    return t.lower() if _UUID_S.fullmatch(t) else None
+
+
+def _api_provider(base: Path) -> str | None:
+    """configLibrary 里当前生效那条的 inferenceProvider（gateway / bedrock / vertex …）。只取这一个字段。"""
+    try:
+        meta = json.loads((Path(base) / "configLibrary" / "_meta.json").read_text(encoding="utf-8"))
+        aid = str(meta.get("appliedId") or "")
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,64}", aid):
+            return None
+        v = json.loads((Path(base) / "configLibrary" / f"{aid}.json").read_text(encoding="utf-8")).get("inferenceProvider")
+        return str(v)[:40] if isinstance(v, str) and v else None
+    except Exception:
+        return None
+
+
+def _deployment_mode(cands: list[dict]) -> tuple[str | None, str | None]:
+    """('3p' / '1p' / None, 从哪个文件读的)。桌面端读的是 Claude-3p 数据目录里的 claude_desktop_config.json。"""
+    best = None
+    for c in cands:
+        f = Path(c["path"]) / "claude_desktop_config.json"
+        try:
+            v = json.loads(f.read_text(encoding="utf-8")).get("deploymentMode")
+            mt = f.stat().st_mtime
+        except Exception:
+            continue
+        if v in ("1p", "3p") and (best is None or mt > best[2]):
+            best = (v, str(f), mt)
+    return (best[0], best[1]) if best else (None, None)
+
+
+def _bucket_latest(d: Path) -> float:
+    try:
+        return max((f.stat().st_mtime for f in d.glob("local_*.json")), default=0.0)
+    except OSError:
+        return 0.0
+
+
+def api_info(max_age: float = 20) -> dict:
+    """API 模式的数据目录 / 设备号 / 会话列表文件夹（bucket）/ 桌面端当前模式 / 供应商类型。20 秒缓存（forget() 清）。"""
+    now = time.time()
+    if _API_RES["v"] is not None and now - _API_RES["t"] < max_age:
+        return _API_RES["v"]
+    cands = api_dir_candidates()
+    rows = []
+    for c in cands:
+        b = Path(c["path"])
+        ses = b / "claude-code-sessions"
+        ex = b.is_dir()
+        dev = device_id(b) if ex else None
+        buckets = []
+        if ses.is_dir():
+            try:
+                for a in ses.iterdir():
+                    if not a.is_dir():
+                        continue
+                    for o in a.iterdir():
+                        if o.is_dir():
+                            buckets.append({"key": API_PREFIX + f"{a.name}/{o.name}", "acct": a.name, "org": o.name, "path": str(o),
+                                            "count": len(list(o.glob("local_*.json"))), "latest": _bucket_latest(o),
+                                            "device_match": bool(dev and a.name.lower() == dev), "placeholder": o.name == PLACEHOLDER_ORG})
+            except OSError:
+                pass
+        # 和 1p 共用一个目录（CLAUDE_USER_DATA_DIR）时，只认设备号 / 占位组织那几个文件夹
+        if c["id"] == "env":
+            buckets = [x for x in buckets if x["device_match"] or x["placeholder"]]
+        rows.append({"id": c["id"], "label": c["label"], "base": str(b), "exists": ex, "sessions": str(ses), "has_sessions": ses.is_dir(),
+                     "device": dev, "buckets": buckets, "activity": max((x["latest"] for x in buckets), default=0.0)})
+    have = [r for r in rows if r["buckets"]]
+    pick = max(have, key=lambda r: r["activity"]) if have else next((r for r in rows if r["exists"] and r["device"]), None)
+    mode, mode_file = _deployment_mode(cands)
+    out: dict = {"cands": rows, "mode": mode, "mode_file": mode_file, "base": None, "device": None, "buckets": [], "bucket": None,
+                 "provider": None, "why": None}
+    if pick:
+        bs = sorted(pick["buckets"], key=lambda x: (not x["device_match"], -x["latest"]))
+        out.update(base=pick["base"], device=pick["device"], buckets=bs, provider=_api_provider(Path(pick["base"])),
+                   why=("只有这边有" if len(have) <= 1 else "这边最近写过") if pick["buckets"] else "还没有会话列表文件夹")
+        if bs:
+            out["bucket"] = bs[0]
+    _API_RES.update(t=now, v=out)
+    return out
+
+
+def api_folders() -> list[dict]:
+    """API 模式的会话列表文件夹（和 folders() 同样的字段，外加 profile='3p'）。"""
+    return [{"key": b["key"], "path": b["path"], "count": b["count"], "latest": b["latest"], "profile": "3p"} for b in api_info()["buckets"]]
+
+
+def api_account() -> dict:
+    i = api_info()
+    b = i.get("bucket")
+    return {"accountUuid": b["acct"] if b else i.get("device"), "organizationUuid": b["org"] if b else None,
+            "key": b["key"] if b else None, "exists": bool(b), "count": b["count"] if b else 0, "path": b["path"] if b else None,
+            "provider": i.get("provider"), "mode": i.get("mode"), "base": i.get("base"), "profile": "3p",
+            "via": "api", "email": None, "name": None, "label": "API 模式（所有供应商共用）"}
+
+
+def desktop_mode() -> dict:
+    """桌面端现在用哪种模式：{'mode': '1p'|'3p', 'why': …}。按 deploymentMode；没记就看哪边的会话列表最近写过。"""
+    i = api_info()
+    if i["mode"] in ("1p", "3p"):
+        return {"mode": i["mode"], "why": "桌面端记的 deploymentMode"}
+    t3 = max((b["latest"] for b in i["buckets"]), default=0.0)
+    t1 = max((f["latest"] for f in folders()), default=0.0)
+    if t3 > t1 + 60:
+        return {"mode": "3p", "why": "没记 deploymentMode，API 模式的会话列表最近写过"}
+    return {"mode": "1p", "why": "没记 deploymentMode，按订阅登录算" if not t3 else "没记 deploymentMode，订阅登录的会话列表最近写过"}
+
+
+def default_source() -> str:
+    """同步的缺省目标：桌面端在 API 模式 → 'api'，否则 'desktop'。"""
+    try:
+        return "api" if desktop_mode()["mode"] == "3p" else "desktop"
+    except Exception:
+        return "desktop"
+
+
+def api_session_ids() -> set[str]:
+    """在 API 模式会话列表里登记过的命令行会话号（含 priorCliSessionIds）：用量里这些会话按 API 模式的供应商算，不算订阅。"""
+    out: set[str] = set()
+    for b in api_info()["buckets"]:
+        for f in Path(b["path"]).glob("local_*.json"):
+            try:
+                d = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            for x in [d.get("cliSessionId")] + list(d.get("priorCliSessionIds") or []):
+                if isinstance(x, str) and x:
+                    out.add(x)
     return out
 
 
@@ -167,16 +356,22 @@ def folders() -> list[dict]:
     out = []
     if not root.exists():
         return out
+    dev = device_id(root.parent)                 # 和 API 模式共用一个目录时（CLAUDE_USER_DATA_DIR），设备号那个文件夹归 API 模式
     for acct in root.iterdir():
-        if not acct.is_dir():
+        if not acct.is_dir() or (dev and acct.name.lower() == dev):
             continue
         for org in acct.iterdir():
             if not org.is_dir():
                 continue
             files = list(org.glob("local_*.json"))
             latest = max((f.stat().st_mtime for f in files), default=0)
-            out.append({"key": f"{acct.name}/{org.name}", "path": str(org), "count": len(files), "latest": latest})
+            out.append({"key": f"{acct.name}/{org.name}", "path": str(org), "count": len(files), "latest": latest, "profile": "1p"})
     return sorted(out, key=lambda x: -x["latest"])
+
+
+def all_folders() -> list[dict]:
+    """订阅登录的「账号 / 组织」文件夹 + API 模式的文件夹（key 带 3p: 前缀）。"""
+    return sorted(folders() + api_folders(), key=lambda x: -x["latest"])
 
 
 def _short(a: str | None) -> str:
@@ -338,6 +533,7 @@ def forget() -> None:
     """丢掉所有读缓存：下一次一定重新读桌面端 Local Storage（刷新按钮 / 打开同步弹窗时用）。"""
     _LDB_CACHE.clear()
     _APP_RES["v"] = None
+    _API_RES["v"] = None
 
 
 def _leveldb_pairs() -> list[tuple[str, float, str, str]]:
@@ -531,7 +727,7 @@ def accounts() -> dict:
     d = dict(d, **desktop_freshness(d))
     if not d.get("org_name") and c.get("org_name") and c.get("key") and c["key"] == d.get("key"):
         d["org_name"] = c["org_name"]                    # 同一个号同一个组织：组织名借命令行那边的
-    return {"desktop": _with_folder(d), "cli": _with_folder(c)}
+    return {"desktop": _with_folder(d), "cli": _with_folder(c), "api": api_account()}
 
 
 def _iso(ts: str | None) -> float:
@@ -587,6 +783,18 @@ def current_key(source: str = "desktop") -> str | None:
     return fs[0]["key"] if fs else None
 
 
+def visible_key() -> str | None:
+    """桌面端现在显示的是哪个会话列表文件夹：API 模式 → API 模式那个（3p: 前缀），否则 current_key('desktop')。"""
+    try:
+        if desktop_mode()["mode"] == "3p":
+            b = api_info()["bucket"]
+            if b:
+                return b["key"]
+    except Exception:
+        pass
+    return current_key("desktop")
+
+
 def _transcript_exists(cli_sid: str | None) -> bool:
     if not cli_sid:
         return False
@@ -601,26 +809,43 @@ def _fresh(d: dict) -> dict:
     return {k: v for k, v in d.items() if k not in _DROP}
 
 
-SOURCES = {"desktop": "桌面端", "cli": "命令行（CLI）"}
+SOURCES = {"desktop": "桌面端", "cli": "命令行（CLI）", "api": "API 模式"}
+# 订阅登录那边的模型名长这样；跨模式同步时，会话里记的别的模型名在另一边多半没有
+_1P_MODEL = re.compile(r"^claude-(opus|sonnet|haiku|fable|mythos)-[0-9][0-9a-z.-]*(\[1m\])?$")
+
+
+def _model_warn(model: str | None, to_profile: str, from_profile: str) -> str | None:
+    if not model or to_profile == from_profile:
+        return None
+    if to_profile == "1p" and _1P_MODEL.match(model) and not model.endswith("-thinking"):
+        return None
+    where = "订阅登录" if to_profile == "1p" else "API 模式的供应商"
+    return f"这个会话记的模型 {model} 在{where}那边可能没有，打开后可能要换个模型"
 
 
 def plan(target: str | None = None, source: str = "desktop") -> dict:
     if source not in SOURCES:
-        return {"ok": False, "error": f"不认识的来源：{source}（只能是 desktop / cli）", "source": source}
+        return {"ok": False, "error": f"不认识的来源：{source}（只能是 desktop / cli / api）", "source": source}
     acc = accounts()[source]
-    base = {"source": source, "account": acc}
-    fs = folders()
+    base = {"source": source, "account": acc, "mode": desktop_mode()}
+    fs = all_folders()
     if not fs:
         return dict(base, ok=False, error=f"没找到 Claude 桌面端的会话列表目录：{sessions_root()}")
     target = target or acc.get("key")
+    if not target and source == "api":
+        return dict(base, ok=False, error="API 模式还没有会话列表文件夹——先在 Claude 桌面端切到 API 模式开一个 Claude Code 会话，"
+                    "再回来同步（本程序不会自己建设备号文件或文件夹）。")
     if not target:
         return dict(base, ok=False, error=f"认不出{SOURCES[source]}现在登的是哪个号"
                     + ("（~/.claude.json 里没有登录信息，命令行先 claude 登一下）" if source == "cli" else ""))
     tgt = next((f for f in fs if f["key"] == target), None)
     if not tgt:
+        if target.startswith(API_PREFIX):
+            return dict(base, ok=False, error="API 模式的这个会话列表文件夹不在了——先在 Claude 桌面端的 API 模式里开一个 Claude Code 会话。")
         who = f"{SOURCES[source]}的号 {_short(target)}/{_short(target.partition('/')[2])}"
         return dict(base, ok=False, error=f"{who} 还没有会话列表文件夹——这个号还没在 Claude 桌面端里开过 Claude Code 会话。"
                     "先用这个号在桌面端开一个 Claude Code 会话，再回来补齐。")
+    prof = {f["key"]: f.get("profile", "1p") for f in fs}
     tdir = Path(tgt["path"])
     have = {f.name for f in tdir.glob("local_*.json")}
     # 在当前账号里删过的（桌面端留 deleted_<会话号> 墓碑）不复活
@@ -655,7 +880,8 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
     for name, (src, d, frm) in best.items():
         item = {"src": str(src), "name": name, "title": d.get("title") or "（无标题）",
                 "cwd": d.get("cwd"), "from": frm, "archived": bool(d.get("isArchived")),
-                "last": d.get("lastActivityAt", 0) / 1000}
+                "last": d.get("lastActivityAt", 0) / 1000, "from_profile": prof.get(frm, "1p"),
+                "model": d.get("model"), "warn": _model_warn(d.get("model"), tgt.get("profile", "1p"), prof.get(frm, "1p"))}
         if name in have:
             try:
                 cur = json.loads((tdir / name).read_text(encoding="utf-8"))
@@ -676,8 +902,10 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
         add.append(item)
     update.sort(key=lambda x: -x["last"])
     add.sort(key=lambda x: -x["last"])
+    tgt = dict(tgt, label=("API 模式（所有供应商共用）" + (f" · {acc.get('provider')}" if acc.get("provider") else ""))
+               if tgt.get("profile") == "3p" else None)
     return dict(base, ok=True, target=tgt, folders=fs, add=add, update=update, skip_missing=skip_missing,
-                skip_tomb=skip_tomb, skip_have=skip_have, tombstones=len(tomb))
+                skip_tomb=skip_tomb, skip_have=skip_have, tombstones=len(tomb), warns=sum(1 for x in add + update if x.get("warn")))
 
 
 def _atomic_write(dst: Path, text: str) -> None:
@@ -735,8 +963,11 @@ def _backup(tdir: Path) -> Path:
 
 
 def _write_ledger(bak: Path, tdir: Path, what: str, **kw) -> None:
+    key = f"{tdir.parent.name}/{tdir.name}"
+    if any(Path(b["path"]) == tdir for b in api_info()["buckets"]):
+        key = API_PREFIX + key
     led = {"what": what, "time": datetime.now().isoformat(timespec="seconds"), "target": str(tdir),
-           "key": f"{tdir.parent.name}/{tdir.name}", **kw}
+           "key": key, "profile": "3p" if key.startswith(API_PREFIX) else "1p", **kw}
     (bak / "ledger.json").write_text(json.dumps(led, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
@@ -767,11 +998,16 @@ def restore(backup_id: str) -> dict:
     if len(dirs) != 1:
         return {"ok": False, "error": "备份目录结构不对（应该正好一个 账号/组织）"}
     src = dirs[0]
-    tdir = sessions_root() / src.parent.name / src.name
     try:
         led = json.loads((b / "ledger.json").read_text(encoding="utf-8"))
     except Exception:
         led = None
+    tdir = sessions_root() / src.parent.name / src.name
+    if led and str(led.get("key") or "").startswith(API_PREFIX):     # API 模式那边的：按账本记的文件夹还原（得是现在认得的那个）
+        hit = next((Path(f["path"]) for f in api_folders() if f["key"] == led["key"]), None)
+        if not hit:
+            return {"ok": False, "error": "这次同步写的是 API 模式的会话列表，那个文件夹现在找不到了"}
+        tdir = hit
     pre = _backup(tdir)                       # 还原之前也先备份一次，还原错了还能再还原回来
     trash = paths.HOME / "trash" / f"claude-restore-{datetime.now():%Y%m%d-%H%M%S}"
     removed = restored = 0
@@ -800,6 +1036,8 @@ def restore(backup_id: str) -> dict:
 def _acc_line(name: str, a: dict) -> str:
     if not a.get("key"):
         return f"{name}：认不出来"
+    if a.get("profile") == "3p":
+        return f"{name}：{a['key']}  API 模式（所有供应商共用）  已有 {a['count']} 个会话"
     via = {"leveldb": "", "cli": "（认不出来，按命令行的号算）", "newest-folder": "（认不出来，按最近有写入的文件夹算）"}.get(a.get("via"), "")
     fold = f"已有 {a['count']} 个会话" if a.get("exists") else "还没有文件夹"
     who = " ".join(x for x in (a.get("name"), a.get("email")) if x)
@@ -808,14 +1046,24 @@ def _acc_line(name: str, a: dict) -> str:
     return f"{name}：{a['key']}{'  ' + who if who else ''}  {fold}{via}"
 
 
+def _api_line() -> str:
+    i, m = api_info(), desktop_mode()
+    head = f"桌面端模式：{'API 模式' if m['mode'] == '3p' else '订阅登录'}（{m['why']}）"
+    if not i["base"]:
+        return head + "\nAPI 模式：没找到数据目录（Claude-3p）"
+    b = i["bucket"]
+    return (head + f"\nAPI 模式：{i['base']}  供应商 {i['provider'] or '—'}  "
+            + (f"{b['key']}  已有 {b['count']} 个会话（所有供应商共用）" if b else "还没有会话列表文件夹"))
+
+
 def _print_plan(r: dict) -> None:
-    print(f"目标（{SOURCES[r['source']]}当前账号 / 组织）：{r['target']['key']}（已有 {r['target']['count']} 个会话）")
+    print(f"目标（{SOURCES[r['source']]}{'' if r['source'] == 'api' else '当前账号 / 组织'}）：{r['target']['key']}（已有 {r['target']['count']} 个会话）")
     print(f"可以补进来 {len(r['add'])} 个；已有但别处更新、要刷新 {len(r['update'])} 个；"
           f"对话记录已不在、跳过 {r['skip_missing']} 个；在这个号里删过（墓碑）不复活 {r['skip_tomb']} 个；"
           f"同一会话已在、跳过 {r['skip_have']} 个")
     for a in r["add"][:40]:
         t = datetime.fromtimestamp(a["last"]).strftime("%m-%d %H:%M") if a["last"] else "—"
-        print(f"  {t}  {a['title'][:40]}{'（已归档）' if a['archived'] else ''}  ·  {a['cwd']}")
+        print(f"  {t}  {a['title'][:40]}{'（已归档）' if a['archived'] else ''}  ·  {a['cwd']}" + (f"  ⚠ {a['warn']}" if a.get("warn") else ""))
     if len(r["add"]) > 40:
         print(f"  … 还有 {len(r['add']) - 40} 个")
 
@@ -828,13 +1076,14 @@ def main(argv: list[str]) -> int:
         tgt = argv[argv.index("--to") + 1]
     src = argv[argv.index("--source") + 1] if "--source" in argv else None
     if src and src not in (*SOURCES, "both"):
-        print(f"✗ --source 只能是 desktop / cli / both，不认识：{src}")
+        print(f"✗ --source 只能是 desktop / cli / api / both，不认识：{src}")
         return 2
     if "--list" in argv:
         acc = accounts()
         print(_acc_line("桌面端当前", acc["desktop"]))
         print(_acc_line("命令行当前", acc["cli"]))
-        for f in folders():
+        print(_api_line())
+        for f in all_folders():
             t = datetime.fromtimestamp(f["latest"]).strftime("%m-%d %H:%M") if f["latest"] else "—"
             tag = "、".join(n for n, s in (("桌面端", "desktop"), ("CLI", "cli")) if acc[s].get("key") == f["key"])
             print(f"{f['key']}  会话 {f['count']:>3}  最近 {t}{'  ← ' + tag + '当前' if tag else ''}")
@@ -854,7 +1103,7 @@ def main(argv: list[str]) -> int:
     only = argv[argv.index("--only") + 1].split(",") if "--only" in argv else None
     if dry:
         # 演练缺省两边都看；--to 指定了文件夹就只看一次（来源只影响显示）
-        srcs = ["desktop", "cli"] if (src or "both") == "both" else [src]
+        srcs = ["desktop", "cli"] + (["api"] if api_info()["bucket"] else []) if (src or "both") == "both" else [src]
         if tgt:
             srcs = srcs[:1]
         seen, bad = {}, 0
@@ -874,9 +1123,9 @@ def main(argv: list[str]) -> int:
         print("（演练，没写文件；去掉 --dry-run 真正补齐，真补时用 --source desktop 或 --source cli 选一边，缺省桌面端）")
         return 1 if bad == len(srcs) else 0
     if src == "both":
-        print("✗ 真正补齐一次只能选一边：--source desktop 或 --source cli")
+        print("✗ 真正补齐一次只能选一边：--source desktop / cli / api")
         return 2
-    src = src or "desktop"
+    src = src or default_source()
     r = run(tgt, True, only, src)
     print(_acc_line(f"{SOURCES[src]}当前账号", r["account"]))
     if not r["ok"]:
@@ -929,6 +1178,13 @@ def _auto_sig() -> tuple:
                       for o in a.iterdir() if o.is_dir())
     except Exception:
         pass
+    try:                                                 # API 模式：会话列表文件夹、deploymentMode（切模式也要重新算目标）
+        _API_RES["v"] = None
+        i = api_info()
+        out += sorted((b["key"], Path(b["path"]).stat().st_mtime_ns, 0) for b in i["buckets"])
+        out.append(("mode", i["mode"] or "", 0))
+    except Exception:
+        pass
     return tuple(out)
 
 
@@ -949,7 +1205,7 @@ def auto_tick(now: float | None = None, force: bool = False, debounce: float = 2
     import time
     from . import apps
     now = now or time.time()
-    if not sessions_root().exists():
+    if not sessions_root().exists() and not api_info()["buckets"]:
         return None
     if not _auto_lock(now):                              # 另一个进程（比如另开的 cc-sessionsync auto）正在做自动同步
         AUTO["other"] = True
@@ -976,7 +1232,7 @@ def auto_tick(now: float | None = None, force: bool = False, debounce: float = 2
     if running:
         if AUTO["changed"] or not AUTO["evaluated"]:     # 有变化但桌面端开着：只读算一下，有要补的就等它退出
             try:
-                p = plan(source="desktop")
+                p = plan(source=default_source())
                 if p.get("ok"):
                     skip = set(_skip_load().get(p["target"]["key"], []))
                     p["add"] = [x for x in p["add"] if x["name"] not in skip]
@@ -989,7 +1245,7 @@ def auto_tick(now: float | None = None, force: bool = False, debounce: float = 2
         return None
     AUTO["changed"], AUTO["evaluated"], AUTO["last_check"] = 0.0, now, now
     try:
-        p = plan(source="desktop")
+        p = plan(source=default_source())
         if not p.get("ok"):
             AUTO["error"], AUTO["pending"] = p.get("error"), False
             return None
@@ -1004,7 +1260,7 @@ def auto_tick(now: float | None = None, force: bool = False, debounce: float = 2
         if now - newest < quiet:
             AUTO["changed"] = now                        # 刚有写入：过一会儿再来
             return None
-        r = run(p["target"]["key"], source="desktop", what="auto-sync", only=[a["name"] for a in p["add"]])
+        r = run(p["target"]["key"], source=p["source"], what="auto-sync", only=[a["name"] for a in p["add"]])
         _prune_auto()
         AUTO["pending"] = False
         ev = {"id": f"{int(now)}", "time": now, "added": r.get("done", 0), "updated": r.get("updated", 0),

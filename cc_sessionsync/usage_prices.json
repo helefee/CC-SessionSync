@@ -1,839 +1,1170 @@
 {
-"_source":"Prices in USD per million tokens (input, output, cache read, cache write 5m). Seed data from cc-switch (MIT, (c) 2025 Jason Young); see THIRD_PARTY_NOTICES.md.",
-"models":{
-"claude-3-5-haiku-20241022":[
+"_source": "Prices in USD per million tokens. List entries: [input, output, cache read, cache write 5m] (seed data from cc-switch, MIT, (c) 2025 Jason Young; see THIRD_PARTY_NOTICES.md). Object entries were checked against the official pricing pages on 'verified': p = [input, output, cache read, cache write 5m, cache write 1h]; lc = [prompt-length threshold, input-side x, output x] applied to the whole request; fast / flex / batch / geo_us = multipliers on all token kinds.",
+"models": {
+"claude-3-5-haiku-20241022": {
+"p": [
 0.8,
-4.0,
+4,
 0.08,
-1.0
+1,
+1.6
 ],
-"claude-3-5-sonnet-20241022":[
+"verified": "2026-10-18",
+"ref": "anthropic"
+},
+"claude-3-5-sonnet-20241022": [
 3.0,
 15.0,
 0.3,
 3.75
 ],
-"claude-fable-5":[
-10.0,
-50.0,
-1.0,
-12.5
+"claude-fable-5": {
+"p": [
+10,
+50,
+1,
+12.5,
+20
 ],
-"claude-fable-5-1":[
-10.0,
-50.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-fable-5-1": {
+"p": [
+10,
+50,
 0.25,
-12.5
+12.5,
+20
 ],
-"claude-haiku-4-5-20251001":[
-1.0,
-5.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-haiku-4-5-20251001": {
+"p": [
+1,
+5,
 0.1,
-1.25
+1.25,
+2
 ],
-"claude-mythos-5":[
-10.0,
-50.0,
-1.0,
-12.5
+"verified": "2026-10-18",
+"ref": "anthropic"
+},
+"claude-haiku-5-5": {
+"p": [
+0.1,
+0.5,
+0.01,
+0.125,
+0.2
 ],
-"claude-mythos-5-1":[
-10.0,
-50.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"lc": [
+100000,
+5,
+5
+],
+"geo_us": 1.1
+},
+"claude-mythos-5": {
+"p": [
+10,
+50,
+1,
+12.5,
+20
+],
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-mythos-5-1": {
+"p": [
+10,
+50,
 0.25,
-12.5
+12.5,
+20
 ],
-"claude-opus-4-1-20250805":[
-15.0,
-75.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-opus-4-1-20250805": {
+"p": [
+15,
+75,
 1.5,
-18.75
+18.75,
+30
 ],
-"claude-opus-4-20250514":[
-15.0,
-75.0,
+"verified": "2026-10-18",
+"ref": "anthropic"
+},
+"claude-opus-4-20250514": {
+"p": [
+15,
+75,
 1.5,
-18.75
+18.75,
+30
 ],
-"claude-opus-4-5-20251101":[
-5.0,
-25.0,
+"verified": "2026-10-18",
+"ref": "anthropic"
+},
+"claude-opus-4-5-20251101": {
+"p": [
+5,
+25,
 0.5,
-6.25
+6.25,
+10
 ],
-"claude-opus-4-6":[
-5.0,
-25.0,
+"verified": "2026-10-18",
+"ref": "anthropic"
+},
+"claude-opus-4-6": {
+"p": [
+5,
+25,
 0.5,
-6.25
+6.25,
+10
 ],
-"claude-opus-4-7":[
-5.0,
-25.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-opus-4-7": {
+"p": [
+5,
+25,
 0.5,
-6.25
+6.25,
+10
 ],
-"claude-opus-4-8":[
-5.0,
-25.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-opus-4-8": {
+"p": [
+5,
+25,
 0.5,
-6.25
+6.25,
+10
 ],
-"claude-opus-5":[
-5.0,
-25.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"fast": 2,
+"geo_us": 1.1
+},
+"claude-opus-5": {
+"p": [
+5,
+25,
 0.5,
-6.25
+6.25,
+10
 ],
-"claude-opus-5-5":[
-4.0,
-20.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"fast": 2,
+"geo_us": 1.1
+},
+"claude-opus-5-5": {
+"p": [
+4,
+20,
 0.2,
-5.0
+5,
+8
 ],
-"claude-sonnet-4-20250514":[
-3.0,
-15.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"fast": 2,
+"geo_us": 1.1
+},
+"claude-sonnet-4-20250514": {
+"p": [
+3,
+15,
 0.3,
-3.75
+3.75,
+6
 ],
-"claude-sonnet-4-5-20250929":[
-3.0,
-15.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"lc": [
+200000,
+2,
+1.5
+]
+},
+"claude-sonnet-4-5-20250929": {
+"p": [
+3,
+15,
 0.3,
-3.75
+3.75,
+6
 ],
-"claude-sonnet-4-6":[
-3.0,
-15.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"lc": [
+200000,
+2,
+1.5
+]
+},
+"claude-sonnet-4-6": {
+"p": [
+3,
+15,
 0.3,
-3.75
+3.75,
+6
 ],
-"claude-sonnet-5":[
-2.0,
-10.0,
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-sonnet-5": {
+"p": [
+2,
+10,
 0.2,
-2.5
+2.5,
+4
 ],
-"codestral-2508":[
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"claude-sonnet-5-5": {
+"p": [
+2,
+10,
+0.1,
+2.5,
+4
+],
+"verified": "2026-10-18",
+"ref": "anthropic",
+"geo_us": 1.1
+},
+"codestral-2508": [
 0.3,
 0.9,
 0.03,
 0.0
 ],
-"codex-mini":[
+"codex-mini": [
 0.75,
 3.0,
 0.025,
 0.0
 ],
-"command-a":[
+"command-a": [
 2.5,
 10.0,
 0.0,
 0.0
 ],
-"command-r":[
+"command-r": [
 0.15,
 0.6,
 0.0,
 0.0
 ],
-"deepseek-chat":[
+"deepseek-chat": [
 0.44,
 1.32,
 0.014,
 0.0
 ],
-"deepseek-reasoner":[
+"deepseek-reasoner": [
 0.44,
 1.32,
 0.014,
 0.0
 ],
-"deepseek-v3":[
+"deepseek-v3": [
 0.28,
 1.11,
 0.028,
 0.0
 ],
-"deepseek-v3.1":[
+"deepseek-v3.1": [
 0.55,
 1.67,
 0.055,
 0.0
 ],
-"deepseek-v3.2":[
+"deepseek-v3.2": [
 0.28,
 0.42,
 0.028,
 0.0
 ],
-"deepseek-v4-flash":[
+"deepseek-v4-flash": [
 0.3,
 1.2,
 0.006,
 0.0
 ],
-"deepseek-v4-pro":[
+"deepseek-v4-pro": [
 1.32,
 3.96,
 0.044,
 0.0
 ],
-"devstral-2-2512":[
+"devstral-2-2512": [
 0.4,
 2.0,
 0.04,
 0.0
 ],
-"gemini-2.0-flash":[
+"gemini-2.0-flash": [
 0.1,
 0.4,
 0.025,
 0.0
 ],
-"gemini-2.5-flash":[
+"gemini-2.5-flash": [
 0.3,
 2.5,
 0.03,
 0.0
 ],
-"gemini-2.5-flash-lite":[
+"gemini-2.5-flash-lite": [
 0.1,
 0.4,
 0.01,
 0.0
 ],
-"gemini-2.5-pro":[
+"gemini-2.5-pro": [
 1.25,
 10.0,
 0.125,
 0.0
 ],
-"gemini-3-flash-preview":[
+"gemini-3-flash-preview": [
 0.5,
 3.0,
 0.05,
 0.0
 ],
-"gemini-3-pro-preview":[
+"gemini-3-pro-preview": [
 2.0,
 12.0,
 0.2,
 0.0
 ],
-"gemini-3.1-flash-lite":[
+"gemini-3.1-flash-lite": [
 0.25,
 1.5,
 0.025,
 0.0
 ],
-"gemini-3.1-pro-preview":[
+"gemini-3.1-pro-preview": [
 2.0,
 12.0,
 0.2,
 0.0
 ],
-"gemini-3.5-flash":[
+"gemini-3.5-flash": [
 1.5,
 9.0,
 0.15,
 0.0
 ],
-"gemini-3.5-flash-lite":[
+"gemini-3.5-flash-lite": [
 0.3,
 2.5,
 0.03,
 0.0
 ],
-"gemini-3.6-flash":[
+"gemini-3.6-flash": [
 0.75,
 3.75,
 0.075,
 0.0
 ],
-"gemini-3.7-flash":[
+"gemini-3.7-flash": [
 0.75,
 3.75,
 0.075,
 0.0
 ],
-"gemini-3.8-flash":[
+"gemini-3.8-flash": [
 0.75,
 3.75,
 0.075,
 0.0
 ],
-"glm-4.6":[
+"glm-4.6": [
 0.6,
 2.2,
 0.11,
 0.0
 ],
-"glm-4.7":[
+"glm-4.7": [
 0.6,
 2.2,
 0.11,
 0.0
 ],
-"glm-5":[
+"glm-5": [
 1.0,
 3.2,
 0.2,
 0.0
 ],
-"glm-5-turbo":[
+"glm-5-turbo": [
 1.2,
 4.0,
 0.24,
 0.0
 ],
-"glm-5.1":[
+"glm-5.1": [
 1.4,
 4.4,
 0.26,
 0.0
 ],
-"glm-5.2":[
+"glm-5.2": [
 1.4,
 4.4,
 0.26,
 0.0
 ],
-"glm-5.3":[
+"glm-5.3": [
 1.4,
 4.4,
 0.26,
 0.0
 ],
-"glm-5v-turbo":[
+"glm-5v-turbo": [
 1.2,
 4.0,
 0.24,
 0.0
 ],
-"gpt-4.1":[
-2.0,
-8.0,
+"gpt-4.1": {
+"p": [
+2,
+8,
 0.5,
-0.0
+0,
+0
 ],
-"gpt-4.1-mini":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.75,
+"batch": 0.5
+},
+"gpt-4.1-mini": {
+"p": [
 0.4,
 1.6,
 0.1,
-0.0
+0,
+0
 ],
-"gpt-4.1-nano":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.75,
+"batch": 0.5
+},
+"gpt-4.1-nano": {
+"p": [
 0.1,
 0.4,
 0.025,
-0.0
+0,
+0
 ],
-"gpt-4o":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 2,
+"batch": 0.5
+},
+"gpt-4o": {
+"p": [
 2.5,
-10.0,
+10,
 1.25,
-0.0
+0,
+0
 ],
-"gpt-4o-mini":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.7,
+"batch": 0.5
+},
+"gpt-4o-mini": {
+"p": [
 0.15,
 0.6,
 0.075,
-0.0
+0,
+0
 ],
-"gpt-5":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.667,
+"batch": 0.5
+},
+"gpt-5": {
+"p": [
+1.25,
+10,
+0.125,
+0,
+0
+],
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5-codex": [
 1.25,
 10.0,
 0.125,
 0.0
 ],
-"gpt-5-codex":[
+"gpt-5-codex-low": [
 1.25,
 10.0,
 0.125,
 0.0
 ],
-"gpt-5-codex-low":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5-high":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5-low":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5-medium":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5-mini":[
+"gpt-5-mini": {
+"p": [
 0.25,
-2.0,
+2,
 0.025,
-0.0
+0,
+0
 ],
-"gpt-5-minimal":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5-nano":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.8,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5-nano": {
+"p": [
 0.05,
 0.4,
 0.005,
-0.0
+0,
+0
 ],
-"gpt-5.1":[
+"verified": "2026-10-18",
+"ref": "openai",
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5-pro": {
+"p": [
+15,
+120,
+0,
+0,
+0
+],
+"verified": "2026-10-18",
+"ref": "openai",
+"batch": 0.5
+},
+"gpt-5.1": {
+"p": [
+1.25,
+10,
+0.125,
+0,
+0
+],
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.1-codex": [
 1.25,
 10.0,
 0.125,
 0.0
 ],
-"gpt-5.1-codex":[
-1.25,
-10.0,
-0.125,
-0.0
+"gpt-5.2": {
+"p": [
+1.75,
+14,
+0.175,
+0,
+0
 ],
-"gpt-5.1-high":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5.1-low":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5.1-medium":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5.1-minimal":[
-1.25,
-10.0,
-0.125,
-0.0
-],
-"gpt-5.2":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.2-codex": [
 1.75,
 14.0,
 0.175,
 0.0
 ],
-"gpt-5.2-codex":[
+"gpt-5.2-pro": {
+"p": [
+21,
+168,
+0,
+0,
+0
+],
+"verified": "2026-10-18",
+"ref": "openai",
+"batch": 0.5
+},
+"gpt-5.3-codex": {
+"p": [
 1.75,
-14.0,
+14,
 0.175,
-0.0
+0,
+0
 ],
-"gpt-5.2-high":[
-1.75,
-14.0,
-0.175,
-0.0
-],
-"gpt-5.2-low":[
-1.75,
-14.0,
-0.175,
-0.0
-],
-"gpt-5.2-medium":[
-1.75,
-14.0,
-0.175,
-0.0
-],
-"gpt-5.2-pro":[
-21.0,
-168.0,
-0.0,
-0.0
-],
-"gpt-5.2-xhigh":[
-1.75,
-14.0,
-0.175,
-0.0
-],
-"gpt-5.3-codex":[
-1.75,
-14.0,
-0.175,
-0.0
-],
-"gpt-5.4":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 2
+},
+"gpt-5.4": {
+"p": [
 2.5,
-15.0,
+15,
 0.25,
-0.0
+0,
+0
 ],
-"gpt-5.4-mini":[
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.4-mini": {
+"p": [
 0.75,
 4.5,
 0.075,
-0.0
+0,
+0
 ],
-"gpt-5.4-nano":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.4-nano": {
+"p": [
 0.2,
 1.25,
 0.02,
-0.0
+0,
+0
 ],
-"gpt-5.4-pro":[
-30.0,
-180.0,
-0.0,
-0.0
+"verified": "2026-10-18",
+"ref": "openai",
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.4-pro": {
+"p": [
+30,
+180,
+0,
+0,
+0
 ],
-"gpt-5.5":[
-5.0,
-30.0,
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"batch": 0.5
+},
+"gpt-5.5": {
+"p": [
+5,
+30,
 0.5,
-0.0
+0,
+0
 ],
-"gpt-5.5-high":[
-5.0,
-30.0,
-0.5,
-0.0
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
 ],
-"gpt-5.5-low":[
-5.0,
-30.0,
-0.5,
-0.0
+"fast": 2.5,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.5-pro": {
+"p": [
+30,
+180,
+0,
+0,
+0
 ],
-"gpt-5.5-medium":[
-5.0,
-30.0,
-0.5,
-0.0
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
 ],
-"gpt-5.5-minimal":[
-5.0,
-30.0,
-0.5,
-0.0
-],
-"gpt-5.5-pro":[
-30.0,
-180.0,
-0.0,
-0.0
-],
-"gpt-5.5-xhigh":[
-5.0,
-30.0,
-0.5,
-0.0
-],
-"gpt-5.6":[
+"batch": 0.5
+},
+"gpt-5.6": [
 4.0,
 20.0,
 0.4,
 5.0
 ],
-"gpt-5.6-high":[
+"gpt-5.6-high": [
 4.0,
 20.0,
 0.4,
 5.0
 ],
-"gpt-5.6-low":[
+"gpt-5.6-low": [
 4.0,
 20.0,
 0.4,
 5.0
 ],
-"gpt-5.6-medium":[
-4.0,
-20.0,
-0.4,
-5.0
-],
-"gpt-5.6-minimal":[
-4.0,
-20.0,
-0.4,
-5.0
-],
-"gpt-5.6-sol":[
-4.0,
-20.0,
-0.4,
-5.0
-],
-"gpt-5.6-terra":[
-2.0,
-12.0,
+"gpt-5.6-luna": {
+"p": [
 0.2,
+1.2,
+0.02,
+0.25,
+0.25
+],
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.6-medium": [
+4.0,
+20.0,
+0.4,
+5.0
+],
+"gpt-5.6-minimal": [
+4.0,
+20.0,
+0.4,
+5.0
+],
+"gpt-5.6-sol": {
+"p": [
+4,
+20,
+0.4,
+5,
+5
+],
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.6-terra": {
+"p": [
+2,
+12,
+0.2,
+2.5,
 2.5
 ],
-"gpt-5.6-xhigh":[
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-5.6-xhigh": [
 4.0,
 20.0,
 0.4,
 5.0
 ],
-"gpt-6-astra":[
-10.0,
-50.0,
-1.0,
+"gpt-6-astra": {
+"p": [
+10,
+50,
+1,
+12.5,
 12.5
 ],
-"gpt-6-luna":[
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-6-luna": {
+"p": [
 0.1,
 0.5,
 0.01,
+0.125,
 0.125
 ],
-"gpt-6-sol":[
-2.0,
-10.0,
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-6-sol": {
+"p": [
+2,
+10,
 0.2,
+2.5,
 2.5
 ],
-"gpt-6.1-sol":[
-2.0,
-10.0,
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"gpt-6.1-sol": {
+"p": [
+2,
+10,
 0.1,
+2.5,
 2.5
 ],
-"grok-3":[
+"verified": "2026-10-18",
+"ref": "openai",
+"lc": [
+272000,
+2,
+1.5
+],
+"fast": 2,
+"flex": 0.5,
+"batch": 0.5
+},
+"grok-3": [
 3.0,
 15.0,
 0.75,
 0.0
 ],
-"grok-3-mini":[
+"grok-3-mini": [
 0.25,
 0.5,
 0.075,
 0.0
 ],
-"grok-4":[
+"grok-4": [
 3.0,
 15.0,
 0.75,
 0.0
 ],
-"grok-4.3":[
+"grok-4.3": [
 1.25,
 2.5,
 0.2,
 0.0
 ],
-"grok-4.5":[
+"grok-4.5": [
 2.0,
 6.0,
 0.3,
 0.0
 ],
-"grok-4.5-build":[
+"grok-4.5-build": [
 2.0,
 6.0,
 0.3,
 0.0
 ],
-"grok-4.6":[
+"grok-4.6": [
 2.0,
 6.0,
 0.5,
 0.0
 ],
-"grok-4.7":[
+"grok-4.7": [
 2.0,
 6.0,
 0.5,
 0.0
 ],
-"grok-build-0.1":[
+"grok-build-0.1": [
 1.0,
 2.0,
 0.2,
 0.0
 ],
-"hunyuan-hy3":[
+"hunyuan-hy3": [
 0.14,
 0.56,
 0.035,
 0.0
 ],
-"hy3":[
+"hy3": [
 0.14,
 0.56,
 0.035,
 0.0
 ],
-"k3":[
+"k3": [
 3.0,
 15.0,
 0.3,
 0.0
 ],
-"kimi-k2-0905":[
+"kimi-k2-0905": [
 0.55,
 2.2,
 0.1,
 0.0
 ],
-"kimi-k2.5":[
+"kimi-k2.5": [
 0.6,
 3.0,
 0.1,
 0.0
 ],
-"kimi-k2.6":[
+"kimi-k2.6": [
 0.95,
 4.0,
 0.16,
 0.0
 ],
-"kimi-k3":[
+"kimi-k3": [
 3.0,
 15.0,
 0.3,
 0.0
 ],
-"magistral-medium":[
+"magistral-medium": [
 2.0,
 5.0,
 0.0,
 0.0
 ],
-"mimo-v2-pro":[
+"mimo-v2-pro": [
 0.435,
 0.87,
 0.0036,
 0.0
 ],
-"mimo-v2.5":[
+"mimo-v2.5": [
 0.14,
 0.28,
 0.0028,
 0.0
 ],
-"minimax-m2":[
+"minimax-m2": [
 0.3,
 1.2,
 0.03,
 0.375
 ],
-"minimax-m3":[
+"minimax-m3": [
 0.3,
 1.2,
 0.06,
 0.0
 ],
-"o1":[
+"o1": [
 15.0,
 60.0,
 7.5,
 0.0
 ],
-"o1-mini":[
+"o1-mini": [
 0.55,
 2.2,
 0.55,
 0.0
 ],
-"o3":[
-2.0,
-8.0,
+"o3": {
+"p": [
+2,
+8,
 0.5,
-0.0
+0,
+0
 ],
-"o3-mini":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.75,
+"flex": 0.5,
+"batch": 0.5
+},
+"o3-mini": {
+"p": [
 1.1,
 4.4,
 0.55,
-0.0
+0,
+0
 ],
-"o3-pro":[
-20.0,
-80.0,
-0.0,
-0.0
+"verified": "2026-10-18",
+"ref": "openai",
+"batch": 0.5
+},
+"o3-pro": {
+"p": [
+20,
+80,
+0,
+0,
+0
 ],
-"o4-mini":[
+"verified": "2026-10-18",
+"ref": "openai",
+"batch": 0.5
+},
+"o4-mini": {
+"p": [
 1.1,
 4.4,
 0.275,
-0.0
+0,
+0
 ],
-"qwen3-32b":[
+"verified": "2026-10-18",
+"ref": "openai",
+"fast": 1.818,
+"flex": 0.5,
+"batch": 0.5
+},
+"qwen3-32b": [
 0.16,
 0.64,
 0.0,
 0.0
 ],
-"qwen3-max":[
+"qwen3-max": [
 0.78,
 3.9,
 0.0,
 0.0
 ],
-"qwen3.5-plus":[
+"qwen3.5-plus": [
 0.26,
 1.56,
 0.052,
 0.0
 ],
-"qwen3.7-max":[
+"qwen3.7-max": [
 2.5,
 7.5,
 0.25,
 0.0
 ],
-"qwen3.7-plus":[
+"qwen3.7-plus": [
 0.4,
 1.6,
 0.08,
 0.0
 ],
-"qwen3.8-27b":[
+"qwen3.8-27b": [
 0.5,
 3.0,
 0.1,
 0.625
 ],
-"qwen3.8-max":[
+"qwen3.8-max": [
 2.0,
 6.0,
 0.25,
 2.5
 ],
-"qwq-32b":[
+"qwq-32b": [
 0.2,
 0.6,
 0.0,
 0.0
 ],
-"qwq-plus":[
+"qwq-plus": [
 0.8,
 2.4,
 0.0,
 0.0
 ]
+},
+"_refs": {
+"anthropic": "https://platform.claude.com/docs/en/about-claude/pricing",
+"openai": "https://platform.openai.com/docs/pricing"
 }
 }
