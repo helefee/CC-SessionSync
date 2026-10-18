@@ -1321,6 +1321,18 @@ def plan_to_dsh(only: list[str] | None = None, again: bool = False) -> dict:
     mine = {v.get("session") for k, v in mp.items() if k.startswith("dsh2cc:")}
     keys = [k.strip().lower() for k in (only or []) if k.strip()]
     rows = []
+    err = None
+    try:
+        wr = write_root()
+        root, comp = wr["root"], wr["compression"]
+    except DshError as e:
+        root, comp, err = None, None, str(e)
+
+    def here(f: str) -> bool:                           # 记录里那份在不在现在这个会话根下（换了 DSH_HOME 就算没导过）
+        try:
+            return root is not None and Path(f).resolve().is_relative_to(Path(root).resolve())
+        except (OSError, ValueError):
+            return False
     for x in S.claude_sessions():
         if x.get("orphan") or not x.get("file"):
             continue
@@ -1331,22 +1343,19 @@ def plan_to_dsh(only: list[str] | None = None, again: bool = False) -> dict:
         f = Path(x["file"])
         rec = mp.get(f"cc2dsh:{x['id']}")
         state = "new"
-        if rec and Path(rec.get("file", "")).exists():
+        if rec and Path(rec.get("file", "")).exists() and here(rec["file"]):
             if rec.get("src_sha") == _sha(f):
                 state = "same"
             else:
                 state = "new" if again else "changed"  # Claude 那边又聊了：已经导过去的那份不改；要的话再导一份新的（again）
         rows.append({"id": x["id"], "title": x.get("title"), "cwd": x.get("cwd"), "path": str(f), "last": x.get("last"),
                      "state": state, "dsh": rec.get("dsh") if rec else None})
-    err = None
     try:
-        wr = write_root()
-        root, comp = wr["root"], wr["compression"]
-        have = root_encoding(root) if root.is_dir() else None
+        have = root_encoding(root) if root is not None and root.is_dir() else None
         if have and have != comp:
             err = f"会话根里现有的会话是 {have}，设置里是 {comp}"
     except DshError as e:
-        root, comp, err = None, None, str(e)
+        err = str(e)
     if comp == "zstd" and not _zstd_ok():
         err = "缺 zstandard 模块，写不了压缩的 dsh 会话"
     return {"ok": not err, "error": err, "rows": rows, "root": str(root) if root else None, "compression": comp,

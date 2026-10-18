@@ -1218,7 +1218,7 @@ def restore_snapshot(snap_id: int) -> dict:
     data = _blob(r["sha"])
     dst = Path(r["path"])
     od, led = _new_op("restore-snapshot", items=[{"agent": r["agent"], "id": r["sid"]}], snap=r["id"])
-    if not dst.exists():
+    if not dst.exists() and r["agent"] != "dsh":      # dsh 的目录本程序从不写：一律另存到导出目录
         _atomic(dst, data)
         led["steps"].append({"t": "created", "path": str(dst)})
         res = {"ok": True, "path": str(dst), "how": "original"}
@@ -1232,7 +1232,8 @@ def restore_snapshot(snap_id: int) -> dict:
         _atomic(f, data)
         led["steps"].append({"t": "created", "path": str(f)})
         res = {"ok": True, "path": str(f), "how": "export",
-               "note": "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
+               "note": "另存到了 exports 目录，没有动 DeepSeek Harness 的文件（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
+               if r["agent"] == "dsh" else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
     led["summary"] = f"从备份库恢复（{ {'original': '写回原处', 'copy': '另存为新会话', 'export': '另存到导出目录'}[res['how']] }）"
     _save_led(od, led)
     return dict(res, op=od.name)
