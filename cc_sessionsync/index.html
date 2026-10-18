@@ -6,6 +6,8 @@
 <title>CC Session Sync</title>
 <link rel="icon" href="/icon.png">
 <script>try { var t = localStorage.getItem("ccss.theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
+<script>try { var r = document.documentElement, f = +localStorage.getItem("ccss.fk"), z = +localStorage.getItem("ccss.zoom");   // 字号 / 界面缩放（0.2.6）：先套上，免得闪一下
+  if (f >= 0.8 && f <= 1.5) r.style.setProperty("--fk", f); if (z >= 0.8 && z <= 2) { r.style.zoom = z; r.style.setProperty("--z", z); } } catch (e) {}</script>
 <style>
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-medium.woff2) format("woff2");font-weight:450 549;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
@@ -16,6 +18,7 @@
 @font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-bold.woff2) format("woff2");font-weight:650 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
 
 :root{
+  --fk:1;--z:1;--vh:calc(1vh / var(--z));--vw:calc(1vw / var(--z));
   --bg:#faf9f5;--panel:#ffffff;--panel2:#f5f4ed;--side:#f3f1ea;--hover:#ebe8de;--hover2:#e2ded1;--bubble:#efece3;
   --line:#e3dfd3;--line2:#ece9e0;--text:#141413;--muted:#6f6d66;--faint:#a19f97;
   --accent:#c96442;--accent-weak:#f7e7df;--ink:#141413;--ink-on:#faf9f5;--claude:#c96442;--codex:#1e6b34;--cxn:#1e6b34;--dsh:#4d6bfe;
@@ -38,7 +41,9 @@
   --codebg:#1a1918;--shadow:0 6px 24px rgba(0,0,0,.4);color-scheme:dark}
 *{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--hover2) transparent}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow:hidden}
+.zoomc{display:inline-flex;align-items:center;gap:4px}.zoomc b{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}.zoomc button{padding:3px 10px}
+kbd{font:calc(12px*var(--fk)) var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--panel2)}
+body{margin:0;background:var(--bg);color:var(--text);font:calc(15px*var(--fk))/1.55 var(--sans);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 button{border:0;background:var(--hover);border-radius:8px;padding:5px 12px;cursor:pointer;white-space:nowrap;transition:background .15s}
 button:hover{background:var(--hover2)}
@@ -51,21 +56,21 @@ button:disabled{opacity:.5;cursor:default}
 input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;vertical-align:-2px}
-code{font-family:var(--mono);font-size:12px;background:var(--hover);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere}
+code{font-family:var(--mono);font-size:calc(13px*var(--fk));background:var(--hover);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere}
 a{color:var(--accent)}
 .ic{width:1.1em;height:1.1em;vertical-align:-.18em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ic.logo{width:1.05em;height:1.05em;fill:currentColor;stroke:none}
 .dim{color:var(--faint)}.muted{color:var(--muted)}
-.app{display:flex;flex-direction:column;height:100vh}
+.app{display:flex;flex-direction:column;height:calc(100*var(--vh))}
 .top{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--line2);background:var(--bg);flex:none}
 .brand{display:flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap}
 .brand img{width:20px;height:20px;border-radius:5px}
-.brand .ver{font-weight:400;font-size:11.5px;color:var(--faint)}
+.brand .ver{font-weight:400;font-size:calc(12.5px*var(--fk));color:var(--faint)}
 .tabs{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
-.tab{font-size:12.5px;padding:3px 11px;border-radius:999px;background:var(--hover);color:var(--text);display:inline-flex;align-items:center;gap:6px}
+.tab{font-size:calc(13.5px*var(--fk));padding:3px 11px;border-radius:999px;background:var(--hover);color:var(--text);display:inline-flex;align-items:center;gap:6px}
 .tab .ic{width:14px;height:14px;color:var(--muted)}
 .tab.on{background:var(--ink);color:var(--ink-on)}.tab.on .ic{color:var(--ink-on)}
-.tab .cnt{font-size:10.5px;background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:15px}
+.tab .cnt{font-size:calc(12px*var(--fk));background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:calc(15px*var(--fk))}
 .topact{display:flex;gap:2px;align-items:center}
 .tbx{position:relative;background:transparent;color:var(--muted);padding:5px 7px;border-radius:8px}
 .tbx:hover{background:var(--hover);color:var(--text)}
@@ -75,28 +80,28 @@ a{color:var(--accent)}
 .main{flex:1;overflow:auto;padding:16px 20px 30px}
 .page{display:none;max-width:1180px;margin:0 auto}
 .page.on{display:block}
-.ban{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px;margin:0 auto 12px;max-width:1180px;font-size:13px;box-shadow:var(--shadow)}
+.ban{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px;margin:0 auto 12px;max-width:1180px;font-size:calc(14px*var(--fk));box-shadow:var(--shadow)}
 .ban .ic{width:17px;height:17px;flex:none}
 .ban.warn{border-color:var(--warn);background:var(--warn-weak)}.ban.warn>.ic{color:var(--warn)}
 .ban.acc>.ic{color:var(--accent)}
 .ban .tx{flex:1;min-width:0}.ban .tx b{font-weight:600}
 .ban .acts{display:flex;gap:6px}
-.ban button{padding:3px 10px;font-size:12.5px}
-h2{font-size:17px;font-weight:600;margin:2px 0 4px;display:flex;align-items:center;gap:8px}
-.sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.ban button{padding:3px 10px;font-size:calc(13.5px*var(--fk))}
+h2{font-size:calc(18px*var(--fk));font-weight:600;margin:2px 0 4px;display:flex;align-items:center;gap:8px}
+.sub{color:var(--muted);font-size:calc(13.5px*var(--fk));margin:0 0 14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r2);padding:12px 14px;margin-bottom:12px}
-.card h3{font-size:13.5px;font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.card h3{font-size:calc(14.5px*var(--fk));font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .card h3 .sp{flex:1}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .acct{display:flex;gap:10px;align-items:center}
 .acct .av{width:34px;height:34px;border-radius:50%;background:var(--accent-weak);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
-.acct .nm{font-weight:600}.acct .ds{font-size:12px;color:var(--muted)}
-.tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;border-radius:6px;padding:0 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;line-height:18px}
+.acct .nm{font-weight:600}.acct .ds{font-size:calc(13px*var(--fk));color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:calc(12px*var(--fk));border-radius:6px;padding:0 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;line-height:calc(18px*var(--fk))}
 .tag.claude{color:var(--claude);border-color:currentColor}.tag.codex{color:var(--cxn);border-color:currentColor}.tag.dsh{color:var(--dsh,#4d6bfe);border-color:currentColor}
 .ic.logo.dshc{color:var(--dsh,#4d6bfe)}
 .tag.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-weak)}.tag.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-weak)}
 .tag.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-weak)}.tag.acc{color:var(--accent);border-color:var(--accent);background:var(--accent-weak)}
-table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t{width:100%;border-collapse:collapse;font-size:calc(13.5px*var(--fk))}
 table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle}
 table.t th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel);z-index:1}
 table.t tr:last-child td{border-bottom:0}
@@ -105,76 +110,76 @@ table.t tr.click{cursor:pointer}table.t tr.click:hover td{background:var(--hover
 table.t td.n{text-align:right;white-space:nowrap}
 .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
 #ssList .tl .ell,#ssList .tl .s{max-width:250px}#ssList td:last-child{white-space:nowrap}#ssList .tag.warn{max-width:74px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
-.tl{font-weight:500}.tl .s{display:block;font-weight:400;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
+.tl{font-weight:500}.tl .s{display:block;font-weight:400;font-size:calc(12.5px*var(--fk));color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .bar .sp{flex:1}
 .bar input[type=search]{width:240px}
 .seg{display:inline-flex;border-radius:999px;background:var(--hover);padding:2px}
-.seg button{border-radius:999px;background:transparent;padding:3px 12px;font-size:12.5px;color:var(--muted)}
+.seg button{border-radius:999px;background:transparent;padding:3px 12px;font-size:calc(13.5px*var(--fk));color:var(--muted)}
 .seg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .split{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;align-items:start}
-.scroll{max-height:calc(100vh - 290px);overflow:auto;border:1px solid var(--line2);border-radius:10px}
-.pv{max-height:calc(100vh - 250px);overflow:auto;display:flex;flex-direction:column;gap:8px}
-.msg{border-radius:12px;padding:8px 11px;font-size:13px;white-space:pre-wrap;word-break:break-word;max-width:100%}
+.scroll{max-height:calc(calc(100*var(--vh)) - 290px);overflow:auto;border:1px solid var(--line2);border-radius:10px}
+.pv{max-height:calc(calc(100*var(--vh)) - 250px);overflow:auto;display:flex;flex-direction:column;gap:8px}
+.msg{border-radius:12px;padding:8px 11px;font-size:calc(14px*var(--fk));white-space:pre-wrap;word-break:break-word;max-width:100%}
 .msg.user{background:var(--bubble);align-self:flex-end;max-width:88%}
 .msg.assistant{background:transparent;border:1px solid var(--line2)}
-.msg.tool{font:12px/1.45 var(--mono);color:var(--muted);padding:2px 6px;border:0}
-.msg .who{font-size:11px;color:var(--faint);margin-bottom:2px;font-family:var(--sans)}
-.empty{color:var(--faint);text-align:center;padding:28px 10px;font-size:13px}
-.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:12.5px}.kv>div:nth-child(odd){color:var(--muted)}
-.batch{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line2);font-size:12.5px}
+.msg.tool{font:calc(13px*var(--fk))/1.45 var(--mono);color:var(--muted);padding:2px 6px;border:0}
+.msg .who{font-size:calc(12px*var(--fk));color:var(--faint);margin-bottom:2px;font-family:var(--sans)}
+.empty{color:var(--faint);text-align:center;padding:28px 10px;font-size:calc(14px*var(--fk))}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:calc(13.5px*var(--fk))}.kv>div:nth-child(odd){color:var(--muted)}
+.batch{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line2);font-size:calc(13.5px*var(--fk))}
 .switch{position:relative;display:inline-block;width:36px;height:20px;flex:none}
 .switch input{display:none}.switch i{position:absolute;inset:0;border-radius:20px;background:var(--hover2);transition:.15s;cursor:pointer}
 .switch i:after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:.15s}
 .switch input:checked+i{background:var(--accent)}.switch input:checked+i:after{left:18px}
-.chk{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.chk{display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:calc(13.5px*var(--fk))}
 .chk label{display:inline-flex;gap:6px;align-items:center}
 .sc{display:flex;gap:10px;align-items:flex-start;padding:8px 2px;border-bottom:1px solid var(--line2)}
 .sc:last-child{border-bottom:0}.sc .ic{width:17px;height:17px;margin-top:2px}
 .sc.pass .ic{color:var(--ok)}.sc.warn .ic{color:var(--warn)}.sc.fail .ic{color:var(--bad)}
-.sc .nm{font-weight:600;font-size:13px}.sc .dt{font-size:12px;color:var(--muted);word-break:break-all}.sc .fx{font-size:12px;color:var(--warn)}
-pre.rep{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px;max-height:340px;overflow:auto;margin:0}
+.sc .nm{font-weight:600;font-size:calc(14px*var(--fk))}.sc .dt{font-size:calc(13px*var(--fk));color:var(--muted);word-break:break-all}.sc .fx{font-size:calc(13px*var(--fk));color:var(--warn)}
+pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:10px;max-height:340px;overflow:auto;margin:0}
 .dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
 .dlg.open{display:flex}
-.dlg .box{background:var(--panel);border-radius:16px;border:1px solid var(--line2);box-shadow:var(--shadow);width:min(620px,100%);max-height:85vh;display:flex;flex-direction:column}
+.dlg .box{background:var(--panel);border-radius:16px;border:1px solid var(--line2);box-shadow:var(--shadow);width:min(620px,100%);max-height:calc(85*var(--vh));display:flex;flex-direction:column}
 .dlg .hd{padding:16px 20px 6px;font-weight:600;display:flex;align-items:center}
 .dlg .hd button{margin-left:auto}
 #dlgTitle{display:inline-flex;align-items:center;gap:8px}
 .dlg .bd{padding:8px 20px 12px;overflow:auto}
 .dlg .ft{padding:10px 20px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
-.dlg.wide .box{width:min(1100px,100%);height:88vh;max-height:88vh}
-.dlg pre{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;margin:0}
-.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px 16px;font-size:13px;z-index:40;display:none;max-width:90vw;align-items:center;gap:8px}
+.dlg.wide .box{width:min(1100px,100%);height:calc(88*var(--vh));max-height:calc(88*var(--vh))}
+.dlg pre{white-space:pre-wrap;font-family:var(--mono);font-size:calc(13.5px*var(--fk));margin:0}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px 16px;font-size:calc(14px*var(--fk));z-index:40;display:none;max-width:calc(90*var(--vw));align-items:center;gap:8px}
 .toast[style*="block"]{display:flex!important}
 .menu{position:relative}
 .menu .list{position:absolute;right:0;top:calc(100% + 4px);background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:6px;min-width:160px;display:none;z-index:20}
 .menu.open .list{display:block}
 .menu .list button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:transparent;border-radius:9px;padding:7px 10px}
 .menu .list button:hover{background:var(--hover)}
-.miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:12.5px}
-.okbox{background:var(--ok-weak);border:1px solid var(--ok);border-radius:8px;padding:6px 10px;font-size:12.5px}
-.diff{font:12px/1.5 var(--mono)}.diff .a{color:var(--ok)}.diff .u{color:var(--warn)}
-.updn{white-space:pre-wrap;font-size:12.5px;max-height:240px;overflow:auto;background:var(--panel2);border-radius:10px;padding:8px 10px;border:1px solid var(--line2)}
+.miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:calc(13.5px*var(--fk))}
+.okbox{background:var(--ok-weak);border:1px solid var(--ok);border-radius:8px;padding:6px 10px;font-size:calc(13.5px*var(--fk))}
+.diff{font:calc(13px*var(--fk))/1.5 var(--mono)}.diff .a{color:var(--ok)}.diff .u{color:var(--warn)}
+.updn{white-space:pre-wrap;font-size:calc(13.5px*var(--fk));max-height:240px;overflow:auto;background:var(--panel2);border-radius:10px;padding:8px 10px;border:1px solid var(--line2)}
 .prog{height:6px;border-radius:6px;background:var(--hover);overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:var(--accent);width:0}
 @media (max-width:900px){.split,.grid2{grid-template-columns:1fr}.brand .ver{display:none}}
 /* 下面这些从 CC Msg 搬来：设置行、诊断卡片、用量统计、模型与 API */
-.setlist{display:flex;flex-direction:column;gap:2px;min-width:min(460px,80vw)}
+.setlist{display:flex;flex-direction:column;gap:2px;min-width:min(460px,calc(80*var(--vw)))}
 .setrow{display:flex;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid var(--line2);flex-wrap:wrap}
 .setrow:last-child{border-bottom:0}
 .setrow .sl{display:flex;gap:10px;align-items:flex-start;flex:1 1 200px;min-width:0}
 .setrow .sl .ic{width:16px;height:16px;color:var(--muted);margin-top:2px;flex:none}
-.setrow .sd{font-size:12px;color:var(--muted);margin-top:1px}
+.setrow .sd{font-size:calc(13px*var(--fk));color:var(--muted);margin-top:1px}
 .setrow .seg{flex:none}
-.setrow .seg button{font-size:12.5px;padding:4px 12px}
+.setrow .seg button{font-size:calc(13.5px*var(--fk));padding:4px 12px}
 .dgag{border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin:0 0 10px}
-.dgag h4{margin:0 0 4px;font-size:13.5px;display:flex;align-items:center;gap:8px}.dgag .why{font-size:12.5px;margin:0 0 6px}
-.dgst{font-size:11px;padding:1px 7px;border-radius:9px;background:var(--accent-weak);color:var(--accent)}.dgst.none{background:var(--warn-weak);color:var(--warn)}
-.dgls{font-size:11.5px;color:var(--muted);margin:4px 0;font-family:var(--mono,monospace);word-break:break-all}.dgls div{padding:1px 0}
-.dgrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;font-size:12.5px}.dgrow input{flex:1;min-width:180px;font-size:12px;padding:4px 7px}
+.dgag h4{margin:0 0 4px;font-size:calc(14.5px*var(--fk));display:flex;align-items:center;gap:8px}.dgag .why{font-size:calc(13.5px*var(--fk));margin:0 0 6px}
+.dgst{font-size:calc(12px*var(--fk));padding:1px 7px;border-radius:9px;background:var(--accent-weak);color:var(--accent)}.dgst.none{background:var(--warn-weak);color:var(--warn)}
+.dgls{font-size:calc(12.5px*var(--fk));color:var(--muted);margin:4px 0;font-family:var(--mono,monospace);word-break:break-all}.dgls div{padding:1px 0}
+.dgrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;font-size:calc(13.5px*var(--fk))}.dgrow input{flex:1;min-width:180px;font-size:calc(13px*var(--fk));padding:4px 7px}
 /* 0.5.0 用量统计 */
 .us{display:flex;flex-direction:column;gap:12px}
 .us .uhd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.us .usrc{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12.5px;border:1px solid var(--line);border-radius:20px;padding:2px 10px}
+.us .usrc{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:calc(13.5px*var(--fk));border:1px solid var(--line);border-radius:20px;padding:2px 10px}
 .us .usrc i.d{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
 .us .usrc.busy i.d{background:var(--warn);animation:usb 1s infinite alternate}
 @keyframes usb{to{opacity:.3}}
@@ -185,144 +190,144 @@ pre.rep{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--panel2);
 .us .seg button.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
 .us .ucards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .us .ucard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel2);min-width:0}
-.us .ucard .k{color:var(--muted);font-size:12.5px}
-.us .ucard .v{font-size:22px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.us .ucard .s{color:var(--faint);font-size:11.5px;margin-top:2px}
-.us .note{color:var(--warn);font-size:11.5px}
+.us .ucard .k{color:var(--muted);font-size:calc(13.5px*var(--fk))}
+.us .ucard .v{font-size:calc(23px*var(--fk));font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.us .ucard .s{color:var(--faint);font-size:calc(12.5px*var(--fk));margin-top:2px}
+.us .note{color:var(--warn);font-size:calc(12.5px*var(--fk))}
 .us .uchart{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel2)}
-.us .uchart .ct{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12.5px;color:var(--muted)}
+.us .uchart .ct{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:calc(13.5px*var(--fk));color:var(--muted)}
 .us .uchart svg{width:100%;height:170px;display:block}
 .us .uchart rect.b{fill:var(--accent);opacity:.8}
 .us .uchart rect.b:hover{opacity:1}
-.us .uchart text{fill:var(--faint);font-size:10px}
+.us .uchart text{fill:var(--faint);font-size:calc(12px*var(--fk))}
 .us .uchart line{stroke:var(--line2)}
 .us .uchart{position:relative}
 .us .uchart .ct{flex-wrap:wrap}
-.us .seg.sty button,.us .seg[data-ser] button{padding:3px 9px;font-size:12px}
+.us .seg.sty button,.us .seg[data-ser] button{padding:3px 9px;font-size:calc(13px*var(--fk))}
 .us svg.ucv{height:190px}
 .us svg.ucv path.ln{fill:none;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .us svg.ucv path.ln.dash{stroke-dasharray:5 4;stroke-width:1.6}
 .us svg.ucv line.gl{stroke:var(--line);stroke-dasharray:2 4}
 .us svg.ucv line.hl{stroke:var(--faint);stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
-.us .utip{position:absolute;display:none;pointer-events:none;z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;box-shadow:var(--shadow);min-width:180px;max-width:380px}
+.us .utip{position:absolute;display:none;pointer-events:none;z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:calc(13px*var(--fk));box-shadow:var(--shadow);min-width:180px;max-width:380px}
 .us .utip div{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .us .utip div span{margin-left:auto;padding-left:14px;font-variant-numeric:tabular-nums;font-weight:600}
-.us .utip div.s{color:var(--muted);white-space:normal;font-size:11.5px;margin-top:3px}
+.us .utip div.s{color:var(--muted);white-space:normal;font-size:calc(12.5px*var(--fk));margin-top:3px}
 .us .utip i,.us .uleg i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
 .us .uleg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .us .uleg:empty{display:none}
-.us .uleg button{font-size:12px;padding:2px 9px;border-radius:999px;display:inline-flex;gap:6px;align-items:center;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.us .uleg button{font-size:calc(13px*var(--fk));padding:2px 9px;border-radius:999px;display:inline-flex;gap:6px;align-items:center;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .us .uleg button.off{opacity:.45;text-decoration:line-through}
-.us .uempty{padding:30px 0;text-align:center;color:var(--faint);font-size:12.5px}
-.us .udist .drow{display:grid;grid-template-columns:minmax(110px,230px) 1fr 150px;gap:10px;align-items:center;font-size:12.5px;padding:3px 0}
+.us .uempty{padding:30px 0;text-align:center;color:var(--faint);font-size:calc(13.5px*var(--fk))}
+.us .udist .drow{display:grid;grid-template-columns:minmax(110px,230px) 1fr 150px;gap:10px;align-items:center;font-size:calc(13.5px*var(--fk));padding:3px 0}
 .us .udist .dn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .us .udist .dbar{height:10px;border-radius:5px;background:var(--hover);overflow:hidden}
 .us .udist .dbar i{display:block;height:100%;border-radius:5px;opacity:.85}
 .us .udist .dv{text-align:right;font-variant-numeric:tabular-nums}
-.us .ucard .tag.part{font-size:11px;margin-left:6px;vertical-align:middle;color:var(--warn,#b7791f)}
+.us .ucard .tag.part{font-size:calc(12px*var(--fk));margin-left:6px;vertical-align:middle;color:var(--warn,#b7791f)}
 :root{--u1:#3b82f6;--u2:#c96442;--u3:#10b981;--u4:#a855f7;--u5:#d4a017;--u6:#64748b;--u7:#ec4899;--u8:#0ea5e9}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--u1:#60a5fa;--u2:#e08a6a;--u3:#34d399;--u4:#c084fc;--u5:#facc15;--u6:#94a3b8;--u7:#f472b6;--u8:#38bdf8}}
 :root[data-theme="dark"]{--u1:#60a5fa;--u2:#e08a6a;--u3:#34d399;--u4:#c084fc;--u5:#facc15;--u6:#94a3b8;--u7:#f472b6;--u8:#38bdf8}
 .us .utabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
 .us .utabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--muted);padding:6px 12px}
 .us .utabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
-.us table{width:100%;border-collapse:collapse;font-size:12.5px}
+.us table{width:100%;border-collapse:collapse;font-size:calc(13.5px*var(--fk))}
 .us th,.us td{padding:5px 8px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}
 .us th{color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--panel)}
 .us td.l,.us th.l{text-align:left}
 .us td.m{max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.us .tag{display:inline-block;font-size:11px;border-radius:5px;padding:0 6px;border:1px solid var(--line);color:var(--muted)}
+.us .tag{display:inline-block;font-size:calc(12px*var(--fk));border-radius:5px;padding:0 6px;border:1px solid var(--line);color:var(--muted)}
 .us .tag.claude{color:var(--claude);border-color:currentColor}.us .tag.codex{color:var(--cxn,var(--codex));border-color:currentColor}
 .us .dim{color:var(--faint)}
-.us .miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:12.5px}
+.us .miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:calc(13.5px*var(--fk))}
 #mcBox code{overflow-wrap:anywhere;word-break:break-all}
 .pvsec{margin-bottom:10px}
 .pvt{margin-top:6px;display:block;overflow-x:auto}.pvt tr.on td{background:var(--ok-weak)}
-.pvr{display:inline-flex;gap:4px;font-size:11.5px}.pvr span{border:1px solid var(--line);border-radius:6px;padding:0 5px}.pvr .y{color:var(--ok);border-color:var(--ok)}.pvr .n{color:var(--faint)}
-.pvm{display:inline-block;font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:0 5px;margin:1px 3px 1px 0}
+.pvr{display:inline-flex;gap:4px;font-size:calc(12.5px*var(--fk))}.pvr span{border:1px solid var(--line);border-radius:6px;padding:0 5px}.pvr .y{color:var(--ok);border-color:var(--ok)}.pvr .n{color:var(--faint)}
+.pvm{display:inline-block;font-size:calc(12.5px*var(--fk));border:1px solid var(--line);border-radius:6px;padding:0 5px;margin:1px 3px 1px 0}
 .tag.ok{color:var(--ok);border-color:var(--ok)}
 .pfold>summary .pfmore{display:none;flex:none;border:0;background:transparent;padding:0 2px;height:18px;color:var(--muted);cursor:pointer;border-radius:5px}
 .pfold>summary:hover .pfmore,.pfold>summary .pfmore:focus-visible{display:inline-flex;align-items:center}
 .pfold>summary .pfmore:hover{background:var(--hover2,var(--line2));color:var(--text)}
 .pjctx{position:fixed;z-index:200;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:5px;min-width:200px}
-.pjctx .pjh{font-size:11.5px;color:var(--faint);padding:3px 9px 5px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pjctx button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;border-radius:7px;padding:6px 9px;font-size:13px}
+.pjctx .pjh{font-size:calc(12.5px*var(--fk));color:var(--faint);padding:3px 9px 5px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pjctx button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;border-radius:7px;padding:6px 9px;font-size:calc(14px*var(--fk))}
 .pjctx button:hover{background:var(--line2)}.pjctx button .ic{width:15px;height:15px;color:var(--muted)}
 .mctop{display:flex;align-items:center;gap:8px;min-height:30px;margin:0 0 6px}
-.mctop .mcvt{font-size:13px}
-.mcback{padding:3px 8px;font-size:12.5px}
+.mctop .mcvt{font-size:calc(14px*var(--fk))}
+.mcback{padding:3px 8px;font-size:calc(13.5px*var(--fk))}
 .mcban{min-width:0;flex:0 1 auto}
-.mcbl{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:2px 4px;color:var(--muted);font-size:12px;max-width:100%;cursor:pointer;border-radius:6px}
+.mcbl{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:2px 4px;color:var(--muted);font-size:calc(13px*var(--fk));max-width:100%;cursor:pointer;border-radius:6px}
 .mcbl:hover,.mcbl.on{color:var(--text);background:var(--line2)}
 .mcbl .ic{width:14px;height:14px;flex:none;color:var(--warn)}
 .mcbl span:not(.mcchev){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mcbx{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px;margin:0 0 10px}
+.mcbx{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:calc(13.5px*var(--fk));margin:0 0 10px}
 .mcbx>div{padding:4px 0}.mcbx>div+div{border-top:1px solid var(--line2)}
-.mcm .list{min-width:220px}.mcm .list button{padding:6px 10px;font-size:13px}
+.mcm .list{min-width:220px}.mcm .list button{padding:6px 10px;font-size:calc(14px*var(--fk))}
 .mcmb{padding:3px 7px}
-.mcnb{margin-left:auto;font-size:11px;border-radius:9px;padding:0 6px;background:var(--bad-weak);color:var(--bad)}
+.mcnb{margin-left:auto;font-size:calc(12px*var(--fk));border-radius:9px;padding:0 6px;background:var(--bad-weak);color:var(--bad)}
 .pvhd{display:flex;align-items:baseline;gap:10px;margin:4px 2px 4px}
-.pvh{font-size:11.5px;color:var(--faint);font-weight:400;margin-left:6px}
+.pvh{font-size:calc(12.5px*var(--fk));color:var(--faint);font-weight:400;margin-left:6px}
 .pvl{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.pvrow{display:grid;grid-template-columns:18px minmax(120px,1.1fr) minmax(0,1.6fr) 56px auto;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:13px}
+.pvrow{display:grid;grid-template-columns:18px minmax(120px,1.1fr) minmax(0,1.6fr) 56px auto;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:calc(14px*var(--fk))}
 .pvrow:hover{background:var(--hover)}.pvrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .pvrow.on{background:var(--accent-weak)}
 .pvrad{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--faint);box-sizing:border-box;display:inline-block}
 .pvrow.on .pvrad{border:4.5px solid var(--accent)}
 .pvn{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pvu{color:var(--muted);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono,ui-monospace,monospace)}
-.pvkey{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;font-family:var(--mono,ui-monospace,monospace)}
+.pvu{color:var(--muted);font-size:calc(13.5px*var(--fk));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono,ui-monospace,monospace)}
+.pvkey{font-size:calc(13px*var(--fk));color:var(--muted);font-variant-numeric:tabular-nums;font-family:var(--mono,ui-monospace,monospace)}
 .pvb{display:flex;gap:4px;justify-content:flex-end}
-.pvmini{padding:1px 8px;font-size:12px;border-radius:6px}
+.pvmini{padding:1px 8px;font-size:calc(13px*var(--fk));border-radius:6px}
 .pvo:empty{display:none}.pvo{padding:4px 10px;border-bottom:1px solid var(--line2)}
-.pvadd{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:12px;flex-wrap:wrap}
-.pvaddb{font-weight:600;padding:2px 8px;font-size:12.5px;color:var(--accent)}
+.pvadd{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:calc(13px*var(--fk));flex-wrap:wrap}
+.pvaddb{font-weight:600;padding:2px 8px;font-size:calc(13.5px*var(--fk));color:var(--accent)}
 .pve .pvpre{margin-bottom:8px;gap:6px}
 .pvadv{margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:0 10px}
-.pvadv>summary{cursor:pointer;padding:8px 0;font-weight:600;font-size:13px;color:var(--muted)}
+.pvadv>summary{cursor:pointer;padding:8px 0;font-weight:600;font-size:calc(14px*var(--fk));color:var(--muted)}
 .pvadv[open]>summary{color:var(--text)}
-.pvfh{margin-top:10px;font-size:12px;color:var(--faint)}
-.pvdd{position:fixed;z-index:1000;display:none;max-height:260px;overflow:auto;background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:4px;font-family:var(--mono);font-size:12.5px}
+.pvfh{margin-top:10px;font-size:calc(13px*var(--fk));color:var(--faint)}
+.pvdd{position:fixed;z-index:1000;display:none;max-height:260px;overflow:auto;background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:4px;font-family:var(--mono);font-size:calc(13.5px*var(--fk))}
 .pvddi{padding:5px 8px;border-radius:5px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}.pvddi:hover,.pvddi.on{background:var(--hover2,var(--hover))}
-.pvddi .dim{font-family:var(--sans);font-size:11px}.pvddh{padding:4px 8px;font-size:11px;color:var(--faint);font-family:var(--sans)}
+.pvddi .dim{font-family:var(--sans);font-size:calc(12px*var(--fk))}.pvddh{padding:4px 8px;font-size:calc(12px*var(--fk));color:var(--faint);font-family:var(--sans)}
 .pvmf{display:flex;gap:6px;align-items:center}
 .pvsub{padding:10px 0 8px;border-top:1px solid var(--line2)}
-.pvsubh{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:13px;margin-bottom:6px}.pvsubh .pvh{flex-basis:100%;margin:2px 0 0}
-.pvtag{font:11px var(--mono);padding:0 6px;border-radius:5px;background:var(--hover);color:var(--muted)}.pvtag.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);font-family:var(--sans)}
-.pvnote{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 8px}.pvnote code{font-size:11.5px}
+.pvsubh{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:calc(14px*var(--fk));margin-bottom:6px}.pvsubh .pvh{flex-basis:100%;margin:2px 0 0}
+.pvtag{font:calc(12px*var(--fk)) var(--mono);padding:0 6px;border-radius:5px;background:var(--hover);color:var(--muted)}.pvtag.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);font-family:var(--sans)}
+.pvnote{font-size:calc(13px*var(--fk));color:var(--muted);line-height:1.6;margin:0 0 8px}.pvnote code{font-size:calc(12.5px*var(--fk))}
 .pvtbl{display:flex;flex-direction:column;gap:5px}
 .pvtr{display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;align-items:center}
 .pvtr[data-ov]{grid-template-columns:1fr 16px 1fr 28px}.pvarr{color:var(--faint);text-align:center}
 .pvcat .pvtr,.pvcat .pvth{grid-template-columns:1.4fr 1fr 110px 110px 28px}
-.pvth{display:grid;gap:6px;font-size:11px;color:var(--faint);padding:0 2px}.pvth:only-child{display:none}
-.pvtr input,.pvtr select{width:100%;min-width:0;box-sizing:border-box}.pvtr .pvmi{font-family:var(--mono);font-size:12.5px}
+.pvth{display:grid;gap:6px;font-size:calc(12px*var(--fk));color:var(--faint);padding:0 2px}.pvth:only-child{display:none}
+.pvtr input,.pvtr select{width:100%;min-width:0;box-sizing:border-box}.pvtr .pvmi{font-family:var(--mono);font-size:calc(13.5px*var(--fk))}
 .pvrx{padding:2px 0!important;color:var(--faint)}.pvrx:hover{color:var(--err,#d33)}
-.pvtadd{display:flex;gap:8px;align-items:center;margin-top:6px}.pvchk{font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center}.pvmf input{width:220px!important}
-.pvmst{padding:0 0 4px;font-size:12px}.pvmst:empty{display:none}.pvmst .miss{margin:4px 0}
+.pvtadd{display:flex;gap:8px;align-items:center;margin-top:6px}.pvchk{font-size:calc(13px*var(--fk));color:var(--muted);display:flex;gap:4px;align-items:center}.pvmf input{width:220px!important}
+.pvmst{padding:0 0 4px;font-size:calc(13px*var(--fk))}.pvmst:empty{display:none}.pvmst .miss{margin:4px 0}
 .pvmap{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:2px 10px 4px}
-.pvmh{display:flex;align-items:baseline;gap:4px;padding:8px 0 2px;font-size:13px}
+.pvmh{display:flex;align-items:baseline;gap:4px;padding:8px 0 2px;font-size:calc(14px*var(--fk))}
 #mcBox .miss{margin-bottom:6px}
 .us input.pr{width:70px;padding:2px 5px;text-align:right}
 .us .more{display:flex;justify-content:center;padding:8px}
-@media (max-width:760px){.us .ucards{grid-template-columns:repeat(2,1fr)}.us .ucard .v{font-size:18px}}
+@media (max-width:760px){.us .ucards{grid-template-columns:repeat(2,1fr)}.us .ucard .v{font-size:calc(19px*var(--fk))}}
 
 /* ---- v0.2.1：左侧面板布局 ---- */
 .body{flex:1;display:flex;min-height:0}
 .side{width:var(--sw,236px);flex:none;background:var(--side);border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .app.noside .side,.app.noside #sideGrip{display:none}
 .nav{padding:8px 8px 8px;display:flex;flex-direction:column;gap:1px;border-bottom:1px solid var(--line2);flex:none}
-.nv{display:flex;align-items:center;gap:10px;background:transparent;padding:6px 10px;border-radius:8px;font-size:13px;color:var(--text);text-align:left;width:100%}
+.nv{display:flex;align-items:center;gap:10px;background:transparent;padding:6px 10px;border-radius:8px;font-size:calc(14px*var(--fk));color:var(--text);text-align:left;width:100%}
 .nv .ic{width:16px;height:16px;color:var(--muted)}
 .nv:hover{background:var(--hover)}
 .nv.on{background:var(--panel);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}.nv.on .ic{color:var(--accent)}
 .nv>span{flex:1;overflow:hidden;text-overflow:ellipsis}
-.nv em{font-style:normal;font-size:11px;color:var(--faint);font-weight:400}
-.nv .cnt{font-size:10.5px;background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:15px;flex:none}
+.nv em{font-style:normal;font-size:calc(12px*var(--fk));color:var(--faint);font-weight:400}
+.nv .cnt{font-size:calc(12px*var(--fk));background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:calc(15px*var(--fk));flex:none}
 .nv .ext{width:12px;height:12px;color:var(--faint)}
-.trh{display:flex;align-items:center;gap:6px;padding:10px 12px 6px;font-size:11.5px;color:var(--muted);font-weight:600;flex:none}
+.trh{display:flex;align-items:center;gap:6px;padding:10px 12px 6px;font-size:calc(12.5px*var(--fk));color:var(--muted);font-weight:600;flex:none}
 .trh .sp{flex:1}
-.trh .seg button{font-size:11.5px;padding:1px 9px}
-.tree{flex:1;overflow:auto;padding:0 6px 14px;font-size:12.5px}
+.trh .seg button{font-size:calc(12.5px*var(--fk));padding:1px 9px}
+.tree{flex:1;overflow:auto;padding:0 6px 14px;font-size:calc(13.5px*var(--fk))}
 .tn{display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:7px;cursor:pointer;white-space:nowrap;min-width:0;user-select:none}
 .tn:hover{background:var(--hover)}
 .tn.on{background:var(--accent-weak);color:var(--accent)}
@@ -330,20 +335,20 @@ pre.rep{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--panel2);
 .tn .tw .ic{width:12px;height:12px}
 .tn .tw.open{transform:rotate(90deg)}.tn .tw.none{visibility:hidden}
 .tn .lb{flex:1;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.tn .n{font-size:11px;color:var(--faint)}
+.tn .n{font-size:calc(12px*var(--fk));color:var(--faint)}
 .tn .lg{width:13px;height:13px;flex:none}
-.tn .cur{font-size:10px;line-height:15px;padding:0 4px;border-radius:5px;background:var(--ok-weak);color:var(--ok);flex:none}
+.tn .cur{font-size:calc(12px*var(--fk));line-height:calc(15px*var(--fk));padding:0 4px;border-radius:5px;background:var(--ok-weak);color:var(--ok);flex:none}
 .tk{padding-left:15px}
-.tree .hint{color:var(--faint);font-size:11.5px;padding:6px 8px}
+.tree .hint{color:var(--faint);font-size:calc(12.5px*var(--fk));padding:6px 8px}
 .grip{width:6px;flex:none;cursor:col-resize;position:relative;z-index:2}
 .grip:after{content:"";position:absolute;top:0;bottom:0;left:2px;width:2px;border-radius:2px;background:transparent;transition:background .15s}
 .grip:hover:after,.grip.drag:after{background:var(--accent)}
 #sideGrip{margin-left:-3px;margin-right:-3px}
-.gsearch{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:0 9px;width:min(440px,38vw)}
+.gsearch{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:0 9px;width:min(440px,calc(38*var(--vw)))}
 .gsearch:focus-within{border-color:var(--accent)}
 .gsearch input{border:0;background:transparent;padding:5px 0;flex:1;min-width:0}
 .gsearch .ic{color:var(--faint);width:15px;height:15px}
-.gsearch kbd{font:11px var(--mono);color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:0 4px}
+.gsearch kbd{font:calc(12px*var(--fk)) var(--mono);color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:0 4px}
 .top .sp{flex:1}
 .page.full{max-width:none}
 .split2{display:flex;align-items:stretch;min-height:0}
@@ -356,31 +361,31 @@ pre.rep{white-space:pre-wrap;font:12px/1.5 var(--mono);background:var(--panel2);
 button.eye{background:transparent;padding:0 3px;color:var(--faint);line-height:1;vertical-align:-1px}
 button.eye:hover{background:transparent;color:var(--accent)}
 button.eye .ic{width:14px;height:14px}
-.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:var(--accent-weak);color:var(--accent);border-radius:999px;padding:1px 4px 1px 10px;max-width:420px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:calc(13px*var(--fk));background:var(--accent-weak);color:var(--accent);border-radius:999px;padding:1px 4px 1px 10px;max-width:420px}
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip button{background:transparent;padding:0 3px;color:inherit}.chip .ic{width:12px;height:12px}
 .tlpick{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tlpick input[type=range]{flex:1;min-width:220px;accent-color:var(--accent)}
-.tlnow{font-size:13px;font-weight:600}
-.tlticks{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:2px}
+.tlnow{font-size:calc(14px*var(--fk));font-weight:600}
+.tlticks{display:flex;justify-content:space-between;font-size:calc(12px*var(--fk));color:var(--faint);margin-top:2px}
 .tlx{position:relative;height:8px;margin:0 8px}
 .tlx i{position:absolute;top:0;width:2px;height:8px;border-radius:1px;background:var(--line);transform:translateX(-1px)}
 .tlx i.on{background:var(--accent)}
-.diff{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:12.5px;margin-bottom:8px;background:var(--panel2)}
+.diff{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;font-size:calc(13.5px*var(--fk));margin-bottom:8px;background:var(--panel2)}
 .diff .dl{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .diff .dl>div{min-width:0}
-.diff .dl b{font-size:11.5px;color:var(--muted);font-weight:600}
-.diff .ln{font-size:12px;border-radius:6px;padding:2px 6px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.diff .dl b{font-size:calc(12.5px*var(--fk));color:var(--muted);font-weight:600}
+.diff .ln{font-size:calc(13px*var(--fk));border-radius:6px;padding:2px 6px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .diff .ln.old{background:var(--bad-weak)}.diff .ln.new{background:var(--ok-weak)}
 .acts2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
-button.big{padding:8px 16px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+button.big{padding:8px 16px;font-size:calc(14.5px*var(--fk));font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .cmdl{display:flex;gap:6px;align-items:center;margin-top:6px}
-.cmdl code{flex:1;padding:4px 8px;font-size:11.5px}
+.cmdl code{flex:1;padding:4px 8px;font-size:calc(12.5px*var(--fk))}
 .mk{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:8px 0}
 .vrow td{cursor:pointer}
 /* 0.2.4 时间线：按天分组的竖向时间线、增长曲线、差别条、骨架屏 */
 .vtl{padding:4px 12px 12px}
-.vtl .day{position:sticky;top:0;z-index:1;background:var(--panel);font-size:12px;font-weight:600;color:var(--muted);padding:10px 0 4px;display:flex;gap:8px;align-items:center}
+.vtl .day{position:sticky;top:0;z-index:1;background:var(--panel);font-size:calc(13px*var(--fk));font-weight:600;color:var(--muted);padding:10px 0 4px;display:flex;gap:8px;align-items:center}
 .vtl .day .dim{font-weight:400}
 .vtl .node{position:relative;display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;padding:7px 8px 7px 26px;border-radius:9px;cursor:pointer}
 .vtl .node:hover{background:var(--hover)}
@@ -390,9 +395,9 @@ button.big{padding:8px 16px;font-size:13.5px;font-weight:600;display:inline-flex
 .vtl .node i.dot{position:absolute;left:6px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--panel);border:2px solid var(--line2);box-sizing:border-box}
 .vtl .node.sel i.dot{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
 .vtl .node.cur i.dot{border-color:var(--ok)}
-.vtl .node .t{font-variant-numeric:tabular-nums;font-weight:600;font-size:12.5px}
-.vtl .node .c{font-size:12px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vtl .node .m{font-size:11.5px;color:var(--faint);text-align:right;white-space:nowrap}
+.vtl .node .t{font-variant-numeric:tabular-nums;font-weight:600;font-size:calc(13.5px*var(--fk))}
+.vtl .node .c{font-size:calc(13px*var(--fk));color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vtl .node .m{font-size:calc(12.5px*var(--fk));color:var(--faint);text-align:right;white-space:nowrap}
 .tlspark{position:relative;margin:8px 0 2px;user-select:none;touch-action:none}
 .tlspark svg{width:100%;height:64px;display:block;cursor:ew-resize}
 .tlspark path.ln{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
@@ -400,69 +405,69 @@ button.big{padding:8px 16px;font-size:13.5px;font-weight:600;display:inline-flex
 .tlspark circle.mk.on{fill:var(--accent)}
 .tlspark line.cur{stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
 .tlgrow svg{height:96px}.tlgrow path.ln.sub{stroke-width:1.2;opacity:.55}
-.tlglab{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.tlglab b{color:var(--text)}
+.tlglab{font-size:calc(13px*var(--fk));color:var(--muted);margin-bottom:4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.tlglab b{color:var(--text)}
 .tlgk{display:inline-flex;align-items:center;gap:4px}.tlgk i{width:10px;height:3px;border-radius:2px;display:inline-block}
 .tlgrow .knob{top:16px}
-.tlspark .knob{position:absolute;top:-2px;transform:translateX(-50%);font-size:11px;background:var(--accent);color:var(--ink-on);border-radius:6px;padding:1px 6px;white-space:nowrap;pointer-events:none}
-.tlkeys{font-size:11.5px;color:var(--faint)}
-.tlkeys kbd{border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 4px;font:11px var(--mono);background:var(--panel2)}
+.tlspark .knob{position:absolute;top:-2px;transform:translateX(-50%);font-size:calc(12px*var(--fk));background:var(--accent);color:var(--ink-on);border-radius:6px;padding:1px 6px;white-space:nowrap;pointer-events:none}
+.tlkeys{font-size:calc(12.5px*var(--fk));color:var(--faint)}
+.tlkeys kbd{border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 4px;font:calc(12px*var(--fk)) var(--mono);background:var(--panel2)}
 .restbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;border:1px solid var(--accent);background:var(--accent-weak);border-radius:12px;padding:10px 12px;margin:2px 0 10px}
-.restbar .h{font-size:12px;color:var(--muted);flex:1;min-width:180px}
+.restbar .h{font-size:calc(13px*var(--fk));color:var(--muted);flex:1;min-width:180px}
 .dbarx{display:flex;height:8px;border-radius:4px;overflow:hidden;margin:6px 0 4px;background:var(--hover)}
 .dbarx i{display:block;height:100%}
 .dbarx .s{background:var(--line2)}.dbarx .o{background:var(--bad,#c0392b);opacity:.7}.dbarx .n{background:var(--ok);opacity:.8}
-.dlegx{display:flex;gap:12px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.dlegx{display:flex;gap:12px;font-size:calc(12.5px*var(--fk));color:var(--muted);flex-wrap:wrap}
 .dlegx i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0}
 .diff .ln.old::before{content:"− ";color:var(--bad,#c0392b);font-weight:700}.diff .ln.new::before{content:"+ ";color:var(--ok);font-weight:700}
 .diff .ln{border-left:3px solid transparent}.diff .ln.old{border-left-color:var(--bad,#c0392b)}.diff .ln.new{border-left-color:var(--ok)}
 .skel{display:flex;flex-direction:column;gap:10px;padding:12px}
 .skel i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--hover),var(--line),var(--hover));background-size:200% 100%;animation:skel 1.2s linear infinite}
 @keyframes skel{to{background-position:-200% 0}}
-.emp{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--faint);padding:40px 16px;text-align:center;font-size:13px}
+.emp{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--faint);padding:40px 16px;text-align:center;font-size:calc(14px*var(--fk))}
 .emp .ic{width:30px;height:30px;color:var(--line)}
 .sched{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0}
-.sched>div{background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--muted)}
-.sched b{display:block;font-size:13.5px;color:var(--text);font-weight:600;margin-top:2px}
+.sched>div{background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:calc(13px*var(--fk));color:var(--muted)}
+.sched b{display:block;font-size:calc(14.5px*var(--fk));color:var(--text);font-weight:600;margin-top:2px}
 .numu{display:inline-flex;gap:6px;align-items:center}.numu input{width:70px}
 /* ---- v0.2.2：顶部按钮栏 + 左侧只放会话列表 ---- */
-button.brand{background:transparent;padding:3px 6px;border-radius:8px;font-size:14px}
+button.brand{background:transparent;padding:3px 6px;border-radius:8px;font-size:calc(15px*var(--fk))}
 button.brand:hover{background:var(--hover)}
 .pnav{display:flex;gap:2px;align-items:center;min-width:0;overflow-x:auto;scrollbar-width:none;margin-left:6px}
-.pb{position:relative;display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--muted);padding:5px 9px;border-radius:8px;font-size:12.5px}
+.pb{position:relative;display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--muted);padding:5px 9px;border-radius:8px;font-size:calc(13.5px*var(--fk))}
 .pb .ic{width:15px;height:15px}
 .pb:hover{background:var(--hover);color:var(--text)}
 .pb.on{background:var(--panel);color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}.pb.on .ic{color:var(--accent)}
-.pb .cnt{font-size:10.5px;background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:15px}
+.pb .cnt{font-size:calc(12px*var(--fk));background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:calc(15px*var(--fk))}
 .pb .rdot{top:3px;right:3px}
 .tbx.on{background:var(--hover);color:var(--accent)}
 @media (max-width:1180px){.pb>span:not(.cnt):not(.rdot){display:none}.pb{padding:5px 7px}}
 .sh{padding:10px 10px 6px;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--line2);flex:none}
 .sht{display:flex;align-items:center;gap:7px;cursor:pointer;padding:2px 4px;border-radius:7px}
 .sht .ic{width:16px;height:16px;color:var(--muted)}
-.sht b{font-size:13.5px}.sht em{font-style:normal;font-size:11px;color:var(--faint)}
+.sht b{font-size:calc(14.5px*var(--fk))}.sht em{font-style:normal;font-size:calc(12px*var(--fk));color:var(--faint)}
 .sht .sp{flex:1}
 .side.on .sht .ic:first-child{color:var(--accent)}
 button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .side .gsearch{width:auto;padding-right:3px}
 .sfl{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
-.sfl .seg button{font-size:11.5px;padding:1px 8px}
-.sfl select{font-size:11.5px;padding:2px 4px;flex:1 1 76px;min-width:76px}
+.sfl .seg button{font-size:calc(12.5px*var(--fk));padding:1px 8px}
+.sfl select{font-size:calc(12.5px*var(--fk));padding:2px 4px;flex:1 1 76px;min-width:76px}
 .tn.leaf{padding-left:8px}
 .tn.leaf .lb{font-weight:400}
-.tn.leaf .n{font-size:10.5px}
-.tn.more{color:var(--faint);font-size:11.5px;padding-left:22px}
+.tn.leaf .n{font-size:calc(12px*var(--fk))}
+.tn.more{color:var(--faint);font-size:calc(12.5px*var(--fk));padding-left:22px}
 .pgv h2{margin-bottom:4px}
 .pgv>.card{padding:14px 16px}
 .pvhd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .pvft{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:10px}
 
 /* v0.2.3：关闭桌面端并执行 */
-.cr{display:flex;flex-direction:column;gap:10px;font-size:13px}
-.cr .crq{display:flex;align-items:center;gap:8px;margin:0;font-size:14.5px}.cr .crq .ic{color:var(--warn);width:18px;height:18px}
-.cr .crk{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.cr{display:flex;flex-direction:column;gap:10px;font-size:calc(14px*var(--fk))}
+.cr .crq{display:flex;align-items:center;gap:8px;margin:0;font-size:calc(15.5px*var(--fk))}.cr .crq .ic{color:var(--warn);width:18px;height:18px}
+.cr .crk{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:calc(13.5px*var(--fk));background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
 .cr .crk>span:nth-child(odd){color:var(--muted)}.cr .crk>span:nth-child(even){word-break:break-all}
-.cr ul{margin:4px 0 0;padding-left:18px}.cr ul li{margin:2px 0;font-size:12px}.cr code{font-size:11.5px;word-break:break-all}
-.cr .crok{border:1px solid var(--ok);background:var(--ok-weak);border-radius:10px;padding:8px 10px;font-size:12.5px}
+.cr ul{margin:4px 0 0;padding-left:18px}.cr ul li{margin:2px 0;font-size:calc(13px*var(--fk))}.cr code{font-size:calc(12.5px*var(--fk));word-break:break-all}
+.cr .crok{border:1px solid var(--ok);background:var(--ok-weak);border-radius:10px;padding:8px 10px;font-size:calc(13.5px*var(--fk))}
 .cr .crok .ic{width:14px;height:14px;color:var(--ok);vertical-align:-2px}
 .crs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .crs li{display:flex;align-items:center;gap:8px;color:var(--muted)}.crs li.cur{color:var(--text);font-weight:600}.crs li.cur .dim{font-weight:400}
@@ -473,7 +478,7 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .crbar{height:6px;border-radius:4px;background:var(--line);overflow:hidden}.crbar i{display:block;height:100%;background:var(--accent);transition:width .4s}
 .crj{list-style:none;padding:0 !important}.crj li{display:flex;gap:6px;align-items:baseline}
 td.nw{white-space:nowrap}
-#mdCr{margin-left:6px;padding:1px 8px;font-size:12px}
+#mdCr{margin-left:6px;padding:1px 8px;font-size:calc(13px*var(--fk))}
 </style>
 </head>
 <body>
@@ -583,6 +588,8 @@ const ICON = {
   chev: '<path d="m9 18 6-6-6-6"/>',
   sparkles: '<path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/>',
   layout: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+  type: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
+  zoom: '<circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/>',
   contrast: '<circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/>',
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
@@ -767,6 +774,31 @@ function confirmDlg(title, html, okText, fn, danger){
   $("#cfOk").onclick = async () => { $("#cfOk").disabled = true; try { await fn(); } catch(e){ toast("❌ " + e.message, 5000); } finally { const b = $("#cfOk"); if (b) b.disabled = false; } };
 }
 
+// ---------- 字号 / 界面缩放（0.2.6） ----------
+const FKS = [["0.93", "小"], ["1", "标准"], ["1.1", "大"], ["1.22", "特大"]], ZMIN = 0.8, ZMAX = 2;
+const zoomK = () => +(document.documentElement.style.zoom || 1) || 1;
+const fontK = () => +(store.get("ccss.fk") || 1) || 1;
+function applyUi(fk, z, save = true){
+  const r = document.documentElement;
+  if (fk != null) { fk = Math.min(1.5, Math.max(0.8, +fk || 1)); r.style.setProperty("--fk", fk); store.set("ccss.fk", String(fk)); }
+  if (z != null) { z = Math.round(Math.min(ZMAX, Math.max(ZMIN, +z || 1)) * 10) / 10; r.style.zoom = z; r.style.setProperty("--z", z); store.set("ccss.zoom", String(z)); }
+  if (save) { clearTimeout(applyUi.t); applyUi.t = setTimeout(() => api("/api/settings", {ui_font: fontK(), ui_zoom: zoomK()}).catch(() => {}), 500); }
+  const zl = $("#stZoomV"); if (zl) zl.textContent = Math.round(zoomK() * 100) + "%";
+  $$("#stFont button").forEach(b => b.classList.toggle("on", Math.abs(+b.dataset.v - fontK()) < 0.005));
+  window.dispatchEvent(new Event("resize"));
+}
+function zoomStep(d){ applyUi(null, d ? zoomK() + d : 1); toast(`界面缩放 ${Math.round(zoomK() * 100)}%（Ctrl+= 放大、Ctrl+- 缩小、Ctrl+0 还原）`, 1600); }
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+  if (e.key === "=" || e.key === "+" || e.code === "NumpadAdd") { e.preventDefault(); zoomStep(0.1); }
+  else if (e.key === "-" || e.key === "_" || e.code === "NumpadSubtract") { e.preventDefault(); zoomStep(-0.1); }
+  else if (e.key === "0" || e.code === "Numpad0") { e.preventDefault(); zoomStep(0); }
+});
+document.addEventListener("wheel", e => { if (!e.ctrlKey) return; e.preventDefault(); zoomStep(e.deltaY < 0 ? 0.1 : -0.1); }, {passive: false});
+(async () => { try { const st = await api("/api/settings");       // 网页存储被清过时，从设置文件找回来
+  if (store.get("ccss.fk") == null && st.ui_font) applyUi(st.ui_font, null, false);
+  if (store.get("ccss.zoom") == null && st.ui_zoom) applyUi(null, st.ui_zoom, false); } catch(e){} })();
+
 // ---------- 主题 ----------
 const THEMES = ["system", "light", "dark"];
 function applyTheme(t){
@@ -797,10 +829,10 @@ $("#sdHead").onclick = e => { if (e.target.closest("button")) return; TR.sel = n
 $("#tbUpd").onclick = () => updOpen(true);
 // 左侧面板：拖动改宽度（记住），Ctrl+B 收起 / 展开
 function dragGrip(el, getW, setW, min, max, key, invert){
-  el.onmousedown = e => {
-    e.preventDefault(); const x0 = e.clientX, w0 = getW(); el.classList.add("drag"); document.body.style.cursor = "col-resize";
-    const mv = ev => setW(Math.max(min, Math.min(max(), w0 + (invert ? -1 : 1) * (ev.clientX - x0))));
-    const up = () => { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); el.classList.remove("drag"); document.body.style.cursor = ""; store.set(key, String(Math.round(getW()))); };
+  el.onmousedown = e => {            // 量出来的宽度是缩放后的（屏幕上的）像素，写回 CSS 前除掉缩放
+    e.preventDefault(); const z = zoomK(), x0 = e.clientX, w0 = getW() / z; el.classList.add("drag"); document.body.style.cursor = "col-resize";
+    const mv = ev => setW(Math.max(min, Math.min(max() / z, w0 + (invert ? -1 : 1) * (ev.clientX - x0) / z)));
+    const up = () => { document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); el.classList.remove("drag"); document.body.style.cursor = ""; store.set(key, String(Math.round(getW() / z))); };
     document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up);
   };
 }
@@ -1029,7 +1061,7 @@ function usCachePut(){
 function usRenderShell(){
   const seg = (k, items) => `<span class="seg" data-k="${k}">${items.map(([v, t]) => `<button data-v="${v}" class="${US[k]===v?"on":""}">${t}</button>`).join("")}</span>`;
   $("#usBox").innerHTML = `
-    <div class="uhd"><span class="usrc" id="usSrc"><i class="d"></i>会话日志 · 自动扫描</span><span class="dim" id="usLast" style="font-size:12px"></span><span class="sp"></span>
+    <div class="uhd"><span class="usrc" id="usSrc"><i class="d"></i>会话日志 · 自动扫描</span><span class="dim" id="usLast" style="font-size:calc(13px*var(--fk))"></span><span class="sp"></span>
       <button id="usSrcBtn"><i data-ic="folder"></i> 数据来源</button><button class="primary" id="usSync"><i data-ic="refresh"></i> 立即同步</button></div>
     <div class="ufl">${seg("app", [["","全部"],["claude","Claude"],["codex","Codex"],["dsh","DeepSeek"]])}
       <select id="usProv"><option value="">全部供应商</option></select><select id="usModel"><option value="">全部模型</option></select>
@@ -1294,11 +1326,11 @@ async function usSources(){
     <div>CC Session Sync 自己读这些会话日志（只读，不改），每分钟只读新增部分：</div>
     <ul style="margin:0"><li>Claude Code / Claude 桌面：<code>${esc(st.claude_dir)}</code>（${st.files_known.claude || 0} 个文件）</li>
     <li>Codex：<code>${esc(st.codex_dir)}\\sessions</code> 和 <code>archived_sessions</code>（${st.files_known.codex || 0} 个文件）</li></ul>
-    <div class="dim" style="font-size:12.5px">去重：Claude 按 message.id + requestId（同一次调用的多行只算一次，取最完整的那行；分叉 / 续接会话复制过来的旧行不重复算）；Codex 按累计值（total_token_usage）算每次的差值：累计没变算 0，变小（压缩 / 续接）就退回这一次的值，续接 / 分叉文件重放的旧记录按「时间 + 累计值」只算一次。费用：缓存写 5 分钟按输入价 1.25 倍、1 小时 2 倍；提示超过长上下文门槛的整条请求按加价档；fast / priority 档按官方倍率。按本机时区的日历日汇总。统计存在 <code>${esc(st.db)}</code>。</div>
+    <div class="dim" style="font-size:calc(13.5px*var(--fk))">去重：Claude 按 message.id + requestId（同一次调用的多行只算一次，取最完整的那行；分叉 / 续接会话复制过来的旧行不重复算）；Codex 按累计值（total_token_usage）算每次的差值：累计没变算 0，变小（压缩 / 续接）就退回这一次的值，续接 / 分叉文件重放的旧记录按「时间 + 累计值」只算一次。费用：缓存写 5 分钟按输入价 1.25 倍、1 小时 2 倍；提示超过长上下文门槛的整条请求按加价档；fast / priority 档按官方倍率。按本机时区的日历日汇总。统计存在 <code>${esc(st.db)}</code>。</div>
     <table><tr><th class="l">来源</th><th class="l">应用</th><th>请求</th><th class="l">时间范围</th></tr>${srcs}</table>
     <div><b>本地代理</b>（opencodex / magpie 转发的请求也会写进 Claude / Codex 的会话日志，已经算在上面）：<ul style="margin:4px 0">${px}</ul></div>
     <div><b>CC Switch 历史</b>：${st.ccswitch.exists ? (imp ? `已导入 ${imp.rows} 条（${new Date(imp.at*1000).toLocaleString("zh-CN", {hour12: false})}）。` : "检测到 CC Switch 的数据库。") : "没检测到 CC Switch。"}
-      ${st.ccswitch.exists ? '<div class="dim" style="font-size:12.5px">一次性只读导入：补回 Claude 已经清理掉的旧会话的用量。和会话日志里同一条消息 / 同一个 Codex 线程的会跳过；CC Switch 代理记的那份不导入（和会话日志重复）；费用按这里的价格表重算。</div>' : ""}</div>
+      ${st.ccswitch.exists ? '<div class="dim" style="font-size:calc(13.5px*var(--fk))">一次性只读导入：补回 Claude 已经清理掉的旧会话的用量。和会话日志里同一条消息 / 同一个 Codex 线程的会跳过；CC Switch 代理记的那份不导入（和会话日志重复）；费用按这里的价格表重算。</div>' : ""}</div>
   </div></div><div class="pvft">${st.ccswitch.exists ? `<button id="usImp">${imp ? "重新导入" : "导入 CC Switch 历史"}</button>` : ""}<button onclick="usOpen()">返回</button></div></div>`;
   $("#usBack").onclick = () => usOpen();
   const b = $("#usImp"); if (b) b.onclick = async () => { b.disabled = true; b.textContent = "导入中…";
@@ -1415,7 +1447,7 @@ async function mcSave(tool, base, extra = {}, ctx = null){
 function mcClaude(){
   const st = MC.d.claude.user, v = st.values, h = st.apiKeyHelper;
   const base = {...v, _key: h.ours ? h.key : ""};
-  let html = `<div class="dim" style="margin:6px 0;font-size:12px">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有，保存时新建）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
+  let html = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有，保存时新建）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
   if (st.error) html += `<div class="miss">这个文件读不了：${esc(st.error)}（不会写）</div>`;
   html += `<div class="setlist">` + CL_FIELDS.map(([k, l, hnt]) => mcRow(k, l, hnt, v[k])).join("") +
     mcSel("effortLevel", "思考强度", "effortLevel；注意：用户级的这个键对 Opus 5.5 不生效（它按 /effort 记住的值），项目级对所有模型生效", v.effortLevel, ["", "low", "medium", "high", "xhigh"]);
@@ -1430,12 +1462,12 @@ function mcClaude(){
     tb.disabled = false; $("#mcTestOut").innerHTML = mcTestHtml(r); };
 }
 function mcTestHtml(r){
-  if (r.ok) return `<div class="miss" style="border-color:var(--ok);background:var(--ok-weak)">连通：HTTP ${r.status}，${r.ms} ms${r.note ? "；" + esc(r.note) : ""}<div class="dim" style="font-size:11.5px">${esc(r.url || "")}</div></div>`;
-  return `<div class="miss"><b>${r.status ? "HTTP " + r.status : "没连上"}</b>${r.reason ? " · " + esc(r.reason) : ""}${r.detail ? `<div style="font-size:12px">${esc(r.detail)}</div>` : ""}${r.hint ? `<div style="font-size:12px"><b>建议：</b>${esc(r.hint)}</div>` : ""}${r.url ? `<div class="dim" style="font-size:11.5px">${esc(r.url)}${r.ms != null ? "，" + r.ms + " ms" : ""}</div>` : ""}${!r.status && !r.reason && r.error ? esc(r.error) : ""}</div>`; }
+  if (r.ok) return `<div class="miss" style="border-color:var(--ok);background:var(--ok-weak)">连通：HTTP ${r.status}，${r.ms} ms${r.note ? "；" + esc(r.note) : ""}<div class="dim" style="font-size:calc(12.5px*var(--fk))">${esc(r.url || "")}</div></div>`;
+  return `<div class="miss"><b>${r.status ? "HTTP " + r.status : "没连上"}</b>${r.reason ? " · " + esc(r.reason) : ""}${r.detail ? `<div style="font-size:calc(13px*var(--fk))">${esc(r.detail)}</div>` : ""}${r.hint ? `<div style="font-size:calc(13px*var(--fk))"><b>建议：</b>${esc(r.hint)}</div>` : ""}${r.url ? `<div class="dim" style="font-size:calc(12.5px*var(--fk))">${esc(r.url)}${r.ms != null ? "，" + r.ms + " ms" : ""}</div>` : ""}${!r.status && !r.reason && r.error ? esc(r.error) : ""}</div>`; }
 function mcCodex(){
   const st = MC.d.codex.user, v = st.values;
   const ef = ["", "minimal", "low", "medium", "high", "xhigh"];
-  let html = `<div class="dim" style="margin:6px 0;font-size:12px">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
+  let html = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
   if (st.error) html += `<div class="miss">这个文件读不了：${esc(st.error)}（不会写）</div>`;
   html += `<div class="setlist">` + CX_FIELDS.map(([k, l, hnt]) => mcRow(k, l, hnt, v[k])).join("") +
     mcSel("model_reasoning_effort", "思考强度", "model_reasoning_effort", v.model_reasoning_effort, ef) +
@@ -1461,7 +1493,7 @@ function mcProxy(){
     MC.pxWait = true; api("/api/modelcfg/proxies").then(r => { MC.d.proxies = r; MC.pxWait = false; if ($("#mcTab") && MC.view === "proxy") mcProxy(); }).catch(() => { MC.pxWait = false; });
   }
   const ps = MC.d.proxies, ocxAg = MC.d.agents.filter(a => a.ocx);
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">opencodex / magpie 是本地模型网关：把一个模型名路由到真正的供应商和模型（含 Anthropic ↔ OpenAI 格式转换）。CC Session Sync 不内置代理，只检测它们、显示路由，并能一键把 Claude / Codex 指过去（先备份，你确认才写）。</div>` +
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">opencodex / magpie 是本地模型网关：把一个模型名路由到真正的供应商和模型（含 Anthropic ↔ OpenAI 格式转换）。CC Session Sync 不内置代理，只检测它们、显示路由，并能一键把 Claude / Codex 指过去（先备份，你确认才写）。</div>` +
     ps.map(p => `<div class="ucard" style="margin-bottom:8px"><div class="ufl"><b>${p.name}</b><span class="tag">${p.running ? "在运行" : p.running == null ? "检测中…" : p.configured ? "装了，没在运行" : "没检测到"}</span><span class="dim">端口 ${p.port}</span><span style="flex:1"></span>
       <button data-px="${p.name}" data-t="claude">Claude 指向它</button><button data-px="${p.name}" data-t="codex">Codex 加为供应商</button></div>
       ${p.providers.length ? `<div class="s">上游供应商：${p.providers.map(esc).join("、")}${p.default_provider ? "（默认 " + esc(p.default_provider) + "）" : ""}</div>` : ""}
@@ -1476,7 +1508,7 @@ function mcProxy(){
 }
 function mcKeys(){
   const d = MC.d;
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">${d.keystore === "wincred" ? "key 存在 <b>Windows 凭据管理器</b>（按当前 Windows 用户加密）。" : "<span class='note'>这台机器不是 Windows：key 存在 ~/.agent-bridge/keys.json（仅测试用）。</span>"} Claude 通过 apiKeyHelper、Codex 通过 [model_providers.x.auth] 运行 <code>${esc(d.helper_example)}</code> 取 key；配置文件里不留明文。这里只显示打码后的样子。</div>
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">${d.keystore === "wincred" ? "key 存在 <b>Windows 凭据管理器</b>（按当前 Windows 用户加密）。" : "<span class='note'>这台机器不是 Windows：key 存在 ~/.agent-bridge/keys.json（仅测试用）。</span>"} Claude 通过 apiKeyHelper、Codex 通过 [model_providers.x.auth] 运行 <code>${esc(d.helper_example)}</code> 取 key；配置文件里不留明文。这里只显示打码后的样子。</div>
     <table><tr><th class="l">名字</th><th class="l">key</th><th class="l">备注</th><th></th></tr>${d.keys.map(k => `<tr><td class="l"><b>${esc(k.name)}</b></td><td class="l">${esc(k.masked)}</td><td class="l dim">${esc(k.comment)}</td><td><button class="ghost" data-kd="${esc(k.name)}">删除</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有</td></tr>'}</table>
     <div class="ufl" style="margin-top:8px"><input id="mcKn" placeholder="名字，如 claude-main" style="width:160px"><input id="mcKs" type="password" autocomplete="new-password" placeholder="粘贴 key（只写不读）" style="width:280px"><input id="mcKc" placeholder="备注（可空）" style="width:160px"><button class="primary" id="mcKsave">存入</button></div>`;
   $("#mcKsave").onclick = async () => { const n = $("#mcKn").value.trim(), s = $("#mcKs").value; if (!n || !s) return toast("名字和 key 都要填");
@@ -1485,7 +1517,7 @@ function mcKeys(){
 }
 function mcMigrate(){
   const d = MC.d;
-  $("#mcTab").innerHTML = d.plaintext.length ? `<div class="dim" style="margin:6px 0;font-size:12px">把配置文件里的明文 key 存进凭据管理器，再把配置改成取 key 的命令。先备份原文件；存进去读回来一致才改配置。只显示打码后的样子。</div>
+  $("#mcTab").innerHTML = d.plaintext.length ? `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">把配置文件里的明文 key 存进凭据管理器，再把配置改成取 key 的命令。先备份原文件；存进去读回来一致才改配置。只显示打码后的样子。</div>
     <table><tr><th class="l">工具</th><th class="l">位置</th><th class="l">key</th><th class="l">存成</th><th></th></tr>${d.plaintext.map((p, i) => `<tr><td class="l">${esc(p.tool)}</td><td class="l"><code>${esc(p.field)}</code></td><td class="l">${esc(p.masked)}</td><td class="l"><input data-mn="${i}" value="${p.tool === "claude" ? "claude-main" : "codex-" + esc(p.provider || "")}" style="width:150px"></td><td><button data-mg="${i}">迁移…</button></td></tr>`).join("")}</table>`
     : `<div class="dim" style="margin:10px 0">配置文件里没有明文 key。</div>`;
   $$("#mcTab [data-mg]").forEach(b => b.onclick = () => { const p = d.plaintext[+b.dataset.mg], name = $(`#mcTab [data-mn="${b.dataset.mg}"]`).value.trim();
@@ -1495,12 +1527,12 @@ function mcMigrate(){
 }
 function mcBackups(){
   const b = MC.d.backups;
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">每次写之前的原文件。还原时会先把现在的文件也备份一份。</div><table><tr><th class="l">时间</th><th class="l">操作</th><th class="l">文件</th><th></th></tr>${b.map(x => `<tr><td class="l">${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})}</td><td class="l">${esc(x.label)}</td><td class="l m" title="${esc(x.file)}">${esc(x.file)}</td><td><button data-rb="${esc(x.id)}">还原</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有备份</td></tr>'}</table>`;
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">每次写之前的原文件。还原时会先把现在的文件也备份一份。</div><table><tr><th class="l">时间</th><th class="l">操作</th><th class="l">文件</th><th></th></tr>${b.map(x => `<tr><td class="l">${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})}</td><td class="l">${esc(x.label)}</td><td class="l m" title="${esc(x.file)}">${esc(x.file)}</td><td><button data-rb="${esc(x.id)}">还原</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有备份</td></tr>'}</table>`;
   $$("#mcTab [data-rb]").forEach(btn => btn.onclick = async () => { const x = b.find(y => y.id === btn.dataset.rb); if (!confirm(`把 ${x.file} 还原成 ${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})} 的样子？`)) return;
     try { await api("/api/modelcfg/restore", {id: x.id}); toast("已还原"); } catch(e){ toast("没还原：" + e.message); } MC.view = "backups"; await mcLoad(); });
 }
 function mcSlot(){
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:12px">在 CC Session Sync 里切换 Codex 全局供应商时，写进 <code>[model_providers.&lt;id&gt;]</code>。Codex 按这个 id 分对话列表：沿用原来的 id，老对话不会「消失」。一般不用改。</div>
+  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">在 CC Session Sync 里切换 Codex 全局供应商时，写进 <code>[model_providers.&lt;id&gt;]</code>。Codex 按这个 id 分对话列表：沿用原来的 id，老对话不会「消失」。一般不用改。</div>
     <div class="ufl"><code>[model_providers.</code><input id="pvSlot" value="${esc(MC.p.codex_slot)}" style="width:120px"><code>]</code><button class="primary" id="pvSlotSave">改</button></div>`;
   $("#pvSlotSave").onclick = async () => { try { await pvApi("slot", {slot: $("#pvSlot").value.trim()}); toast("已改"); } catch(e){ toast("没改：" + e.message); } mcOpen("slot"); };
 }
@@ -1753,13 +1785,13 @@ R.sync = async () => {
           <td class="ell" title="${esc(r.cwd)}">${esc(projName(r.cwd))}</td><td class="n">${when(r.last)}</td>
           <td>${r.k === "add" ? '<span class="tag ok">补进来</span>' : '<span class="tag warn">刷新</span>'}${r.archived ? ' <span class="tag">已归档</span>' : ""}</td></tr>`).join("")}</table></div>`
         : '<div class="okbox">都齐了：当前账号已经能看到所有会话。</div>'}
-      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:12px">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
+      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:calc(13px*var(--fk))">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
         <button class="primary" id="syGo" ${SY.sel.size ? "" : "disabled"}>${ic("sync")} 同步选中的 ${SY.sel.size} 个</button></div></div>
     <div class="card"><h3>各账号的会话文件夹</h3><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
       ${(pl.folders || st.folders || []).map(f => `<tr><td>${f.profile === "3p" ? '<span class="tag acc">API 模式（所有供应商共用）</span> ' : ""}<code>${esc(f.key)}</code></td><td class="n">${f.count}</td><td>${when(f.latest)}</td>
         <td>${f.key === (st.accounts.desktop || {}).key ? '<span class="tag acc">桌面端当前</span> ' : ""}${f.key === (st.accounts.cli || {}).key ? '<span class="tag">命令行当前</span>' : ""}</td></tr>`).join("")}</table></div>
     <div class="card"><div class="setrow" style="border:0;padding:2px"><div class="sl">${ic("sync")}<div><b>自动同步</b><div class="sd">桌面端没开的时候，把别的账号新出现的会话自动补进当前账号（会弹通知）。缺省关；CC Msg 也开了自动同步的话两边都会补，开一个就够。</div></div></div>${sw("syAuto", st.settings.auto_sync)}</div>
-      ${st.auto && st.auto.last ? `<div class="dim" style="font-size:12px;margin-top:4px">上次自动同步：${when(st.auto.last.time)} · 补 ${st.auto.last.added} / 刷新 ${st.auto.last.updated}</div>` : ""}</div>`;
+      ${st.auto && st.auto.last ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:4px">上次自动同步：${when(st.auto.last.time)} · 补 ${st.auto.last.added} / 刷新 ${st.auto.last.updated}</div>` : ""}</div>`;
   $$("#sySrc button").forEach(b => b.onclick = () => { SY.source = b.dataset.s; SY.touched = false; R.sync(); });
   $("#syRef").onclick = () => { SY.touched = false; R.sync(); };
   $$("#pg-sync [data-n]").forEach(c => c.onchange = () => { SY.touched = true; c.checked ? SY.sel.add(c.dataset.n) : SY.sel.delete(c.dataset.n); syBtn(); });
@@ -1852,9 +1884,9 @@ async function cxPreview(t){
     if (!p.ok) { box.innerHTML = `<div class="miss">${esc(p.error)}</div>`; return; }
     const s = p.stats || {};
     box.innerHTML = `<h3>${esc(p.title)}<span class="sp"></span><span class="tag">${p.turns_total} 轮</span></h3>
-      <div class="dim" style="font-size:12px;margin:-4px 0 8px">${esc(p.cwd)} → <code>${esc(p.target || "")}</code><br>工具调用 ${s.tools || 0}${s.images ? ` · 图片 ${s.images}（导不过去，留文字说明）` : ""}${s.reasoning_encrypted ? ` · 加密思考 ${s.reasoning_encrypted}（导不过去）` : ""}${s.compactions ? ` · 压缩过 ${s.compactions} 次` : ""}</div>
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px">${esc(p.cwd)} → <code>${esc(p.target || "")}</code><br>工具调用 ${s.tools || 0}${s.images ? ` · 图片 ${s.images}（导不过去，留文字说明）` : ""}${s.reasoning_encrypted ? ` · 加密思考 ${s.reasoning_encrypted}（导不过去）` : ""}${s.compactions ? ` · 压缩过 ${s.compactions} 次` : ""}</div>
       <div class="pv">${p.turns.map(m => `<div class="msg ${m.role === "user" ? "user" : "assistant"}"><div class="who">${m.role === "user" ? "你" : "Codex → Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>${esc(m.text)}${m.cut ? '<span class="dim">…（预览截短）</span>' : ""}</div>`).join("")}
-      ${p.more ? `<div class="dim" style="text-align:center;font-size:12px">后面还有 ${p.more} 轮（导入时全导）</div>` : ""}</div>`;
+      ${p.more ? `<div class="dim" style="text-align:center;font-size:calc(13px*var(--fk))">后面还有 ${p.more} 轮（导入时全导）</div>` : ""}</div>`;
   } catch(e){ box.innerHTML = `<div class="miss">预览失败：${esc(e.message)}</div>`; }
 }
 async function cxDry(thenApply){
@@ -1869,7 +1901,7 @@ async function cxDry(thenApply){
       <div>桌面端列表</div><div>${r.desktop ? `写进当前账号 <code>${esc(short(r.desktop.key))}…</code>` : esc(r.desktop_note || "不写（只写命令行记录）")}</div>
       <div>防重复导入</div><div>${r.mark ? (mk.ok ? `登记进 <code>${esc(mk.file)}</code>（${mk.exists ? "先备份再改" : "新建"}）` : `<span style="color:var(--bad)">${esc(mk.error || "")}</span>`) : "关"}</div></div>
     <div class="diff updn" style="margin-top:10px">${todo.length ? todo.map(x => `<div class="${x.state === "new" ? "a" : "u"}">${x.state === "new" ? "+ 新建" : "~ 更新"}  ${esc(x.target || "")}/…jsonl   ${esc(x.title || "")}  (${x.turns} 轮 / ${Math.round((x.chars || 0) / 1000)}K 字)</div>`).join("") : "（没有要写的）"}</div>
-    <div class="dim" style="font-size:12px;margin-top:8px">这是演练，还什么都没写。${CX.desktop && SY.st && SY.st.running.claude ? "Claude 桌面端开着：确认后会排队，退出桌面端后自动导入。" : ""}</div>`;
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是演练，还什么都没写。${CX.desktop && SY.st && SY.st.running.claude ? "Claude 桌面端开着：确认后会排队，退出桌面端后自动导入。" : ""}</div>`;
   openDlg(thenApply ? "确认导入" : "演练结果", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${todo.length && !(r.mark && !mk.ok) ? `<button class="primary" id="cxApply">${ic("download")} 确认导入 ${todo.length} 个</button>` : ""}`);
   const b = $("#cxApply");
   if (b) b.onclick = async () => {
@@ -1908,14 +1940,14 @@ R.dsh = async () => {
     <div class="bar"><span class="seg" id="dsDir"><button data-v="to-claude" class="${to ? "on" : ""}">dsh → Claude Code</button><button data-v="from-claude" class="${to ? "" : "on"}">Claude Code → dsh</button></span>
       <input type="search" id="dsQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(DS.q)}"><span class="sp"></span>
       ${pl.error ? `<span class="tag bad">${esc(pl.error)}</span>` : ""}</div>
-    <div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="dsList" style="border:0;border-radius:0;max-height:52vh"></div>
+    <div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="dsList" style="border:0;border-radius:0;max-height:calc(52*var(--vh))"></div>
       <div class="batch"><span id="dsN"></span><span style="flex:1"></span><button id="dsDry">${ic("eye")} 演练：看会改什么</button><button class="primary" id="dsGo">${ic("download")} 导入选中的</button></div></div>
     <div class="card"><h3>导入选项</h3>${to ? `
       <div class="setrow"><div class="sl">${ic("monitor")}<div><b>写进 Claude 桌面端的会话列表</b><div class="sd">关掉就只写命令行能 <code>claude --resume</code> 的记录；桌面端开着时会排队</div></div></div>${sw("dsDesk", DS.desktop)}</div>
       <div class="setrow"><div class="sl">${ic("sparkles")}<div><b>带上思考内容（当文字）</b><div class="sd">缺省不带：dsh 的思考内容不能变成 Claude 的思考块，只能当普通文字放进回复里</div></div></div>${sw("dsReas", DS.reasoning)}</div>
       <div class="setrow"><div class="sl">${ic("file")}<div><b>图片按原样带过去</b><div class="sd">缺省只留「[图片]」占位；打开后 dsh 附件库里找得到的图片按 base64 嵌进去（会话文件会变大）</div></div></div>${sw("dsImg", DS.images)}</div>`
     : `<div class="setrow"><div class="sl">${ic("refresh")}<div><b>Claude 里又聊过的，再导一份新的</b><div class="sd">已经导过去的那份不改（不往已有的 dsh 会话里写）；勾上就把现在的内容另导成一个新的 dsh 会话</div></div></div>${sw("dsAgain", DS.again)}</div>
-      <div class="dim" style="font-size:12.5px">只带文字：工具调用和结果变成文字摘要，图片变成占位，思考内容不带。导进去的会话标题带「（Claude Code）」，在 dsh 里接着聊会用 dsh 当前的模型。${det.running ? "dsh 开着也可以导（只新建目录）；它的会话列表可能要重开一下才看得到。" : ""}</div>`}</div>`;
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">只带文字：工具调用和结果变成文字摘要，图片变成占位，思考内容不带。导进去的会话标题带「（Claude Code）」，在 dsh 里接着聊会用 dsh 当前的模型。${det.running ? "dsh 开着也可以导（只新建目录）；它的会话列表可能要重开一下才看得到。" : ""}</div>`}</div>`;
   dsList();
   $$("#dsDir button").forEach(b => b.onclick = () => { if (DS.dir === b.dataset.v) return; DS.dir = b.dataset.v; DS.sel.clear(); DS.touched = false; DS.plan = null; R.dsh(); });
   $("#dsQ").oninput = e => { DS.q = e.target.value; dsList(); };
@@ -1948,7 +1980,7 @@ async function dsDry(thenApply){
       <div>会写</div><div><b>${todo.length - bad.length}</b> 个${to ? " Claude Code 会话" : " dsh 会话"}</div>
       ${to ? `<div>桌面端列表</div><div>${DS.desktop && r.desktop ? `写进当前账号 <code>${esc(short(r.desktop.key))}…</code>` : "不写（只写命令行记录）"}</div>` : `<div>写到</div><div><code>${esc(r.root || "")}</code>（${esc(r.compression || "")}）</div>`}</div>
     <div class="diff updn" style="margin-top:10px">${todo.length ? todo.map(x => `<div class="${x.error || x.valid === false ? "d" : x.state === "update" ? "u" : "a"}">${x.error ? "✗ " + esc(x.error) : x.valid === false ? "✗ 校验没过：" + esc((x.problems || []).join("；")) : (x.state === "update" ? "~ 更新" : "+ 新建")}  ${esc(x.target || "")}   ${esc(x.title || "")}  (${x.turns ?? "?"} 轮${st(x) ? " · " + st(x) : ""})</div>`).join("") : "（没有要写的）"}</div>
-    <div class="dim" style="font-size:12px;margin-top:8px">这是演练，还什么都没写。${to ? "工具调用 / 结果变成文字，思考内容缺省不带，dsh 自己的运行时上下文和系统提示不带。" : "写之前在内存里按 dsh 的格式校验一遍（帧、校验和、序号连续）；写的时候先写临时文件再改名，不会写出半个会话。"}</div>`;
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是演练，还什么都没写。${to ? "工具调用 / 结果变成文字，思考内容缺省不带，dsh 自己的运行时上下文和系统提示不带。" : "写之前在内存里按 dsh 的格式校验一遍（帧、校验和、序号连续）；写的时候先写临时文件再改名，不会写出半个会话。"}</div>`;
   const n = todo.length - bad.length;
   openDlg(thenApply ? "确认导入" : "演练结果", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${n ? `<button class="primary" id="dsApply">${ic("download")} 确认导入 ${n} 个</button>` : ""}`);
   const b = $("#dsApply");
@@ -1970,7 +2002,7 @@ R.sessions = async (keep) => {
   try { SS.d = await api("/api/sessions"); } catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   const live = new Set(SS.d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
   pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span class="sp"></span>
-      <span class="dim" style="font-size:12px">改名 / 删除先备份、可撤回；删除进回收站</span>
+      <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
       <button id="ssImp" title="把导出的 .md / .html 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html</button>
       <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
     ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
@@ -2046,9 +2078,9 @@ async function ssView(agent, id){
           : `<button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button><button data-v="copy">${ic("copy")} 复制继续命令</button>
         <button data-v="del" class="danger">${ic("trash")} 删除（进回收站）</button>`}</div></span>
       ${agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
-    <div class="dim" style="font-size:12px;margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
     <div class="pv">${chatHtml(r.entries, agent)}
-      ${r.cut ? `<div class="dim" style="text-align:center;font-size:12px">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条（导出能看全部）</div>` : ""}</div>`;
+      ${r.cut ? `<div class="dim" style="text-align:center;font-size:calc(13px*var(--fk))">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条（导出能看全部）</div>` : ""}</div>`;
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
   if (agent === "dsh") $("#svOpen").onclick = () => { copyText(x.resume || id); toast("已复制 dsh 命令行的继续命令。用桌面版的话，在 DeepSeek Harness 的会话列表里点开它就能接着聊（本程序不改 dsh 的会话）", 7000); };
@@ -2070,7 +2102,7 @@ function ssOrphan(agent, id, x, box){
         <button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button>
         <button data-v="del" class="danger">${ic("trash")} 删掉这条登记（进回收站）</button></div></span>
       <button class="primary" disabled title="对话文件不存在，没法继续">${ic("play")} 继续</button></h3>
-    <div class="dim" style="font-size:12px;margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " · " : ""}${x.model ? esc(x.model) + " · " : ""}${esc(id)}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " · " : ""}${x.model ? esc(x.model) + " · " : ""}${esc(id)}</div>
     <div class="emp">${ic("file")}<b>无法打开（对话文件不存在）</b>
       <div style="max-width:440px">桌面端的会话列表里还登记着这一条，但本机找不到它的对话记录（可能是在别的电脑上、被清理了，或者 API 模式下从没写到本地）。
       不能继续、导出、复制命令；可以改显示名、归档，或者把这条登记删掉（先进回收站，能撤回）。要是以前备份过，可以在「时间线」里从备份恢复。</div></div>`;
@@ -2093,14 +2125,14 @@ async function ssExport(items, fmt, label){
   }
   if (!out.length) return toast("❌ " + (errs[0] || "没导出来"), 5000);
   openDlg("✅ 已导出", `<div>导出了 ${out.length} 个${dir ? `，在 <code>${esc(dir)}</code>` : ""}：</div><div class="dgls">${out.slice(0, 30).map(p => `<div>${esc(p)}</div>`).join("")}${out.length > 30 ? `<div>…还有 ${out.length - 30} 个</div>` : ""}</div>
-    ${fmt !== "jsonl" ? '<div class="dim" style="font-size:12px;margin-top:6px">文件里带着完整的原始记录：用「导入 .md / .html」能一模一样地导回来。</div>' : ""}
+    ${fmt !== "jsonl" ? '<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">文件里带着完整的原始记录：用「导入 .md / .html」能一模一样地导回来。</div>' : ""}
     ${errs.length ? `<div class="miss">${errs.length} 个没导出来：${esc(errs[0])}</div>` : ""}`,
     `<button onclick="closeDlg()">关闭</button><button class="primary" id="exRev">${ic("folder")} 打开文件夹</button>`);
   $("#exRev").onclick = () => api("/api/reveal", {path: dir || out[0]}).catch(e => toast("❌ " + e.message));
 }
 function exDlg(items, label){
   openDlg("导出", `导出 ${items.length} 个会话到 <code>${esc((SY.st || {}).home || "~/.cc-sessionsync")}/exports</code>${items.length > 1 ? "（放进一个文件夹）" : ""}
-    <div class="dim" style="font-size:12.5px;margin-top:8px">Markdown / HTML：好读（角色、时间、代码块；HTML 里工具调用折叠、自带浅色 / 深色样式，单个文件就能打开），并且内嵌完整原始记录，可以无损导回来。原始 jsonl：原样复制。</div>`,
+    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:8px">Markdown / HTML：好读（角色、时间、代码块；HTML 里工具调用折叠、自带浅色 / 深色样式，单个文件就能打开），并且内嵌完整原始记录，可以无损导回来。原始 jsonl：原样复制。</div>`,
     `<button onclick="closeDlg()">取消</button><button id="ex1">原始 jsonl</button><button id="ex3">HTML</button><button class="primary" id="ex2">Markdown</button>`);
   $("#ex1").onclick = () => ssExport(items, "jsonl", label); $("#ex2").onclick = () => ssExport(items, "md", label); $("#ex3").onclick = () => ssExport(items, "html", label);
 }
@@ -2110,10 +2142,10 @@ function ssAct(act, items){
   if (act === "export") return exDlg(items, "");
   const names = items.map(i => (SS.d.items.find(x => x.agent === i.agent && x.id === i.id) || {}).title || i.id).slice(0, 8);
   const lab = {archive: "归档", unarchive: "取消归档", delete: "删除"}[act];
-  const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:12.5px">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
+  const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:calc(13.5px*var(--fk))">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
     ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「备份 → 回收站」还原，或在操作记录里撤回。</div>`
-      : `<div class="dim" style="font-size:12.5px">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
-    <div class="dim" style="font-size:12px;margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
+      : `<div class="dim" style="font-size:calc(13.5px*var(--fk))">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
   confirmDlg(lab + "会话", html, lab, async () => {
     const r = await api("/api/sessions/batch", {action: act, items});
     closeDlg();
@@ -2127,7 +2159,7 @@ function ssRename(agent, id, x){
   const can = agent === "codex" ? "写进 Codex 的会话名（session_index.jsonl 追加一条 + state 数据库），Codex 里也会显示新名字"
     : (x.registered ? "写进 Claude 桌面端的会话列表标题，并在会话记录末尾追加一条 custom-title（Claude Code 自己的改名格式）" : "在会话记录末尾追加一条 custom-title（Claude Code 自己的改名格式）");
   openDlg("改名", `<input id="rnName" style="width:100%" value="${esc(x.title || "")}" placeholder="新名字（留空 = 恢复原名）">
-    <label class="chk" style="margin-top:12px;align-items:flex-start;flex-wrap:nowrap;gap:8px"><input type="checkbox" id="rnTool" style="margin-top:3px;flex:none"><span>也改 ${agent === "codex" ? "Codex" : "Claude"} 自己显示的名字<div class="dim" style="font-size:12px">${can}。改之前先备份，可以撤回；${agent === "codex" ? "Codex" : "Claude"} 桌面端开着会排队。不勾就只改本程序里的显示名，什么文件都不动。</div></span></label>`,
+    <label class="chk" style="margin-top:12px;align-items:flex-start;flex-wrap:nowrap;gap:8px"><input type="checkbox" id="rnTool" style="margin-top:3px;flex:none"><span>也改 ${agent === "codex" ? "Codex" : "Claude"} 自己显示的名字<div class="dim" style="font-size:calc(13px*var(--fk))">${can}。改之前先备份，可以撤回；${agent === "codex" ? "Codex" : "Claude"} 桌面端开着会排队。不勾就只改本程序里的显示名，什么文件都不动。</div></span></label>`,
     `<button onclick="closeDlg()">取消</button><button class="primary" id="rnGo">保存</button>`);
   setTimeout(() => $("#rnName").select(), 30);
   if (agent === "dsh") { $("#rnTool").disabled = true; $("#rnTool").closest("label").style.opacity = .5; $("#rnTool").closest("label").title = "DeepSeek Harness 的会话文件本程序不改：只改本程序里的显示名"; }
@@ -2228,11 +2260,11 @@ async function tlSession(){
   const g = trGroup(x.gacct || tlGacct({agent, id}));
   pg.innerHTML = tlHead(`会话备份库里这个会话的每个版本。拖滑块或选时间 → 右边预览那时候的对话、和现在比 → 「恢复到 Claude」另存成新会话（不覆盖现在的）。`) +
     `<div class="card"><h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(v.title || "（无标题）")}</span>${v.exists ? "" : '<span class="tag warn">现在这个会话已经没了</span>'}<span class="tag">${vs.length} 个版本</span></h3>
-      <div class="dim" style="font-size:12px;margin:-4px 0 8px">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}<span title="${esc(v.cwd || "")}">${esc(projName(v.cwd))}</span> · ${esc(id)}</div>
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}<span title="${esc(v.cwd || "")}">${esc(projName(v.cwd))}</span> · ${esc(id)}</div>
       ${vs.length ? (TL.spark && vs.length > 1 ? tlSpark(vs, TL.idx) : "") + tlPicker(vs.map(r => r.at), TL.idx, vs[TL.idx] ? `${fullTime(vs[TL.idx].at)} · ${vs[TL.idx].msgs ?? "?"} 条消息` : "") +
-        `<div class="bar" style="margin-top:6px;gap:12px"><label class="chk" style="font-size:12px"><input type="checkbox" id="tlSpOn" ${TL.spark ? "checked" : ""} ${vs.length > 1 ? "" : "disabled"}> 显示对话增长曲线</label><span class="sp"></span><span class="tlkeys"><kbd>←</kbd> <kbd>→</kbd> 切换版本</span></div>`
+        `<div class="bar" style="margin-top:6px;gap:12px"><label class="chk" style="font-size:calc(13px*var(--fk))"><input type="checkbox" id="tlSpOn" ${TL.spark ? "checked" : ""} ${vs.length > 1 ? "" : "disabled"}> 显示对话增长曲线</label><span class="sp"></span><span class="tlkeys"><kbd>←</kbd> <kbd>→</kbd> 切换版本</span></div>`
         : `<div class="emp">${ic("history")}<b>这个会话还没有备份版本</b><div>会话备份库每次备份时会给有变化的会话存一个版本；也可以现在就备份一次。</div><div><button id="tlBk">${ic("download")} 立即备份</button></div></div>`}</div>
-    ${vs.length ? `<div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="tlVers" style="border:0;border-radius:0;max-height:calc(100vh - 380px)"></div></div></div>
+    ${vs.length ? `<div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="tlVers" style="border:0;border-radius:0;max-height:calc(calc(100*var(--vh)) - 380px)"></div></div></div>
       <div class="grip" id="tlGrip"></div><div class="r"><div class="card" id="tlPv"></div></div></div>` : ""}`;
   tlWireHead();
   const bk = $("#tlBk"); if (bk) bk.onclick = async () => { bk.disabled = true; try { await api("/api/backup/now", {}); } catch(e){ toast("❌ " + e.message); } TL.vers = null; tlSession(); };
@@ -2277,7 +2309,7 @@ async function tlPreview(snap, box, agent){
         <div class="dlegx"><span><i style="background:var(--line2)"></i>一样 ${d.same}</span><span><i style="background:var(--bad,#c0392b)"></i>只在这一版 ${d.only_then}</span><span><i style="background:var(--ok)"></i>只在现在 ${d.only_now}</span></div>`}
       ${!d.identical && (d.then_samples.length || d.now_samples.length) ? `<details style="margin-top:6px" ${d.only_then + d.only_now <= 6 ? "open" : ""}><summary class="dim" style="cursor:pointer">看差别</summary><div class="dl">
         <div><b>只在这一版（${d.only_then}）</b>${smp(d.then_samples, "old") || '<div class="dim">—</div>'}</div><div><b>只在现在（${d.only_now}）</b>${smp(d.now_samples, "new") || '<div class="dim">—</div>'}</div></div></details>` : ""}</div>
-    <div class="pv" style="max-height:calc(100vh - 500px);min-height:200px">${r.cut ? `<div class="dim" style="text-align:center;font-size:12px">前面还有 ${r.cut} 条没显示（恢复 / 导出是完整的）</div>` : ""}${r.entries.length ? chatHtml(r.entries, s.agent) : '<div class="empty">这一版里没有能显示的消息</div>'}</div>`;
+    <div class="pv" style="max-height:calc(calc(100*var(--vh)) - 500px);min-height:200px">${r.cut ? `<div class="dim" style="text-align:center;font-size:calc(13px*var(--fk))">前面还有 ${r.cut} 条没显示（恢复 / 导出是完整的）</div>` : ""}${r.entries.length ? chatHtml(r.entries, s.agent) : '<div class="empty">这一版里没有能显示的消息</div>'}</div>`;
   $("#pvClaude").onclick = () => tlRestore([s.id], "copy", "claude");
   const cx = $("#pvCodex"); if (cx) cx.onclick = () => tlReplaceDlg([s.id], "codex");
   const rp = $("#pvRep"); if (rp) rp.onclick = () => tlReplaceDlg([s.id], "claude");
@@ -2297,7 +2329,7 @@ async function tlRestore(snaps, mode, target){
 function tlReplaceDlg(snaps, target){
   const app = target === "codex" ? "Codex" : target === "claude" ? "Claude" : "Claude / Codex", tgt = target === "codex" ? "codex" : "claude";
   openDlg(target === "codex" ? "恢复到 Codex" : "替换当前会话", `<div>用备份里的版本<b>替换</b> ${snaps.length} 个${app}会话现在的内容。</div>
-    <ul style="font-size:12.5px;margin:8px 0;padding-left:20px"><li>替换前先把现在的版本存进会话备份库，并记进操作记录，可以撤回。</li><li>${app} 桌面端开着的话会排队，等它完全退出后再换。</li>
+    <ul style="font-size:calc(13.5px*var(--fk));margin:8px 0;padding-left:20px"><li>替换前先把现在的版本存进会话备份库，并记进操作记录，可以撤回。</li><li>${app} 桌面端开着的话会排队，等它完全退出后再换。</li>
     <li>不想动现在的会话：用「恢复到 Claude」另存一份新的更稳妥。</li></ul>
     <label class="chk"><input type="checkbox" id="rpOk"> 我知道会替换现在的会话内容</label>`,
     `<button onclick="closeDlg()">取消</button><button class="primary danger" id="rpGo" disabled>替换</button>`);
@@ -2310,9 +2342,9 @@ function madeDlg(title, r){
   const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。<button class="ghost" id="mdCr">${ic("power")} 关闭 Claude 并登记（完成后重启）</button>`
     : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
   openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）：</div>` : ""}
-    ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}</div><div class="dim" style="font-size:12px;word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
+    ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
       <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}
-    <div class="dim" style="font-size:12.5px;margin-top:6px">${dnote}</div>
+    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:6px">${dnote}</div>
     ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
     `<button id="mdUndo" class="ghost">${ic("undo")} 撤回</button><span style="flex:1"></span><button onclick="closeDlg()">关闭</button><button class="primary" id="mdGo">${ic("list")} 去会话列表看</button>`);
   $$("#dlgBody [data-cp]").forEach(b => b.onclick = () => copyText(b.dataset.cp));
@@ -2369,7 +2401,7 @@ async function tlGlobal(){
     (runs.length ? `<div class="card">${runs.length > 1 && TL.spark ? tlGrowth(runs, TL.ri) : ""}${tlPicker(runs.map(r => r.at), TL.ri, `${fullTime(runs[TL.ri].at)} · 那次存了 ${runs[TL.ri].n} 个新版本`)}</div>
       <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
         <div class="bar" style="padding:8px 10px 0;margin:0"><span class="seg" id="tlSt"></span><span class="sp"></span></div>
-        <div class="scroll" id="tlList" style="border:0;border-radius:0;max-height:calc(100vh - 420px)"></div><div class="batch" id="tlBatch"></div></div></div>
+        <div class="scroll" id="tlList" style="border:0;border-radius:0;max-height:calc(calc(100*var(--vh)) - 420px)"></div><div class="batch" id="tlBatch"></div></div></div>
       <div class="grip" id="tlGrip"></div><div class="r"><div class="card" id="tlPv"><div class="emp">${ic("messages")}点左边一个会话，预览它在这个时间点的对话</div></div></div></div>`
       : `<div class="card"><div class="emp">${ic("history")}会话备份库里还没有版本。自动备份缺省每 10 分钟一次；也可以现在就备份。<div><button class="primary" id="tlBk">${ic("download")} 立即备份</button></div></div></div>`);
   tlWireHead();
@@ -2428,7 +2460,7 @@ async function imDlg(){
   IM.files = []; IM.plan = null;
   if (!SY.st) { try { SY.st = await api("/api/status"); } catch(e){} }
   const projs = (SS.d && SS.d.projects) || [];
-  openDlg("导入 .md / .html", `<div class="dim" style="font-size:12.5px">把导出的 .md / .html 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。</div>
+  openDlg("导入 .md / .html", `<div class="dim" style="font-size:calc(13.5px*var(--fk))">把导出的 .md / .html 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。</div>
     <input type="file" id="imF" accept=".md,.markdown,.html,.htm" multiple style="margin-top:10px;width:100%">
     <div class="setrow"><div class="sl"><div><b>放进哪个项目</b><div class="sd">留空 = 用文件里记的工作目录（没有就放家目录）</div></div></div><input id="imCwd" list="imProj" placeholder="（用文件里记的）" style="width:300px"><datalist id="imProj">${projs.map(p => `<option value="${esc(p)}">`).join("")}</datalist></div>
     <div class="setrow" style="border:0"><div class="sl"><div><b>登记进 Claude 桌面端</b><div class="sd">登记进当前账号 ${acm((SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).rid, (SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).email_masked || "")} 的会话列表；桌面端开着会排队</div></div></div>${sw("imDesk", true)}</div>
@@ -2450,9 +2482,9 @@ async function imDry(){
   try { IM.plan = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), dry: true}); }
   catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
   const rows = IM.plan.rows || [];
-  box.innerHTML = `<div class="dim" style="font-size:12.5px;margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop())}：${esc(r.error)}</div>`
+  box.innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop())}：${esc(r.error)}</div>`
     : `<div class="mk"><div class="tl">${esc(r.title)} ${r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>'} ${r.agent === "codex" ? '<span class="tag codex">原来是 Codex</span>' : ""}</div>
-      <div class="dim" style="font-size:12px">${r.messages} 条消息 · ${kb(r.size)} · 放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div>
+      <div class="dim" style="font-size:calc(13px*var(--fk))">${r.messages} 条消息 · ${kb(r.size)} · 放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div>
       <div class="pv" style="max-height:160px;margin-top:6px">${chatHtml((r.preview || []).slice(0, 6), r.agent)}</div></div>`).join("")}`;
   $("#imGo").disabled = !rows.some(r => !r.error);
 }
@@ -2473,7 +2505,7 @@ R.backups = async () => {
     <div class="card" id="bkJobs"><h3>排队中的改动 <span class="tag ${waiting.length ? "warn" : ""}">${waiting.length}</span></h3>
       ${jobs.length ? `<table class="t">${jobs.slice().reverse().slice(0, 12).map(j => `<tr><td>${esc(j.title)}</td><td>${when(j.queued)}</td><td><span class="tag ${(JST[j.state] || [""])[0]}">${(JST[j.state] || ["", j.state])[1]}</span></td>
         <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td class="nw">${j.state === "waiting" ? `<button data-crj="${esc(j.id)}" data-k="${esc(j.kind || "claude")}" title="关闭${APPN[j.kind] || "Claude"} 桌面端、做完、再按原来的方式打开它">${ic("power")} 关闭并执行</button> <button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
-        : '<div class="dim" style="font-size:12.5px">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
+        : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
     <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkPrune" title="按保留规则清掉旧版本，再压缩数据库">${ic("trash")} 清理旧版本</button><button class="primary" id="bkNow">${ic("download")} 立即备份</button></h3>
       <div class="sched"><div>自动备份<b>${sc.auto ? `每 ${sc.every} ${BK_UNIT[sc.unit] || sc.unit}` : "已关"}</b>${sc.running || bs.running ? '<span class="tag warn">正在备份</span>' : ""}</div>
         <div>上次<b>${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没备份过"}</b>${sc.last_error ? `<span class="tag bad" title="${esc(sc.last_error)}">失败</span>` : sc.last_result ? `新版本 ${sc.last_result.snapshots} · 看了 ${sc.last_result.files} 个` : ""}</div>
@@ -2484,22 +2516,22 @@ R.backups = async () => {
         <span class="numu"><input type="number" id="bkEvery" min="1" value="${esc(s.session_backup_every ?? 10)}"><select id="bkUnit">${Object.entries(BK_UNIT).map(([k, v]) => `<option value="${k}" ${s.session_backup_unit === k ? "selected" : ""}>${v}</option>`).join("")}</select></span>${sw("bkAuto", s.session_backup_auto)}</div>
       <div class="setrow" style="border:0"><div class="sl">${ic("archive")}<div><b>保留多久</b><div class="sd">最近 N 天的版本全留；再往前到 M 天每天留最后一版；更早的每周一版。每个会话最新的一版永远留着。点「清理旧版本」才按这个删。</div></div></div>
         <span class="numu">全留 <input type="number" id="bkKeepAll" min="1" value="${esc(s.retention_all_days ?? 7)}"> 天，每天一版到 <input type="number" id="bkKeepDay" min="1" value="${esc(s.retention_daily_days ?? 90)}"> 天</span></div>
-      ${snaps.items.length ? `<details style="margin-top:6px"><summary class="dim" style="cursor:pointer;font-size:12.5px">最近的 ${Math.min(snaps.items.length, 50)} 个版本</summary><div class="scroll" style="max-height:300px;margin-top:6px"><table class="t"><tr><th>会话</th><th>备份时间</th><th class="n">大小</th><th>原文件</th><th></th></tr>
+      ${snaps.items.length ? `<details style="margin-top:6px"><summary class="dim" style="cursor:pointer;font-size:calc(13.5px*var(--fk))">最近的 ${Math.min(snaps.items.length, 50)} 个版本</summary><div class="scroll" style="max-height:300px;margin-top:6px"><table class="t"><tr><th>会话</th><th>备份时间</th><th class="n">大小</th><th>原文件</th><th></th></tr>
         ${snaps.items.slice(0, 50).map(x => `<tr><td class="tl">${logo(x.agent)} <span class="ell" style="display:inline-block;vertical-align:bottom;max-width:300px">${esc(x.title || x.sid)}</span></td><td>${when(x.at)}</td><td class="n">${kb(x.size)}</td><td>${x.exists ? '<span class="tag ok">在</span>' : '<span class="tag warn">不在了</span>'}</td><td style="white-space:nowrap"><button data-tlo="${esc(x.agent + ":" + x.sid)}">${ic("history")} 时间线</button></td></tr>`).join("")}</table></div></details>` : ""}</div>
     <div class="card"><h3>${ic("trash")}回收站 <span class="tag">${trash.items.length}</span></h3>
       ${trash.items.length ? `<table class="t">${trash.items.map(t => `<tr><td><code>${esc(t.id)}</code></td><td>${when(t.time)}</td><td>${t.items.length} 个会话（${t.items.filter(i => i.agent === "claude").length} Claude / ${t.items.filter(i => i.agent === "codex").length} Codex）</td>
         <td>${t.restored ? `<span class="tag ok">已还原</span>` : ""}</td><td style="white-space:nowrap">${t.restored ? "" : `<button data-tr="${esc(t.id)}">${ic("undo")} 还原</button> `}<button class="ghost danger" data-tp="${esc(t.id)}">彻底删除</button></td></tr>`).join("")}</table>`
-        : '<div class="dim" style="font-size:12.5px">空的。在会话管理里删除的会话会先放在这里。</div>'}</div>
+        : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">空的。在会话管理里删除的会话会先放在这里。</div>'}</div>
     <div class="card"><h3>${ic("list")}会话操作记录（可撤回）</h3>
       ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
-        <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有。</div>'}</div>
+        <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}</div>
     <div class="grid2"><div class="card"><h3>${ic("users")}Claude 账号同步备份</h3>
-      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有同步过。</div>'}</div>
+      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。</div>'}</div>
       <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
-      ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有导入过。</div>'}</div></div>
+      ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}</div></div>
     <div class="card"><h3>${ic("dsh", "logo dshc")}DeepSeek Harness 导入账本</h3>
-      ${dled.length ? `<table class="t">${dled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "claude-to-dsh" ? "Claude Code → dsh" : "dsh → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-dled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:12.5px">还没有导入过。</div>'}
-      <div class="dim" style="font-size:12px;margin-top:6px">撤回：新建的文件 / 会话目录挪进回收站（不直接删）；导过去之后又接着聊过的、dsh 正开着的，不动。</div></div>`;
+      ${dled.length ? `<table class="t">${dled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "claude-to-dsh" ? "Claude Code → dsh" : "dsh → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-dled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回：新建的文件 / 会话目录挪进回收站（不直接删）；导过去之后又接着聊过的、dsh 正开着的，不动。</div></div>`;
   $$("[data-dled]").forEach(b => b.onclick = () => confirmDlg("撤回 DeepSeek Harness 导入", `撤回账本 <code>${esc(b.dataset.dled)}</code>：这次导入新建的会话挪进回收站，更新过的换回原来的。之后又接着聊过的不动。`, "撤回", async () => {
     try { const r = await api("/api/dsh/undo", {ledger: b.dataset.dled}); closeDlg();
       if (r.ok === false) return toast("❌ " + r.error, 5000);
@@ -2512,7 +2544,7 @@ R.backups = async () => {
   $("#bkEvery").onchange = bkEv; $("#bkUnit").onchange = bkEv;
   const bkKeep = async () => { await saveSetting({retention_all_days: +$("#bkKeepAll").value, retention_daily_days: +$("#bkKeepDay").value}); R.backups(); };
   $("#bkKeepAll").onchange = bkKeep; $("#bkKeepDay").onchange = bkKeep;
-  $("#bkPrune").onclick = () => confirmDlg("清理旧版本", `按保留规则清掉旧版本：最近 <b>${s.retention_all_days ?? 7}</b> 天全留，<b>${s.retention_daily_days ?? 90}</b> 天内每天留最后一版，更早的每周一版；每个会话最新的一版永远留着。然后压缩数据库（现在 ${kb(bs.db_bytes)}）。<div class="dim" style="font-size:12px;margin-top:6px">只动备份库，不碰 Claude / Codex 的会话文件。</div>`, "清理", async () => {
+  $("#bkPrune").onclick = () => confirmDlg("清理旧版本", `按保留规则清掉旧版本：最近 <b>${s.retention_all_days ?? 7}</b> 天全留，<b>${s.retention_daily_days ?? 90}</b> 天内每天留最后一版，更早的每周一版；每个会话最新的一版永远留着。然后压缩数据库（现在 ${kb(bs.db_bytes)}）。<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">只动备份库，不碰 Claude / Codex 的会话文件。</div>`, "清理", async () => {
     try { const r = await api("/api/backup/prune", {vacuum: true}); closeDlg(); toast(`✅ 清掉 ${r.snapshots_dropped} 个旧版本，数据库 ${kb(r.db_before)} → ${kb(r.db_after)}`, 6000); R.backups(); } catch(e){ toast("❌ " + e.message); } });
   $$("[data-tlo]").forEach(b => b.onclick = () => { const [a, ...i] = b.dataset.tlo.split(":"); tlOpen(a, i.join(":")); });
   $$("[data-tr]").forEach(b => b.onclick = () => confirmDlg("从回收站还原", `把 <code>${esc(b.dataset.tr)}</code> 里的会话放回去：原位置空着就放回原位；原位置已经有文件了就另存一份新的（不覆盖）。桌面端开着会排队。`, "还原", async () => {
@@ -2544,6 +2576,9 @@ R.settings = async () => {
   pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。</p>
     <div class="card"><h3>外观与窗口</h3><div class="setlist">
       ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
+      ${setRow("type", "字号", "整个界面的文字大小（缺省「标准」）", `<span class="seg" id="stFont">${FKS.map(([v, t]) => `<button data-v="${v}" class="${Math.abs(+v - fontK()) < 0.005 ? "on" : ""}">${t}</button>`).join("")}</span>`)}
+      ${setRow("zoom", "界面缩放", "整体放大 / 缩小（80%–200%）。快捷键 <kbd>Ctrl</kbd>+<kbd>=</kbd> 放大、<kbd>Ctrl</kbd>+<kbd>-</kbd> 缩小、<kbd>Ctrl</kbd>+<kbd>0</kbd> 还原，也可以按住 Ctrl 滚滚轮。会记住；Windows 的显示缩放（125% / 150%）另外照常生效",
+        `<span class="zoomc"><button class="ghost" id="stZm" title="缩小">−</button><b id="stZoomV">${Math.round(zoomK() * 100)}%</b><button class="ghost" id="stZp" title="放大">+</button><button class="ghost" id="stZ0">还原</button></span>`)}
       ${setRow("x", "关窗口时缩到托盘", "关掉窗口后留在通知区域继续自动同步 / 检测账号切换；托盘菜单里「退出」才真正退出" + (win ? "" : "（只有 Windows 桌面版有托盘）"), sw("stTray", s.tray_close, dis))}
       ${setRow("monitor", "启动时只放进托盘", "开机自启或双击图标时不弹窗口", sw("stMin", s.start_min, dis))}
       ${setRow("power", "开机自动启动", win ? "登录 Windows 后自动在托盘里运行（写 HKCU\\…\\Run，卸载时会删掉）" : "只有 Windows 桌面版支持", sw("stAuto", s.autostart, s.autostart_supported ? "" : "disabled"))}
@@ -2560,8 +2595,10 @@ R.settings = async () => {
         `<button class="tbx has-dot-able${u.badge ? " has-dot" : ""}" id="setUpd" style="position:relative;background:var(--hover);color:var(--text);padding:5px 12px">${ic("refresh")} 检查更新<span class="rdot"></span></button>`)}</div></div>
     <div class="card"><h3>数据</h3><div class="kv"><div>本程序数据</div><div><code>${esc(st.home)}</code> <button class="ghost" id="stRev" style="padding:1px 6px">${ic("folder")}</button></div>
       <div>Claude Code</div><div><code>${esc(st.claude_home)}</code></div><div>Codex</div><div><code>${esc(st.codex_home)}</code></div></div>
-      <div class="dim" style="font-size:12px;margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
+  $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
+  $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
   bind("#stMark", "codex_mark_imported"); bind("#stUpd", "update_auto");
@@ -2578,7 +2615,7 @@ const SC_IC = {pass: "ok", warn: "warn", fail: "err"};
 function scHtml(r){
   if (!r || r.never) return '<div class="dim">还没自检过。</div>';
   const c = r.counts || {};
-  return `<div class="dim" style="font-size:12px;margin-bottom:4px">${when(r.time)} · 通过 ${c.pass || 0} / 注意 ${c.warn || 0} / 没通过 ${c.fail || 0}（${r.ms} ms）</div>` +
+  return `<div class="dim" style="font-size:calc(13px*var(--fk));margin-bottom:4px">${when(r.time)} · 通过 ${c.pass || 0} / 注意 ${c.warn || 0} / 没通过 ${c.fail || 0}（${r.ms} ms）</div>` +
     r.items.map(i => `<div class="sc ${i.status}">${ic(SC_IC[i.status])}<div style="min-width:0"><div class="nm">${esc(i.name)}</div><div class="dt">${esc(i.detail)}</div>${i.fix ? `<div class="fx">建议：${esc(i.fix)}</div>` : ""}</div></div>`).join("");
 }
 R.diag = async () => {
@@ -2603,12 +2640,12 @@ R.diag = async () => {
         ${accRow("Claude 桌面端", (acc.desktop || {}).email_masked || short((acc.desktop || {}).accountUuid), (acc.desktop || {}).via && "认自 " + acc.desktop.via, (acc.desktop || {}).rid)}
         ${accRow("Claude Code 命令行", (acc.cli || {}).email_masked || short((acc.cli || {}).accountUuid), (acc.cli || {}).via && "认自 " + acc.cli.via, (acc.cli || {}).rid)}
         ${accRow("Codex", (w.codex || {}).label, "auth.json + config.toml", (w.codex || {}).rid)}</table>
-        <div class="dim" style="font-size:12px;margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
+        <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
       <div class="card">${ag("claude", "Claude")}${ag("codex", "Codex")}</div></div></div>
     <div class="card"><h3>${ic("folder")}数据目录</h3>
       ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}${dirRow("DeepSeek Harness", "dsh_home", d.dsh_home || "")}
       <div class="dgls" style="margin-top:8px">${(d.app_dirs.parts || []).map(p => `<div>桌面端${esc(p.name)}：${esc(p.path)}（${esc(p.why)}）</div>`).join("")}</div>
-      <div class="dim" style="font-size:12px">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME / DSH_HOME 优先。</div></div>
+      <div class="dim" style="font-size:calc(13px*var(--fk))">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME / DSH_HOME 优先。</div></div>
     ${apiCard(d.api)}
     <div class="card"><h3>${ic("text")}诊断报告<span class="sp"></span><button class="primary" id="dgCp">${ic("copy")} 复制报告</button></h3><pre class="rep" id="dgRep">${esc(d.text + "\n\n" + (sc && !sc.never ? sc.text : ""))}</pre></div>`;
   $("#dgCp").onclick = () => copyText($("#dgRep").textContent);
@@ -2637,7 +2674,7 @@ function diagCnt(sc){ const n = sc && !sc.never ? (sc.counts.fail || 0) : 0, e =
 async function scOpen(run){
   openDlg("✅ 自检", '<div class="empty">自检中…</div>', `<button onclick="closeDlg()">关闭</button><button id="scCp">${ic("copy")} 复制</button><button class="primary" id="scRe">${ic("refresh")} 重新自检</button>`);
   let r;
-  const show = () => { $("#dlgBody").innerHTML = `<div class="dim" style="font-size:12.5px;margin-bottom:6px">程序文件、数据目录写权限、凭据管理器、Claude / Codex、数据目录、更新地址。第一次启动会自动跑一次。</div>${scHtml(r)}`; diagCnt(r); };
+  const show = () => { $("#dlgBody").innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin-bottom:6px">程序文件、数据目录写权限、凭据管理器、Claude / Codex、数据目录、更新地址。第一次启动会自动跑一次。</div>${scHtml(r)}`; diagCnt(r); };
   try { r = run ? await api("/api/selfcheck", {}) : await api("/api/selfcheck"); if (r.never) r = await api("/api/selfcheck", {}); show(); } catch(e){ $("#dlgBody").innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
   $("#scRe").onclick = async () => { $("#dlgBody").innerHTML = '<div class="empty">自检中…</div>'; try { r = await api("/api/selfcheck", {}); show(); } catch(e){ toast("❌ " + e.message); } };
   $("#scCp").onclick = () => r && copyText(r.text || "");
@@ -2655,15 +2692,15 @@ function updRender(u){
   let body;
   if (u.error && !u.latest) body = `<div class="miss">${esc(u.error)}</div>`;
   else if (!u.newer) body = `<div class="okbox">已经是最新版 v${esc(u.current)}${u.checked ? `（${when(u.checked)} 查的）` : ""}</div>`;
-  else body = `<div style="display:flex;align-items:center;gap:10px"><span class="rdot" style="display:block;position:static;box-shadow:none"></span><b style="font-size:15px">有新版本 v${esc(u.latest)}</b><span class="dim">当前 v${esc(u.current)}${u.published ? " · 发布于 " + when(u.published) : ""}</span>${u.ignored === u.latest ? '<span class="tag">已忽略</span>' : ""}</div>
+  else body = `<div style="display:flex;align-items:center;gap:10px"><span class="rdot" style="display:block;position:static;box-shadow:none"></span><b style="font-size:calc(16px*var(--fk))">有新版本 v${esc(u.latest)}</b><span class="dim">当前 v${esc(u.current)}${u.published ? " · 发布于 " + when(u.published) : ""}</span>${u.ignored === u.latest ? '<span class="tag">已忽略</span>' : ""}</div>
     ${u.notes ? `<div class="updn" style="margin-top:10px">${esc(u.notes)}</div>` : ""}
-    <div class="dim" style="font-size:12.5px;margin-top:10px">${u.mode === "installer" ? (u.has_setup ? "点「立即更新」：下载安装包 → 校验 sha256 → 静默安装 → 自动重新打开。不点就不会装。" : "这个版本没有带校验文件的安装包，请到发布页手动下载。")
+    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:10px">${u.mode === "installer" ? (u.has_setup ? "点「立即更新」：下载安装包 → 校验 sha256 → 静默安装 → 自动重新打开。不点就不会装。" : "这个版本没有带校验文件的安装包，请到发布页手动下载。")
       : "这是 pip / 源码版：请运行 <code>pip install -U cc-sessionsync</code>，或到发布页下载 Windows 安装版。"}</div>
-    ${busy || dl.state === "error" ? `<div style="margin-top:10px;font-size:12.5px">${{downloading: "下载中", verifying: "校验 sha256", installing: "正在安装，马上重新打开…", error: "出错了：" + esc(dl.error || "")}[dl.state]}${dl.total ? ` ${kb(dl.done)} / ${kb(dl.total)}` : ""}</div><div class="prog"><i style="width:${dl.total ? Math.round(dl.done / dl.total * 100) : busy ? 100 : 0}%"></i></div>` : ""}`;
+    ${busy || dl.state === "error" ? `<div style="margin-top:10px;font-size:calc(13.5px*var(--fk))">${{downloading: "下载中", verifying: "校验 sha256", installing: "正在安装，马上重新打开…", error: "出错了：" + esc(dl.error || "")}[dl.state]}${dl.total ? ` ${kb(dl.done)} / ${kb(dl.total)}` : ""}</div><div class="prog"><i style="width:${dl.total ? Math.round(dl.done / dl.total * 100) : busy ? 100 : 0}%"></i></div>` : ""}`;
   const can = u.newer && u.mode === "installer" && u.has_setup;
   $("#dlgTitle").innerHTML = ic("refresh") + " 检查更新";
   $("#dlgBody").innerHTML = body;
-  $("#dlgFt").innerHTML = (u.page ? `<a href="${esc(u.page)}" target="_blank" style="margin-right:auto;font-size:12.5px" id="updPage">发布页</a>` : "") +
+  $("#dlgFt").innerHTML = (u.page ? `<a href="${esc(u.page)}" target="_blank" style="margin-right:auto;font-size:calc(13.5px*var(--fk))" id="updPage">发布页</a>` : "") +
     (u.newer && u.ignored !== u.latest ? `<button class="ghost" id="updIgn">忽略此版本</button><button id="updLater">稍后</button>` : u.newer ? `<button class="ghost" id="updUnign">取消忽略</button><button onclick="closeDlg()">关闭</button>` : `<button onclick="closeDlg()">关闭</button>`) +
     `<button id="updRe">${ic("refresh")} 重新检查</button>` + (can ? `<button class="primary" id="updGo" ${busy ? "disabled" : ""}>${ic("download")} 立即更新</button>` : "");
   const on = (id, fn) => { const e = $(id); if (e) e.onclick = fn; };

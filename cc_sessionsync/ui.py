@@ -498,6 +498,12 @@ class H(BaseHTTPRequestHandler):
             ch = {k: b[k] for k in ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
                                     "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
                                     "show_full_accounts", "retention_all_days", "retention_daily_days") if k in b}
+            for k, lo, hi in (("ui_font", 0.8, 1.5), ("ui_zoom", 0.8, 2.0)):      # 字号 / 界面缩放（0.2.6）
+                if k in b:
+                    try:
+                        ch[k] = round(min(hi, max(lo, float(b[k]))), 3)
+                    except (TypeError, ValueError):
+                        raise ValueError(f"{k} 应该是数字")
             _check_backup_settings(ch)
             if ch:
                 settings.update(**ch)

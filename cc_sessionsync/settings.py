@@ -11,6 +11,8 @@
     selfcheck_done       第一次启动的自检做过了
     claude_dir / codex_dir / claude_app_dir   手动指定的数据目录（诊断里选）
     dsh_home                                  DeepSeek Harness 的数据目录（缺省 ~/.dsh；环境变量 DSH_HOME 优先）
+    ui_font / ui_zoom                         界面字号倍数（0.8–1.5，缺省 1）和界面缩放（0.8–2，缺省 1）（0.2.6）
+    cursor_user_dir / cursor_home             Cursor 的 User 目录（state.vscdb 所在）和 ~/.cursor（诊断里选）（0.2.6）
 开机自启不存在这里：看注册表 HKCU\\...\\Run 本身（tray.autostart_get）。
 """
 from __future__ import annotations
@@ -27,7 +29,7 @@ DEFAULTS = {"auto_sync": False, "tray_close": True, "start_min": False, "notify"
             "show_full_accounts": False,
             # 会话自动备份（0.2.1 起缺省开，每 10 分钟；最少 5 分钟）+ 保留规则
             "session_backup_auto": True, "session_backup_every": 10, "session_backup_unit": "min",
-            "retention_all_days": 7, "retention_daily_days": 90}
+            "retention_all_days": 7, "retention_daily_days": 90, "ui_font": 1, "ui_zoom": 1}
 BOOL_KEYS = ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
              "tray_hint_shown", "show_full_accounts", "session_backup_auto")
 _lock = threading.Lock()

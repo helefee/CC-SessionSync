@@ -112,6 +112,20 @@ def _single_instance(wait: float = 0) -> bool:
 
 # ---------- 窗口位置 ----------
 
+def _dpi_aware():
+    """Windows：按显示器 DPI 感知（Per-Monitor v2），125% / 150% 缩放下字不糊、窗口尺寸按真实像素算。
+    要在建窗口之前调；pywebview 自己也会设，已经设过时这里的调用会失败，忽略即可。"""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        if ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4)):   # PER_MONITOR_AWARE_V2
+            return
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        pass
+
+
 def _load_state() -> dict:
     try:
         d = json.loads(STATE.read_text(encoding="utf-8"))
@@ -338,6 +352,7 @@ def main(argv=None) -> int:
         print(f"[desktop] 服务已在本进程里启动：{url}")
     else:
         print(f"[desktop] 连上已在运行的服务：{url}")
+    _dpi_aware()
     try:
         import webview
     except ImportError:
