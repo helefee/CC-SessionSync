@@ -6,9 +6,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
 T = Path(tempfile.mkdtemp(prefix="ccss-usage-")); H = T / "home"; H.mkdir()
 AD = H / "AppData/Roaming"; LA = H / "AppData/Local"
 os.environ.update(HOME=str(H), USERPROFILE=str(H), CC_SESSIONSYNC_HOME=str(T / "ss"), APPDATA=str(AD), XDG_CONFIG_HOME=str(AD), LOCALAPPDATA=str(LA),
-                  CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), CC_SESSIONSYNC_FAKE_PROCS=str(T / "procs.json"), TZ="Africa/Maputo")
+                  CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), CC_SESSIONSYNC_FAKE_PROCS=str(T / "procs.json"))
 for k in ("CC_SESSIONSYNC_FAKE_APPS", "CC_SESSIONSYNC_FAKE_APP", "CLAUDE_USER_DATA_DIR"): os.environ.pop(k, None)
-if hasattr(time, "tzset"): time.tzset()
+if hasattr(time, "tzset"):          # Windows 的 C 运行库不认 IANA 时区名：只在能 tzset 的系统上固定成马普托
+    os.environ["TZ"] = "Africa/Maputo"; time.tzset()
 (T / "procs.json").write_text("[]")
 from cc_sessionsync import usage as U, claude_sync as C
 FAILS = []

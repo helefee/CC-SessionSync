@@ -1124,7 +1124,7 @@ function usCurve(box, xs, series, o){
   const vis = series.filter(s => !hide[s.k]);
   const W = 1000, H = 190, L = 54, B = 18, T = 8, n = xs.length;
   const max = Math.max(1e-9, ...vis.flatMap(s => s.vals));
-  const X = i => L + (n <= 1 ? (W-L)/2 : i * (W - L - 6) / (n - 1)), Y = v => (H - B) - v / max * (H - B - T);
+  const RP = 26, X = i => L + (n <= 1 ? (W-L)/2 : i * (W - L - RP) / (n - 1)), Y = v => (H - B) - v / max * (H - B - T);
   const gid = "g" + o.id;
   let g = `<defs>${series.map((s, j) => `<linearGradient id="${gid}${j}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--u${s.c||j+1});stop-opacity:.32"/><stop offset="1" style="stop-color:var(--u${s.c||j+1});stop-opacity:0"/></linearGradient>`).join("")}</defs>`;
   g += [0, .25, .5, .75, 1].map(p => `<line class="gl" x1="${L}" x2="${W}" y1="${Y(max*p)}" y2="${Y(max*p)}"/><text x="${L-5}" y="${Y(max*p) + 3}" text-anchor="end">${o.fmt(max*p)}</text>`).join("");
@@ -1142,7 +1142,7 @@ function usCurve(box, xs, series, o){
   const hl = svg.querySelector(".hl"), dots = svg.querySelector(".dots");
   svg.querySelector(".hit").onmousemove = e => {
     const r = svg.getBoundingClientRect(), vx = (e.clientX - r.left) / r.width * W;
-    const i = Math.max(0, Math.min(n - 1, Math.round(n <= 1 ? 0 : (vx - L) / ((W - L - 6) / (n - 1)))));
+    const i = Math.max(0, Math.min(n - 1, Math.round(n <= 1 ? 0 : (vx - L) / ((W - L - RP) / (n - 1)))));
     hl.setAttribute("x1", X(i)); hl.setAttribute("x2", X(i)); hl.style.display = "";
     dots.innerHTML = vis.map(s => `<circle cx="${X(i)}" cy="${Y(s.vals[i])}" r="3.5" style="fill:var(--u${s.c||series.indexOf(s)+1})"/>`).join("");
     tip.innerHTML = `<b>${esc(o.title(xs[i].ts))}</b>` + vis.map(s => `<div><i style="background:var(--u${s.c||series.indexOf(s)+1})"></i>${esc(s.name)}<span>${o.full(s.vals[i])}</span></div>`).join("") + (o.extra ? o.extra(i) : "");
@@ -1733,7 +1733,7 @@ R.sync = async () => {
   pg.innerHTML = `<h2>${ic("users")}账号同步</h2>
     <p class="sub">Claude 桌面端换了账号，以前的会话就看不到了（会话记录其实还在 <code>~/.claude/projects</code>）。这里把别的账号下的会话补进当前账号的列表；先备份，可以撤回。</p>
     <div class="grid2">${acctCard("Claude 桌面端当前账号", st.accounts.desktop, st.running.claude)}${acctCard("Claude Code 命令行当前账号", st.accounts.cli, null)}</div>
-    <div class="card"><h3>可以补进当前账号的会话 <span class="tag acc">${rows.length}</span><span class="sp"></span>
+    <div class="card"><h3>${SY.source === "api" ? "可以补进 API 模式的会话" : "可以补进当前账号的会话"} <span class="tag acc">${rows.length}</span><span class="sp"></span>
       <span class="seg" id="sySrc"><button data-s="desktop" class="${SY.source === "desktop" ? "on" : ""}">按桌面端账号</button><button data-s="cli" class="${SY.source === "cli" ? "on" : ""}">按命令行账号</button>${st.api && (st.api.base || st.api.mode === "3p") ? `<button data-s="api" class="${SY.source === "api" ? "on" : ""}" title="同步到桌面端 API 模式（第三方供应商 / 网关）的会话列表；所有供应商共用一个">API 模式</button>` : ""}</span>
       <button class="ghost" id="syRef" title="重新看一遍">${ic("refresh")}</button></h3>
       ${!pl.ok ? `<div class="miss">${esc(pl.error || "认不出当前账号")}</div>` : rows.length ? `<div class="scroll" style="max-height:340px"><table class="t"><tr><th style="width:28px"><input type="checkbox" id="syAll" ${SY.sel.size === rows.length ? "checked" : ""}></th><th>会话</th><th>来自账号</th><th>项目</th><th>最近</th><th></th></tr>
