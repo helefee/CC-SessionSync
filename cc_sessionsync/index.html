@@ -959,11 +959,13 @@ async function poll(){
     for (const e of t.events || []) {
       if (e.kind === "account" && (!first || Date.now() / 1000 - e.time < 600)) {
         const k = (e.open && e.open.account_switch) || e.title;
-        ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, title: e.title, text: e.text, open: e.open, old: e.old, new: e.new, old_rid: e.old_rid, new_rid: e.new_rid});
+        ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, time: e.time, title: e.title, text: e.text, open: e.open, old: e.old, new: e.new, old_rid: e.old_rid, new_rid: e.new_rid, mode: e.mode_switch});
         RV.loaded = false; if (RV.on) rvLoad().then(rvPaint).catch(() => {}); if (!first) { SS.d = null; treeLoad(); }
       } else if (e.kind === "job") jobDone = true;
       else if (e.kind === "auto-sync" && !first && !e.manual) toast("🔄 " + e.title);
     }
+    const hd = t.acct_handled || {};          // 同步过 / 不缺会话了：这条切换算处理完，提示条收起
+    ST.acct = ST.acct.filter(a => !(hd[a.k] && hd[a.k] >= (a.time || 0)));
     ST.jobs = t.jobs; ST.jobKinds = t.job_kinds || ["claude"]; ST.cr = t.closerun || null;
     if (!ST.upd || (t.update && (t.update.badge !== ST.upd.badge || t.update.latest !== ST.upd.latest))) ST.upd = await api("/api/update");
     setBadge(ST.upd && ST.upd.badge);

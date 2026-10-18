@@ -581,7 +581,47 @@ def desktop_account(profile: bool = True) -> dict:
     ts, _, a, g = max(with_ts) if with_ts else max(ps, key=lambda p: p[1])
     d = {"accountUuid": a, "organizationUuid": g, "email": None, "name": None,
          "key": f"{a}/{g}", "via": "leveldb", "seen": ts or None}
-    return dict(d, **_profile(a)) if profile else d
+    d = _last_known(d)
+    return dict(d, **_profile(d["accountUuid"])) if profile else d
+
+
+# Local Storage 里的这些记录是桌面端的遥测事件：发出去以后会被删掉，leveldb 压缩时也会搬到别的文件里。
+# 当前账号的事件暂时都没了（发完了 / 桌面端没开 / 正在压缩）时，「时间戳最新的那条」会落到很早以前一直没删掉的
+# 旧文件（比如几个月前别的账号留下的 000005.ldb）上 → 看起来像换了号，等新事件写进来又「换回来」。
+# 所以记下认出来的账号和它最新的时间戳：新认出的号只有在它的时间戳比记下的更新时才算换号，否则还是记下的那个。
+def _last_file() -> Path:
+    return paths.HOME / "desktop-account.json"
+
+
+def _last_known(d: dict) -> dict:
+    f = _last_file()
+    try:
+        k = json.loads(f.read_text(encoding="utf-8"))
+    except Exception:
+        k = None
+    seen = d.get("seen") or ""
+    try:
+        here = str(app_path("ldb") or "")
+    except Exception:
+        here = ""
+    if k and (k.get("dir") or "") != here:
+        k = None                              # 换了数据目录（MSIX / 普通安装 / 别的位置）：上次记的不算数
+
+    def t(x):
+        return _iso(x) or 0.0
+    if k and k.get("key") and k["key"] != d["key"] and seen and t(k.get("seen")) >= t(seen):
+        return dict(d, accountUuid=k["accountUuid"], organizationUuid=k["organizationUuid"], key=k["key"],
+                    seen=k.get("seen"), via="leveldb-last-known", stale={"key": d["key"], "seen": seen})
+    if seen and (not k or k.get("key") != d["key"] or t(k.get("seen")) < t(seen)):
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            tmp = f.with_suffix(".tmp")
+            tmp.write_text(json.dumps({"key": d["key"], "accountUuid": d["accountUuid"], "organizationUuid": d["organizationUuid"],
+                                       "seen": seen, "dir": here, "at": time.time()}), encoding="utf-8")
+            os.replace(tmp, f)
+        except Exception:
+            pass
+    return d
 
 
 # ---------- 账号的邮箱 / 名字 ----------
@@ -923,6 +963,8 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
         keep = set(only)
         p["add"] = [a for a in p["add"] if a["name"] in keep]
     if not p["ok"] or dry or not (p["add"] or p["update"]):
+        if p.get("ok") and not dry and only is None:
+            _switch_handled(p)
         return dict(p, done=0, updated=0, dry=dry)
     tdir = Path(p["target"]["path"])
     bak = _backup(tdir)
@@ -944,7 +986,18 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
         _atomic_write(dst, json.dumps(new, ensure_ascii=False))
         updated += 1
     _write_ledger(bak, tdir, what, source=source, added=[a["name"] for a in p["add"]], updated=[a["name"] for a in p["update"]])
+    if only is None or not [x for x in plan(target, source).get("add", [])]:
+        _switch_handled(p)
     return dict(p, done=done, updated=updated, dry=False, backup=str(bak))
+
+
+def _switch_handled(p: dict) -> None:
+    """同步到了现在的账号（或者看过发现不缺什么）：「检测到切换账号」算处理完，提示条收起、不再提醒。"""
+    try:
+        from . import watch
+        watch.mark_handled(key=(p.get("target") or {}).get("key"), source=p.get("source"))
+    except Exception:
+        pass
 
 
 # ---------- 备份账本与还原 ----------

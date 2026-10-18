@@ -99,7 +99,7 @@ def settings_view() -> dict:
 
 
 def tray_state(since: int = -1) -> dict:
-    from . import update
+    from . import update, watch
     seq, evs = events.since(since)
     s = settings.load()
     u = update.status()
@@ -109,7 +109,9 @@ def tray_state(since: int = -1) -> dict:
     return {"seq": seq, "events": evs, "settings": s, "auto_sync": bool(s.get("auto_sync")), "jobs": jobs,
             "job_kinds": sorted({j.get("kind") or "claude" for j in wq}), "closerun": appclose._active(),
             "update": {"badge": u.get("badge"), "latest": u.get("latest")},
-            "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600 for e in events.recent(10))}
+            "acct_handled": watch.handled_since(),
+            "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600
+                             and not (watch.handled_since().get(e.get("who")) or 0) >= e["time"] for e in events.recent(10))}
 
 
 def api_brief() -> dict:
@@ -134,6 +136,7 @@ def sync_now(to: str | None = None, only=None, source: str | None = None) -> dic
     if not pl.get("ok"):
         return pl
     if not (pl.get("add") or pl.get("update")):
+        claude_sync._switch_handled(pl)        # 当前账号不缺会话：「检测到切换账号」算处理完
         return dict(pl, done=0, updated=0, deferred=False, note="没有要补的会话")
     r = apps.run_or_defer("claude", "claude-sync", {"target": to or pl["target"]["key"], "only": only, "source": source},
                           "同步 Claude 会话到 API 模式" if source == "api" else "同步 Claude 会话到当前账号")
