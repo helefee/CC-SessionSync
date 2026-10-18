@@ -513,11 +513,12 @@ def account_groups(items: list[dict]) -> list[dict]:
             elif k:
                 claude_g(k)["n"] += 1
         elif x["agent"] == "dsh":                # DeepSeek Harness：按供应商分（记录里只有 provider id，没有账号）
-            prov = x.get("provider") or ""
+            prov = x.get("provider") or ("" if not x.get("imported") else "imported")
             k = "dsh:" + (prov or "-")
             if k not in g:
                 g[k] = {"key": k, "kind": "dsh", "rid": "", "provider": prov or None,
-                        "masked": "DeepSeek Harness" + (f" · {prov}" if prov else ""), "tags": [], "current": False,
+                        "masked": "DeepSeek Harness" + (" · 从 Claude Code 导入" if prov == "imported" else f" · {prov}" if prov else ""),
+                        "tags": [], "current": False,
                         "folders": [], "n": 0, "hint": "DeepSeek Harness 的会话（~/.dsh/sessions），按记录里的供应商分"}
             g[k]["n"] += 1
             x["gacct"] = k

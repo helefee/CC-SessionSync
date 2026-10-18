@@ -399,6 +399,10 @@ button.big{padding:8px 16px;font-size:13.5px;font-weight:600;display:inline-flex
 .tlspark circle.mk{fill:var(--panel);stroke:var(--accent);stroke-width:1.5;vector-effect:non-scaling-stroke}
 .tlspark circle.mk.on{fill:var(--accent)}
 .tlspark line.cur{stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
+.tlgrow svg{height:96px}.tlgrow path.ln.sub{stroke-width:1.2;opacity:.55}
+.tlglab{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.tlglab b{color:var(--text)}
+.tlgk{display:inline-flex;align-items:center;gap:4px}.tlgk i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.tlgrow .knob{top:16px}
 .tlspark .knob{position:absolute;top:-2px;transform:translateX(-50%);font-size:11px;background:var(--accent);color:var(--ink-on);border-radius:6px;padding:1px 6px;white-space:nowrap;pointer-events:none}
 .tlkeys{font-size:11.5px;color:var(--faint)}
 .tlkeys kbd{border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 4px;font:11px var(--mono);background:var(--panel2)}
@@ -812,7 +816,7 @@ document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); if ($("#app").classList.contains("noside")) toggleSide(); $("#gQ").focus(); $("#gQ").select(); }
 });
 // 会话列表里的搜索 / 筛选（会话页、时间线都跟着筛）
-function sdApply(){ if (PAGE === "sessions" && SS.d) { ssList(); ssChip(); } else if (PAGE === "timeline" && TL.pt) tlList(); treeRender(); }
+function sdApply(){ if (PAGE === "sessions" && SS.d) { ssList(); ssChip(); } else if (PAGE === "timeline" && TL.pt) { tlList(); if (TL.regrow) TL.regrow(); } treeRender(); }
 $("#gQ").oninput = e => { SS.q = e.target.value; sdApply(); };
 $("#gQ").onkeydown = e => { if (e.key !== "Enter") return; if (e.ctrlKey) { if (PAGE !== "sessions") go("sessions"); return ssFulltext(); } if (PAGE !== "sessions" && PAGE !== "timeline") go("sessions"); };
 $("#sdFt").onclick = e => { e.preventDefault(); if (PAGE !== "sessions") go("sessions"); ssFulltext(); };
@@ -1001,7 +1005,7 @@ R.usage = () => usOpen();
 function usOpen(){
   if ($("#dlg").classList.contains("open")) closeDlg();
   if (PAGE !== "usage") return go("usage");
-  $("#pg-usage").innerHTML = `<div class="pgv"><h2>${ic("chart")}用量</h2><p class="sub">读本机 Claude Code / Codex 的会话日志（只读）。费用按 API 价折算；订阅（Claude / ChatGPT 登录）不是实际账单。</p>
+  $("#pg-usage").innerHTML = `<div class="pgv"><h2>${ic("chart")}用量</h2><p class="sub">读本机 Claude Code / Codex / DeepSeek Harness 的会话日志（只读）。费用按 API 价折算（DeepSeek 按高峰价，错峰半价没算）；订阅（Claude / ChatGPT 登录）不是实际账单。</p>
     <div class="card"><div class="us" id="usBox"></div></div></div>`;
   usRenderShell();
   const c = usCacheGet();                       // 上次的数据先画出来（内存 / 本地缓存），后台再刷新
@@ -2155,7 +2159,7 @@ document.addEventListener("keydown", e => {        // 单个会话的时间线�
 function tlGacct(x){
   const m = SS.d && SS.d.items.find(i => i.agent === x.agent && i.id === x.id);
   if (m) return m.gacct;
-  return x.agent === "codex" ? "codex:" + (x.provider || "openai") : x.agent === "dsh" ? "dsh:" + (x.provider || "-") : ((x.accounts || [])[0] || "unknown");
+  return x.agent === "codex" ? "codex:" + (x.provider || "openai") : x.agent === "dsh" ? "dsh:" + (x.provider || (x.imported ? "imported" : "-")) : ((x.accounts || [])[0] || "unknown");
 }
 R.timeline = async () => {
   if (!SS.d) await treeLoad();
@@ -2320,14 +2324,49 @@ function madeDlg(title, r){
 }
 
 // 全部会话：选一个时间点
+// 全部会话的增长曲线：x = 时间，y = 那时备份库里所有会话加起来的消息数（阶梯）；每次备份一个点；拖竖线选时间点（松手才加载）
+function tlGrowth(runs, idx){
+  const G = TL.grow || [], by = new Map(G.map(g => [Math.floor(g.at), g]));
+  const vs = runs.map(r => by.get(Math.floor(r.at)) || {at: r.at, total: null, apps: {}});
+  let lastT = 0; vs.forEach(v => { if (v.total == null) v.total = lastT; else lastT = v.total; });
+  const ag = SS.agent, val = v => ag ? ((v.apps || {})[ag] || 0) : v.total;
+  const W = 1000, H = 96, P = 10, t0 = vs[0].at, t1 = vs[vs.length - 1].at, span = Math.max(1, t1 - t0);
+  const mx = Math.max(1, ...vs.map(val)), X = t => P + (t - t0) / span * (W - 2*P), Y = m => H - 8 - (m || 0) / mx * (H - 20);
+  const pts = vs.map(v => [X(v.at), Y(val(v))]);
+  const step = ps => ps.map(([x, y], i) => i ? `H${x.toFixed(1)}V${y.toFixed(1)}` : `M${x.toFixed(1)},${y.toFixed(1)}`).join("") + `H${W - P}`;
+  const apps = ag ? [] : [["claude", "var(--claude)"], ["codex", "var(--cxn)"], ["dsh", "var(--dsh,#4d6bfe)"]].filter(([k]) => vs.some(v => (v.apps || {})[k]));
+  const lab = i => `${val(vs[i]).toLocaleString()} 条`;
+  return `<div class="tlspark tlgrow" id="tlGr"><div class="tlglab"><b>全部会话的消息总数</b>${ag ? `（只算 ${esc(APPN[ag] || ag)}）` : ""} · 现在 ${val(vs[vs.length - 1]).toLocaleString()} 条
+      ${apps.length > 1 ? apps.map(([k, c]) => `<span class="tlgk"><i style="background:${c}"></i>${esc(APPN[k])}</span>`).join("") : ""}</div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    ${apps.length > 1 ? apps.map(([k, c]) => `<path class="ln sub" style="stroke:${c}" d="${step(vs.map(v => [X(v.at), Y((v.apps || {})[k] || 0)]))}"/>`).join("") : ""}
+    <path class="ln" d="${step(pts)}"/>
+    ${pts.map(([x, y], i) => `<circle class="mk${i === idx ? " on" : ""}" data-i="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"><title>${fullTime(vs[i].at)} · ${lab(i)}（这次存了 ${runs[i].n} 个新版本）</title></circle>`).join("")}
+    <line class="cur" x1="${pts[idx][0]}" x2="${pts[idx][0]}" y1="2" y2="${H}"/></svg><span class="knob" style="left:${(pts[idx][0] / W * 100).toFixed(2)}%">${lab(idx)}</span></div>`;
+}
+function tlWireGrowth(runs, set){
+  const box = $("#tlGr"); if (!box) return;
+  const svg = box.querySelector("svg"), W = 1000, P = 10, t0 = runs[0].at, span = Math.max(1, runs[runs.length - 1].at - t0);
+  const near = e => { const r = svg.getBoundingClientRect(), t = t0 + ((e.clientX - r.left) / r.width * W - P) / (W - 2*P) * span;
+    let b = 0; runs.forEach((v, i) => { if (Math.abs(v.at - t) < Math.abs(runs[b].at - t)) b = i; }); return b; };
+  const move = i => { const c = svg.querySelector(`circle.mk[data-i="${i}"]`), x = +c.getAttribute("cx"), ln = svg.querySelector("line.cur");
+    ln.setAttribute("x1", x); ln.setAttribute("x2", x); const k = box.querySelector(".knob"); k.style.left = (x / W * 100).toFixed(2) + "%";
+    k.textContent = c.querySelector("title").textContent.split(" · ")[1].split("（")[0];
+    svg.querySelectorAll("circle.mk").forEach(m => m.classList.toggle("on", m === c)); };
+  let drag = false, last = -1;
+  svg.onpointerdown = e => { drag = true; svg.setPointerCapture(e.pointerId); last = near(e); move(last); set(last, true); };
+  svg.onpointermove = e => { if (!drag) return; const i = near(e); if (i !== last) { last = i; move(i); set(i, true); } };
+  svg.onpointerup = e => { if (!drag) return; drag = false; set(near(e)); };
+}
 async function tlGlobal(){
   const pg = $("#pg-timeline");
   if (!TL.runs) { pg.innerHTML = tlHead("") + '<div class="emp">读取…</div>';
-    try { TL.runs = (await api("/api/timeline/runs")).items.slice().reverse(); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+    try { [TL.runs, TL.grow] = await Promise.all([api("/api/timeline/runs").then(r => r.items.slice().reverse()), api("/api/timeline/growth").then(r => r.items).catch(() => [])]); }
+    catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
     if (TL.ri < 0 || TL.ri >= TL.runs.length) TL.ri = TL.runs.length - 1; TL.pt = null; }
   const runs = TL.runs;
   pg.innerHTML = tlHead("每一格是一次备份。选一个时间点，看那时候每个会话是什么样（只读），勾选几个一起「恢复到 Claude」（另存成新会话），或者换回那时的版本。左侧分组、搜索都能筛。") +
-    (runs.length ? `<div class="card">${tlPicker(runs.map(r => r.at), TL.ri, `${fullTime(runs[TL.ri].at)} · 那次存了 ${runs[TL.ri].n} 个新版本`)}</div>
+    (runs.length ? `<div class="card">${runs.length > 1 && TL.spark ? tlGrowth(runs, TL.ri) : ""}${tlPicker(runs.map(r => r.at), TL.ri, `${fullTime(runs[TL.ri].at)} · 那次存了 ${runs[TL.ri].n} 个新版本`)}</div>
       <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
         <div class="bar" style="padding:8px 10px 0;margin:0"><span class="seg" id="tlSt"></span><span class="sp"></span></div>
         <div class="scroll" id="tlList" style="border:0;border-radius:0;max-height:calc(100vh - 420px)"></div><div class="batch" id="tlBatch"></div></div></div>
@@ -2338,6 +2377,7 @@ async function tlGlobal(){
   if (!runs.length) return;
   const set = (i, quick) => { TL.ri = i; if (quick) { $(".tlnow").textContent = `${fullTime(runs[i].at)} · 那次存了 ${runs[i].n} 个新版本`; return; } TL.pt = null; TL.sel.clear(); tlGlobal(); };
   tlWirePicker(runs.map(r => r.at), set);
+  tlWireGrowth(runs, set); TL.regrow = () => { const g = $("#tlGr"); if (g && TL.runs === runs) { g.outerHTML = tlGrowth(runs, TL.ri); tlWireGrowth(runs, set); } };
   dragGrip($("#tlGrip"), () => $("#pg-timeline .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-timeline .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
   if (!TL.pt) {
     const nx = runs[TL.ri + 1], t = Math.min(runs[TL.ri].at + 600, nx ? nx.at - 0.001 : Infinity);

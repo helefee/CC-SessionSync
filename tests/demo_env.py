@@ -187,6 +187,31 @@ def build(T: Path, extra: bool = False) -> dict:
                                                             {"name": "CCSessionSync-Setup-9.9.9.exe.sha256", "size": 90,
                                                              "browser_download_url": "https://example.invalid/CCSessionSync-Setup-9.9.9.exe.sha256"}]}),
                                    encoding="utf-8")
+    try:                                             # DeepSeek Harness（只在演示 / 截图时加：CCSS_DEMO_DSH=1）：两个会话（一个压缩过、带工具和图片），按 dsh 第 4 版格式写
+        if not os.environ.get("CCSS_DEMO_DSH"):
+            raise ImportError
+        import dsh_fixture as FX
+        DH = H / ".dsh"
+        (DH / "profiles/desktop").mkdir(parents=True, exist_ok=True)
+        for j, (sid, cwd, title, days) in enumerate((("session-" + U(), "/work/web", "排查首页白屏", 1), ("session-" + U(), "/work/shop", "订单导出 CSV", 4))):
+            fx = FX.rich(sid, cwd, DH) if j == 0 else FX.Sess(sid, cwd)
+            fx.header["createdAt"] = int((NOW - timedelta(days=days)).timestamp() * 1000)
+            if j:
+                fx.t = fx.header["createdAt"]
+                fx.add("turn/start", {}); fx.user("把订单导出成 CSV，带表头")
+                fx.assistant([{"type": "text", "text": "加了 /orders/export.csv，用流式写出，10 万行 3 秒。"}],
+                             usage={"inputTokens": 2100, "outputTokens": 900, "cacheReadTokens": 18000, "cacheWriteTokens": 0, "reasoningTokens": 300, "totalTokens": 21300})
+                fx.add("session/title", {"title": title}); fx.add("turn/end", {"reason": {"kind": "completed"}})
+            else:
+                fx.add("session/title", {"title": title})
+            base = fx.header["createdAt"] - fx.ev[0]["time"] if j == 0 else 0
+            for e in fx.ev:
+                e["time"] += base
+            f = fx.write(DH / "sessions")
+            t = (NOW - timedelta(days=days)).timestamp() + 3600
+            os.utime(f, (t, t))
+    except ImportError:
+        pass
     return {"A1": A1, "A2": A2, "A3": A3, "sessions": sessions}
 
 

@@ -129,6 +129,34 @@ def runs(limit: int = 500) -> list[dict]:
     return [{"at": r[0], "n": r[1], "why": r[2]} for r in rows]
 
 
+def growth(limit: int = 2000) -> dict:
+    """「全部会话」的增长曲线：每次备份（时间点）时，备份库里所有会话（各取那时最新的一版）加起来有多少条消息，
+    按 Claude / Codex / DeepSeek Harness 分开也给一份。时间点和 runs() 的一样（同一秒算一次）。"""
+    with S._db_lock:
+        c = S._db()
+        rows = c.execute("select coalesce(run, at), agent, sid, coalesce(msgs, 0) from snaps order by coalesce(run, at), at").fetchall()
+        c.close()
+    cur: dict = {}
+    by = {"claude": 0, "codex": 0, "dsh": 0}
+    pts: list[dict] = []
+    for r, agent, sid, msgs in rows:
+        k = int(r)
+        old = cur.get((agent, sid), 0)
+        cur[(agent, sid)] = msgs
+        by[agent] = by.get(agent, 0) + msgs - old
+        if pts and pts[-1]["k"] == k:
+            p = pts[-1]
+        else:
+            p = {"k": k, "at": r}
+            pts.append(p)
+        p.update(total=sum(by.values()), sessions=len(cur), apps=dict(by))
+        p["changed"] = p.get("changed", 0) + 1
+    pts = pts[-limit:]
+    for p in pts:
+        p.pop("k", None)
+    return {"ok": True, "items": pts}
+
+
 def point(t: float) -> dict:
     """时间点 t：每个会话那时候的版本（t 之前最后一版），和现在比是一样 / 后来变了 / 现在已经没了。"""
     with S._db_lock:

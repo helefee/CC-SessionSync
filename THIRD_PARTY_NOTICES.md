@@ -2,8 +2,19 @@
 
 ## 源码 / Source
 
-`cc_sessionsync` 的依赖：`tomlkit`（MIT，改 Codex 的 config.toml 时保留注释和格式）；桌面窗口可选 `pywebview`（BSD-3-Clause）。
-Dependencies: `tomlkit` (MIT, round-trips Codex `config.toml`); optional `pywebview` (BSD-3-Clause) for the desktop window.
+`cc_sessionsync` 的依赖：`tomlkit`（MIT，改 Codex 的 config.toml 时保留注释和格式）；`zstandard`（BSD-3-Clause，0.2.5 起，读写 DeepSeek Harness 的
+zstd 会话文件）；桌面窗口可选 `pywebview`（BSD-3-Clause）。
+Dependencies: `tomlkit` (MIT, round-trips Codex `config.toml`); `zstandard` (BSD-3-Clause, since 0.2.5, reads/writes DeepSeek Harness zstd
+session logs); optional `pywebview` (BSD-3-Clause) for the desktop window.
+
+### DeepSeek Harness（0.2.5）
+
+| 项目 / Project | 许可 / License | 用在哪 / What is used |
+|---|---|---|
+| [DeepSeek Harness (dsh)](https://github.com/deepseek-ai/deepseek-harness) — Copyright (c) 2026 DeepSeek | MIT (`licenses/deepseek-harness-MIT.txt`) | 会话记录格式（第 4 版 `session.v4.jsonl[.zstd]`：头一行、事件、`surfaceOp`、独立带校验和的 zstd 帧、目录名编码 `--projectKey--/encodeSegment(id)`、`session.lock`、附件库路径）和事件类型清单（`docs/persistence-catalog.md`），按它公开的源码和文档在 `dsh.py` 里重写读 / 写 / 校验；没有拷贝它的代码。CI 和 `tools/verify_dsh.py` 用 npm 上的 `@deepseek-ai/dsh` 命令行（临时 DSH_HOME + 本机假模型）验证导进去的会话能接着聊；它不随本项目分发 / the v4 session-log format and event-type catalog, re-implemented in `dsh.py` from the public source and docs (no code copied); the npm CLI is used only in CI / `tools/verify_dsh.py` against a local mock model and is not distributed |
+
+"DeepSeek" / "DeepSeek Harness" 是 DeepSeek 的商标；本项目和它没有关系。界面里 dsh 的图标是自己画的鲸鱼轮廓，不是官方 logo。
+"DeepSeek" and "DeepSeek Harness" are trademarks of DeepSeek; this project is not affiliated with it. The whale glyph used for dsh in the UI is an original drawing, not the official logo.
 
 ### 从 CC Msg 搬来的代码 / Code ported from CC Msg
 
@@ -43,7 +54,8 @@ CC Msg (MIT) and adapted; see "What was ported" in the README.
 - **Nuitka** 运行时辅助代码 — Apache License 2.0（https://github.com/Nuitka/Nuitka/blob/develop/LICENSE.txt）；
   Nuitka 对它编译出来的程序里的这部分代码不额外施加限制。
 - **pywebview** — BSD-3-Clause（https://github.com/r0x0r/pywebview）；Windows 上通过它用系统自带的 Microsoft Edge WebView2 显示界面。
-- **pythonnet**（pywebview 在 Windows 上的依赖）— MIT；**tomlkit** — MIT。
+- **pythonnet**（pywebview 在 Windows 上的依赖）— MIT；**tomlkit** — MIT；**zstandard**（python-zstandard，带 zstd 库）— BSD-3-Clause
+  （https://github.com/indygreg/python-zstandard ；zstd 本身 BSD-3-Clause / GPLv2 双许可，这里按 BSD 用）。
 - 安装程序的中文界面文字 `installer/ChineseSimplified.isl` 来自 Inno Setup 的非官方翻译（随 Inno Setup 许可）。
 
 ## 测试工具 / Test tooling
@@ -52,3 +64,7 @@ CI 里会用 npm 装 `@anthropic-ai/claude-code`，只用来验证导入的会�
 它不随本项目分发。
 CI installs `@anthropic-ai/claude-code` from npm only to verify that imported sessions open with `claude --resume` against a local mock API;
 it is not distributed with this project.
+CI 也会用 npm 装 `@deepseek-ai/dsh`（MIT）命令行，只用来验证从 Claude Code 导进 DeepSeek Harness 的会话能接着聊（临时 DSH_HOME，连本机的假模型
+`tools/mock_openai.py`），不随本项目分发。
+CI also installs the `@deepseek-ai/dsh` CLI (MIT) only to verify that sessions imported into DeepSeek Harness can be resumed (scratch DSH_HOME,
+local mock model `tools/mock_openai.py`); it is not distributed with this project.

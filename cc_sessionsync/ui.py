@@ -421,6 +421,8 @@ class H(BaseHTTPRequestHandler):
                 return timeline.versions(q["agent"], q["id"])
             if p == "/api/timeline/view":
                 return timeline.view(int(q["snap"]), int(q.get("limit") or 400))
+            if p == "/api/timeline/growth":
+                return timeline.growth()
             if p == "/api/timeline/runs":
                 return {"items": timeline.runs()}
             if p == "/api/timeline/point":

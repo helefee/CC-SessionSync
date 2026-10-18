@@ -14,7 +14,9 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    （也能换回那一版、恢复到 Codex）。单个会话、或一批会话恢复到同一个时间点。
 5. **备份与还原**：会话备份库（`~/.cc-sessionsync/sessions.sqlite`：只存追加的部分 + 相同内容只存一份 + 压缩，保留规则可调）、回收站、
    操作记录（每一步都能撤回）。
-6. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
+6. **DeepSeek Harness ⇄ Claude Code（0.2.5）**：DeepSeek Harness（dsh）的会话也在会话管理里（只读），能导成 Claude Code 会话接着聊，
+   也能把 Claude Code 会话导成一个**新的** dsh 会话；dsh 已有的会话一个字节都不改。用量统计也算 dsh 的。
+7. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
 > 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
 > （本程序的数据都在 `~/.cc-sessionsync`）。
@@ -79,6 +81,12 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 每 10 秒看一眼 Claude 桌面端 / 命令行 / Codex 的登录信息（只看文件修改时间，变了才读，几乎不占 CPU），确认稳定后弹一次通知
 「检测到 Claude Code/Codex 账号已切换：旧 → 新」，窗口顶部出现提示条，带「立即同步」「打开」。通知和界面里只显示打码的账号（`z***@example.com`），
 从不读、不显示 token。Windows 的托盘气泡不能放按钮，所以点通知 = 打开窗口，按钮在窗口的提示条上。
+
+0.2.5 修了「明明同步过了还一直提示检测到切换账号」：桌面端 Local Storage 里有个几个月前的旧文件，里面是以前那个账号的记录，一直没删；
+当前账号的记录发出去以后会被删掉 / 压缩走，那一会儿「最新的一条」就落到旧文件上，于是报「换号」，过一会儿又「换回来」。现在：
+记住上一次认出的桌面端账号，旧文件里时间更早的记录不会盖过它；变化要连续两次读到（至少隔 9 秒）才算；基线存在 `~/.cc-sessionsync/watch-state.json`，
+重启不丢；桌面端切到 / 切回 API 模式（3P）算「模式切换」，不算换号；同步完（或者当前账号本来就有全部会话、没什么可补）就记成「处理过了」，
+不再提醒。提示条上写明是哪一端、从哪个号换到哪个号（打码）。
 
 ### 桌面端开着时：关闭并同步（完成后重启）
 
@@ -158,6 +166,60 @@ Claude 桌面端可以不用订阅登录，改走自己的推理网关 / 第三�
 
 ![时间线](docs/screenshots/v024-t-timeline-light.png)
 
+### DeepSeek Harness ⇄ Claude Code（0.2.5）
+
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh，MIT）的会话存在 `$DSH_HOME/sessions`（缺省 `~/.dsh/sessions`；
+profile 的 `cordis.patch.yml` 里改了 `session-persistence-jsonl` 的 root / compression 也认），每个会话一个目录
+`--<项目>--/<会话号>/session.v4.jsonl.zstd`：一串各自独立、带校验和的 zstd 帧，头一行 + 事件。
+
+- **检测**：数据目录、会话根和压缩方式、桌面版装在哪（版本）、开没开（只看进程名）。「诊断 → 数据目录」里可以手动指定 dsh 的目录；环境变量 `DSH_HOME` 优先。
+- **会话管理**：多一个来源「DeepSeek」（筛选 + 左侧分组「DeepSeek Harness · 供应商」），只读看对话（按 dsh 的 `surfaceOp` 拼，压缩过的显示压缩后的样子；
+  系统提示、运行时上下文、思考不显示）。可以导出、改显示名（只改本程序里的名字）；**不能**归档 / 删除 / 原地恢复（本程序不改 dsh 的文件）。
+  dsh 的会话也进会话备份库和时间线；时间线里只能「另存为新的 Claude Code 会话」。
+- **dsh → Claude Code**（页面「DeepSeek⇄Claude」或 `cc-sessionsync dsh to-claude`）：每个 dsh 会话写成一份新的 Claude Code 会话
+  （标题带「（DeepSeek）」，可选登记进桌面端列表）。再导一次：dsh 那边有新内容 → 原地更新那份；没变 → 跳过；你已经在 Claude 里接着聊过 → 不动。
+- **Claude Code → dsh**（`cc-sessionsync dsh from-claude`）：每个 Claude Code 会话**新建**一个 dsh 会话目录（新会话号，标题带「（Claude Code）」）。
+  写之前在内存里按 dsh 的规则校验一遍（帧、校验和、序号连续、事件类型、第 4 版），先写临时文件、落盘、再改名；**绝不往已有的 / 锁着的 dsh 会话里写**，
+  会话根里现有会话的压缩方式和设置不一致、会话号重复、格式不是第 4 版，都拒绝。Claude 那边又聊过的，缺省不再导；要的话用「再导一份新的」。
+- 两个方向都是**先演练**，每次导入都有账本（`~/.cc-sessionsync/dsh-import/`），能撤回：新建的文件 / 目录挪进回收站（不直接删），sha 对不上
+  （导过去之后又接着聊过）的、dsh 正开着（`session.lock` 被占着）的不动。
+- **用量**：dsh 每次模型调用的 token（新输入 / 缓存读 / 缓存写 / 输出）按 DeepSeek 官方价格算（`deepseek-flash`、`deepseek-v4-pro` 等，按高峰价，
+  错峰半价没算）；没价格的模型显示「—」。dsh 里用的其他供应商（比如走代理的 Claude 模型）按模型名查价。
+
+**转换是有损的**：
+
+| | dsh → Claude Code | Claude Code → dsh |
+|---|---|---|
+| 文字 | 带 | 带 |
+| 工具调用 / 结果 | 变成文字（「〔DeepSeek Harness 调用了 …〕」+ 参数 + 截短的输出，缺省 20 行 / 2000 字） | 变成文字摘要 |
+| 思考 | 缺省丢；可选当普通文字带上（不是 Claude 的思考块） | 丢 |
+| 图片 | 缺省「[图片：…]」占位；可选从 dsh 附件库按 base64 内嵌（sha 对得上才用） | 「[图片]」占位 |
+| 压缩过的上下文 | 按 `surfaceOp` 用压缩后的那一串 | — |
+| 系统提示 / 运行时上下文 / 技能目录 | 不带（Claude Code 自己会带） | 不带；第一个节点是空的系统消息，接着聊时 dsh 会把自己的系统提示放在最前面 |
+| 模型 | 助手消息记成 `deepseek-harness-import`，0 token | 记成供应商 `claude-code-import`，0 token；接着聊用 dsh 当前的模型 |
+
+- 第 3 版及更早的 dsh 会话只列出来、不读（用 dsh 打开一次会自动升级）；同一个目录里留着的老 `session.jsonl.zstd` 不碰。
+- 子代理的会话缺省不导（父会话里有它的结果）；空会话（开了没说话）不导。
+- dsh 的格式不是稳定的公开接口，这里按 dsh 0.2.x 开源仓库里的定义来读写；CI 每次都用 npm 上的 dsh 命令行在临时 `DSH_HOME` 里、连本机的假模型
+  真的接着聊一遍（`tools/verify_dsh.py`），同时用最新的 Claude Code `claude --resume` 打开 dsh 导过来的会话。dsh 以后改格式可能要跟着更新。
+
+| | |
+|---|---|
+| ![DeepSeek⇄Claude](docs/screenshots/v025-dsh-page-light.png) | ![演练](docs/screenshots/v025-dsh-dryrun.png) |
+| 检测 + 选会话 + 选项。 | Claude Code → dsh 的演练：写到哪、几个，校验过了才给「确认导入」。 |
+| ![只读看 dsh 会话](docs/screenshots/v025-sessions-dsh-view.png) | ![用量](docs/screenshots/v025-usage-dsh.png) |
+| 会话管理里的 dsh 会话（只读）。 | 用量：DeepSeek Harness，按 DeepSeek 价格；没价格的「—」。 |
+
+### 时间线：全部会话的增长曲线（0.2.5）
+
+「按时间点（全部会话）」上面多了一条曲线：每次备份时，备份库里所有会话（各取那时最新的一版）加起来有多少条消息，按 Claude / Codex /
+DeepSeek Harness 分开的细线也画出来；每次备份一个点，拖竖线选时间点（松手才加载那一刻的列表），和下面的滑块、日期联动。左侧来源筛选选了某一家时只算那一家。
+「显示对话增长曲线」的开关和单个会话的共用。
+
+| | |
+|---|---|
+| ![增长曲线](docs/screenshots/v025-timeline-growth-light.png) | ![拖到某个时间点](docs/screenshots/v025-timeline-growth-drag.png) |
+
 ### 检查更新（不会自动安装）
 
 - 启动后、之后每 6 小时最多查一次 GitHub 的最新发布（公开接口，不用登录）。
@@ -222,11 +284,20 @@ cc-sessionsync settings --codex-mark-imported on       # 以后缺省就登记�
 cc-sessionsync codex ledgers                           # 导入账本
 cc-sessionsync codex undo 20261017-101800              # 撤回一次导入
 
+# ③ DeepSeek Harness ⇄ Claude Code
+cc-sessionsync dsh detect                              # 装在哪、数据目录、会话根 / 压缩方式、开没开
+cc-sessionsync dsh list                                # 列出 dsh 会话
+cc-sessionsync dsh validate <会话号或文件>              # 按 dsh 的规则离线校验
+cc-sessionsync dsh to-claude [--only 末几位] [--reasoning] [--images] [--no-desktop] [--apply]
+cc-sessionsync dsh from-claude [--only 末几位] [--again] [--apply]   # 只新建 dsh 会话
+cc-sessionsync dsh ledgers                             # 导入账本
+cc-sessionsync dsh undo 20261018-151308               # 撤回一次导入
+
 cc-sessionsync jobs [--cancel ID]         # 等桌面端退出再做的任务
 cc-sessionsync diag                       # 检测报告（家目录已打码，可以直接发出来）
 cc-sessionsync selfcheck [--offline] [--json]   # 自检；有没通过的项返回 1
 
-# ③ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
+# ④ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
 cc-sessionsync sessions list [--agent claude|codex] [-n 50]
 cc-sessionsync sessions backup            # 增量备份进 ~/.cc-sessionsync/sessions.sqlite
 cc-sessionsync sessions export claude <会话号> --fmt md
@@ -383,6 +454,20 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   from `total_token_usage`, long-context tiers per request, fast/priority/flex multipliers, verified price table with dates, local-day
   buckets, per-row cost breakdown, Cowork / 3P logs, migration of the existing DB. Curve chart style (toggle, remembered) and per-model /
   per-project distribution charts; timeline grouped by day with a growth sparkline and ←/→ keys.
+- **DeepSeek Harness ⇄ Claude Code (0.2.5):** reads DeepSeek Harness (dsh, MIT) v4 session logs (`$DSH_HOME/sessions/--project--/<id>/session.v4.jsonl[.zstd]`,
+  independent checksummed zstd frames; profile `session-persistence-jsonl` root/compression overrides honoured), lists them read-only in
+  session management (source filter + group), backs them up, and converts both ways with dry-run, ledger + hash-checked undo and idempotency.
+  dsh → Claude Code applies `surfaceOp` (compaction), renders tools as text, drops reasoning (opt-in as text), images as placeholders (opt-in
+  base64 from the attachment store), skips system prompt / runtime context. Claude Code → dsh only ever creates a new session dir (text only,
+  atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
+  Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
+  `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Timeline growth curve (0.2.5):** total messages across all backed-up sessions per backup run (with per-app lines), draggable cursor.
+- **Account-switch false positive fixed (0.2.5):** a months-old `000005.ldb` in Claude Desktop's Local Storage still held another account's
+  telemetry; whenever the current account's records were uploaded/compacted away, "newest record wins" picked the stale account and the
+  watcher reported a switch (and later a switch back). Now: last-known desktop account guarded by timestamp, 2 consecutive stable reads,
+  persisted baseline (`watch-state.json`), 3P mode changes reported as mode switches, and a switch is marked handled after a sync or when
+  there is nothing to sync.
 - **Backups:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
   operation ledger with undo.
 - **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code

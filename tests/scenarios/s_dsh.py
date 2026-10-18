@@ -218,6 +218,8 @@ vs = timeline.versions("dsh", SID)
 ok(vs.get("items") or vs.get("versions"), "backup + timeline versions include dsh")
 items = vs.get("items") or vs.get("versions")
 sid_snap = items[-1]["id"]
+gr = timeline.growth()["items"]
+ok(gr and gr[-1]["apps"].get("dsh", 0) > 0 and gr[-1]["total"] == sum(gr[-1]["apps"].values()), "growth curve: total messages over backups, per-app split incl. dsh")
 rr = timeline.restore([sid_snap], mode="replace")
 ok(rr["ok"] is False, "timeline replace refused for dsh")
 rc = timeline.restore([sid_snap], mode="copy", desktop=False)
