@@ -166,6 +166,11 @@ def _timeline():
     return timeline
 
 
+def _cursor():
+    from . import cursor
+    return cursor
+
+
 def _dsh():
     from . import dsh
     return dsh
@@ -181,6 +186,8 @@ def _ops():
         "codex-undo": lambda **a: codex_import.undo(a["ledger"]),
         "dsh-to-claude": lambda **a: _dsh().run_to_claude(dry=False, **a),
         "dsh-undo": lambda **a: _dsh().undo(a["ledger"]),
+        "cursor-to-claude": lambda **a: _cursor().run_to_claude(dry=False, **a),
+        "cursor-undo": lambda **a: _cursor().undo(a["ledger"]),
         "sessions-batch": lambda **a: _sessions().batch(a["action"], a["items"]),
         "sessions-rename": lambda **a: _sessions().rename(a["agent"], a["id"], a["name"], bool(a.get("write_tool"))),
         "sessions-trash-restore": lambda **a: _sessions().trash_restore(a["batch"], a.get("only")),

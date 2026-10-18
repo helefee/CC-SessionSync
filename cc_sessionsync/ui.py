@@ -198,6 +198,7 @@ def diag() -> dict:
         lines.append(f"    {'→' if c['active'] else ' '} {c['label']}：{'有' if c['exists'] else '没有'}" + (f"，{c['buckets']} 个会话列表文件夹" if c["buckets"] else ""))
     return {"report": r, "accounts": acc, "watch": w, "app_dirs": ad, "api": ab, "text": "\n".join(lines),
             "claude_home": str(paths.CLAUDE_HOME), "codex_home": str(paths.CODEX_HOME), "dsh_home": _settings_get("dsh_home"),
+            "cursor_user_dir": _settings_get("cursor_user_dir"), "cursor_home": _settings_get("cursor_home"),
             "version": __version__, "frozen": paths.FROZEN, "exe": paths.EXE if paths.FROZEN else None}
 
 
@@ -355,6 +356,18 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/dsh/validate":
                 f = dsh.find_file(q.get("id") or "")
                 return dsh.validate(f) if f else {"ok": False, "errors": ["找不到这个会话"]}
+        if p.startswith("/api/cursor/"):
+            from . import cursor
+            if p == "/api/cursor/detect":
+                return cursor.detect()
+            if p == "/api/cursor/plan":                  # Cursor → Claude Code 只演练
+                only = [x for x in (q.get("only") or "").split(",") if x.strip()] or None
+                return cursor.run_to_claude(only, dry=True, reasoning=q.get("reasoning") in ("1", "true"),
+                                            subagents=q.get("subagents") in ("1", "true"))
+            if p == "/api/cursor/context":               # 任意会话 → 给 Cursor 的上下文文件：演练
+                return cursor.run_context(q.get("agent") or "claude", q.get("id") or "", into_project=q.get("project") in ("1", "true"), dry=True)
+            if p == "/api/cursor/ledgers":
+                return cursor.ledgers()
         if p == "/api/diag":
             return diag()
         if p == "/api/jobs":
@@ -483,6 +496,27 @@ class H(BaseHTTPRequestHandler):
                 events.add("import", f"已把 {r['done']} 个 DeepSeek Harness 会话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（DeepSeek）」）",
                            {"page": "sessions"})
             return r
+        if p == "/api/cursor/import":                    # Cursor → Claude Code
+            from . import cursor
+            kw = {"only": b.get("only") or None, "reasoning": bool(b.get("reasoning")), "subagents": bool(b.get("subagents")),
+                  "desktop": b.get("desktop", True) is not False, "target": b.get("to") or None}
+            if kw["desktop"] and apps.running("claude"):
+                return apps.run_or_defer("claude", "cursor-to-claude", kw, "把 Cursor 对话导进 Claude Code")
+            r = dict(cursor.run_to_claude(dry=False, **kw), deferred=False)
+            if r.get("done"):
+                events.add("import", f"已把 {r['done']} 个 Cursor 对话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（Cursor）」）",
+                           {"page": "sessions"})
+            return r
+        if p == "/api/cursor/context":                   # 写上下文文件（不碰 Cursor 的数据库，不用等谁退出）
+            from . import cursor
+            r = cursor.run_context(str(b.get("agent") or "claude"), str(b.get("id") or ""), into_project=bool(b.get("project")), dry=False)
+            return r
+        if p == "/api/cursor/undo":
+            from . import cursor
+            led = cursor._load(cursor.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
+            if led.get("desktop") and apps.running("claude"):
+                return apps.run_or_defer("claude", "cursor-undo", {"ledger": b["ledger"]}, f"撤回 Cursor 导入 {b['ledger']}")
+            return dict(cursor.undo(str(b.get("ledger"))), deferred=False)
         if p == "/api/dsh/undo":
             from . import dsh
             led = dsh._load(dsh.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
@@ -514,8 +548,8 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/appdir":
             return _settings_dir("claude_app_dir", b.get("path") or "")
         if p == "/api/datadir":
-            if b.get("which") not in ("claude_dir", "codex_dir", "dsh_home"):
-                raise ValueError("which 只能是 claude_dir / codex_dir / dsh_home")
+            if b.get("which") not in ("claude_dir", "codex_dir", "dsh_home", "cursor_user_dir", "cursor_home"):
+                raise ValueError("which 只能是 claude_dir / codex_dir / dsh_home / cursor_user_dir / cursor_home")
             return dict(_settings_dir(b["which"], b.get("path") or ""), note="重启 CC Session Sync 后全面生效")
         if p == "/api/pickdir":
             return detect.pick_folder(b.get("start") or "")
