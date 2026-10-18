@@ -780,6 +780,24 @@ def encode_segment(raw: str) -> str:
     return "".join(out)
 
 
+def long_path(p: str) -> str:
+    """Windows：把 8.3 短名（C:\\Users\\RUNNER~1\\…）展开成长名。dsh 续接时拿进程的工作目录（长名）和头里的 cwd 逐字比，
+    不展开就会报「recorded in … not …」。只展开短名，不解析联接 / 符号链接；目录不在了就原样返回。"""
+    if os.name != "nt" or "~" not in p:
+        return p
+    try:
+        import ctypes
+        f = ctypes.windll.kernel32.GetLongPathNameW
+        n = f(p, None, 0)
+        if n:
+            buf = ctypes.create_unicode_buffer(n)
+            if f(p, buf, n):
+                return buf.value
+    except Exception:
+        pass
+    return p
+
+
 def project_key(cwd: str) -> str:
     if not cwd:
         raise ValueError("空的工作目录")
@@ -1200,6 +1218,7 @@ def build_dsh(cc_file: Path, title: str | None = None, out_lines: int = 20, out_
     cwd = CI.norm_cwd(cwd) or None
     if cwd and not (cwd.startswith("/") or re.match(r"^[A-Za-z]:[\\/]", cwd) or cwd.startswith("\\\\")):
         cwd = None
+    cwd = long_path(cwd) if cwd else None
     base_title = (ctitle or "").removeprefix("（Codex）").removeprefix(TO_CC_PREFIX).strip()
     title = (title or base_title or " ".join(turns[0][1][0].split())[:40] or "Claude Code 对话").strip()
     now = int(time.time() * 1000)

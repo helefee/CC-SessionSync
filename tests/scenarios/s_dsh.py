@@ -241,5 +241,14 @@ ok(cl.returncode == 0, "cli: dsh validate <file> passes " + cl.stdout[-200:] + c
 cl2 = subprocess.run([sys.executable, "-m", "cc_sessionsync", "dsh", "detect"], capture_output=True, text=True, env=env, cwd=str(pathlib.Path(__file__).resolve().parents[2]))
 ok(cl2.returncode == 0, "cli: dsh detect runs")
 
+# Windows 8.3 短名：dsh 逐字比 cwd，Claude → dsh 时要写长名（CI 的临时目录就是 C:\Users\RUNNER~1\…）
+ok(dsh.long_path("/work/a~b") == "/work/a~b" and dsh.long_path("C:\\gone\\X~1") == "C:\\gone\\X~1", "long_path: untouched off-Windows / missing dir")
+if os.name == "nt":
+    import ctypes
+    lp = T / "a long directory name"; lp.mkdir()
+    buf = ctypes.create_unicode_buffer(600); n = ctypes.windll.kernel32.GetShortPathNameW(str(lp), buf, 600)
+    if n and "~" in buf.value:
+        ok(dsh.long_path(buf.value).lower() == str(lp).lower(), "long_path expands 8.3 short names")
+
 print("FAILS:", len(FAILS))
 sys.exit(1 if FAILS else 0)
