@@ -25,7 +25,8 @@ def env_for(T: Path) -> dict:
     H = T / "home"
     return dict(HOME=str(H), USERPROFILE=str(H), XDG_CONFIG_HOME=str(T / "cfg"), APPDATA=str(T / "cfg"), LOCALAPPDATA=str(T / "la"),
                 CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), CC_SESSIONSYNC_HOME=str(T / "ss"),
-                CC_SESSIONSYNC_FAKE_APP=str(T / "desktop-running"), CC_SESSIONSYNC_FAKE_PROCS=str(T / "noprocs.json"),
+                CC_SESSIONSYNC_FAKE_APP=str(T / "desktop-running"),
+                CURSOR_USER_DIR=str(T / "cfg" / "Cursor" / "User"), CURSOR_CONFIG_DIR=str(H / ".cursor"), CC_SESSIONSYNC_FAKE_CURSOR_PROCS=str(T / "noprocs.json"), CC_SESSIONSYNC_FAKE_PROCS=str(T / "noprocs.json"),
                 CC_SESSIONSYNC_NO_WATCHER="1", CC_SESSIONSYNC_KEYSTORE="file", PYTHONIOENCODING="utf-8", PYTHONUTF8="1",
                 CC_SESSIONSYNC_UPDATE_URL=(T / "release.json").as_uri())
 
@@ -212,6 +213,23 @@ def build(T: Path, extra: bool = False) -> dict:
             os.utime(f, (t, t))
     except ImportError:
         pass
+    if os.environ.get("CCSS_DEMO_CURSOR"):          # Cursor（只在演示 / 截图时加）：编辑器两个对话（一个带子代理）+ 一个 agent 记录
+        import cursor_fixture as CF
+        CUD, CH = T / "cfg" / "Cursor" / "User", H / ".cursor"
+        w1, w2 = CF.ws_storage(CUD, "/work/web"), CF.ws_storage(CUD, "/work/api")
+        ms = lambda days: int((NOW - timedelta(days=days)).timestamp() * 1000)
+        c1 = CF.rich(CUD, "/work/web", w1, marker="演示：")
+        c1.t0 = c1.t = ms(2); c1.bubbles.clear()
+        c1.user("首页白屏了，帮我看看", images=1); c1.thinking("先看路由和入口组件")
+        c1.tool("read_file_v2", {"targetFile": "src/App.tsx"}, {"contents": "export default function App(){ return <Home user={u}/> }"})
+        c1.tool("run_terminal_command_v2", {"command": "npm test"}, {"output": "1 failing: TypeError: u is undefined"}, status="error", error="exit 1")
+        c1.tool("edit_file_v2", {"relativeWorkspacePath": "src/App.tsx"}, {"diff": "- <Home user={u}/>\n+ {u && <Home user={u}/>}"})
+        c1.say("找到了：App 里 user 没判空。加了判断，npm test 全过。"); c1.write(CUD)
+        sub = CF.Composer(name="找出所有用到 user 的组件", cwd="/work/web", wid=w1, t0=ms(2) + 5000, mode="agent", parent=c1.cid)
+        sub.user("找出所有用到 user 的组件"); sub.tool("ripgrep_raw_search", {"pattern": "user\\."}, {"matches": 7}); sub.say("7 处，都在 src/pages 下。"); sub.write(CUD)
+        c2 = CF.Composer(name="给 /orders 加分页", cwd="/work/api", wid=w2, t0=ms(5), mode="chat", model="gpt-5")
+        c2.user("给 /orders 加分页，默认 20 条"); c2.say("用 limit/offset，默认 limit=20、上限 100；返回 total。代码如下：\n```ts\nconst limit = Math.min(+q.limit || 20, 100)\n```"); c2.write(CUD)
+        CF.transcript(CH, "work-shop", "a" + U()[1:], [("user", "订单导出 CSV 太慢"), ("assistant", ("tool", "Read", {"path": "export.ts"})), ("assistant", "改成流式写出，10 万行 3 秒。")])
     return {"A1": A1, "A2": A2, "A3": A3, "sessions": sessions}
 
 

@@ -58,6 +58,8 @@ jobs:
         env:
           DSH_BIN: dsh
         run: python tools/verify_dsh.py "" 8797
+      - name: verify Cursor → Claude Code (claude --resume on IDE / agent-transcript / cursor-agent conversations, local mock)
+        run: python tools/verify_cursor.py "" 8796
 
   build:
     runs-on: ${{ matrix.os }}

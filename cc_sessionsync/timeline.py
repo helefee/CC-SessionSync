@@ -137,7 +137,7 @@ def growth(limit: int = 2000) -> dict:
         rows = c.execute("select coalesce(run, at), agent, sid, coalesce(msgs, 0) from snaps order by coalesce(run, at), at").fetchall()
         c.close()
     cur: dict = {}
-    by = {"claude": 0, "codex": 0, "dsh": 0}
+    by = {"claude": 0, "codex": 0, "dsh": 0, "cursor": 0}
     pts: list[dict] = []
     for r, agent, sid, msgs in rows:
         k = int(r)
@@ -211,6 +211,11 @@ def _claude_records_from(agent: str, data: bytes, new_sid: str, title: str) -> t
             lines.append(json.dumps(j, ensure_ascii=False))
         lines.append(json.dumps({"type": "custom-title", "customTitle": title, "sessionId": new_sid}, ensure_ascii=False))
         return lines, cwd
+    if agent == "cursor":                                      # Cursor：走 Cursor → Claude Code 的转换器
+        from . import cursor
+        b = cursor.build_claude_bytes(data, new_sid, title)
+        b["records"][-1]["customTitle"] = title
+        return [json.dumps(r, ensure_ascii=False) for r in b["records"]], b["cwd"]
     if agent == "dsh":                                         # DeepSeek Harness：走 dsh → Claude Code 的转换器
         from . import dsh
         b = dsh.build_claude_bytes(data, new_sid, title)
@@ -304,6 +309,8 @@ def restore(snaps: list[int], mode: str = "copy", target: str = "claude", deskto
         return {"ok": False, "error": "没选版本"}
     if (mode == "replace" or target == "codex") and any(r["agent"] == "dsh" for r in rs):
         return {"ok": False, "error": "DeepSeek Harness 的会话不在原处替换（本程序从不改已有的 dsh 会话）；用「另存为新的 Claude Code 会话」"}
+    if (mode == "replace" or target == "codex") and any(r["agent"] == "cursor" for r in rs):
+        return {"ok": False, "error": "Cursor 的对话不在原处替换（本程序不写 Cursor 的数据库）；用「另存为新的 Claude Code 会话」"}
     if mode == "replace" or target == "codex":
         kinds = {r["agent"] for r in rs}
         if target == "codex" and kinds != {"codex"}:
@@ -339,6 +346,8 @@ def replace(snaps: list[int]) -> dict:
     rs = [_snap(i) for i in snaps]
     if any(r["agent"] == "dsh" for r in rs):
         return {"ok": False, "error": "DeepSeek Harness 的会话不在原处替换", "done": [], "errors": ["dsh"], "op": None}
+    if any(r["agent"] == "cursor" for r in rs):
+        return {"ok": False, "error": "Cursor 的对话不在原处替换", "done": [], "errors": ["cursor"], "op": None}
     od, led = S._new_op("timeline-replace", items=[{"agent": r["agent"], "id": r["sid"]} for r in rs],
                         summary=f"把 {len(rs)} 个会话换回备份里的版本")
     done, errors = [], []

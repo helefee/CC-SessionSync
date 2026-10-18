@@ -504,7 +504,7 @@ def _desktop_target(target: str | None) -> dict | None:
     return next((f for f in fs if f["key"] == key), None) or fs[0]
 
 
-def _desktop_entry(tdir: Path, cli_sid: str, cwd: str, title: str, mtime: float, cur: dict | None) -> dict:
+def _desktop_entry(tdir: Path, cli_sid: str, cwd: str, title: str, mtime: float, cur: dict | None, prefix: str | None = None) -> dict:
     tmpl = {}
     try:
         fs = sorted(tdir.glob("local_*.json"), key=lambda f: f.stat().st_mtime, reverse=True)
@@ -521,7 +521,7 @@ def _desktop_entry(tdir: Path, cli_sid: str, cwd: str, title: str, mtime: float,
     d.setdefault("createdAt", ms)
     d.setdefault("isArchived", False)
     if cur.get("titleSource") != "user" or not cur.get("title"):
-        d.update({"title": PREFIX + title, "titleSource": "user"})
+        d.update({"title": (PREFIX if prefix is None else prefix) + title, "titleSource": "user"})
     return d
 
 

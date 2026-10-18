@@ -153,6 +153,48 @@ DLAB = {"new": "新导入", "update": "更新（那边有新内容）", "same": 
         "changed": "Claude 那边又聊过（加 --again 再导一份新的）", "error": "读不了", "empty": "空会话"}
 
 
+def cmd_cursor(a) -> int:
+    from . import cursor
+    if a.cursor_cmd == "detect":
+        print(json.dumps(cursor.detect(), ensure_ascii=False, indent=1))
+        return 0
+    if a.cursor_cmd == "list":
+        rows = cursor.sessions()
+        rows.sort(key=lambda x: -(x["last"] or 0))
+        for x in rows[: a.n]:
+            print(f"{_t(x['last'])}  {x['id'][:8]}  {x['msgs'] or 0:>4} 条  [{x['source_name']}]  {x['title'][:50]}  ·  {x.get('cwd') or x.get('project') or ''}")
+        d = cursor.detect()
+        print(f"\n共 {len(rows)} 个（{d['db']}；{d['cursor_home']}）" + (f"\n注意：{d['error']}" if d.get("error") else ""))
+        return 0
+    if a.cursor_cmd == "to-claude":
+        only = [x for x in (a.only or "").split(",") if x.strip()] or None
+        r = cursor.run_to_claude(only, dry=not a.apply, reasoning=a.reasoning, desktop=not a.no_desktop, subagents=a.subagents)
+        for x in r["rows"]:
+            print(f"  [{DLAB.get(x['state'], x['state'])}]  {x['id']}  {(x.get('title') or '')[:50]}"
+                  + (f"  → {x.get('turns')} 轮" if x.get("turns") is not None else "") + (f"  ✗ {x['error']}" if x.get("error") else "")
+                  + (f"\n      {x['resume']}" if x.get("resume") else ""))
+        print(("演练（加 --apply 才写）" if r.get("dry") else f"✓ 写了 {r.get('done', 0)} 个，账本 {r.get('ledger')}"))
+        return 0 if not r.get("errors") else 1
+    if a.cursor_cmd == "context":
+        r = cursor.run_context(a.agent, a.id, into_project=a.project, dry=not a.apply)
+        print(("演练（加 --apply 才写）：" if r["dry"] else "✓ 写好了：") + r["path"] + f"（{r['msgs']} 条消息，{r['text_chars']} 字）")
+        print("在 Cursor 里新开一个对话，发：\n  " + r["prompt"])
+        return 0
+    if a.cursor_cmd == "ledgers":
+        for l in cursor.ledgers():
+            print(f"{l['id']}  {l['what']}  {l['items']} 个  新建 {l['created']} / 更新 {l['updated']}"
+                  + (f"  （已撤回 {l['undone']}）" if l["undone"] else ""))
+        return 0
+    if a.cursor_cmd == "undo":
+        r = cursor.undo(a.ledger)
+        if not r.get("ok"):
+            print("✗ " + r["error"])
+            return 1
+        print(f"✓ 挪进回收站 {r['moved']} 个，换回 {r['restored']} 个" + (f"；没动（之后又改过）：{len(r['kept'])} 个" if r["kept"] else ""))
+        return 0
+    return 2
+
+
 def cmd_dsh(a) -> int:
     from . import dsh
     if a.dsh_cmd == "detect":
@@ -376,6 +418,26 @@ def build_parser() -> argparse.ArgumentParser:
     x = ds.add_parser("undo", help="按账本撤回一次导入")
     x.add_argument("ledger")
     d.set_defaults(fn=cmd_dsh)
+    cu = sub.add_parser("cursor", help="Cursor 的对话：列出、导进 Claude Code、把任意会话导成给 Cursor 的上下文文件")
+    cs = cu.add_subparsers(dest="cursor_cmd", required=True)
+    cs.add_parser("detect", help="Cursor 装在哪、数据在哪、开没开、有几个对话")
+    x = cs.add_parser("list", help="列出 Cursor 的对话（编辑器 / agent 记录 / cursor-agent 命令行）")
+    x.add_argument("-n", type=int, default=40)
+    x = cs.add_parser("to-claude", help="Cursor → Claude Code（缺省演练；--apply 才写；Cursor 的数据只读）")
+    x.add_argument("--only", help="只导这几个（对话号或末尾几位，逗号分隔）")
+    x.add_argument("--apply", action="store_true", help="真正写（不加就是演练）")
+    x.add_argument("--reasoning", action="store_true", help="把 Cursor 里的思考当文字带上（缺省丢掉）")
+    x.add_argument("--subagents", action="store_true", help="子代理的对话也导（缺省跳过）")
+    x.add_argument("--no-desktop", action="store_true", help="不写 Claude 桌面端会话列表")
+    x = cs.add_parser("context", help="把一个会话写成给 Cursor 用的 Markdown（在 Cursor 里 @ 它接着聊；不写 Cursor 的数据库）")
+    x.add_argument("agent", choices=("claude", "codex", "dsh", "cursor"))
+    x.add_argument("id")
+    x.add_argument("--project", action="store_true", help="写进会话的工作目录下 .cursor/sessionsync/（缺省写到本程序的导出目录）")
+    x.add_argument("--apply", action="store_true")
+    cs.add_parser("ledgers", help="导入账本")
+    x = cs.add_parser("undo", help="按账本撤回一次导入 / 导出")
+    x.add_argument("ledger")
+    cu.set_defaults(fn=cmd_cursor)
     st = sub.add_parser("settings", help="看 / 改设置")
     st.add_argument("--codex-mark-imported", choices=("on", "off"), help="codex import 缺省要不要登记进 Codex 导入记录")
     st.set_defaults(fn=cmd_settings)
