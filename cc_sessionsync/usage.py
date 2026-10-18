@@ -163,7 +163,8 @@ def _files() -> list[tuple[str, Path, str]]:
     for sub in ("sessions", "archived_sessions"):
         d = paths.CODEX_HOME / sub
         if d.is_dir():
-            out += [("codex", p, "") for p in d.rglob("rollout-*.jsonl")]
+            # 按文件名（rollout-<开始时间>-…）排：原来的会话先读，续接 / 分叉出来的新文件重放的旧记录就记在原会话名下（和目录遍历顺序无关）
+            out += [("codex", p, "") for p in sorted(d.rglob("rollout-*.jsonl"), key=lambda p: (p.name, str(p)))]
     return out
 
 
