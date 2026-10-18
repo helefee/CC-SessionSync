@@ -133,6 +133,18 @@ def _first_user(f: Path, agent: str) -> tuple[str, str | None, str | None]:
     if c and c[0] == mt:
         return c[1], c[2], c[3]
     text, cwd, title = "", None, None
+    if agent == "dsh":
+        try:
+            from . import dsh
+            L = dsh.load(f)
+            cwd = L["header"].get("cwd")
+            title = next((e["data"].get("title") for e in reversed(L["events"]) if e.get("type") == "session/title"
+                          and (e.get("data") or {}).get("title")), None)
+            text = next((" ".join(x["text"].split())[:200] for x in dsh.entries(L["events"]) if x["role"] == "user"), "")
+        except Exception:
+            pass
+        _title_cache[str(f)] = (mt, text, cwd, title)
+        return text, cwd, title
     try:
         with open(f, "rb") as fh:
             data = fh.read(HEAD)
@@ -202,6 +214,41 @@ def claude_file(sid: str) -> Path | None:
     if not re.fullmatch(r"[A-Za-z0-9-]{6,80}", sid or ""):
         return None
     return next(iter((claude_home() / "projects").glob(f"*/{sid}.jsonl")), None)
+
+
+def agent_file(agent: str, sid: str) -> Path | None:
+    """会话记录文件：Claude Code（~/.claude/projects）、Codex（rollout）、DeepSeek Harness（session.v4.jsonl[.zstd]）。"""
+    if agent == "claude":
+        return claude_file(sid)
+    if agent == "dsh":
+        from . import dsh
+        return dsh.find_file(sid)
+    return codex_file(sid)
+
+
+def parse_bytes(agent: str, data: bytes) -> list[dict]:
+    """整份记录 → [{role, text, ts}]（只为显示）。"""
+    if agent == "dsh":
+        from . import dsh
+        return dsh.entries_from_bytes(data)
+    parse = parse_claude if agent == "claude" else parse_codex
+    out = []
+    for line in data.splitlines():
+        if not line.strip():
+            continue
+        try:
+            out += parse(json.loads(line))
+        except Exception:
+            continue
+    return out
+
+
+def dsh_sessions(names: dict | None = None) -> list[dict]:
+    try:
+        from . import dsh
+        return dsh.sessions(names if names is not None else _aliases())
+    except Exception:
+        return []
 
 
 def claude_sessions(names: dict | None = None) -> list[dict]:
@@ -363,7 +410,8 @@ def list_all(agent: str | None = None) -> dict:
     t0 = time.time()
     names = _aliases()
     items = (claude_sessions(names) if agent in (None, "", "claude") else []) + \
-            (codex_sessions(names) if agent in (None, "", "codex") else [])
+            (codex_sessions(names) if agent in (None, "", "codex") else []) + \
+            (dsh_sessions(names) if agent in (None, "", "dsh") else [])
     items.sort(key=lambda x: -(x["last"] or 0))
     bk = backup_index()
     for x in items:
@@ -464,6 +512,16 @@ def account_groups(items: list[dict]) -> list[dict]:
                 g["3p"]["n"] += 1
             elif k:
                 claude_g(k)["n"] += 1
+        elif x["agent"] == "dsh":                # DeepSeek Harness：按供应商分（记录里只有 provider id，没有账号）
+            prov = x.get("provider") or ("" if not x.get("imported") else "imported")
+            k = "dsh:" + (prov or "-")
+            if k not in g:
+                g[k] = {"key": k, "kind": "dsh", "rid": "", "provider": prov or None,
+                        "masked": "DeepSeek Harness" + (" · 从 Claude Code 导入" if prov == "imported" else f" · {prov}" if prov else ""),
+                        "tags": [], "current": False,
+                        "folders": [], "n": 0, "hint": "DeepSeek Harness 的会话（~/.dsh/sessions），按记录里的供应商分"}
+            g[k]["n"] += 1
+            x["gacct"] = k
         else:
             prov = x.get("provider") or "openai"
             k = "codex:" + prov
@@ -476,7 +534,7 @@ def account_groups(items: list[dict]) -> list[dict]:
             g[k]["n"] += 1
             x["gacct"] = k
     unk = sum(1 for x in items if x.get("gacct") == "unknown")
-    out = sorted(g.values(), key=lambda v: ({"claude": 0, "api": 1}.get(v["kind"], 2), not v["current"], -v["n"]))
+    out = sorted(g.values(), key=lambda v: ({"claude": 0, "api": 1, "codex": 2}.get(v["kind"], 3), not v["current"], -v["n"]))
     if unk:
         out.append({"key": "unknown", "kind": "unknown", "rid": "", "masked": "未知账号", "tags": [], "current": False,
                     "folders": [], "n": unk, "hint": "只在命令行用过、没在任何桌面端账号里登记的会话"})
@@ -504,11 +562,15 @@ def _account_labels(prefixes: list[str]) -> dict:
 
 
 def find(agent: str, sid: str) -> dict | None:
-    return next((x for x in (claude_sessions() if agent == "claude" else codex_sessions()) if x["id"] == sid), None)
+    rows = claude_sessions() if agent == "claude" else dsh_sessions() if agent == "dsh" else codex_sessions()
+    return next((x for x in rows if x["id"] == sid), None)
 
 
 def read(agent: str, sid: str, limit: int = 400) -> dict:
     """只读看记录：最后 limit 条（人话 / 回复 / 工具一行）。"""
+    if agent == "dsh":
+        from . import dsh
+        return dsh.read(sid, limit)
     f = claude_file(sid) if agent == "claude" else codex_file(sid)
     if not f:
         return {"ok": False, "error": "找不到会话记录文件"}
@@ -530,11 +592,23 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
     needle = q.strip().lower().encode("utf-8")
     t0, hits, partial = time.time(), [], False
     files = [("claude", f) for f in (claude_home() / "projects").glob("*/*.jsonl")] + [("codex", f) for f in rollouts()]
+    try:
+        from . import dsh
+        files += [("dsh", sf["file"]) for sf in dsh.session_files() if sf["version"] == dsh.FORMAT]
+    except Exception:
+        pass
     files.sort(key=lambda x: -x[1].stat().st_mtime)
     for agent, f in files:
         if time.time() - t0 > limit_s:
             partial = True
             break
+        if agent == "dsh":                      # 压缩的：解开再找（只在人话 / 回复里找）
+            try:
+                if any(needle.decode() in e["text"].lower() for e in parse_bytes("dsh", f.read_bytes())):
+                    hits.append({"agent": "dsh", "id": dsh.load(f)["header"].get("id") or f.parent.name})
+            except Exception:
+                pass
+            continue
         try:
             with open(f, "rb") as fh:
                 while chunk := fh.read(8 * 1024 * 1024):
@@ -548,13 +622,13 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
 
 def export(agent: str, sid: str, fmt: str = "md") -> dict:
     """导出到 ~/.cc-sessionsync/exports/：md / html（排好版、带原始记录，能导回来；见 exports.py）或 jsonl（原样复制）。"""
-    f = claude_file(sid) if agent == "claude" else codex_file(sid)
+    f = agent_file(agent, sid)
     if not f:
         return {"ok": False, "error": "找不到会话记录文件"}
     EXPORTS.mkdir(parents=True, exist_ok=True)
     stamp = f"{datetime.now():%Y%m%d-%H%M%S}"
     if fmt == "jsonl":
-        out = EXPORTS / f"{agent}-{sid[:8]}-{stamp}.jsonl"
+        out = EXPORTS / (f"{agent}-{sid[:16]}-{stamp}.jsonl" + (".zstd" if f.name.endswith(".zstd") else ""))
         shutil.copy2(f, out)
         return {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size}
     from . import exports
@@ -615,6 +689,9 @@ MAX_DEPTH = 30          # 增量链最长多少节，超过就存一份完整的
 
 def count_msgs(agent: str, data: bytes) -> int:
     """数一下有几条人话 / 回复（时间线上显示「n 条消息」）。"""
+    if agent == "dsh":
+        from . import dsh
+        return dsh.count_msgs(data)
     parse = parse_claude if agent == "claude" else parse_codex
     n = 0
     for line in data.splitlines():
@@ -678,12 +755,17 @@ def backup(full: bool = False, only: list[tuple[str, str]] | None = None, why: s
     files: list[tuple[str, str, Path]] = []
     if only:
         for a, s in only:
-            f = claude_file(s) if a == "claude" else codex_file(s)
+            f = agent_file(a, s)
             if f:
                 files.append((a, s, f))
     else:
         files = [("claude", f.stem, f) for f in (claude_home() / "projects").glob("*/*.jsonl")]
         files += [("codex", _codex_meta(f).get("id") or f.stem[-36:], f) for f in rollouts()]
+        try:
+            from . import dsh
+            files += [("dsh", sf["dir"].name, sf["file"]) for sf in dsh.session_files() if sf["version"] == dsh.FORMAT]
+        except Exception:
+            pass
     n_new = n_snap = n_skip = 0
     BK["running"] = True
     try:
@@ -838,6 +920,8 @@ def rename(agent: str, sid: str, name: str, write_tool: bool = False) -> dict:
         try:
             if agent == "claude":
                 _rename_claude(sid, name, d, led)
+            elif agent == "dsh":
+                errors.append("DeepSeek Harness 的会话不改它自己的文件，只改了本程序里的显示名")
             else:
                 _rename_codex(sid, name, d, led)
         except Exception as e:
@@ -1135,7 +1219,7 @@ def restore_snapshot(snap_id: int) -> dict:
     data = _blob(r["sha"])
     dst = Path(r["path"])
     od, led = _new_op("restore-snapshot", items=[{"agent": r["agent"], "id": r["sid"]}], snap=r["id"])
-    if not dst.exists():
+    if not dst.exists() and r["agent"] != "dsh":      # dsh 的目录本程序从不写：一律另存到导出目录
         _atomic(dst, data)
         led["steps"].append({"t": "created", "path": str(dst)})
         res = {"ok": True, "path": str(dst), "how": "original"}
@@ -1149,7 +1233,8 @@ def restore_snapshot(snap_id: int) -> dict:
         _atomic(f, data)
         led["steps"].append({"t": "created", "path": str(f)})
         res = {"ok": True, "path": str(f), "how": "export",
-               "note": "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
+               "note": "另存到了 exports 目录，没有动 DeepSeek Harness 的文件（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
+               if r["agent"] == "dsh" else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
     led["summary"] = f"从备份库恢复（{ {'original': '写回原处', 'copy': '另存为新会话', 'export': '另存到导出目录'}[res['how']] }）"
     _save_led(od, led)
     return dict(res, op=od.name)

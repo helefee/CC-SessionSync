@@ -10,6 +10,7 @@
     codex_mark_imported  导入 Codex 对话时登记进 Codex 的导入记录（0.1.1）
     selfcheck_done       第一次启动的自检做过了
     claude_dir / codex_dir / claude_app_dir   手动指定的数据目录（诊断里选）
+    dsh_home                                  DeepSeek Harness 的数据目录（缺省 ~/.dsh；环境变量 DSH_HOME 优先）
 开机自启不存在这里：看注册表 HKCU\\...\\Run 本身（tray.autostart_get）。
 """
 from __future__ import annotations

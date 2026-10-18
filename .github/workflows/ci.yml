@@ -50,6 +50,14 @@ jobs:
         run: npm install -g @anthropic-ai/claude-code
       - name: verify claude --resume opens imported, restored (timeline) and md/html-imported sessions
         run: python tools/verify_resume.py "" 8799
+      - name: install DeepSeek Harness CLI (MIT) + zstandard
+        run: |
+          npm install -g @deepseek-ai/dsh@0.2.0-rc.2
+          python -m pip install "zstandard>=0.22"
+      - name: verify dsh ⇄ Claude Code (claude --resume + dsh --session-id, both against local mocks)
+        env:
+          DSH_BIN: dsh
+        run: python tools/verify_dsh.py "" 8797
 
   build:
     runs-on: ${{ matrix.os }}

@@ -99,7 +99,7 @@ def settings_view() -> dict:
 
 
 def tray_state(since: int = -1) -> dict:
-    from . import update
+    from . import update, watch
     seq, evs = events.since(since)
     s = settings.load()
     u = update.status()
@@ -109,7 +109,9 @@ def tray_state(since: int = -1) -> dict:
     return {"seq": seq, "events": evs, "settings": s, "auto_sync": bool(s.get("auto_sync")), "jobs": jobs,
             "job_kinds": sorted({j.get("kind") or "claude" for j in wq}), "closerun": appclose._active(),
             "update": {"badge": u.get("badge"), "latest": u.get("latest")},
-            "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600 for e in events.recent(10))}
+            "acct_handled": watch.handled_since(),
+            "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600
+                             and not (watch.handled_since().get(e.get("who")) or 0) >= e["time"] for e in events.recent(10))}
 
 
 def api_brief() -> dict:
@@ -134,6 +136,7 @@ def sync_now(to: str | None = None, only=None, source: str | None = None) -> dic
     if not pl.get("ok"):
         return pl
     if not (pl.get("add") or pl.get("update")):
+        claude_sync._switch_handled(pl)        # 当前账号不缺会话：「检测到切换账号」算处理完
         return dict(pl, done=0, updated=0, deferred=False, note="没有要补的会话")
     r = apps.run_or_defer("claude", "claude-sync", {"target": to or pl["target"]["key"], "only": only, "source": source},
                           "同步 Claude 会话到 API 模式" if source == "api" else "同步 Claude 会话到当前账号")
@@ -149,6 +152,13 @@ def _settings_dir(k: str, v) -> dict:
     claude_sync.forget()
     detect.forget()
     return {"ok": True}
+
+
+def _settings_get(k: str):
+    try:
+        return settings.get(k) or ""
+    except Exception:
+        return ""
 
 
 def _codex_kw(q: dict) -> dict:
@@ -187,7 +197,7 @@ def diag() -> dict:
     for c in ab.get("cands") or []:
         lines.append(f"    {'→' if c['active'] else ' '} {c['label']}：{'有' if c['exists'] else '没有'}" + (f"，{c['buckets']} 个会话列表文件夹" if c["buckets"] else ""))
     return {"report": r, "accounts": acc, "watch": w, "app_dirs": ad, "api": ab, "text": "\n".join(lines),
-            "claude_home": str(paths.CLAUDE_HOME), "codex_home": str(paths.CODEX_HOME),
+            "claude_home": str(paths.CLAUDE_HOME), "codex_home": str(paths.CODEX_HOME), "dsh_home": _settings_get("dsh_home"),
             "version": __version__, "frozen": paths.FROZEN, "exe": paths.EXE if paths.FROZEN else None}
 
 
@@ -330,6 +340,21 @@ class H(BaseHTTPRequestHandler):
             return codex_import.preview(q.get("id") or "", reasoning=q.get("reasoning") in ("1", "true"))
         if p == "/api/codex/ledgers":
             return codex_import.ledgers()
+        if p.startswith("/api/dsh/"):
+            from . import dsh
+            if p == "/api/dsh/detect":
+                return dsh.detect()
+            if p == "/api/dsh/plan":                     # 两个方向都只演练
+                only = [x for x in (q.get("only") or "").split(",") if x.strip()] or None
+                if q.get("dir") == "from-claude":
+                    return dsh.run_to_dsh(only, dry=True, again=q.get("again") in ("1", "true"))
+                return dsh.run_to_claude(only, dry=True, reasoning=q.get("reasoning") in ("1", "true"),
+                                         images="embed" if q.get("images") in ("1", "true") else "placeholder")
+            if p == "/api/dsh/ledgers":
+                return dsh.ledgers()
+            if p == "/api/dsh/validate":
+                f = dsh.find_file(q.get("id") or "")
+                return dsh.validate(f) if f else {"ok": False, "errors": ["找不到这个会话"]}
         if p == "/api/diag":
             return diag()
         if p == "/api/jobs":
@@ -396,6 +421,8 @@ class H(BaseHTTPRequestHandler):
                 return timeline.versions(q["agent"], q["id"])
             if p == "/api/timeline/view":
                 return timeline.view(int(q["snap"]), int(q.get("limit") or 400))
+            if p == "/api/timeline/growth":
+                return timeline.growth()
             if p == "/api/timeline/runs":
                 return {"items": timeline.runs()}
             if p == "/api/timeline/point":
@@ -438,6 +465,30 @@ class H(BaseHTTPRequestHandler):
                 events.add("import", f"已把 {r['done']} 个 Codex 对话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（Codex）」）",
                            {"page": "codex"})
             return r
+        if p == "/api/dsh/import":
+            from . import dsh
+            only = b.get("only") or None
+            if b.get("dir") == "from-claude":           # Claude Code → dsh：只新建会话目录，不碰 Claude 的文件，不用等谁退出
+                r = dsh.run_to_dsh(only, dry=False, again=bool(b.get("again")))
+                if r.get("done"):
+                    events.add("import", f"已把 {r['done']} 个 Claude Code 会话导进 DeepSeek Harness",
+                               "标题带「（Claude Code）」；dsh 桌面版重开一下会话列表就能看到", {"page": "sessions"})
+                return dict(r, deferred=False)
+            kw = {"only": only, "reasoning": bool(b.get("reasoning")), "images": "embed" if b.get("images") else "placeholder",
+                  "desktop": b.get("desktop", True) is not False, "target": b.get("to") or None}
+            if kw["desktop"] and apps.running("claude"):
+                return apps.run_or_defer("claude", "dsh-to-claude", kw, "把 DeepSeek Harness 会话导进 Claude Code")
+            r = dict(dsh.run_to_claude(dry=False, **kw), deferred=False)
+            if r.get("done"):
+                events.add("import", f"已把 {r['done']} 个 DeepSeek Harness 会话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（DeepSeek）」）",
+                           {"page": "sessions"})
+            return r
+        if p == "/api/dsh/undo":
+            from . import dsh
+            led = dsh._load(dsh.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
+            if led.get("desktop") and apps.running("claude"):
+                return apps.run_or_defer("claude", "dsh-undo", {"ledger": b["ledger"]}, f"撤回 dsh 导入 {b['ledger']}")
+            return dict(dsh.undo(str(b.get("ledger"))), deferred=False)
         if p == "/api/codex/undo":
             led = codex_import._load(codex_import.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
             if led.get("desktop"):
@@ -457,8 +508,8 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/appdir":
             return _settings_dir("claude_app_dir", b.get("path") or "")
         if p == "/api/datadir":
-            if b.get("which") not in ("claude_dir", "codex_dir"):
-                raise ValueError("which 只能是 claude_dir / codex_dir")
+            if b.get("which") not in ("claude_dir", "codex_dir", "dsh_home"):
+                raise ValueError("which 只能是 claude_dir / codex_dir / dsh_home")
             return dict(_settings_dir(b["which"], b.get("path") or ""), note="重启 CC Session Sync 后全面生效")
         if p == "/api/pickdir":
             return detect.pick_folder(b.get("start") or "")

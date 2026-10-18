@@ -46,22 +46,14 @@ def _when(ts) -> str:
 
 
 def _entries(agent: str, raw: bytes) -> list[dict]:
-    parse = S.parse_claude if agent == "claude" else S.parse_codex
-    out = []
-    for line in raw.splitlines():
-        if line.strip():
-            try:
-                out += parse(json.loads(line))
-            except Exception:
-                pass
-    return out
+    return S.parse_bytes(agent, raw)
 
 
 ROLE = {"user": "你", "assistant": None, "tool": "工具"}
 
 
 def _who(agent: str, role: str) -> str:
-    return ROLE.get(role) or ("Codex" if agent == "codex" else "Claude")
+    return ROLE.get(role) or {"codex": "Codex", "dsh": "DeepSeek Harness"}.get(agent, "Claude")
 
 
 # ---------- 导出 ----------
@@ -74,7 +66,7 @@ def to_md(agent: str, raw: bytes, meta: dict) -> str:
           "messages": sum(1 for e in es if e["role"] != "tool")}
     out = ["---"] + [f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items()] + ["---", "", f"# {meta.get('title') or '会话'}", ""]
     if meta.get("cwd"):
-        out += [f"> {'Codex' if agent == 'codex' else 'Claude Code'} · `{meta['cwd']}`", ""]
+        out += [f"> { {'codex': 'Codex', 'dsh': 'DeepSeek Harness'}.get(agent, 'Claude Code') } · `{meta['cwd']}`", ""]
     tools: list[str] = []
 
     def flush():
@@ -150,7 +142,7 @@ def to_html(agent: str, raw: bytes, meta: dict) -> str:
     flush()
     raw_json = json.dumps({"v": 1, "agent": agent, "id": meta.get("id"), "sha256": sha, "size": len(raw), "title": title,
                            "cwd": meta.get("cwd"), "data": _pack(raw)}, ensure_ascii=False).replace("</", "<\\/")
-    src = "Codex" if agent == "codex" else "Claude Code"
+    src = {"codex": "Codex", "dsh": "DeepSeek Harness"}.get(agent, "Claude Code")
     return (f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<meta name="generator" content="CC Session Sync {__version__}"><title>{H.escape(title)}</title><style>{CSS}</style></head><body><main>'
             f'<h1>{H.escape(title)}</h1><div class="meta">{src}{" · " + H.escape(meta["cwd"]) if meta.get("cwd") else ""} · '
@@ -183,7 +175,7 @@ def export_many(items: list[dict], fmt: str = "md", label: str = "") -> dict:
                         "cwd": m.get("cwd") or r.get("cwd")}
             else:
                 agent, sid = it["agent"], it["id"]
-                f = S.claude_file(sid) if agent == "claude" else S.codex_file(sid)
+                f = S.agent_file(agent, sid)
                 if not f:
                     raise FileNotFoundError("找不到会话记录文件")
                 raw = f.read_bytes()
