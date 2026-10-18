@@ -139,7 +139,7 @@ ok(rd2["done"] == 1, "to-dsh: one session created")
 after = tree_sha(DH)
 ok(all(after.get(k) == v for k, v in before.items()), "every pre-existing dsh file byte-identical")
 newf = Path(rd2["rows"][0]["file"])
-ok(newf.name == "session.v4.jsonl.zstd" and newf.parent.parent.name == dsh.project_key(CWD) and newf.parent.name == dsh.encode_segment(rd2["rows"][0]["dsh"]),
+ok(newf.name == "session.v4.jsonl.zstd" and newf.parent.parent.name == dsh.project_key(dsh.long_path(CWD)) and newf.parent.name == dsh.encode_segment(rd2["rows"][0]["dsh"]),
    "path: <projectKey>/<encodeSegment(id)>/session.v4.jsonl.zstd")
 vv = dsh.validate(newf)
 ok(vv["ok"] and all(ck for _, _, ck in dsh._frames(newf.read_bytes())), "written session valid; every zstd frame checksummed")
@@ -248,7 +248,7 @@ if os.name == "nt":
     lp = T / "a long directory name"; lp.mkdir()
     buf = ctypes.create_unicode_buffer(600); n = ctypes.windll.kernel32.GetShortPathNameW(str(lp), buf, 600)
     if n and "~" in buf.value:
-        ok(dsh.long_path(buf.value).lower() == str(lp).lower(), "long_path expands 8.3 short names")
+        ok("~" not in dsh.long_path(buf.value) and dsh.long_path(buf.value).lower() == os.path.realpath(lp).lower(), "long_path expands 8.3 short names")
 
 print("FAILS:", len(FAILS))
 sys.exit(1 if FAILS else 0)

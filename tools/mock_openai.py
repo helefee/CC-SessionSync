@@ -14,7 +14,7 @@ class H(BaseHTTPRequestHandler):
         def txt(c):
             if isinstance(c, str): return c
             return " ".join(x.get("text", "") for x in c or [] if isinstance(x, dict))
-        with open(LOG, "a") as f:
+        with open(LOG, "a", encoding="utf-8") as f:   # Windows 缺省 cp1252，写中文会抛错 → dsh 只看到 Connection error
             f.write(json.dumps({"path": self.path, "model": body.get("model"), "stream": body.get("stream"),
                                 "msgs": [{"role": m.get("role"), "text": txt(m.get("content"))[:80]} for m in msgs if isinstance(m, dict)]}, ensure_ascii=False) + "\n")
         reply = "MOCK-REPLY: 我收到了 %d 条消息" % len(msgs)
