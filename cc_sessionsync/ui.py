@@ -386,7 +386,7 @@ class H(BaseHTTPRequestHandler):
                 org = convert.origins()
                 rows = convert.sources(a)
                 rows.sort(key=lambda x: -(x.get("last") or 0))
-                return {"agent": a, "rows": [{"id": x["id"], "title": x.get("title"), "cwd": x.get("cwd"), "last": x.get("last"), "msgs": x.get("msgs"),
+                return {"agent": a, "rows": [{"id": x["id"], "title": x.get("title"), "cwd": x.get("cwd"), "last": x.get("last"), "msgs": x.get("msgs"), "size": x.get("size"),
                                               "subagent": bool(x.get("subagent")), "archived": bool(x.get("archived")), "source_name": x.get("source_name"),
                                               "origin": convert.origin_of(a, x["id"], x.get("tool_title") or x.get("title"), org)} for x in rows]}
             if p == "/api/convert/plan":                 # 只演练

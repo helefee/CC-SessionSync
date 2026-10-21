@@ -2162,12 +2162,12 @@ function cvList(){
   const q = CV.q.trim().toLowerCase(), all = (CV.rows || []).filter(r => CV.sub || !(r.subagent || r.archived));
   const rows = all.filter(r => !q || [r.title, r.cwd, r.id].some(v => String(v || "").toLowerCase().includes(q)));
   const groups = new Map(); rows.forEach(r => { const k = r.cwd || "（没有项目目录）"; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
-  $("#cvList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="cvAll"></th><th>会话</th><th class="n">消息</th><th>最近</th><th></th></tr>
+  $("#cvList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="cvAll"></th><th>会话</th><th class="n">内容</th><th>最近</th><th></th></tr>
     ${[...groups].map(([g, rs]) => `<tr><td></td><td colspan="4" class="dim" style="font-weight:600">${ic("folder")} ${esc(g)} <span class="dim">（${rs.length}）</span></td></tr>
     ${rs.map(r => `<tr><td><input type="checkbox" data-c="${esc(r.id)}" ${CV.sel.has(r.id) ? "checked" : ""}></td>
       <td class="tl"><div class="ell">${logo(CV.src)} ${esc(r.title || "（无标题）")}${r.subagent ? ' <span class="tag">子代理</span>' : ""}${r.archived ? ' <span class="tag">已删 / 归档</span>' : ""}</div>
         <span class="s">${esc(String(r.id).slice(-12))}${r.source_name ? " · " + esc(r.source_name) : ""}</span></td>
-      <td class="n">${r.msgs ?? ""}</td><td class="n nw">${r.last ? when(r.last) : "—"}</td>
+      <td class="n">${r.msgs ? r.msgs + " 条" : r.size ? kb(r.size) : ""}</td><td class="n nw">${r.last ? when(r.last) : "—"}</td>
       <td>${r.origin ? `<span class="tag ${r.origin === CV.dst ? "warn" : ""}" title="${r.origin === CV.dst ? "这个会话本来就是从目标应用转过来的，原生方向不会再转回去" : ""}">从 ${esc(CV_N[r.origin] || r.origin)} 转来</span>` : ""}</td></tr>`).join("")}`).join("")}</table>`
     : `<div class="empty">${all.length ? "没有符合筛选的会话" : `没找到 ${CV_N[CV.src]} 的会话`}</div>`;
   $$("#cvList [data-c]").forEach(c => c.onchange = () => { c.checked ? CV.sel.add(c.dataset.c) : CV.sel.delete(c.dataset.c); cvN(); });
@@ -2186,7 +2186,7 @@ async function cvDry(thenApply){
     s.thinking ? `思考 ${s.thinking}（${CV.reasoning ? "带上" : "不带"}）` : ""].filter(Boolean).join(" · "); };
   const html = `<div class="kv"><div>方向</div><div>${logo(r.src)} ${CV_N[r.src]} → ${logo(r.dst)} ${CV_N[r.dst]} <span class="tag ${exp ? "warn" : "ok"}">${exp ? "导出上下文文件" : "原生写入"}</span></div>
       <div>会${exp ? "导出" : "新建"}</div><div><b>${todo.length}</b> 个${rows.length - todo.length ? `（跳过 ${rows.length - todo.length} 个）` : ""}</div>
-      ${exp ? `<div>写到</div><div><code>${CV.project ? "项目目录/.sessionsync/" : esc((todo[0] || {}).target || "")}</code></div>` : ""}
+      ${exp ? `<div>写到</div><div><code>${CV.project ? "项目目录/.cc-sessionsync/" : esc((todo[0] || {}).target || "")}</code></div>` : ""}
       ${r.running && !exp ? `<div>注意</div><div><span class="tag warn">${CV_N[r.dst]} 在运行</span> 点确认后会问要不要关掉它再写（或等它退出后自动写）</div>` : ""}</div>
     <div class="diff updn" style="margin-top:10px">${rows.map(x => `<div class="${x.state === "new" ? "a" : x.error ? "d" : ""}">${x.state === "new" ? "+ " : "  "}${esc((CV_LAB[x.state] || ["", x.state])[1])}  ${esc(x.title || x.id)}${x.stats ? "  (" + st(x) + ")" : ""}${x.error ? "  " + esc(x.error) : ""}</div>`).join("") || "（没有）"}</div>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是演练，还什么都没写。${esc(CV_N[r.src])} 的数据只读；${exp ? "只写文件，不碰目标应用的数据。" : "目标只新建会话，写之前先备份，账本可撤回。"}</div>`;
