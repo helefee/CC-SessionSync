@@ -102,7 +102,6 @@ h2{font-size:calc(18px*var(--fk));font-weight:600;margin:2px 0 4px;display:flex;
 .ic.logo.occ{color:var(--oc,#1f7a8c)}.ic.logo.zcc{color:var(--zc,#5b4bd6)}.tag.opencode{color:var(--oc,#1f7a8c);border-color:currentColor}.tag.zcode{color:var(--zc,#5b4bd6);border-color:currentColor}
 .cvm{border-collapse:separate;border-spacing:4px;font-size:calc(13.5px*var(--fk))}.cvm th{font-weight:600;color:var(--muted);text-align:center;padding:4px 6px}.cvm th.r{text-align:right}.cvm td{text-align:center;padding:6px 8px;border-radius:7px;cursor:pointer;white-space:nowrap}.cvm td.nat{background:color-mix(in srgb,var(--ok,#2e7d32) 14%,transparent);color:var(--ok,#2e7d32)}.cvm td.exp{background:color-mix(in srgb,var(--warn,#b26a00) 14%,transparent);color:var(--warn,#b26a00)}.cvm td.same{color:var(--muted);cursor:default}.cvm td.on{outline:2px solid var(--accent);outline-offset:-2px}
 .cvpk{display:flex;flex-wrap:wrap;gap:6px}.cvpk button{display:inline-flex;align-items:center;gap:6px}.cvpk button.on{background:var(--accent);color:var(--ink-on)}.cvpk button.on .ic.logo{color:inherit}
-#sdAg{flex-wrap:wrap}
 .tag.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-weak)}.tag.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-weak)}
 .tag.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-weak)}.tag.acc{color:var(--accent);border-color:var(--accent);background:var(--accent-weak)}
 table.t{width:100%;border-collapse:collapse;font-size:calc(13.5px*var(--fk))}
@@ -515,7 +514,7 @@ td.nw{white-space:nowrap}
           <button class="ghost sm" id="sdImp" title="导入 .md / .html，变成新的 Claude Code 会话"><i data-ic="upload"></i></button>
           <button class="ghost sm" id="sdRef" title="刷新"><i data-ic="refresh"></i></button></div>
         <label class="gsearch" title="搜标题 / 第一句 / 目录 / id；Ctrl+Enter 在内容里搜"><i data-ic="search"></i><input type="search" id="gQ" placeholder="搜会话（Ctrl+K）"><button class="ghost sm" id="sdFt" title="在全部会话内容里搜（Ctrl+Enter）"><i data-ic="text"></i></button></label>
-        <div class="sfl"><span class="seg" id="sdAg"><button data-v="" class="on">全部</button><button data-v="claude">Claude</button><button data-v="codex">Codex</button><button data-v="dsh" title="DeepSeek Harness">DeepSeek</button><button data-v="cursor">Cursor</button><button data-v="opencode">OpenCode</button><button data-v="zcode">ZCode</button></span>
+        <div class="sfl"><select id="sdAg" title="应用"><option value="">全部应用</option><option value="claude">Claude</option><option value="codex">Codex</option><option value="dsh">DeepSeek</option><option value="cursor">Cursor</option><option value="opencode">OpenCode</option><option value="zcode">ZCode</option></select>
           <select id="sdDate" title="时间"><option value="">不限时间</option><option value="1">今天</option><option value="7">7 天</option><option value="30">30 天</option></select>
           <select id="sdStat" title="归档"><option value="live">没归档</option><option value="archived">已归档</option><option value="all">全部</option></select></div>
       </div>
@@ -868,7 +867,7 @@ function sdApply(){ if (PAGE === "sessions" && SS.d) { ssList(); ssChip(); } els
 $("#gQ").oninput = e => { SS.q = e.target.value; sdApply(); };
 $("#gQ").onkeydown = e => { if (e.key !== "Enter") return; if (e.ctrlKey) { if (PAGE !== "sessions") go("sessions"); return ssFulltext(); } if (PAGE !== "sessions" && PAGE !== "timeline") go("sessions"); };
 $("#sdFt").onclick = e => { e.preventDefault(); if (PAGE !== "sessions") go("sessions"); ssFulltext(); };
-$$("#sdAg button").forEach(b => b.onclick = () => { SS.agent = b.dataset.v; $$("#sdAg button").forEach(x => x.classList.toggle("on", x === b)); sdApply(); });
+$("#sdAg").onchange = e => { SS.agent = e.target.value; sdApply(); };
 $("#sdDate").onchange = e => { SS.date = e.target.value; sdApply(); };
 $("#sdStat").onchange = e => { SS.status = e.target.value; sdApply(); };
 $("#sdImp").onclick = () => imDlg();
