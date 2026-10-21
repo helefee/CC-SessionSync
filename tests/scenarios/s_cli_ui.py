@@ -96,6 +96,15 @@ try:
     ok(r.get("marked", {}).get("ok") and imp.exists(), "api/codex/import uses the saved setting → marked")
     u = post("/api/codex/undo", {"ledger": r["ledger"]}); ok(u.get("codex_imports", {}).get("ok") and not imp.exists(), "api/codex/undo reverts the mark")
     post("/api/settings", {"codex_mark_imported": False})
+    # 0.2.7 会话转换接口：方向表、来源列表、演练、导出（→ ZCode）、账本、撤回
+    m = g("/api/convert/matrix"); ok(m["cells"]["claude"]["zcode"] == "export" and m["cells"]["codex"]["claude"] == "native" and "opencode" in m["detect"], "api/convert/matrix")
+    src = g("/api/convert/sources?agent=codex"); ok(len(src["rows"]) >= 1 and src["rows"][0]["id"], "api/convert/sources")
+    sid = src["rows"][0]["id"]
+    pl = g(f"/api/convert/plan?src=codex&dst=zcode&ids={sid}"); ok(pl["mode"] == "export" and pl["rows"][0]["state"] == "new" and pl["dry"], "api/convert/plan (dry)")
+    r = post("/api/convert/run", {"src": "codex", "dst": "zcode", "ids": [sid]}); ok(r.get("done") == 1 and Path(r["rows"][0]["file"]).exists() and r.get("paste"), "api/convert/run → export file + paste prompt")
+    lg = g("/api/convert/ledgers"); ok(lg and lg[0]["name"] == r["ledger"] and lg[0]["count"] == 1, "api/convert/ledgers")
+    u = post("/api/convert/undo", {"ledger": r["ledger"]}); ok(u.get("ok") and not Path(r["rows"][0]["file"]).exists(), "api/convert/undo removes the export")
+    ok("（OpenCode / ZCode" in d["text"] or "OpenCode：" in d["text"], "api/diag mentions OpenCode / ZCode")
     rq = urllib.request.Request("http://127.0.0.1:8799/api/status", headers={"host": "evil.example"})
     try:
         urllib.request.urlopen(rq, timeout=5); ok(False, "foreign Host header refused")
