@@ -45,14 +45,14 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 ## 桌面程序
 
 - 只开一个：再点快捷方式会把已经开着的窗口叫出来。关窗口缺省缩到托盘（设置里能改），托盘菜单：显示 / 隐藏窗口、立即同步 Claude 会话、
-  自动同步、Codex → Claude Code、会话管理、用量、供应商、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
+  自动同步、会话转换（Codex → Claude Code）、会话管理、用量、供应商、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
   检查更新、诊断自检、退出。
 - 界面只听 `127.0.0.1:8766`，每个请求都要带页面里的一次性口令（别的网页 / 程序调不了）。
 - **系统通知**：同步 / 导入做完、排队的改动做完、检测到换号、有新版本。可以在设置里关。
 
 ### 界面
 
-- **顶部按钮栏**（0.2.2）：时间线 / 账号同步 / Codex→Claude / 备份 / 用量 / 供应商 / 诊断自检 / 检查更新（红点）/ 主题，当前页高亮；
+- **顶部按钮栏**（0.2.2）：时间线 / 账号同步 / 会话转换 / 备份 / 用量 / 供应商 / 诊断自检 / 检查更新（红点）/ 主题，当前页高亮；
   **设置（齿轮）在右上角**。点了在主区域显示那一页（**不是弹窗**，用量、供应商也一样，供应商的新增 / 编辑表单也在页面里，只有写配置前的确认还是小对话框）。
   点左上角标题、左侧「会话」或任何一个会话就回到会话页。窗口窄的时候按钮只显示图标（鼠标停上去有名字）。
 - **左侧面板只放会话列表**：搜会话（Ctrl+K）、全文搜、Claude / Codex、时间、归档筛选，下面是**按账号 / 按项目**的分组树，最里层就是会话本身
@@ -323,6 +323,15 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | 导出方向：文件 + 粘贴提示。 | OpenCode / ZCode 检测 + 转换记录（可撤回）。 |
 | ![OpenCode 会话](docs/screenshots/v027-sessions-opencode.png) | ![深色](docs/screenshots/v027-convert-page-dark.png) |
 | 会话管理里的 OpenCode 会话（只读）。 | 深色主题。 |
+
+**0.2.8**：顶栏的「Codex→Claude」也并进了「会话转换」——顶栏不再有任何一对一的转换页。在会话转换里选「从 Codex → 到 Claude Code」，
+下面就是原来的 Codex 导入器（按天数 / 项目 / 状态筛选、含子代理等、预览、就地更新、「防止 Codex 再导回去」开关），账本照旧在「备份」里撤回。
+原来的 Codex→Claude、DeepSeek⇄Claude、Cursor⇄Claude 单独页面只留在会话转换页底的链接里；托盘菜单、通知、`?page=codex` 这类深链接和
+记住的上次页面会打开会话转换并预选对应方向。
+
+| 之前（0.2.7） | 之后（0.2.8） |
+|---|---|
+| ![](docs/screenshots/v028-nav-before.png) | ![](docs/screenshots/v028-nav-after.png) |
 
 ### 字号与界面缩放（0.2.6）
 
@@ -597,6 +606,10 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Navigation (0.2.8):** the top bar no longer has per-pair pages; "Codex→Claude" is merged into "会话转换" (Codex → Claude Code
+  embeds the Codex importer with its day/project/state filters, include-subagents, preview, in-place update and the anti-reimport switch).
+  The old Codex / dsh / Cursor pages are only linked at the bottom of 会话转换; tray item, notifications, `?page=codex` deep links and the
+  remembered last page open 会话转换 with the direction preselected.
 - **Any-to-any session conversion + OpenCode / ZCode (0.2.7):** a unified "会话转换" page (and `cc-sessionsync convert …`) converts sessions
   between Claude Code, Codex, DeepSeek Harness, Cursor, OpenCode and ZCode through a common intermediate model (`ccss-ir/1`). Native
   targets write a **new** session the target can resume: Claude Code (jsonl, optional desktop registration), Codex (rollout + session index),

@@ -233,7 +233,7 @@ ok('class="tabs"' not in page, "UI: old top tabs gone")
 side = page[page.index('<aside class="side"'):page.index('</aside>')]
 top = page[page.index('<header class="top">'):page.index('</header>')]
 ok('data-p=' not in side and 'id="gQ"' in side and 'id="tree"' in side and 'id="sdAg"' in side, "0.2.2: left panel = session list + search/filters + tree only")
-ok(all(f'data-p="{p}"' in top for p in ("timeline", "sync", "codex", "backups", "usage", "models", "diag", "settings")) and 'id="tbUpd"' in top and 'id="tbTheme"' in top,
+ok(all(f'data-p="{p}"' in top for p in ("timeline", "sync", "convert", "backups", "usage", "models", "diag", "settings")) and 'id="tbUpd"' in top and 'id="tbTheme"' in top,
    "0.2.2: all other pages in the top button bar")
 ok(top.rstrip().endswith("</div>") and top.rindex('id="tbSet"') > top.rindex('id="tbTheme"'), "0.2.2: settings gear is the last (top-right) button")
 ok('id="tbEye"' not in page and 'id="trEye"' in side, "0.2.2: no duplicate top-bar eye; the list keeps its own")

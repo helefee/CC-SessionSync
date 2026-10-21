@@ -265,7 +265,7 @@ def tick(now: float | None = None, stable: float = 9) -> list[dict]:
             _save()
             continue
         ev = events.add("account", title, text,
-                        {"page": "sync" if k.startswith("claude") else "codex", "account_switch": k},
+                        {"page": "sync", "account_switch": k} if k.startswith("claude") else {"page": "convert", "src": "codex", "dst": "claude", "account_switch": k},
                         who=k, old=cur["label"], new=v["label"], old_rid=cur.get("rid", ""), new_rid=v.get("rid", ""),
                         mode_switch=mode_switch, new_id=v["id"])
         STATE["last"] = (STATE["last"] + [ev])[-10:]
