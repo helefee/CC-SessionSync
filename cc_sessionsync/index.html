@@ -21,7 +21,7 @@
   --fk:1;--z:1;--vh:calc(1vh / var(--z));--vw:calc(1vw / var(--z));
   --bg:#faf9f5;--panel:#ffffff;--panel2:#f5f4ed;--side:#f3f1ea;--hover:#ebe8de;--hover2:#e2ded1;--bubble:#efece3;
   --line:#e3dfd3;--line2:#ece9e0;--text:#141413;--muted:#6f6d66;--faint:#a19f97;
-  --accent:#c96442;--accent-weak:#f7e7df;--ink:#141413;--ink-on:#faf9f5;--claude:#c96442;--codex:#1e6b34;--cxn:#1e6b34;--dsh:#4d6bfe;--cur:#3a3a38;
+  --accent:#c96442;--accent-weak:#f7e7df;--ink:#141413;--ink-on:#faf9f5;--claude:#c96442;--codex:#1e6b34;--cxn:#1e6b34;--dsh:#4d6bfe;--cur:#3a3a38;--oc:#1f7a8c;--zc:#5b4bd6;
   --ok:#3f8a52;--ok-weak:#e4f1e5;--warn:#a8701c;--warn-weak:#f8eedb;--bad:#bf4b3a;--bad-weak:#f8e3df;
   --codebg:#1f1e1d;--codefg:#ebe9e1;--shadow:0 4px 20px rgba(60,48,30,.09);--r:9px;--r2:14px;
   --sans:"SS Inter","Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans SC",system-ui,sans-serif;
@@ -30,13 +30,13 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#262624;--panel:#30302e;--panel2:#2b2a28;--side:#1f1e1d;--hover:#353431;--hover2:#3e3d3a;--bubble:#393937;
   --line:#3b3a36;--line2:#31302d;--text:#faf9f5;--muted:#a6a39b;--faint:#77756e;
-  --accent:#d97757;--accent-weak:#40302a;--ink:#faf9f5;--ink-on:#1f1e1d;--claude:#d97757;--codex:#7cc982;--cxn:#7cc982;--dsh:#8fa6ff;--cur:#d6d4cc;
+  --accent:#d97757;--accent-weak:#40302a;--ink:#faf9f5;--ink-on:#1f1e1d;--claude:#d97757;--codex:#7cc982;--cxn:#7cc982;--dsh:#8fa6ff;--cur:#d6d4cc;--oc:#6cc4d4;--zc:#a99bff;
   --ok:#7dbb83;--ok-weak:#26332a;--warn:#e2b25f;--warn-weak:#3a311f;--bad:#e8826f;--bad-weak:#402823;
   --codebg:#1a1918;--shadow:0 6px 24px rgba(0,0,0,.4);color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#262624;--panel:#30302e;--panel2:#2b2a28;--side:#1f1e1d;--hover:#353431;--hover2:#3e3d3a;--bubble:#393937;
   --line:#3b3a36;--line2:#31302d;--text:#faf9f5;--muted:#a6a39b;--faint:#77756e;
-  --accent:#d97757;--accent-weak:#40302a;--ink:#faf9f5;--ink-on:#1f1e1d;--claude:#d97757;--codex:#7cc982;--cxn:#7cc982;--dsh:#8fa6ff;--cur:#d6d4cc;
+  --accent:#d97757;--accent-weak:#40302a;--ink:#faf9f5;--ink-on:#1f1e1d;--claude:#d97757;--codex:#7cc982;--cxn:#7cc982;--dsh:#8fa6ff;--cur:#d6d4cc;--oc:#6cc4d4;--zc:#a99bff;
   --ok:#7dbb83;--ok-weak:#26332a;--warn:#e2b25f;--warn-weak:#3a311f;--bad:#e8826f;--bad-weak:#402823;
   --codebg:#1a1918;--shadow:0 6px 24px rgba(0,0,0,.4);color-scheme:dark}
 *{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--hover2) transparent}
@@ -99,6 +99,10 @@ h2{font-size:calc(18px*var(--fk));font-weight:600;margin:2px 0 4px;display:flex;
 .tag{display:inline-flex;align-items:center;gap:3px;font-size:calc(12px*var(--fk));border-radius:6px;padding:0 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;line-height:calc(18px*var(--fk))}
 .tag.claude{color:var(--claude);border-color:currentColor}.tag.codex{color:var(--cxn);border-color:currentColor}.tag.dsh{color:var(--dsh,#4d6bfe);border-color:currentColor}
 .ic.logo.dshc{color:var(--dsh,#4d6bfe)}.ic.logo.curc{color:var(--cur,#3a3a38)}.tag.cursor{color:var(--cur,#3a3a38);border-color:currentColor}
+.ic.logo.occ{color:var(--oc,#1f7a8c)}.ic.logo.zcc{color:var(--zc,#5b4bd6)}.tag.opencode{color:var(--oc,#1f7a8c);border-color:currentColor}.tag.zcode{color:var(--zc,#5b4bd6);border-color:currentColor}
+.cvm{border-collapse:separate;border-spacing:4px;font-size:calc(13.5px*var(--fk))}.cvm th{font-weight:600;color:var(--muted);text-align:center;padding:4px 6px}.cvm th.r{text-align:right}.cvm td{text-align:center;padding:6px 8px;border-radius:7px;cursor:pointer;white-space:nowrap}.cvm td.nat{background:color-mix(in srgb,var(--ok,#2e7d32) 14%,transparent);color:var(--ok,#2e7d32)}.cvm td.exp{background:color-mix(in srgb,var(--warn,#b26a00) 14%,transparent);color:var(--warn,#b26a00)}.cvm td.same{color:var(--muted);cursor:default}.cvm td.on{outline:2px solid var(--accent);outline-offset:-2px}
+.cvpk{display:flex;flex-wrap:wrap;gap:6px}.cvpk button{display:inline-flex;align-items:center;gap:6px}.cvpk button.on{background:var(--accent);color:var(--ink-on)}.cvpk button.on .ic.logo{color:inherit}
+#sdAg{flex-wrap:wrap}
 .tag.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-weak)}.tag.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-weak)}
 .tag.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-weak)}.tag.acc{color:var(--accent);border-color:var(--accent);background:var(--accent-weak)}
 table.t{width:100%;border-collapse:collapse;font-size:calc(13.5px*var(--fk))}
@@ -491,8 +495,7 @@ td.nw{white-space:nowrap}
       <button class="pb" data-p="timeline" title="时间线：选一个时间点，预览、恢复"><i data-ic="history"></i><span>时间线</span></button>
       <button class="pb" data-p="sync" title="账号同步"><i data-ic="users"></i><span>账号同步</span></button>
       <button class="pb" data-p="codex" title="Codex → Claude Code"><i data-ic="codex" data-cls="logo"></i><span>Codex→Claude</span></button>
-      <button class="pb" data-p="dsh" title="DeepSeek Harness ⇄ Claude Code"><i data-ic="dsh" data-cls="logo"></i><span>DeepSeek⇄Claude</span></button>
-      <button class="pb" data-p="cursor" title="Cursor → Claude Code，以及把会话导成给 Cursor 的上下文"><i data-ic="cursor" data-cls="logo"></i><span>Cursor⇄Claude</span></button>
+      <button class="pb" data-p="convert" title="会话转换：Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 任意互转"><i data-ic="shuffle"></i><span>会话转换</span></button>
       <button class="pb" data-p="backups" title="备份与还原"><i data-ic="download"></i><span>备份</span></button>
       <button class="pb" data-p="usage" title="用量统计"><i data-ic="chart"></i><span>用量</span></button>
       <button class="pb" data-p="models" title="供应商（模型与 API）"><i data-ic="key"></i><span>供应商</span></button>
@@ -512,7 +515,7 @@ td.nw{white-space:nowrap}
           <button class="ghost sm" id="sdImp" title="导入 .md / .html，变成新的 Claude Code 会话"><i data-ic="upload"></i></button>
           <button class="ghost sm" id="sdRef" title="刷新"><i data-ic="refresh"></i></button></div>
         <label class="gsearch" title="搜标题 / 第一句 / 目录 / id；Ctrl+Enter 在内容里搜"><i data-ic="search"></i><input type="search" id="gQ" placeholder="搜会话（Ctrl+K）"><button class="ghost sm" id="sdFt" title="在全部会话内容里搜（Ctrl+Enter）"><i data-ic="text"></i></button></label>
-        <div class="sfl"><span class="seg" id="sdAg"><button data-v="" class="on">全部</button><button data-v="claude">Claude</button><button data-v="codex">Codex</button><button data-v="dsh" title="DeepSeek Harness">DeepSeek</button><button data-v="cursor">Cursor</button></span>
+        <div class="sfl"><span class="seg" id="sdAg"><button data-v="" class="on">全部</button><button data-v="claude">Claude</button><button data-v="codex">Codex</button><button data-v="dsh" title="DeepSeek Harness">DeepSeek</button><button data-v="cursor">Cursor</button><button data-v="opencode">OpenCode</button><button data-v="zcode">ZCode</button></span>
           <select id="sdDate" title="时间"><option value="">不限时间</option><option value="1">今天</option><option value="7">7 天</option><option value="30">30 天</option></select>
           <select id="sdStat" title="归档"><option value="live">没归档</option><option value="archived">已归档</option><option value="all">全部</option></select></div>
       </div>
@@ -528,6 +531,7 @@ td.nw{white-space:nowrap}
       <section class="page" id="pg-codex"></section>
       <section class="page" id="pg-dsh"></section>
       <section class="page" id="pg-cursor"></section>
+      <section class="page" id="pg-convert"></section>
       <section class="page" id="pg-backups"></section>
       <section class="page full" id="pg-usage"></section>
       <section class="page full" id="pg-models"></section>
@@ -620,10 +624,14 @@ const ICON = {
   moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  // OpenCode / ZCode：自己画的简单图形（不是官方 logo），只在本机工具里作识别用
+  opencode: '<path fill-rule="evenodd" d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm3 4v10h10V7zm2.5 2.5h5v5h-5z"/>',
+  zcode: '<path d="M5 4h14v3.2L10.2 17H19v3H5v-3.2L13.8 7H5z"/>',
   // DeepSeek Harness：自己画的鲸鱼轮廓（不是官方 logo），只在本机工具里作识别用
   dsh: '<path fill-rule="evenodd" d="M1.5 12.6C1.5 8.7 5.9 6 11.3 6c3.4 0 6.3 1.1 8 2.8l3.2-2.3v9.8l-3.1-2.2c-1.6 2.6-4.9 4.2-8.6 4.2-1.9 0-3.6-.4-5-1.1L3 19.3v-3.6c-1-.9-1.5-1.9-1.5-3.1zm6.6-2.4a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/>'
 };
 Object.assign(ICON, {
+  shuffle: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
   archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   undo: '<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>',
   copy: '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
@@ -632,7 +640,7 @@ Object.assign(ICON, {
   shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>'
 });
 function ic(name, cls){ return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ""}</svg>`; }
-const logo = agent => ic({claude: "claude", codex: "codex", dsh: "dsh", cursor: "cursor"}[agent] || "user", "logo" + (agent === "dsh" ? " dshc" : agent === "cursor" ? " curc" : ""));
+const logo = agent => ic({claude: "claude", codex: "codex", dsh: "dsh", cursor: "cursor", opencode: "opencode", zcode: "zcode"}[agent] || "user", "logo" + ({dsh: " dshc", cursor: " curc", opencode: " occ", zcode: " zcc"}[agent] || ""));
 const EMO = {"✅": "ok", "❌": "err", "⚠": "warn", "🔄": "sync", "📥": "download"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function emoIcons(t){ let out = esc(String(t)); for (const [e, n] of Object.entries(EMO)) out = out.split(e).join(ic(n)); return out.replace(/\uFE0F/g, ""); }
@@ -684,7 +692,7 @@ function doneOrQueued(r, okMsg){
 }
 // ---------- 桌面端开着：「关闭并…（完成后重启）」/ 等它退出后自动做 / 取消（0.2.3）----------
 // 改桌面端数据的操作在它开着时会排队（apps.run_or_defer）；这里问用户要不要让我们代劳：正常关掉 → 做 → 按原来的方式重新打开。
-const APPN = {claude: "Claude", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor"};
+const APPN = {claude: "Claude", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor", opencode: "OpenCode", zcode: "ZCode"};
 const crPl = p => `<li><code>${esc(p.exe || p.name)}</code> <span class="dim">· PID ${esc(p.pid)}</span></li>`;
 function queuedAsk(rs){       // 一批结果里第一个排队的 → 问；其他的看顶部提示条
   const d = (rs || []).find(x => x && x.deferred);
@@ -825,7 +833,7 @@ function go(p){
   if (!R[p]) return;
   if (PAGE !== p && $("#dlg").classList.contains("open")) closeDlg();
   PAGE = p;
-  $$("#nav [data-p], #tbSet").forEach(t => t.classList.toggle("on", t.dataset.p === p));
+  $$("#nav [data-p], #tbSet").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor"))));
   $("#side").classList.toggle("on", p === "sessions");
   $$(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
   store.set("ccss.page", p);
@@ -904,7 +912,7 @@ function trGroup(k){ return ((SS.d && SS.d.groups) || []).find(g => g.key === k)
 function trLabel(sel = TR.sel){
   if (!sel) return "";
   const g = sel.acct && trGroup(sel.acct);
-  return [g ? (g.kind === "codex" ? "Codex · " : "") + (g.kind === "dsh" || g.kind === "cursor" ? esc(g.masked) : g.masked) : "", sel.proj != null ? projName(sel.proj) || "（没有目录）" : ""].filter(Boolean).join(" / ");
+  return [g ? (g.kind === "codex" ? "Codex · " : "") + (["dsh", "cursor", "opencode", "zcode"].includes(g.kind) ? esc(g.masked) : g.masked) : "", sel.proj != null ? projName(sel.proj) || "（没有目录）" : ""].filter(Boolean).join(" / ");
 }
 async function treeLoad(){ try { SS.d = await api("/api/sessions"); } catch(e){ $("#tree").innerHTML = `<div class="hint">读不到：${esc(e.message)}</div>`; return; } treeRender(); }
 function treeRender(){
@@ -924,7 +932,7 @@ function treeRender(){
     return `<div class="tn leaf${SS.cur && skey(SS.cur) === k ? " on" : ""}" data-sk="${esc(k)}" title="${esc((x.title || "（无标题）") + "\n" + (x.cwd || ""))}">${logo(x.agent)}<span class="lb">${esc(x.title || "（无标题）")}</span><span class="n">${when(x.last)}</span></div>`; }).join("") +
     (xs.length > LIM ? `<div class="tn more" data-sel="${esc(JSON.stringify(sel))}">还有 ${xs.length - LIM} 个：在右边列表里看…</div>` : "");
   const gLabel = g => g.kind === "unknown" ? `<span title="${esc(g.hint || "")}">未知账号</span>` : g.kind === "api" || g.kind === "dsh" || g.kind === "cursor" ? `<span title="${esc(g.hint || "")}">${esc(g.masked)}</span>` : acm(g.rid, g.masked, true);
-  const gIcon = g => g.kind === "cursor" ? ic("cursor", "logo lg curc") : g.kind === "dsh" ? ic("dsh", "logo lg dshc") : g.kind === "codex" ? ic("codex", "logo lg") : g.kind === "claude" ? ic("claude", "logo lg") : g.kind === "api" ? ic("key", "lg") : ic("user", "lg");
+  const gIcon = g => g.kind === "opencode" ? ic("opencode", "logo lg occ") : g.kind === "zcode" ? ic("zcode", "logo lg zcc") : g.kind === "cursor" ? ic("cursor", "logo lg curc") : g.kind === "dsh" ? ic("dsh", "logo lg dshc") : g.kind === "codex" ? ic("codex", "logo lg") : g.kind === "claude" ? ic("claude", "logo lg") : g.kind === "api" ? ic("key", "lg") : ic("user", "lg");
   const gTags = g => g.current ? `<span class="cur" title="${esc((g.tags || []).join("、"))}">当前</span>` : "";
   const pLabel = p => `<span title="${esc(p)}">${esc(projName(p) || "（没有目录）")}</span>`;
   let html = node("all", null, "全部会话", items.length, null, ic("list", "lg"));
@@ -2077,6 +2085,147 @@ async function cuDry(thenApply){
     } catch(e){ b.disabled = false; toast("❌ " + e.message, 5000); }
   };
 }
+// ---------- 会话转换：任意 → 任意（0.2.7）----------
+// 来源（6 个应用之一）的会话 → 目标应用。能安全原生写的（Claude Code / Codex / DeepSeek Harness / OpenCode）写新会话；
+// 写不了的（Cursor / ZCode，或者没找到 OpenCode 命令行）导出上下文文件 + 粘贴提示。先演练；每次都有账本可以撤回。
+const CV_AG = ["claude", "codex", "dsh", "cursor", "opencode", "zcode"];
+const CV_N = {claude: "Claude Code", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor", opencode: "OpenCode", zcode: "ZCode"};
+const CV = {src: "opencode", dst: "claude", sel: new Set(), q: "", rows: null, rowsFor: null, mat: null, reasoning: false, desktop: true,
+            again: false, export: false, project: false, sub: false};
+const CV_LAB = {new: ["ok", "会转"], same: ["", "转过了，没变"], changed: ["warn", "转过后又有新内容"], loop: ["", "本来就是从目标导来的"],
+                empty: ["", "没内容"], error: ["bad", "读不了"], missing: ["bad", "找不到"]};
+function cvOpen(agent, ids){                                     // 会话详情的「转换到…」
+  CV.src = agent; CV.sel = new Set(ids || []); CV.rows = null; CV.q = "";
+  if (CV.dst === agent) CV.dst = agent === "claude" ? "codex" : "claude";
+  go("convert");
+}
+R.convert = async () => {
+  const pg = $("#pg-convert");
+  if (!CV.mat) pg.innerHTML = '<div class="empty">读取…</div>';
+  let mat, src, leds;
+  try { [mat, src, leds] = await Promise.all([api("/api/convert/matrix"), CV.rowsFor === CV.src && CV.rows ? null : api(`/api/convert/sources?agent=${CV.src}`), api("/api/convert/ledgers")]); }
+  catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  CV.mat = mat; if (src) { CV.rows = src.rows || []; CV.rowsFor = CV.src; }
+  const ids = new Set(CV.rows.map(r => r.id)); for (const t of [...CV.sel]) if (!ids.has(t)) CV.sel.delete(t);
+  const T = mat.targets || {}, cell = (s, d) => (mat.cells[s] || {})[d];
+  const md = (T[CV.dst] || {}).mode, exp = md === "export" || CV.export;
+  const pick = (id, cur, dis) => `<div class="cvpk" id="${id}">${CV_AG.map(a => `<button data-a="${a}" class="${a === cur ? "on" : ""}" ${dis === a ? "disabled" : ""}>${logo(a)} ${CV_N[a]}</button>`).join("")}</div>`;
+  const det = mat.detect || {};
+  const detRow = k => { const d = det[k] || {}; return `<div>${logo(k)} <b>${CV_N[k]}</b>：${d.install ? `${esc(d.install.version || "")} <code>${esc(d.install.path || "")}</code> · ` : ""}数据 <code>${esc(d.db || "")}</code> ${d.db_exists ? `✓ ${d.sessions} 个会话 · ${d.projects} 个项目${d.legacy ? ` · 旧版 JSON 记录 ${d.legacy} 个（不读）` : ""}` : "✗ 没有"}${k === "opencode" ? ` · 命令行 ${d.cli ? `<code>${esc(d.cli)}</code>${d.cli_version ? " " + esc(d.cli_version) : ""}` : '<span class="tag warn">没找到（只能导出）</span>'}` : ""}${d.running ? ' · <span class="tag warn">在运行（照样能读）</span>' : ""}${d.error ? ` <span class="tag bad">${esc(d.error)}</span>` : ""}</div>`; };
+  pg.innerHTML = `<h2>${ic("shuffle")}会话转换</h2>
+    <p class="sub">把一个应用里的会话转成另一个应用的会话接着聊：Claude Code、Codex、DeepSeek Harness、Cursor、OpenCode、ZCode 任意两个之间都行。
+      中间先转成统一的格式（文字、思考、工具调用、图片占位），再写成目标的格式。<b>来源只读</b>；目标只<b>新建</b>会话，不改已有的；先演练，每次都有账本可以撤回。</p>
+    <div class="card"><h3>${ic("shuffle")}方向</h3>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:center"><b>从</b>${pick("cvSrc", CV.src)}<b>到</b>${pick("cvDst", CV.dst, CV.src)}</div>
+      <div style="margin-top:10px">${CV.src === CV.dst ? "" : md === "native"
+        ? `<span class="tag ok">原生写入</span> ${esc((mat.how || {})[CV.dst] || "")}`
+        : `<span class="tag warn">导出上下文文件</span> ${esc((T[CV.dst] || {}).why || "")}。写好后在 ${CV_N[CV.dst]} 里新开对话，粘贴提示里的那句话（会自动复制）。`}</div>
+      <details style="margin-top:10px" ${CV.mx ? "open" : ""} id="cvMx"><summary>全部方向一览（行 = 从，列 = 到；点格子直接选）</summary>
+      <table class="cvm" style="margin-top:8px"><tr><th></th>${CV_AG.map(d => `<th>${logo(d)}<br>${CV_N[d]}</th>`).join("")}</tr>
+        ${CV_AG.map(s => `<tr><th class="r">${logo(s)} ${CV_N[s]}</th>${CV_AG.map(d => { const c = cell(s, d);
+          return `<td class="${c === "same" ? "same" : c === "native" ? "nat" : "exp"} ${s === CV.src && d === CV.dst ? "on" : ""}" ${c === "same" ? "" : `data-s="${s}" data-d="${d}"`} title="${c === "same" ? "" : esc(c === "native" ? (mat.how || {})[d] || "" : (T[d] || {}).why || "")}">${c === "same" ? "—" : c === "native" ? "原生" : "导出"}</td>`; }).join("")}</tr>`).join("")}</table>
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px"><span class="tag ok">原生</span> 写成目标应用自己的会话，能在它里面接着聊（Claude Code / Codex / DeepSeek Harness / OpenCode）。
+        <span class="tag warn">导出</span> 写一份上下文文件 + 一句粘贴提示：Cursor 和 ZCode 的会话库没有公开格式、还有好几处要一起改，写坏了可能影响应用本身，所以不碰。</div></details></div>
+    <div class="bar"><input type="search" id="cvQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(CV.q)}"><span class="sp"></span><span class="dim">${logo(CV.src)} ${CV_N[CV.src]} 的会话 ${CV.rows.length} 个</span></div>
+    <div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="cvList" style="border:0;border-radius:0;max-height:calc(48*var(--vh))"></div>
+      <div class="batch"><span id="cvN"></span><span style="flex:1"></span><button id="cvDry">${ic("eye")} 演练：看会写什么</button><button class="primary" id="cvGo">${ic(exp ? "download" : "shuffle")} ${exp ? "导出选中的" : "转换选中的"}</button></div></div>
+    <div class="card"><h3>选项</h3>
+      <div class="setrow"><div class="sl">${ic("sparkles")}<div><b>带上思考内容（当文字）</b><div class="sd">缺省不带：各家的思考块互相不认，只能当普通文字放进回复里</div></div></div>${sw("cvReas", CV.reasoning)}</div>
+      ${CV.dst === "claude" && !exp ? `<div class="setrow"><div class="sl">${ic("monitor")}<div><b>写进 Claude 桌面端的会话列表</b><div class="sd">关掉就只写命令行能 <code>claude --resume</code> 的记录；桌面端开着时会排队</div></div></div>${sw("cvDesk", CV.desktop)}</div>` : ""}
+      ${md === "native" ? `<div class="setrow"><div class="sl">${ic("download")}<div><b>只导出上下文文件</b><div class="sd">不写进 ${CV_N[CV.dst]}，只给一份文件 + 粘贴提示</div></div></div>${sw("cvExp", CV.export)}</div>
+      <div class="setrow"><div class="sl">${ic("copy")}<div><b>转过的也再转一份</b><div class="sd">缺省不重复：转过且没变的跳过；又有新内容的也要勾这个才会再新建一份（旧的不动）</div></div></div>${sw("cvAgain", CV.again)}</div>` : ""}
+      ${exp ? `<div class="setrow"><div class="sl">${ic("folder")}<div><b>写进项目目录</b><div class="sd">写到会话所在项目的 <code>.sessionsync/</code> 下（目标应用里直接 @ 得到）；缺省写到本程序的导出目录</div></div></div>${sw("cvProj", CV.project)}</div>` : ""}
+      <div class="setrow"><div class="sl">${ic("users")}<div><b>子代理 / 已删的也列出来</b><div class="sd">缺省不列：父会话里已经有子代理的结果</div></div></div>${sw("cvSub", CV.sub)}</div>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">工具调用变成文字摘要（输出截短），图片换成占位文字；转出去的会话标题带来源前缀（比如「（OpenCode）」），以后不会被转回来源（防止来回导）。</div></div>
+    <div class="card"><h3>${ic("activity")}OpenCode / ZCode 检测</h3><div class="dgls">${detRow("opencode")}${detRow("zcode")}</div>
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">只读：把它们的数据库连同 -wal 复制一份到临时目录再读，读完删掉；应用开着也能读。写 OpenCode 一律通过它自己的命令行（<code>opencode import</code>），要先关掉 OpenCode。数据目录可以在「诊断 → 数据目录」里改。</div></div>
+    <div class="card"><h3>${ic("history")}转换记录（账本）</h3>${(leds || []).length ? `<table class="t"><tr><th>时间</th><th>方向</th><th class="n">个数</th><th>状态</th><th></th></tr>
+      ${leds.slice(0, 30).map(l => `<tr><td class="nw">${when(l.time)}</td><td>${logo(l.src)} ${esc(CV_N[l.src] || l.src)} → ${logo(l.dst)} ${esc(CV_N[l.dst] || l.dst)} <span class="tag ${l.mode === "native" ? "ok" : "warn"}">${l.mode === "native" ? "原生" : "导出"}</span>
+        <div class="s dim ell">${(l.items || []).slice(0, 3).map(i => esc(i.title || i.id || "")).join(" · ")}${(l.items || []).length > 3 ? " …" : ""}</div></td>
+        <td class="n">${l.count}${l.errors ? ` <span class="tag bad">${l.errors} 个出错</span>` : ""}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : ""}</td>
+        <td class="nw">${l.undone || !l.count ? "" : `<button data-u="${esc(l.name)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="empty">还没转过</div>'}
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回只删这次新建的会话 / 文件；转过去以后在目标应用里又接着聊过的会保留（不会把你后来聊的内容删掉）。</div></div>
+    <div class="dim" style="font-size:calc(13px*var(--fk))">以前的专门页面还在：<a href="#" data-go="codex">Codex → Claude</a> · <a href="#" data-go="dsh">DeepSeek ⇄ Claude</a> · <a href="#" data-go="cursor">Cursor → Claude</a></div>`;
+  cvList();
+  $$("#cvSrc [data-a]").forEach(b => b.onclick = () => { if (CV.src === b.dataset.a) return; CV.src = b.dataset.a; CV.sel.clear(); CV.rows = null;
+    if (CV.dst === CV.src) CV.dst = CV.src === "claude" ? "codex" : "claude"; R.convert(); });
+  $$("#cvDst [data-a]").forEach(b => b.onclick = () => { CV.dst = b.dataset.a; R.convert(); });
+  $$("#pg-convert .cvm [data-s]").forEach(td => td.onclick = () => { const ch = CV.src !== td.dataset.s; CV.src = td.dataset.s; CV.dst = td.dataset.d; if (ch) { CV.sel.clear(); CV.rows = null; } CV.mx = true; R.convert(); });
+  $("#cvMx").ontoggle = e => { CV.mx = e.target.open; };
+  $("#cvQ").oninput = e => { CV.q = e.target.value; cvList(); };
+  const on = (id, k) => { const e = $(id); if (e) e.onchange = ev => { CV[k] = ev.target.checked; if (["export", "sub"].includes(k)) R.convert(); }; };
+  on("#cvReas", "reasoning"); on("#cvDesk", "desktop"); on("#cvExp", "export"); on("#cvAgain", "again"); on("#cvProj", "project"); on("#cvSub", "sub");
+  $$("#pg-convert [data-go]").forEach(a => a.onclick = e => { e.preventDefault(); go(a.dataset.go); });
+  $$("#pg-convert [data-u]").forEach(b => b.onclick = () => cvUndo(b.dataset.u));
+  $("#cvDry").onclick = () => cvDry(false); $("#cvGo").onclick = () => cvDry(true);
+};
+function cvList(){
+  const q = CV.q.trim().toLowerCase(), all = (CV.rows || []).filter(r => CV.sub || !(r.subagent || r.archived));
+  const rows = all.filter(r => !q || [r.title, r.cwd, r.id].some(v => String(v || "").toLowerCase().includes(q)));
+  const groups = new Map(); rows.forEach(r => { const k = r.cwd || "（没有项目目录）"; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+  $("#cvList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="cvAll"></th><th>会话</th><th class="n">消息</th><th>最近</th><th></th></tr>
+    ${[...groups].map(([g, rs]) => `<tr><td></td><td colspan="4" class="dim" style="font-weight:600">${ic("folder")} ${esc(g)} <span class="dim">（${rs.length}）</span></td></tr>
+    ${rs.map(r => `<tr><td><input type="checkbox" data-c="${esc(r.id)}" ${CV.sel.has(r.id) ? "checked" : ""}></td>
+      <td class="tl"><div class="ell">${logo(CV.src)} ${esc(r.title || "（无标题）")}${r.subagent ? ' <span class="tag">子代理</span>' : ""}${r.archived ? ' <span class="tag">已删 / 归档</span>' : ""}</div>
+        <span class="s">${esc(String(r.id).slice(-12))}${r.source_name ? " · " + esc(r.source_name) : ""}</span></td>
+      <td class="n">${r.msgs ?? ""}</td><td class="n nw">${r.last ? when(r.last) : "—"}</td>
+      <td>${r.origin ? `<span class="tag ${r.origin === CV.dst ? "warn" : ""}" title="${r.origin === CV.dst ? "这个会话本来就是从目标应用转过来的，原生方向不会再转回去" : ""}">从 ${esc(CV_N[r.origin] || r.origin)} 转来</span>` : ""}</td></tr>`).join("")}`).join("")}</table>`
+    : `<div class="empty">${all.length ? "没有符合筛选的会话" : `没找到 ${CV_N[CV.src]} 的会话`}</div>`;
+  $$("#cvList [data-c]").forEach(c => c.onchange = () => { c.checked ? CV.sel.add(c.dataset.c) : CV.sel.delete(c.dataset.c); cvN(); });
+  const a = $("#cvAll"); if (a) { a.checked = rows.length && rows.every(r => CV.sel.has(r.id));
+    a.onchange = () => { rows.forEach(r => a.checked ? CV.sel.add(r.id) : CV.sel.delete(r.id)); cvList(); }; }
+  cvN();
+}
+function cvN(){ const n = CV.sel.size; $("#cvN").textContent = n ? `已选 ${n} 个` : "勾选要转换的会话"; $("#cvGo").disabled = $("#cvDry").disabled = !n || CV.src === CV.dst; }
+async function cvDry(thenApply){
+  const ids = [...CV.sel];
+  let r;
+  try { r = await api(`/api/convert/plan?src=${CV.src}&dst=${CV.dst}&ids=${encodeURIComponent(ids.join(","))}&again=${CV.again ? 1 : 0}&export=${CV.export ? 1 : 0}`); }
+  catch(e){ return toast("❌ " + e.message); }
+  const rows = r.rows || [], todo = rows.filter(x => x.state === "new"), exp = r.mode === "export";
+  const st = x => { const s = x.stats || {}; return [`${s.user || 0} 问 / ${s.assistant || 0} 答`, s.tools ? `工具 ${s.tools}` : "", s.images ? `图片 ${s.images}` : "",
+    s.thinking ? `思考 ${s.thinking}（${CV.reasoning ? "带上" : "不带"}）` : ""].filter(Boolean).join(" · "); };
+  const html = `<div class="kv"><div>方向</div><div>${logo(r.src)} ${CV_N[r.src]} → ${logo(r.dst)} ${CV_N[r.dst]} <span class="tag ${exp ? "warn" : "ok"}">${exp ? "导出上下文文件" : "原生写入"}</span></div>
+      <div>会${exp ? "导出" : "新建"}</div><div><b>${todo.length}</b> 个${rows.length - todo.length ? `（跳过 ${rows.length - todo.length} 个）` : ""}</div>
+      ${exp ? `<div>写到</div><div><code>${CV.project ? "项目目录/.sessionsync/" : esc((todo[0] || {}).target || "")}</code></div>` : ""}
+      ${r.running && !exp ? `<div>注意</div><div><span class="tag warn">${CV_N[r.dst]} 在运行</span> 点确认后会问要不要关掉它再写（或等它退出后自动写）</div>` : ""}</div>
+    <div class="diff updn" style="margin-top:10px">${rows.map(x => `<div class="${x.state === "new" ? "a" : x.error ? "d" : ""}">${x.state === "new" ? "+ " : "  "}${esc((CV_LAB[x.state] || ["", x.state])[1])}  ${esc(x.title || x.id)}${x.stats ? "  (" + st(x) + ")" : ""}${x.error ? "  " + esc(x.error) : ""}</div>`).join("") || "（没有）"}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是演练，还什么都没写。${esc(CV_N[r.src])} 的数据只读；${exp ? "只写文件，不碰目标应用的数据。" : "目标只新建会话，写之前先备份，账本可撤回。"}</div>`;
+  openDlg(thenApply ? "确认转换" : "演练结果", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${todo.length ? `<button class="primary" id="cvApply">${ic(exp ? "download" : "shuffle")} 确认${exp ? "导出" : "转换"} ${todo.length} 个</button>` : ""}`);
+  const b = $("#cvApply");
+  if (b) b.onclick = async () => {
+    b.disabled = true;
+    try {
+      const x = await api("/api/convert/run", {src: CV.src, dst: CV.dst, ids: todo.map(t => t.id), again: CV.again, reasoning: CV.reasoning,
+                                               desktop: CV.desktop, project: CV.project, export: CV.export});
+      closeDlg();
+      if (x.deferred) { doneOrQueued(x); return; }
+      if (x.ok === false) return toast("❌ " + (x.error || "没做成"), 6000);
+      CV.sel.clear(); CV.rows = null; SS.d = null; treeLoad(); R.convert();
+      if (x.mode === "export") cvPaste(x);
+      else toast(`✅ 转好了 ${x.done || 0} 个${(x.errors || []).length ? `，${x.errors.length} 个出错` : ""}（账本 ${x.ledger}，可撤回）`, 7000);
+    } catch(e){ b.disabled = false; toast("❌ " + e.message, 6000); }
+  };
+}
+function cvPaste(x){
+  const done = (x.rows || []).filter(r => r.done);
+  const p = done.length === 1 ? (done[0].paste || x.paste) : x.paste;
+  if (p) copyText(p);
+  openDlg("导出好了：在目标应用里粘贴", `<div class="kv"><div>方向</div><div>${logo(x.src)} ${CV_N[x.src]} → ${logo(x.dst)} ${CV_N[x.dst]}（导出上下文文件）</div>
+      <div>文件</div><div>${done.map(r => `<div><code>${esc(r.file || "")}</code></div>`).join("")}</div></div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">在 ${CV_N[x.dst]} 里新开一个对话，粘贴下面这句（已经复制好了），把文件 @ 进去或拖进去：</div>
+    <pre class="rep" style="margin-top:6px">${esc(p || "")}</pre>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">账本 ${esc(x.ledger || "")}：在「会话转换 → 转换记录」里可以撤回（删掉导出的文件）。</div>`,
+    `<button onclick="closeDlg()">好</button>`);
+}
+async function cvUndo(name){
+  if (!confirm("撤回这次转换？只删这次新建的会话 / 文件；在目标应用里又接着聊过的会保留。")) return;
+  try { const x = await api("/api/convert/undo", {ledger: name});
+    if (x.deferred) { doneOrQueued(x); return; }
+    toast(x.ok ? `✅ 撤回了 ${x.removed} 个${(x.kept || []).length ? `，保留 ${x.kept.length} 个（之后又聊过）` : ""}` : "❌ " + ((x.errors || []).join("；") || x.error || "没撤回干净"), 7000);
+    SS.d = null; treeLoad(); R.convert(); }
+  catch(e){ toast("❌ " + e.message, 6000); }
+}
 // 任意会话 → 给 Cursor 用的上下文文件（不写 Cursor 的数据库）
 async function ctxDlg(agent, id, x, proj){
   let r;
@@ -2139,7 +2288,7 @@ function ssList(){
     ${rows.map(x => `<tr class="click${SS.cur && skey(SS.cur) === skey(x) ? " sel" : ""}" data-k="${esc(skey(x))}"><td><input type="checkbox" data-c="${esc(skey(x))}" ${SS.sel.has(skey(x)) ? "checked" : ""}></td>
       <td class="tl"><div class="ell">${logo(x.agent)} ${esc(x.title || "（无标题）")}${x.alias ? ' <span class="tag" title="只在本程序里改的名字">别名</span>' : ""}</div><span class="s">${esc(x.first || "")}</span></td>
       <td class="ell" title="${esc(x.cwd)}">${esc(projName(x.cwd))}</td><td class="n">${when(x.last)}</td><td class="n">${kb(x.size)}</td>
-      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? (x.agent === "dsh" ? '<span class="tag claude">从 Claude Code 导入</span> ' : '<span class="tag codex">Codex 导入</span> ') : ""}${x.agent === "dsh" ? '<span class="tag dsh">只读</span> ' : x.agent === "cursor" ? `<span class="tag cursor" title="${esc(x.source_name || "Cursor")}">只读</span> ` : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数（点开看时间线）" data-tl="${esc(skey(x))}" style="cursor:pointer">${ic("history")}${x.backups}</span>` : ""}</td></tr>`).join("")}</table>`
+      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? (x.agent === "dsh" ? '<span class="tag claude">从 Claude Code 导入</span> ' : '<span class="tag codex">Codex 导入</span> ') : ""}${x.agent === "dsh" ? '<span class="tag dsh">只读</span> ' : x.agent === "cursor" ? `<span class="tag cursor" title="${esc(x.source_name || "Cursor")}">只读</span> ` : x.agent === "opencode" || x.agent === "zcode" ? `<span class="tag ${x.agent}" title="${esc(x.source_name || "")}">只读</span> ` : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数（点开看时间线）" data-tl="${esc(skey(x))}" style="cursor:pointer">${ic("history")}${x.backups}</span>` : ""}</td></tr>`).join("")}</table>`
     : `<div class="emp">${ic("search")}${SS.d.items.length ? "没有符合筛选的会话" + (TR.sel || SS.q ? "<div><button id='ssClr'>清除筛选</button></div>" : "") : "还没有 Claude Code / Codex 会话"}</div>`;
   $$("#ssList [data-c]").forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { c.checked ? SS.sel.add(c.dataset.c) : SS.sel.delete(c.dataset.c); ssBatch(); }; });
   $$("#ssList tr[data-k]").forEach(tr => tr.onclick = () => { const [a, ...i] = tr.dataset.k.split(":"); ssView(a, i.join(":")); treeRender(); });
@@ -2165,7 +2314,7 @@ async function ssFulltext(){
   catch(e){ toast("❌ " + e.message); }
 }
 // 聊天样式的只读记录
-const chatHtml = (entries, agent) => entries.length ? entries.map(m => `<div class="msg ${m.role === "user" ? "user" : m.role === "tool" ? "tool" : "assistant"}">${m.role !== "tool" ? `<div class="who">${m.role === "user" ? "你" : agent === "codex" ? "Codex" : agent === "dsh" ? "DeepSeek Harness" + (m.model ? " · " + esc(m.model) : "") : agent === "cursor" ? "Cursor" : "Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>` : ""}${esc(m.text)}</div>`).join("") : '<div class="empty">（没有对话内容）</div>';
+const chatHtml = (entries, agent) => entries.length ? entries.map(m => `<div class="msg ${m.role === "user" ? "user" : m.role === "tool" ? "tool" : "assistant"}">${m.role !== "tool" ? `<div class="who">${m.role === "user" ? "你" : agent === "codex" ? "Codex" : agent === "dsh" ? "DeepSeek Harness" + (m.model ? " · " + esc(m.model) : "") : agent === "cursor" ? "Cursor" : agent === "opencode" ? "OpenCode" + (m.model ? " · " + esc(m.model) : "") : agent === "zcode" ? "ZCode" + (m.model ? " · " + esc(m.model) : "") : "Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>` : ""}${esc(m.text)}</div>`).join("") : '<div class="empty">（没有对话内容）</div>';
 async function ssView(agent, id){
   SS.cur = {agent, id};
   $$("#ssList tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === agent + ":" + id));
@@ -2178,19 +2327,23 @@ async function ssView(agent, id){
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
+        <button data-v="conv">${ic("shuffle")} 转换到别的应用…</button>
         <button data-v="ctx">${ic("cursor", "logo curc")} 给 Cursor 用（导出上下文文件）…</button>
-        ${agent === "dsh" ? `<button data-v="copy">${ic("copy")} 复制继续命令（dsh 命令行）</button><button data-v="tocc">${ic("claude", "logo")} 导进 Claude Code…</button>`
+        ${agent === "opencode" || agent === "zcode" ? (x.resume ? `<button data-v="copy">${ic("copy")} 复制继续命令（opencode 命令行）</button>` : "")
+          : agent === "dsh" ? `<button data-v="copy">${ic("copy")} 复制继续命令（dsh 命令行）</button><button data-v="tocc">${ic("claude", "logo")} 导进 Claude Code…</button>`
           : agent === "cursor" ? `${x.resume ? `<button data-v="copy">${ic("copy")} 复制继续命令（cursor-agent）</button>` : ""}<button data-v="tocc">${ic("claude", "logo")} 导进 Claude Code…</button>`
           : `<button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button><button data-v="copy">${ic("copy")} 复制继续命令</button>
         <button data-v="del" class="danger">${ic("trash")} 删除（进回收站）</button>`}</div></span>
-      ${agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
+      ${agent === "opencode" || agent === "zcode" ? `<button class="primary" id="svOpen" title="${APPN[agent]} 的会话本程序只读；可以转成别的应用的会话接着聊">${ic("shuffle")} 转换…</button>` :
+        agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
         agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；也可以导进 Claude Code 接着聊">${ic("claude", "logo")} 导进 Claude Code…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
-    <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : agent === "opencode" || agent === "zcode" ? `<span class="tag ${agent}">${esc(x.source_name || APPN[agent])} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
     <div class="pv">${chatHtml(r.entries, agent)}
       ${r.cut ? `<div class="dim" style="text-align:center;font-size:calc(13px*var(--fk))">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条（导出能看全部）</div>` : ""}</div>`;
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
-  if (agent === "cursor") $("#svOpen").onclick = () => { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); };
+  if (agent === "opencode" || agent === "zcode") $("#svOpen").onclick = () => cvOpen(agent, [id]);
+  else if (agent === "cursor") $("#svOpen").onclick = () => { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); };
   else if (agent === "dsh") $("#svOpen").onclick = () => { copyText(x.resume || id); toast("已复制 dsh 命令行的继续命令。用桌面版的话，在 DeepSeek Harness 的会话列表里点开它就能接着聊（本程序不改 dsh 的会话）", 7000); };
   else $("#svOpen").onclick = async () => { try { const o = await api("/api/sessions/open", {agent, id}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } };
   $("#svMoreB").onclick = e => { e.stopPropagation(); $("#svMore").classList.toggle("open"); };
@@ -2201,6 +2354,7 @@ async function ssView(agent, id){
     if (v === "tocc" && agent === "cursor") { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); return; }
     if (v === "tocc") { DS.dir = "to-claude"; DS.sel = new Set([id]); DS.touched = true; DS.plan = null; go("dsh"); return; }
     if (v === "ctx") return ctxDlg(agent, id, x);
+    if (v === "conv") return cvOpen(agent, [id]);
     if (v === "del") return ssAct("delete", [{agent, id}]); });
 }
 // 列表里登记着、但对话文件已经没了（比如 API 模式里的旧条目）：照样显示，只给能做的操作
@@ -2273,6 +2427,7 @@ function ssRename(agent, id, x){
     `<button onclick="closeDlg()">取消</button><button class="primary" id="rnGo">保存</button>`);
   setTimeout(() => $("#rnName").select(), 30);
   if (agent === "cursor") { $("#rnTool").disabled = true; $("#rnTool").closest("label").style.opacity = .5; $("#rnTool").closest("label").title = "Cursor 的数据库本程序不写：只改本程序里的显示名"; }
+  if (agent === "opencode" || agent === "zcode") { $("#rnTool").disabled = true; $("#rnTool").closest("label").style.opacity = .5; $("#rnTool").closest("label").title = APPN[agent] + " 的数据库本程序不写：只改本程序里的显示名"; }
   if (agent === "dsh") { $("#rnTool").disabled = true; $("#rnTool").closest("label").style.opacity = .5; $("#rnTool").closest("label").title = "DeepSeek Harness 的会话文件本程序不改：只改本程序里的显示名"; }
   if (x.orphan) { $("#rnTool").disabled = true; $("#rnTool").closest("label").style.opacity = .5; $("#rnTool").closest("label").title = "对话文件不存在：只改本程序里的显示名"; }
   $("#rnName").onkeydown = e => { if (e.key === "Enter") $("#rnGo").click(); };
@@ -2302,7 +2457,7 @@ document.addEventListener("keydown", e => {        // 单个会话的时间线�
 function tlGacct(x){
   const m = SS.d && SS.d.items.find(i => i.agent === x.agent && i.id === x.id);
   if (m) return m.gacct;
-  return x.agent === "codex" ? "codex:" + (x.provider || "openai") : x.agent === "dsh" ? "dsh:" + (x.provider || (x.imported ? "imported" : "-")) : x.agent === "cursor" ? "cursor:" + (x.cwd || "-") : ((x.accounts || [])[0] || "unknown");
+  return x.agent === "codex" ? "codex:" + (x.provider || "openai") : x.agent === "dsh" ? "dsh:" + (x.provider || (x.imported ? "imported" : "-")) : x.agent === "cursor" ? "cursor:" + (x.cwd || "-") : x.agent === "opencode" || x.agent === "zcode" ? x.agent + ":" + (x.cwd || "-") : ((x.accounts || [])[0] || "unknown");
 }
 R.timeline = async () => {
   if (!SS.d) await treeLoad();
@@ -2477,7 +2632,7 @@ function tlGrowth(runs, idx){
   const mx = Math.max(1, ...vs.map(val)), X = t => P + (t - t0) / span * (W - 2*P), Y = m => H - 8 - (m || 0) / mx * (H - 20);
   const pts = vs.map(v => [X(v.at), Y(val(v))]);
   const step = ps => ps.map(([x, y], i) => i ? `H${x.toFixed(1)}V${y.toFixed(1)}` : `M${x.toFixed(1)},${y.toFixed(1)}`).join("") + `H${W - P}`;
-  const apps = ag ? [] : [["claude", "var(--claude)"], ["codex", "var(--cxn)"], ["dsh", "var(--dsh,#4d6bfe)"], ["cursor", "var(--cur,#3a3a38)"]].filter(([k]) => vs.some(v => (v.apps || {})[k]));
+  const apps = ag ? [] : [["claude", "var(--claude)"], ["codex", "var(--cxn)"], ["dsh", "var(--dsh,#4d6bfe)"], ["cursor", "var(--cur,#3a3a38)"], ["opencode", "var(--oc,#1f7a8c)"], ["zcode", "var(--zc,#5b4bd6)"]].filter(([k]) => vs.some(v => (v.apps || {})[k]));
   const lab = i => `${val(vs[i]).toLocaleString()} 条`;
   return `<div class="tlspark tlgrow" id="tlGr"><div class="tlglab"><b>全部会话的消息总数</b>${ag ? `（只算 ${esc(APPN[ag] || ag)}）` : ""} · 现在 ${val(vs[vs.length - 1]).toLocaleString()} 条
       ${apps.length > 1 ? apps.map(([k, c]) => `<span class="tlgk"><i style="background:${c}"></i>${esc(APPN[k])}</span>`).join("") : ""}</div>
@@ -2762,7 +2917,7 @@ R.diag = async () => {
         <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
       <div class="card">${ag("claude", "Claude")}${ag("codex", "Codex")}</div></div></div>
     <div class="card"><h3>${ic("folder")}数据目录</h3>
-      ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}${dirRow("DeepSeek Harness", "dsh_home", d.dsh_home || "")}${dirRow("Cursor（User）", "cursor_user_dir", d.cursor_user_dir || "")}${dirRow("Cursor（~/.cursor）", "cursor_home", d.cursor_home || "")}
+      ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}${dirRow("DeepSeek Harness", "dsh_home", d.dsh_home || "")}${dirRow("Cursor（User）", "cursor_user_dir", d.cursor_user_dir || "")}${dirRow("Cursor（~/.cursor）", "cursor_home", d.cursor_home || "")}${dirRow("OpenCode", "opencode_dir", d.opencode_dir || "")}${dirRow("ZCode", "zcode_dir", d.zcode_dir || "")}
       <div class="dgls" style="margin-top:8px">${(d.app_dirs.parts || []).map(p => `<div>桌面端${esc(p.name)}：${esc(p.path)}（${esc(p.why)}）</div>`).join("")}</div>
       <div class="dim" style="font-size:calc(13px*var(--fk))">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME / DSH_HOME / CURSOR_USER_DIR / CURSOR_CONFIG_DIR 优先。</div></div>
     ${apiCard(d.api)}
