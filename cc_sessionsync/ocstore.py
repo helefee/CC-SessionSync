@@ -124,7 +124,8 @@ def find_cli() -> str | None:
 
 def cli_version(cli: str) -> str | None:
     try:
-        r = subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=30, stdin=subprocess.DEVNULL, env=_cli_env())
+        r = subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=30, stdin=subprocess.DEVNULL,
+                           env=_cli_env(tempfile.gettempdir()), cwd=tempfile.gettempdir())
         v = (r.stdout or "").strip().splitlines()
         return v[-1].strip() if v else None
     except Exception:
@@ -490,8 +491,10 @@ def detect(agent: str) -> dict:
 
 # ---------- 写：OpenCode（只用它自己的命令行，只建新会话） ----------
 
-def _cli_env() -> dict:
+def _cli_env(cwd: str | None = None) -> dict:
     env = dict(os.environ)
+    if cwd:
+        env["PWD"] = cwd                                # opencode 认 $PWD 先于真正的工作目录：不对上的话 1.x 跑完不退出
     v = os.environ.get("CC_SESSIONSYNC_OPENCODE_DATA") or _set("opencode_dir")
     if v and Path(v).name == "opencode":               # 自己指定了数据目录：让命令行也用它
         env["XDG_DATA_HOME"] = str(Path(v).parent)
@@ -518,7 +521,7 @@ def import_session(data: dict, cwd: str | None, cli: str | None = None, timeout:
         args = [cli, "session", "import", "--standalone"] + (["--directory", cwd] if cwd and Path(cwd).is_dir() else []) + [str(f)] \
             if major >= 2 else [cli, "import", str(f)]
         run_cwd = cwd if cwd and Path(cwd).is_dir() else str(tmp)
-        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout, cwd=run_cwd, stdin=subprocess.DEVNULL, env=_cli_env(),
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout, cwd=run_cwd, stdin=subprocess.DEVNULL, env=_cli_env(run_cwd),
                            encoding="utf-8", errors="replace")
         out = ((r.stdout or "") + (r.stderr or ""))[-400:]
         if r.returncode != 0:
@@ -542,7 +545,7 @@ def delete_session(sid: str, cli: str | None = None) -> dict:
     major = cli_major(cli)
     args = [cli, "session", "delete", "--standalone", sid] if major >= 2 else [cli, "session", "delete", sid]
     try:
-        r = subprocess.run(args, capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL, env=_cli_env(),
+        r = subprocess.run(args, capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL, env=_cli_env(tempfile.gettempdir()),
                            cwd=tempfile.gettempdir(), encoding="utf-8", errors="replace")
         ok = r.returncode == 0 and not has_session(sid)
         return {"ok": ok, "error": None if ok else f"opencode 退出码 {r.returncode}", "out": ((r.stdout or "") + (r.stderr or ""))[-300:]}

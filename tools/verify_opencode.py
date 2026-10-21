@@ -57,7 +57,7 @@ def main() -> int:
                CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), CC_SESSIONSYNC_HOME=str(T / "ss"),
                CC_SESSIONSYNC_OPENCODE_DATA=str(T / "data" / "opencode"), CC_SESSIONSYNC_ZCODE_HOME=str(H / ".zcode"),
                CC_SESSIONSYNC_OPENCODE_CLI=oc, CC_SESSIONSYNC_NO_WATCH="1", CC_SESSIONSYNC_NO_WATCHER="1", OPENCODE_DISABLE_AUTOUPDATE="1",
-               OPENCODE_DISABLE_LSP_DOWNLOAD="1", OPENCODE_DISABLE_MODELS_FETCH="1", PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
+               OPENCODE_DISABLE_LSP_DOWNLOAD="1", PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     log = T / "mock.jsonl"
     mock = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_openai.py"), str(port), str(log)])
     wait_port(port)
@@ -68,7 +68,7 @@ def main() -> int:
         c or fails.append(m)
 
     def ocrun(*args, timeout=180):
-        return subprocess.run([oc, *args], cwd=str(proj), env=env, capture_output=True, text=True, encoding="utf-8", errors="replace",
+        return subprocess.run([oc, *args], cwd=str(proj), env=dict(env, PWD=str(proj)), capture_output=True, text=True, encoding="utf-8", errors="replace",
                               stdin=subprocess.DEVNULL, timeout=timeout)
 
     def ccss(*args):
