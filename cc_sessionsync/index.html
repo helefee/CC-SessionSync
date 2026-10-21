@@ -493,7 +493,6 @@ td.nw{white-space:nowrap}
     <nav class="pnav" id="nav">
       <button class="pb" data-p="timeline" title="时间线：选一个时间点，预览、恢复"><i data-ic="history"></i><span>时间线</span></button>
       <button class="pb" data-p="sync" title="账号同步"><i data-ic="users"></i><span>账号同步</span></button>
-      <button class="pb" data-p="codex" title="Codex → Claude Code"><i data-ic="codex" data-cls="logo"></i><span>Codex→Claude</span></button>
       <button class="pb" data-p="convert" title="会话转换：Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 任意互转"><i data-ic="shuffle"></i><span>会话转换</span></button>
       <button class="pb" data-p="backups" title="备份与还原"><i data-ic="download"></i><span>备份</span></button>
       <button class="pb" data-p="usage" title="用量统计"><i data-ic="chart"></i><span>用量</span></button>
@@ -832,7 +831,7 @@ function go(p){
   if (!R[p]) return;
   if (PAGE !== p && $("#dlg").classList.contains("open")) closeDlg();
   PAGE = p;
-  $$("#nav [data-p], #tbSet").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor"))));
+  $$("#nav [data-p], #tbSet").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor" || p === "codex"))));
   $("#side").classList.toggle("on", p === "sessions");
   $$(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
   store.set("ccss.page", p);
@@ -872,6 +871,20 @@ $("#sdDate").onchange = e => { SS.date = e.target.value; sdApply(); };
 $("#sdStat").onchange = e => { SS.status = e.target.value; sdApply(); };
 $("#sdImp").onclick = () => imDlg();
 $("#sdRef").onclick = async () => { SS.d = null; await treeLoad(); if (PAGE === "sessions") R.sessions(); };
+// 以前的一对一页面（0.2.8 起都并进「会话转换」）：深链接 / 托盘 / 通知 / 记住的上次页面指向它们时，打开会话转换并预选方向
+const PAGE_ALIAS = {codex: ["codex", "claude"], dsh: ["dsh", "claude"], cursor: ["cursor", "claude"]};
+function goTo(p, o){
+  o = o || {};
+  const a = PAGE_ALIAS[p];
+  if (a || (p === "convert" && (o.src || o.dst))) {
+    const src = o.src || (a && a[0]), dst = o.dst || (a && a[1]);
+    if (src && CV_AG.includes(src) && src !== CV.src) { CV.src = src; CV.rows = null; CV.sel.clear(); }
+    if (dst && CV_AG.includes(dst) && dst !== CV.src) CV.dst = dst;
+    if (CV.dst === CV.src) CV.dst = CV.src === "claude" ? "codex" : "claude";
+    p = "convert";
+  }
+  go(p);
+}
 // 托盘菜单 / 通知点进来：window.ccOpen("codex") 或 ccOpen({page: "sync", account_switch: "claude-desktop"})
 // 用量、供应商、自检都是窗口里的页面（不弹窗）
 window.ccOpen = target => {
@@ -879,7 +892,7 @@ window.ccOpen = target => {
   const p = {selfcheck: "diag"}[t.page] || t.page;
   if (p === "update") return updOpen(false);
   if (p === "jobs") { go("backups"); setTimeout(() => { const j = $("#bkJobs"); if (j) j.scrollIntoView({block: "start"}); }, 300); return; }
-  if (p) go(p);
+  if (p) goTo(p, t);
   if (t.closeRun) setTimeout(() => crAsk(t.closeRun), 200);       // 托盘「立即同步」时桌面端开着：打开窗口直接问
 };
 
@@ -995,8 +1008,8 @@ function renderBans(){
     ST.acct = ST.acct.filter(x => x.k !== k); renderBans();
     if (b.dataset.a === "x") return;
     const page = a && a.open && a.open.page || "sync";
-    if (b.dataset.a === "open") return go(page);
-    if (page === "codex") { go("codex"); return; }     // Codex 换号：导入页按新账号重新看一遍
+    if (b.dataset.a === "open") return goTo(page, a && a.open);
+    if (page === "codex" || (page === "convert" && a.open.src === "codex")) { goTo("convert", {src: "codex", dst: "claude"}); return; }     // Codex 换号：会话转换（Codex → Claude Code）按新账号重新看一遍
     go("sync"); syncSelected(true);
   });
   $$("#bans [data-j]").forEach(b => b.onclick = () => ccOpen("jobs"));
@@ -1835,8 +1848,11 @@ function cxQs(only){
   if (CX.all) p.set("all", "1"); if (only) p.set("only", only.join(","));
   return p.toString();
 }
-R.codex = async (keep) => {
-  const pg = $("#pg-codex");
+R.codex = async (keep, host) => {
+  // host：嵌在「会话转换」里（来源 Codex → 目标 Claude Code）时的容器；没有就是旧的单独页面（会话转换页底的链接进来）
+  CX.host = host || null;
+  const pg = host || $("#pg-codex");
+  if (host) $("#pg-codex").innerHTML = ""; else { const e = $("#cvCodex"); if (e) e.innerHTML = ""; }     // 同一套元素 id 只留一份
   if (!CX.plan) pg.innerHTML = '<div class="empty">读取 Codex 对话…</div>';
   let pl, s;
   try { [pl, s] = await Promise.all([api("/api/codex/plan?" + cxQs()), api("/api/settings")]); }
@@ -1846,7 +1862,7 @@ R.codex = async (keep) => {
   if (!CX.touched) CX.rows.forEach(r => { if (r.state === "new" || r.state === "update") CX.sel.add(r.thread); });
   const projs = [...new Set(CX.rows.map(r => r.cwd).filter(Boolean))].sort();
   const c = pl.counts || {};
-  pg.innerHTML = `<h2>${ic("codex", "logo")}Codex → Claude Code</h2>
+  pg.innerHTML = `${host ? "" : `<h2>${ic("codex", "logo")}Codex → Claude Code</h2>`}
     <p class="sub">把 Codex 的对话转成 Claude Code 的会话记录，之后在 Claude Code 里 <code>/resume</code> 或桌面端列表里接着聊。只读 Codex 的数据；写之前先演练，看清楚会改哪些文件再导；每次导入都有账本，可以撤回。</p>
     <div class="bar"><input type="search" id="cxQ" placeholder="搜标题 / 目录 / 线程号" value="${esc(CX.q)}">
       <select id="cxDays">${[["7","最近 7 天"],["30","最近 30 天"],["90","最近 90 天"],["0","全部"]].map(([v,t]) => `<option value="${v}" ${CX.days===v?"selected":""}>${t}</option>`).join("")}</select>
@@ -1861,10 +1877,10 @@ R.codex = async (keep) => {
       <div class="setrow"><div class="sl">${ic("shield")}<div><b>防止 Codex 再导回去（登记进 Codex 导入记录）</b><div class="sd">Codex 桌面端开了「从 Claude Code 导入」时，免得它把导过去的会话再导回一份重复的。会改 <code>~/.codex/external_agent_session_imports.json</code>（先备份，撤回时还原）。缺省关。</div></div></div>${sw("cxMark", CX.mark)}</div></div>`;
   cxList();
   $("#cxQ").oninput = e => { CX.q = e.target.value; cxList(); };
-  $("#cxDays").onchange = e => { CX.days = e.target.value; CX.touched = false; R.codex(); };
+  $("#cxDays").onchange = e => { CX.days = e.target.value; CX.touched = false; R.codex(false, CX.host); };
   $("#cxCwd").onchange = e => { CX.cwd = e.target.value; cxList(); };
   $$("#cxSt button").forEach(b => b.onclick = () => { CX.state = b.dataset.v; $$("#cxSt button").forEach(x => x.classList.toggle("on", x === b)); cxList(); });
-  $("#cxAll").onchange = e => { CX.all = e.target.checked; R.codex(); };
+  $("#cxAll").onchange = e => { CX.all = e.target.checked; R.codex(false, CX.host); };
   $("#cxDesk").onchange = e => { CX.desktop = e.target.checked; };
   $("#cxReas").onchange = e => { CX.reasoning = e.target.checked; if (CX.pv) cxPreview(CX.pv); };
   $("#cxMark").onchange = e => saveSetting({codex_mark_imported: e.target.checked}).then(() => { CX.mark = e.target.checked; });
@@ -1924,7 +1940,7 @@ async function cxDry(thenApply){
     try {
       const x = await api("/api/codex/import", {days: CX.days, only, all: CX.all ? 1 : 0, desktop: CX.desktop ? 1 : 0, reasoning: CX.reasoning ? 1 : 0, mark: CX.mark ? 1 : 0});
       closeDlg();
-      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「备份与还原」撤回）`)) { CX.touched = false; R.codex(); }
+      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「备份与还原」撤回）`)) { CX.touched = false; if (CX.host) R.convert(); else R.codex(); }
     } catch(e){ b.disabled = false; toast("❌ " + e.message, 5000); }
   };
 }
@@ -2102,10 +2118,11 @@ R.convert = async () => {
   const pg = $("#pg-convert");
   if (!CV.mat) pg.innerHTML = '<div class="empty">读取…</div>';
   let mat, src, leds;
-  try { [mat, src, leds] = await Promise.all([api("/api/convert/matrix"), CV.rowsFor === CV.src && CV.rows ? null : api(`/api/convert/sources?agent=${CV.src}`), api("/api/convert/ledgers")]); }
+  const cxMode = CV.src === "codex" && CV.dst === "claude";      // Codex → Claude Code：用 Codex 导入器（就地更新、防 Codex 再导回、含子代理…）
+  try { [mat, src, leds] = await Promise.all([api("/api/convert/matrix"), cxMode || (CV.rowsFor === CV.src && CV.rows) ? null : api(`/api/convert/sources?agent=${CV.src}`), api("/api/convert/ledgers")]); }
   catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   CV.mat = mat; if (src) { CV.rows = src.rows || []; CV.rowsFor = CV.src; }
-  const ids = new Set(CV.rows.map(r => r.id)); for (const t of [...CV.sel]) if (!ids.has(t)) CV.sel.delete(t);
+  const ids = new Set((CV.rows || []).map(r => r.id)); for (const t of [...CV.sel]) if (!ids.has(t)) CV.sel.delete(t);
   const T = mat.targets || {}, cell = (s, d) => (mat.cells[s] || {})[d];
   const md = (T[CV.dst] || {}).mode, exp = md === "export" || CV.export;
   const pick = (id, cur, dis) => `<div class="cvpk" id="${id}">${CV_AG.map(a => `<button data-a="${a}" class="${a === cur ? "on" : ""}" ${dis === a ? "disabled" : ""}>${logo(a)} ${CV_N[a]}</button>`).join("")}</div>`;
@@ -2117,7 +2134,7 @@ R.convert = async () => {
     <div class="card"><h3>${ic("shuffle")}方向</h3>
       <div style="display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:center"><b>从</b>${pick("cvSrc", CV.src)}<b>到</b>${pick("cvDst", CV.dst, CV.src)}</div>
       <div style="margin-top:10px">${CV.src === CV.dst ? "" : md === "native"
-        ? `<span class="tag ok">原生写入</span> ${esc((mat.how || {})[CV.dst] || "")}`
+        ? `<span class="tag ok">原生写入</span> ${cxMode ? "用 Codex 导入器：写成 Claude Code 会话（<code>claude --resume</code> / 桌面端列表），Codex 那边有新内容时就地更新，可选登记进 Codex 导入记录防止它再导回来。" : esc((mat.how || {})[CV.dst] || "")}`
         : `<span class="tag warn">导出上下文文件</span> ${esc((T[CV.dst] || {}).why || "")}。写好后在 ${CV_N[CV.dst]} 里新开对话，粘贴提示里的那句话（会自动复制）。`}</div>
       <details style="margin-top:10px" ${CV.mx ? "open" : ""} id="cvMx"><summary>全部方向一览（行 = 从，列 = 到；点格子直接选）</summary>
       <table class="cvm" style="margin-top:8px"><tr><th></th>${CV_AG.map(d => `<th>${logo(d)}<br>${CV_N[d]}</th>`).join("")}</tr>
@@ -2125,7 +2142,7 @@ R.convert = async () => {
           return `<td class="${c === "same" ? "same" : c === "native" ? "nat" : "exp"} ${s === CV.src && d === CV.dst ? "on" : ""}" ${c === "same" ? "" : `data-s="${s}" data-d="${d}"`} title="${c === "same" ? "" : esc(c === "native" ? (mat.how || {})[d] || "" : (T[d] || {}).why || "")}">${c === "same" ? "—" : c === "native" ? "原生" : "导出"}</td>`; }).join("")}</tr>`).join("")}</table>
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px"><span class="tag ok">原生</span> 写成目标应用自己的会话，能在它里面接着聊（Claude Code / Codex / DeepSeek Harness / OpenCode）。
         <span class="tag warn">导出</span> 写一份上下文文件 + 一句粘贴提示：Cursor 和 ZCode 的会话库没有公开格式、还有好几处要一起改，写坏了可能影响应用本身，所以不碰。</div></details></div>
-    <div class="bar"><input type="search" id="cvQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(CV.q)}"><span class="sp"></span><span class="dim">${logo(CV.src)} ${CV_N[CV.src]} 的会话 ${CV.rows.length} 个</span></div>
+    ${cxMode ? `<div id="cvCodex"><div class="empty">读取 Codex 对话…</div></div>` : `    <div class="bar"><input type="search" id="cvQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(CV.q)}"><span class="sp"></span><span class="dim">${logo(CV.src)} ${CV_N[CV.src]} 的会话 ${CV.rows.length} 个</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="cvList" style="border:0;border-radius:0;max-height:calc(48*var(--vh))"></div>
       <div class="batch"><span id="cvN"></span><span style="flex:1"></span><button id="cvDry">${ic("eye")} 演练：看会写什么</button><button class="primary" id="cvGo">${ic(exp ? "download" : "shuffle")} ${exp ? "导出选中的" : "转换选中的"}</button></div></div>
     <div class="card"><h3>选项</h3>
@@ -2135,7 +2152,7 @@ R.convert = async () => {
       <div class="setrow"><div class="sl">${ic("copy")}<div><b>转过的也再转一份</b><div class="sd">缺省不重复：转过且没变的跳过；又有新内容的也要勾这个才会再新建一份（旧的不动）</div></div></div>${sw("cvAgain", CV.again)}</div>` : ""}
       ${exp ? `<div class="setrow"><div class="sl">${ic("folder")}<div><b>写进项目目录</b><div class="sd">写到会话所在项目的 <code>.sessionsync/</code> 下（目标应用里直接 @ 得到）；缺省写到本程序的导出目录</div></div></div>${sw("cvProj", CV.project)}</div>` : ""}
       <div class="setrow"><div class="sl">${ic("users")}<div><b>子代理 / 已删的也列出来</b><div class="sd">缺省不列：父会话里已经有子代理的结果</div></div></div>${sw("cvSub", CV.sub)}</div>
-      <div class="dim" style="font-size:calc(13.5px*var(--fk))">工具调用变成文字摘要（输出截短），图片换成占位文字；转出去的会话标题带来源前缀（比如「（OpenCode）」），以后不会被转回来源（防止来回导）。</div></div>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">工具调用变成文字摘要（输出截短），图片换成占位文字；转出去的会话标题带来源前缀（比如「（OpenCode）」），以后不会被转回来源（防止来回导）。</div></div>`}
     <div class="card"><h3>${ic("activity")}OpenCode / ZCode 检测</h3><div class="dgls">${detRow("opencode")}${detRow("zcode")}</div>
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">只读：把它们的数据库连同 -wal 复制一份到临时目录再读，读完删掉；应用开着也能读。写 OpenCode 一律通过它自己的命令行（<code>opencode import</code>），要先关掉 OpenCode。数据目录可以在「诊断 → 数据目录」里改。</div></div>
     <div class="card"><h3>${ic("history")}转换记录（账本）</h3>${(leds || []).length ? `<table class="t"><tr><th>时间</th><th>方向</th><th class="n">个数</th><th>状态</th><th></th></tr>
@@ -2145,18 +2162,18 @@ R.convert = async () => {
         <td class="nw">${l.undone || !l.count ? "" : `<button data-u="${esc(l.name)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="empty">还没转过</div>'}
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回只删这次新建的会话 / 文件；转过去以后在目标应用里又接着聊过的会保留（不会把你后来聊的内容删掉）。</div></div>
     <div class="dim" style="font-size:calc(13px*var(--fk))">以前的专门页面还在：<a href="#" data-go="codex">Codex → Claude</a> · <a href="#" data-go="dsh">DeepSeek ⇄ Claude</a> · <a href="#" data-go="cursor">Cursor → Claude</a></div>`;
-  cvList();
+  if (cxMode) R.codex(false, $("#cvCodex")); else { const e = $("#pg-codex"); if (e) e.innerHTML = ""; cvList(); }
   $$("#cvSrc [data-a]").forEach(b => b.onclick = () => { if (CV.src === b.dataset.a) return; CV.src = b.dataset.a; CV.sel.clear(); CV.rows = null;
     if (CV.dst === CV.src) CV.dst = CV.src === "claude" ? "codex" : "claude"; R.convert(); });
   $$("#cvDst [data-a]").forEach(b => b.onclick = () => { CV.dst = b.dataset.a; R.convert(); });
   $$("#pg-convert .cvm [data-s]").forEach(td => td.onclick = () => { const ch = CV.src !== td.dataset.s; CV.src = td.dataset.s; CV.dst = td.dataset.d; if (ch) { CV.sel.clear(); CV.rows = null; } CV.mx = true; R.convert(); });
   $("#cvMx").ontoggle = e => { CV.mx = e.target.open; };
-  $("#cvQ").oninput = e => { CV.q = e.target.value; cvList(); };
+  if ($("#cvQ")) $("#cvQ").oninput = e => { CV.q = e.target.value; cvList(); };
   const on = (id, k) => { const e = $(id); if (e) e.onchange = ev => { CV[k] = ev.target.checked; if (["export", "sub"].includes(k)) R.convert(); }; };
   on("#cvReas", "reasoning"); on("#cvDesk", "desktop"); on("#cvExp", "export"); on("#cvAgain", "again"); on("#cvProj", "project"); on("#cvSub", "sub");
   $$("#pg-convert [data-go]").forEach(a => a.onclick = e => { e.preventDefault(); go(a.dataset.go); });
   $$("#pg-convert [data-u]").forEach(b => b.onclick = () => cvUndo(b.dataset.u));
-  $("#cvDry").onclick = () => cvDry(false); $("#cvGo").onclick = () => cvDry(true);
+  if ($("#cvDry")) { $("#cvDry").onclick = () => cvDry(false); $("#cvGo").onclick = () => cvDry(true); }
 };
 function cvList(){
   const q = CV.q.trim().toLowerCase(), all = (CV.rows || []).filter(r => CV.sub || !(r.subagent || r.archived));
@@ -3000,7 +3017,8 @@ async function updInstall(){
   try { const st = await api("/api/settings"); if (st.show_full_accounts) await rvSet(true); } catch(e){}
   rvPaint();
   await treeLoad();
-  go(R[want] ? want : "sessions");
+  const qs = new URLSearchParams(location.search);
+  if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst")}); else go("sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);       // 老链接 ?dlg=usage 之类：现在都是页面
   poll();
   try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}

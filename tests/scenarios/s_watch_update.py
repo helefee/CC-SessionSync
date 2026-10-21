@@ -40,7 +40,7 @@ ok(r == [] and not watch._cand, "flip away and back before it settles → no eve
 a = json.loads((H / ".codex/auth.json").read_text()); a["tokens"]["account_id"] = "acct-new"; a["tokens"]["id_token"] = demo_env.jwt({"email": "zhao.lei@example.com"})
 (H / ".codex/auth.json").write_text(json.dumps(a)); t = time.time() + 50; os.utime(H / ".codex/auth.json", (t, t))
 watch.tick(1050); ev = watch.tick(1060)
-ok(len(ev) == 1 and ev[0]["open"]["page"] == "codex" and "z***@example.com" in ev[0]["text"], "Codex account switch → event pointing at the Codex page")
+ok(len(ev) == 1 and ev[0]["open"]["page"] == "convert" and ev[0]["open"].get("src") == "codex" and ev[0]["open"].get("dst") == "claude" and "z***@example.com" in ev[0]["text"], "Codex account switch → event opens 会话转换 with Codex → Claude Code preselected (0.2.8)")
 dump = json.dumps(events.recent(100), ensure_ascii=False) + json.dumps(watch.status(), ensure_ascii=False)
 ok("FAKE-NOT-A-TOKEN" not in dump and "zhang.wei" not in dump and "wang.fang" not in dump and "id_token" not in dump, "no tokens / full emails in events or status")
 ts = ui.tray_state(-1); ok(ts["attention"] and any(e["kind"] == "account" for e in ts["events"]), "tray_state flags attention after a switch")

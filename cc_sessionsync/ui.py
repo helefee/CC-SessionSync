@@ -503,7 +503,7 @@ class H(BaseHTTPRequestHandler):
             r = dict(codex_import.run(dry=False, **kw), deferred=False)
             if r.get("done"):
                 events.add("import", f"已把 {r['done']} 个 Codex 对话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（Codex）」）",
-                           {"page": "codex"})
+                           {"page": "convert", "src": "codex", "dst": "claude"})
             return r
         if p == "/api/dsh/import":
             from . import dsh
