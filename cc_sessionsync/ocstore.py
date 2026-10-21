@@ -500,11 +500,9 @@ def _cli_env() -> dict:
 
 
 def cli_major(cli: str) -> int:
-    v = cli_version(cli) or ""
-    try:
-        return int(v.lstrip("v").split(".")[0])
-    except ValueError:
-        return 2
+    import re
+    m = re.search(r"(\d+)\.\d+", cli_version(cli) or "")
+    return int(m.group(1)) if m else 2
 
 
 def import_session(data: dict, cwd: str | None, cli: str | None = None, timeout: int = 120) -> dict:

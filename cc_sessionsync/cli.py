@@ -195,6 +195,68 @@ def cmd_cursor(a) -> int:
     return 2
 
 
+CLAB = {"new": "要转", "same": "转过了、没变", "changed": "来源又有新内容（加 --again 再转一份新的）", "loop": "本来就是从目标应用来的，不转回去",
+        "empty": "空会话", "error": "读不了", "missing": "找不到"}
+
+
+def cmd_convert(a) -> int:
+    from . import convert, ir, ocstore
+    if a.conv_cmd == "matrix":
+        m = convert.matrix()
+        ags = m["agents"]
+        print("来源 \\ 目标".ljust(18) + "".join(ir.SHORT[d][:10].ljust(12) for d in ags))
+        for s_ in ags:
+            print(ir.SHORT[s_][:16].ljust(18) + "".join({"same": "—", "native": "原生", "export": "导出"}[m["cells"][s_][d]].ljust(11) for d in ags))
+        for d in ags:
+            print(f"  → {ir.LABEL[d]}：{m['how'][d]}" + (f"（{m['targets'][d]['why']}）" if m["targets"][d]["why"] else ""))
+        return 0
+    if a.conv_cmd == "detect":
+        print(json.dumps({k: ocstore.detect(k) for k in ("opencode", "zcode")}, ensure_ascii=False, indent=1))
+        return 0
+    if a.conv_cmd == "list":
+        rows = convert.sources(a.agent)
+        rows.sort(key=lambda x: -(x.get("last") or 0))
+        for x in rows[: a.n]:
+            print(f"{_t(x.get('last'))}  {x['id']}  {x.get('msgs') or 0:>4} 条  {(x.get('title') or '')[:50]}  ·  {x.get('cwd') or ''}")
+        print(f"\n共 {len(rows)} 个")
+        return 0
+    if a.conv_cmd == "run":
+        ids = [x.strip() for x in (a.id or "").split(",") if x.strip()]
+        if not ids:
+            print("✗ 用 --id 指定会话（逗号分隔）")
+            return 2
+        if a.apply and not a.export:
+            k = convert.needs_close(a.to, desktop=not a.no_desktop)
+            if k:
+                from . import apps
+                print(f"✗ {apps.NAMES[k]} 正开着：先完全退出它再做（界面里的「会话转换」可以排队，等它退出后自动做）")
+                return 3
+        r = convert.run(a.src, ids, a.to, dry=not a.apply, again=a.again, reasoning=a.reasoning, desktop=not a.no_desktop,
+                        project=a.project, export=a.export)
+        print(f"{ir.LABEL[a.src]} → {ir.LABEL[a.to]}：" + ("原生写入" if r["mode"] == "native" else "导出上下文文件") + (f"（{r['why']}）" if r.get("why") else ""))
+        for x in r["rows"]:
+            print(f"  [{CLAB.get(x['state'], x['state'])}]  {x['id']}  {(x.get('title') or '')[:50]}"
+                  + (f"  ✗ {x['error']}" if x.get("error") else "")
+                  + (f"\n      → {x['file']}" if x.get("done") and x.get("file") else "")
+                  + (f"\n      {x['resume']}" if x.get("resume") else ""))
+        if r.get("paste") and not r.get("dry"):
+            print("粘贴提示：" + r["paste"])
+        print("演练（加 --apply 才写）" if r.get("dry") else f"✓ 做了 {r.get('done', 0)} 个，账本 {r.get('ledger')}")
+        return 0 if not r.get("errors") else 1
+    if a.conv_cmd == "ledgers":
+        for l in convert.ledgers():
+            print(f"{l['name']}  {l['what']}  {l['count']} 个" + ("（导出）" if l["mode"] == "export" else "") + (f"  （已撤回）" if l["undone"] else ""))
+        return 0
+    if a.conv_cmd == "undo":
+        r = convert.undo(a.ledger)
+        if r.get("error"):
+            print("✗ " + r["error"])
+            return 1
+        print(f"✓ 删了 {r['removed']} 个新建的" + (f"；没动（之后又改过）：{len(r['kept'])} 个" if r["kept"] else "") + (f"；出错：{r['errors']}" if r["errors"] else ""))
+        return 0 if r["ok"] else 1
+    return 2
+
+
 def cmd_dsh(a) -> int:
     from . import dsh
     if a.dsh_cmd == "detect":
@@ -418,6 +480,28 @@ def build_parser() -> argparse.ArgumentParser:
     x = ds.add_parser("undo", help="按账本撤回一次导入")
     x.add_argument("ledger")
     d.set_defaults(fn=cmd_dsh)
+    cv = sub.add_parser("convert", help="会话转换：任意应用的会话 → 任意应用（原生写入或导出上下文文件）")
+    cvs = cv.add_subparsers(dest="conv_cmd", required=True)
+    cvs.add_parser("matrix", help="哪些方向能原生写入、哪些只能导出")
+    cvs.add_parser("detect", help="检测 OpenCode / ZCode（数据目录、会话数，只读）")
+    x = cvs.add_parser("list", help="列出某个应用的会话")
+    x.add_argument("agent", choices=("claude", "codex", "dsh", "cursor", "opencode", "zcode"))
+    x.add_argument("-n", type=int, default=50)
+    x = cvs.add_parser("run", help="转换（缺省只演练）")
+    x.add_argument("--from", dest="src", required=True, choices=("claude", "codex", "dsh", "cursor", "opencode", "zcode"))
+    x.add_argument("--to", required=True, choices=("claude", "codex", "dsh", "cursor", "opencode", "zcode"))
+    x.add_argument("--id", required=True, help="会话号，逗号分隔")
+    x.add_argument("--apply", action="store_true", help="真的写（缺省只演练）")
+    x.add_argument("--again", action="store_true", help="来源又有新内容时，再转一份新的")
+    x.add_argument("--reasoning", action="store_true", help="思考也当文字带上")
+    x.add_argument("--no-desktop", action="store_true", help="→ Claude Code 时不登记进桌面端列表")
+    x.add_argument("--export", action="store_true", help="能原生写也只导出上下文文件")
+    x.add_argument("--project", action="store_true", help="上下文文件写进会话的工作目录下 .cc-sessionsync/")
+    cvs.add_parser("ledgers", help="转换记录")
+    x = cvs.add_parser("undo", help="撤回一次转换（只删没动过的）")
+    x.add_argument("ledger")
+    cv.set_defaults(fn=cmd_convert)
+
     cu = sub.add_parser("cursor", help="Cursor 的对话：列出、导进 Claude Code、把任意会话导成给 Cursor 的上下文文件")
     cs = cu.add_subparsers(dest="cursor_cmd", required=True)
     cs.add_parser("detect", help="Cursor 装在哪、数据在哪、开没开、有几个对话")

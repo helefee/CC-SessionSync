@@ -1,5 +1,5 @@
 """本地假模型（OpenAI chat-completions 兼容，流式），给 tools/verify_dsh.py 里的 dsh headless 用：不连外网、不用任何真钥匙。
-每个请求的 messages 记到 MOCK_LOG（只记角色和每条的前 80 字，用来确认导入的历史有没有被送进模型）。"""
+每个请求的 messages 记到 MOCK_LOG（只记角色和每条的前 2000 字，用来确认导入的历史有没有被送进模型）。"""
 import json, os, sys, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 LOG = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("MOCK_LOG", "mock_openai.jsonl")
@@ -16,7 +16,7 @@ class H(BaseHTTPRequestHandler):
             return " ".join(x.get("text", "") for x in c or [] if isinstance(x, dict))
         with open(LOG, "a", encoding="utf-8") as f:   # Windows 缺省 cp1252，写中文会抛错 → dsh 只看到 Connection error
             f.write(json.dumps({"path": self.path, "model": body.get("model"), "stream": body.get("stream"),
-                                "msgs": [{"role": m.get("role"), "text": txt(m.get("content"))[:80]} for m in msgs if isinstance(m, dict)]}, ensure_ascii=False) + "\n")
+                                "msgs": [{"role": m.get("role"), "text": txt(m.get("content"))[:2000]} for m in msgs if isinstance(m, dict)]}, ensure_ascii=False) + "\n")
         reply = "MOCK-REPLY: 我收到了 %d 条消息" % len(msgs)
         tool = self._want_tool(body, msgs)
         if self.path.rstrip("/").endswith("/responses"):
