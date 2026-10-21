@@ -39,6 +39,7 @@ def main() -> int:
     for s in (sys.stdout, sys.stderr):
         s.reconfigure(encoding="utf-8", errors="replace")
     oc = (sys.argv[1] if len(sys.argv) > 1 else "") or shutil.which("opencode") or "opencode"
+    oc = shutil.which(oc) or oc                     # Windows：npm 装的是 opencode.cmd
     port = int(sys.argv[2]) if len(sys.argv) > 2 else 8797
     T = Path(tempfile.mkdtemp(prefix="oc-verify-"))
     H = T / "home"

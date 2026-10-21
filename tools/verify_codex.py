@@ -44,6 +44,7 @@ def main() -> int:
     for s in (sys.stdout, sys.stderr):
         s.reconfigure(encoding="utf-8", errors="replace")
     codex = (sys.argv[1] if len(sys.argv) > 1 else "") or shutil.which("codex") or "codex"
+    codex = shutil.which(codex) or codex
     port = int(sys.argv[2]) if len(sys.argv) > 2 else 8798
     T = Path(tempfile.mkdtemp(prefix="codex-verify-"))
     H, CH = T / "home", T / "home" / ".codex"
