@@ -1153,7 +1153,8 @@ def _ms(ts) -> int | None:
         return None
 
 
-def build_dsh(cc_file: Path, title: str | None = None, out_lines: int = 20, out_chars: int = 2000) -> dict:
+def build_dsh(cc_file: Path, title: str | None = None, out_lines: int = 20, out_chars: int = 2000, note: bool = True,
+              prefix: str | None = None) -> dict:
     """把一个 Claude Code 会话拼成 dsh 第 4 版会话（只算，不写）：每一轮 = turn/start、step/start、user/message、
     assistant/message、step/end、turn/end，全是 'append'。只带文字：工具调用和结果变成助手消息里的文字摘要（结果截短），
     思考丢掉，图片占位，系统提示 / 子代理 / 命令行内部消息不带。"""
@@ -1239,7 +1240,7 @@ def build_dsh(cc_file: Path, title: str | None = None, out_lines: int = 20, out_
         evs.append(e)
         return e["seq"]
 
-    note = (f"（以下是从 Claude Code 导入的对话「{title}」，Claude Code 会话 {csid or cc_file.stem}"
+    note = "" if not note else (f"（以下是从 Claude Code 导入的对话「{title}」，Claude Code 会话 {csid or cc_file.stem}"
             + (f"，工作目录 {cwd}" if cwd else "")
             + "。Claude Code 里跑过的工具只留了文字摘要，输出是截短的；接着做之前先看一下文件 / git 的当前状态。）\n\n")
     turn, i, titled = 0, 0, False
@@ -1262,7 +1263,7 @@ def build_dsh(cc_file: Path, title: str | None = None, out_lines: int = 20, out_
                                   "source": {"kind": "user"}}, True, ts)
         if not titled:
             titled = True
-            add("session/title", {"title": TO_DSH_PREFIX + title, "messageSeqs": [us], "source": {"kind": "fallback"}}, ts=ts)
+            add("session/title", {"title": (TO_DSH_PREFIX if prefix is None else prefix) + title, "messageSeqs": [us], "source": {"kind": "fallback"}}, ts=ts)
         a_text = "\n\n".join(a[1]) if a else "（Claude Code 那边到这里还没有回复。导入到此为止。）"
         add("assistant/message", {"turn": turn, "step": 1,
                                   "message": {"role": "assistant", "id": str(uuid.uuid4()), "content": [{"type": "text", "text": a_text}],

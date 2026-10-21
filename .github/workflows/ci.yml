@@ -37,7 +37,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4.2.2
       - uses: actions/setup-python@v5.6.0
@@ -60,6 +60,24 @@ jobs:
         run: python tools/verify_dsh.py "" 8797
       - name: verify Cursor → Claude Code (claude --resume on IDE / agent-transcript / cursor-agent conversations, local mock)
         run: python tools/verify_cursor.py "" 8796
+      - name: verify OpenCode / ZCode → Claude Code (claude --resume) and → dsh (dsh --session-id), local mocks
+        env:
+          DSH_BIN: dsh
+        run: python tools/verify_convert.py "" 8794
+      - name: install Codex CLI (Apache-2.0)
+        run: npm install -g @openai/codex
+      - name: verify any → Codex (codex exec resume against a local Responses-API mock)
+        run: python tools/verify_codex.py "" 8792
+      - name: install OpenCode CLI 2.x (MIT) and 1.x (separate prefix)
+        shell: bash
+        run: |
+          npm install -g @opencode/cli
+          npm install --prefix "$RUNNER_TEMP/oc1" opencode-ai@1
+      - name: verify any → OpenCode 2.x (session import / list / run -s / delete, local mock)
+        run: python tools/verify_opencode.py "" 8790
+      - name: verify any → OpenCode 1.x (import / list / run -s / delete, local mock)
+        shell: bash
+        run: python tools/verify_opencode.py "$RUNNER_TEMP/oc1/node_modules/.bin/opencode" 8788
 
   build:
     runs-on: ${{ matrix.os }}

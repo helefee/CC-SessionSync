@@ -13,6 +13,7 @@
     dsh_home                                  DeepSeek Harness 的数据目录（缺省 ~/.dsh；环境变量 DSH_HOME 优先）
     ui_font / ui_zoom                         界面字号倍数（0.8–1.5，缺省 1）和界面缩放（0.8–2，缺省 1）（0.2.6）
     cursor_user_dir / cursor_home             Cursor 的 User 目录（state.vscdb 所在）和 ~/.cursor（诊断里选）（0.2.6）
+    opencode_dir / zcode_dir / opencode_cli    OpenCode 数据目录、ZCode 主目录（~/.zcode）、opencode 命令行路径（0.2.7）
 开机自启不存在这里：看注册表 HKCU\\...\\Run 本身（tray.autostart_get）。
 """
 from __future__ import annotations

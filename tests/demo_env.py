@@ -27,6 +27,7 @@ def env_for(T: Path) -> dict:
                 CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), CC_SESSIONSYNC_HOME=str(T / "ss"),
                 CC_SESSIONSYNC_FAKE_APP=str(T / "desktop-running"),
                 CURSOR_USER_DIR=str(T / "cfg" / "Cursor" / "User"), CURSOR_CONFIG_DIR=str(H / ".cursor"), CC_SESSIONSYNC_FAKE_CURSOR_PROCS=str(T / "noprocs.json"), CC_SESSIONSYNC_FAKE_PROCS=str(T / "noprocs.json"),
+                CC_SESSIONSYNC_FAKE_OPENCODE_PROCS=str(T / "noprocs.json"), CC_SESSIONSYNC_FAKE_ZCODE_PROCS=str(T / "noprocs.json"),
                 CC_SESSIONSYNC_NO_WATCHER="1", CC_SESSIONSYNC_KEYSTORE="file", PYTHONIOENCODING="utf-8", PYTHONUTF8="1",
                 CC_SESSIONSYNC_UPDATE_URL=(T / "release.json").as_uri())
 
@@ -230,6 +231,30 @@ def build(T: Path, extra: bool = False) -> dict:
         c2 = CF.Composer(name="给 /orders 加分页", cwd="/work/api", wid=w2, t0=ms(5), mode="chat", model="gpt-5")
         c2.user("给 /orders 加分页，默认 20 条"); c2.say("用 limit/offset，默认 limit=20、上限 100；返回 total。代码如下：\n```ts\nconst limit = Math.min(+q.limit || 20, 100)\n```"); c2.write(CUD)
         CF.transcript(CH, "work-shop", "a" + U()[1:], [("user", "订单导出 CSV 太慢"), ("assistant", ("tool", "Read", {"path": "export.ts"})), ("assistant", "改成流式写出，10 万行 3 秒。")])
+    if os.environ.get("CCSS_DEMO_OC"):              # OpenCode / ZCode（只在演示 / 截图时加）：用测试夹具的真实表结构，换成演示用的文字
+        import sqlite3
+        import oc_fixture as OF
+        ms = lambda days: int((NOW - timedelta(days=days)).timestamp() * 1000)
+        ocd = H / ".local" / "share" / "opencode"
+        OF.opencode(ocd, "/work/shop", t0=ms(1))
+        OF.zcode(H / ".zcode", "/work/web", t0=ms(3))
+        R = [("OC1-MARK ", ""), ("OC1-THINK ", ""), (" OC1-TOOL-OUT", ""), ("OC1-ANSWER ", ""), ("OC2-MARK ", ""), ("OC2-THINK", "看下 utils 有哪些函数"),
+             (" OC2-TOOL-OUT", ""), ("OC2-ANSWER ", ""), ("ZC-MARK ", ""), ("ZC-THINK", "先找按钮的事件绑定"), (" ZC-TOOL-OUT", ""), ("ZC-ANSWER ", ""),
+             ("ZC-REMINDER", "todo"), ("ZC-NOTIFY", "done")]
+        for f, tabs in ((ocd / "opencode.db", ("message", "part", "session_message")), (H / ".zcode" / "cli" / "db" / "db.sqlite", ("message", "part"))):
+            c = sqlite3.connect(str(f))
+            for t in tabs:
+                for a, b in R:
+                    c.execute(f"update {t} set data = replace(data, ?, ?)", (a, b))
+            for a, b in (("OC1 修复构建", "修复 npm run build 报错"), ("OC2 写单测", "给 utils 写单元测试"), ("ZC 修登录", "登录按钮点了没反应"), ("原标题", "整理路由")):
+                c.execute("update " + ("session_v2" if "OC2" in a else "session") + " set title = ? where title = ?", (b, a)) if (f.name != "db.sqlite") == a.startswith("OC") else None
+            c.commit()
+            c.close()
+        t = sqlite3.connect(str(H / ".zcode" / "v2" / "tasks-index.sqlite"))
+        t.execute("update tasks set title = '登录按钮点了没反应' where title = 'ZC 修登录'")
+        t.execute("update tasks set title = '整理路由（我改的名）' where title = '用户改的名字'")
+        t.commit()
+        t.close()
     return {"A1": A1, "A2": A2, "A3": A3, "sessions": sessions}
 
 

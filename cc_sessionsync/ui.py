@@ -196,9 +196,18 @@ def diag() -> dict:
         lines.append(f"  API 模式会话列表：{ab['bucket']['key'][:14]}…  {ab['bucket']['count']} 个（所有供应商共用）")
     for c in ab.get("cands") or []:
         lines.append(f"    {'→' if c['active'] else ' '} {c['label']}：{'有' if c['exists'] else '没有'}" + (f"，{c['buckets']} 个会话列表文件夹" if c["buckets"] else ""))
+    try:
+        from . import ocstore
+        for k in ("opencode", "zcode"):
+            d = ocstore.detect(k)
+            lines.append(f"{d['name']}：数据 {d['db']}（{'有' if d['db_exists'] else '没有'}）  会话 {d['sessions']} 个 / 项目 {d['projects']} 个"
+                         + (f"  命令行 {d['cli']}" if d.get("cli") else "") + ("  在运行" if d["running"] else "") + (f"  出错：{d['error']}" if d.get("error") else ""))
+    except Exception as e:
+        lines.append(f"OpenCode / ZCode 检测出错：{type(e).__name__}")
     return {"report": r, "accounts": acc, "watch": w, "app_dirs": ad, "api": ab, "text": "\n".join(lines),
             "claude_home": str(paths.CLAUDE_HOME), "codex_home": str(paths.CODEX_HOME), "dsh_home": _settings_get("dsh_home"),
             "cursor_user_dir": _settings_get("cursor_user_dir"), "cursor_home": _settings_get("cursor_home"),
+            "opencode_dir": _settings_get("opencode_dir"), "zcode_dir": _settings_get("zcode_dir"),
             "version": __version__, "frozen": paths.FROZEN, "exe": paths.EXE if paths.FROZEN else None}
 
 
@@ -368,6 +377,24 @@ class H(BaseHTTPRequestHandler):
                 return cursor.run_context(q.get("agent") or "claude", q.get("id") or "", into_project=q.get("project") in ("1", "true"), dry=True)
             if p == "/api/cursor/ledgers":
                 return cursor.ledgers()
+        if p.startswith("/api/convert/"):
+            from . import convert, ocstore
+            if p == "/api/convert/matrix":
+                return dict(convert.matrix(), detect={k: ocstore.detect(k) for k in ("opencode", "zcode")})
+            if p == "/api/convert/sources":
+                a = q.get("agent") or "claude"
+                org = convert.origins()
+                rows = convert.sources(a)
+                rows.sort(key=lambda x: -(x.get("last") or 0))
+                return {"agent": a, "rows": [{"id": x["id"], "title": x.get("title"), "cwd": x.get("cwd"), "last": x.get("last"), "msgs": x.get("msgs"), "size": x.get("size"),
+                                              "subagent": bool(x.get("subagent")), "archived": bool(x.get("archived")), "source_name": x.get("source_name"),
+                                              "origin": convert.origin_of(a, x["id"], x.get("tool_title") or x.get("title"), org)} for x in rows]}
+            if p == "/api/convert/plan":                 # 只演练
+                ids = [x for x in (q.get("ids") or "").split(",") if x.strip()]
+                return convert.run(q.get("src") or "", ids, q.get("dst") or "", dry=True, again=q.get("again") in ("1", "true"),
+                                   export=q.get("export") in ("1", "true"))
+            if p == "/api/convert/ledgers":
+                return convert.ledgers()
         if p == "/api/diag":
             return diag()
         if p == "/api/jobs":
@@ -507,6 +534,21 @@ class H(BaseHTTPRequestHandler):
                 events.add("import", f"已把 {r['done']} 个 Cursor 对话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（Cursor）」）",
                            {"page": "sessions"})
             return r
+        if p == "/api/convert/run":                      # 任意 → 任意（目标应用开着就排队，等它退出后做）
+            from . import convert, ir
+            kw = {"src": str(b.get("src") or ""), "ids": [str(x) for x in (b.get("ids") or [])], "dst": str(b.get("dst") or ""),
+                  "again": bool(b.get("again")), "reasoning": bool(b.get("reasoning")), "desktop": b.get("desktop", True) is not False,
+                  "to": b.get("to") or None, "project": bool(b.get("project")), "export": bool(b.get("export"))}
+            k = None if kw["export"] else convert.needs_close(kw["dst"], kw["desktop"])
+            if k:
+                return apps.run_or_defer(k, "convert-run", kw, f"把 {len(kw['ids'])} 个 {ir.LABEL.get(kw['src'], kw['src'])} 会话转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
+            return dict(convert.run(dry=False, **kw), deferred=False)
+        if p == "/api/convert/undo":
+            from . import convert
+            k = convert.undo_needs_close(str(b.get("ledger")))
+            if k:
+                return apps.run_or_defer(k, "convert-undo", {"ledger": str(b.get("ledger"))}, f"撤回会话转换 {b.get('ledger')}")
+            return dict(convert.undo(str(b.get("ledger"))), deferred=False)
         if p == "/api/cursor/context":                   # 写上下文文件（不碰 Cursor 的数据库，不用等谁退出）
             from . import cursor
             r = cursor.run_context(str(b.get("agent") or "claude"), str(b.get("id") or ""), into_project=bool(b.get("project")), dry=False)
@@ -548,8 +590,8 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/appdir":
             return _settings_dir("claude_app_dir", b.get("path") or "")
         if p == "/api/datadir":
-            if b.get("which") not in ("claude_dir", "codex_dir", "dsh_home", "cursor_user_dir", "cursor_home"):
-                raise ValueError("which 只能是 claude_dir / codex_dir / dsh_home / cursor_user_dir / cursor_home")
+            if b.get("which") not in ("claude_dir", "codex_dir", "dsh_home", "cursor_user_dir", "cursor_home", "opencode_dir", "zcode_dir"):
+                raise ValueError("which 只能是 claude_dir / codex_dir / dsh_home / cursor_user_dir / cursor_home / opencode_dir / zcode_dir")
             return dict(_settings_dir(b["which"], b.get("path") or ""), note="重启 CC Session Sync 后全面生效")
         if p == "/api/pickdir":
             return detect.pick_folder(b.get("start") or "")
