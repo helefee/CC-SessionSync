@@ -30,7 +30,7 @@ import uuid
 from pathlib import Path
 
 NOWIN = 0x08000000 if os.name == "nt" else 0
-APP = {"claude": "Claude", "codex": "Codex"}
+APP = {"claude": "Claude", "codex": "Codex", "opencode": "OpenCode", "zcode": "ZCode"}
 WAIT = 15.0          # 正常关闭最多等多久，再问要不要强制结束
 TAIL = 5.0           # 退干净后再等一会儿（退出时写盘有个尾巴）
 LAUNCH_WAIT = 30.0   # 重新打开后最多等多久确认它起来了
@@ -271,6 +271,15 @@ def is_app(kind: str, p: dict, win: bool) -> bool:
         if not win:
             return "codex.app/contents/macos" in (p.get("exe") or "").lower() or "app-server" in (p.get("cmd") or "")
         return ("openai.codex" in exe and name in ("chatgpt.exe", "codex.exe")) or (name == "codex.exe" and "app-server" in (p.get("cmd") or ""))
+    if kind == "opencode":
+        # 桌面版 OpenCode.exe 和它带的 opencode-cli.exe（后台服务 / 终端版）都开着库，都算
+        if not win:
+            return name in ("opencode", "opencode-cli") or "/opencode.app/contents/macos" in (p.get("exe") or "").lower()
+        return name in ("opencode.exe", "opencode-cli.exe")
+    if kind == "zcode":
+        if not win:
+            return name == "zcode" or "/zcode.app/contents/macos" in (p.get("exe") or "").lower()
+        return name == "zcode.exe"
     return False
 
 

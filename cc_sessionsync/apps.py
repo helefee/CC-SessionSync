@@ -24,7 +24,7 @@ from . import paths
 QUEUE = paths.HOME / "pending-jobs.json"
 LOG = paths.HOME / "after-quit.log"
 NOWIN = 0x08000000 if os.name == "nt" else 0
-NAMES = {"claude": "Claude 桌面端", "codex": "Codex 桌面端"}
+NAMES = {"claude": "Claude 桌面端", "codex": "Codex 桌面端", "opencode": "OpenCode", "zcode": "ZCode"}
 
 
 # ---------- 进程 ----------
@@ -51,7 +51,7 @@ def _procs() -> list[dict]:
             LAST.update(error=f"进程快照失败：{type(e).__name__}")
     if os.name == "nt":
         ps = ("Get-CimInstance Win32_Process -Filter \"Name='Claude.exe' OR Name='claude.exe' OR Name='ChatGPT.exe' "
-              "OR Name='Codex.exe' OR Name='codex.exe'\" | Select-Object ProcessId,Name,ExecutablePath,CommandLine "
+              "OR Name='Codex.exe' OR Name='codex.exe' OR Name='OpenCode.exe' OR Name='opencode-cli.exe' OR Name='opencode.exe' OR Name='ZCode.exe'\" | Select-Object ProcessId,Name,ExecutablePath,CommandLine "
               "| ConvertTo-Json -Compress")
         try:
             r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], capture_output=True, timeout=30,
@@ -114,7 +114,7 @@ def relaunch(info: dict | None) -> bool:
 
 VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "codex-import": "导入", "codex-undo": "撤回导入",
          "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
-         "timeline-replace": "恢复"}
+         "timeline-replace": "恢复", "convert-run": "转换", "convert-undo": "撤回转换"}
 
 
 def verb(op: str, args: dict | None = None) -> str:
@@ -176,6 +176,11 @@ def _dsh():
     return dsh
 
 
+def _convert():
+    from . import convert
+    return convert
+
+
 def _ops():
     """op 名 → 函数(**args) -> dict。放在函数里导入，免得循环引用。"""
     from . import claude_sync, codex_import
@@ -188,6 +193,8 @@ def _ops():
         "dsh-undo": lambda **a: _dsh().undo(a["ledger"]),
         "cursor-to-claude": lambda **a: _cursor().run_to_claude(dry=False, **a),
         "cursor-undo": lambda **a: _cursor().undo(a["ledger"]),
+        "convert-run": lambda **a: _convert().run(dry=False, **a),
+        "convert-undo": lambda **a: _convert().undo(a["ledger"]),
         "sessions-batch": lambda **a: _sessions().batch(a["action"], a["items"]),
         "sessions-rename": lambda **a: _sessions().rename(a["agent"], a["id"], a["name"], bool(a.get("write_tool"))),
         "sessions-trash-restore": lambda **a: _sessions().trash_restore(a["batch"], a.get("only")),
