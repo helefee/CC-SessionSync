@@ -462,8 +462,9 @@ def _to_dsh(h, items, opts, led) -> dict:
         b["records"] = [r for r in b["records"] if r.get("type") != "custom-title"]
         cf = tmp / "x.jsonl"
         cf.write_text(CI._dump(b["records"]), encoding="utf-8")
-        title = ir.PREFIX.get(h.get("agent"), "") + (h.get("title") or ir.title_of(items) or "对话")
-        d = dsh.build_dsh(cf, title=title)
+        pre = ir.PREFIX.get(h.get("agent"), "")
+        d = dsh.build_dsh(cf, title=h.get("title") or ir.title_of(items) or "对话", note=False, prefix=pre)
+        title = pre + d["title"]
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     f = dsh.write_session(Path(wr["root"]), wr["compression"], d["header"], d["events"])

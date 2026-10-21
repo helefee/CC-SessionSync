@@ -271,7 +271,8 @@ def _items_v1(msgs, parts_by: dict) -> list[dict]:
         sem = d.get("semantics") if isinstance(d.get("semantics"), dict) else None
         if sem and sem.get("kind") and sem["kind"] not in _KEEP_KINDS:
             continue                              # ZCode 的提醒 / 通知 / 时间线这些不是对话
-        mdl = _model({"providerID": d.get("providerID"), "id": d.get("modelID")}) if role == "assistant" else None
+        mdl = _model({"providerID": d.get("providerID") or d.get("providerId"), "id": d.get("modelID") or d.get("modelId")}) \
+            if role == "assistant" else None
         ts = (d.get("time") or {}).get("created") or m["time_created"]
         imgs, texts = 0, []
         for p in parts_by.get(m["id"], []):
@@ -289,7 +290,7 @@ def _items_v1(msgs, parts_by: dict) -> list[dict]:
                 items.append({"role": "assistant", "kind": "tool", "tool": pd.get("tool"), "input": st.get("input"),
                               "output": _tool_out(st), "status": st.get("status"),
                               "error": _clip(st.get("error")) if st.get("error") else None, "ts": ts, "model": mdl})
-            elif pt == "file" and str(pd.get("mime") or "").startswith("image/"):
+            elif pt == "file" and str(pd.get("mime") or pd.get("mediaType") or "").startswith("image/"):
                 imgs += 1
         if role == "user" and (texts or imgs):
             items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None})
@@ -334,7 +335,43 @@ def _read_db(agent: str) -> tuple[list[dict], dict]:
                             "model": _model(_j(s["model"])) if "model" in sc else None, "project": s["project_id"],
                             "project_dir": (proj.get(s["project_id"]) or {}).get("worktree"), "items": _items_v1(msgs, pb)})
                 stat["v1"] += 1
+    if agent == "zcode":
+        tk = _zcode_tasks()
+        stat["tasks"] = len(tk)
+        stat["tasks_matched"] = 0
+        keep = []
+        for m in out:
+            t = tk.get(m["id"])
+            if t:
+                stat["tasks_matched"] += 1
+                if t.get("deleted"):
+                    continue                       # 在 ZCode 里删了的不列
+                if t.get("title") and (t.get("title_overridden") or not m["title"]):
+                    m["title"] = t["title"]
+                m["archived"] = m["archived"] or bool(t.get("archived"))
+                m["cwd"] = m["cwd"] or t.get("workspace_path")
+            keep.append(m)
+        out = keep
     return out, stat
+
+
+def _zcode_tasks() -> dict:
+    """ZCode 桌面端的任务列表（v2/tasks-index.sqlite）：task_id → {title, archived, deleted}。只拿这几列。"""
+    f = data_dir("zcode") / "v2" / "tasks-index.sqlite"
+    if not f.exists():
+        return {}
+    out = {}
+    try:
+        with _Snap(f) as con:
+            cols = _tables(con).get("tasks") or set()
+            want = [c for c in ("task_id", "title", "title_overridden", "archived", "deleted", "workspace_path") if c in cols]
+            if "task_id" not in want:
+                return {}
+            for r in con.execute(f"select {', '.join(want)} from tasks"):
+                out[r["task_id"]] = {k: r[k] for k in want}
+    except Exception:
+        return {}
+    return out
 
 
 def legacy_count(agent: str) -> int:
@@ -445,7 +482,7 @@ def detect(agent: str) -> dict:
     d = {"agent": agent, "name": NAMES[agent], "data_dir": str(data_dir(agent)), "db": str(f), "db_exists": size is not None,
          "db_bytes": size or 0, "install": info, "running": bool(procs(agent)), "sessions": len(rows), "by_source": by,
          "projects": len({group_of(r) for r in rows}), "error": st.get("error"), "mirror": str(mirror_dir(agent)),
-         "legacy_json": legacy_count(agent), "found": size is not None or bool(info) or data_dir(agent).is_dir()}
+         "legacy_json": legacy_count(agent), "stat": st.get("stat"), "found": size is not None or bool(info) or data_dir(agent).is_dir()}
     if agent == "opencode":
         d["cli"] = find_cli()
     return d
