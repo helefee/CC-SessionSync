@@ -233,5 +233,12 @@ ok(len({(s["agent"], s["id"]) for s in snaps}) >= 6, f"backups include opencode/
 tl = timeline.sessions() if hasattr(timeline, "sessions") else None
 gr = timeline.growth() if hasattr(timeline, "growth") else None
 ok(gr is None or any(k in json.dumps(gr) for k in ("opencode", "zcode")), "timeline growth knows opencode/zcode")
+sn = [x for x in S.snapshots("zcode") if x.get("sid", x.get("id")) == zc["main"] or x.get("sid") == zc["main"]]
+if sn:
+    rr = timeline.restore([sn[0]["id"]], mode="copy", desktop=False)
+    ok(rr["ok"] and rr["made"] and Path(rr["made"][0]["file"] if "file" in rr["made"][0] else rr["made"][0].get("path", "")).exists(), f"timeline: zcode snapshot → new Claude Code session {rr.get('errors')}")
+    ok(timeline.restore([sn[0]["id"]], mode="replace")["ok"] is False, "timeline: replace refused for zcode")
+else:
+    ok(False, "zcode snapshot found")
 hold.close()
 print("FAILS", len(FAILS)); sys.exit(1 if FAILS else 0)

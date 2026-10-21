@@ -53,7 +53,7 @@ ROLE = {"user": "你", "assistant": None, "tool": "工具"}
 
 
 def _who(agent: str, role: str) -> str:
-    return ROLE.get(role) or {"codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor"}.get(agent, "Claude")
+    return ROLE.get(role) or {"codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}.get(agent, "Claude")
 
 
 # ---------- 导出 ----------
@@ -66,7 +66,7 @@ def to_md(agent: str, raw: bytes, meta: dict) -> str:
           "messages": sum(1 for e in es if e["role"] != "tool")}
     out = ["---"] + [f"{k}: {json.dumps(v, ensure_ascii=False)}" for k, v in fm.items()] + ["---", "", f"# {meta.get('title') or '会话'}", ""]
     if meta.get("cwd"):
-        out += [f"> { {'codex': 'Codex', 'dsh': 'DeepSeek Harness', 'cursor': 'Cursor'}.get(agent, 'Claude Code') } · `{meta['cwd']}`", ""]
+        out += [f"> { {'codex': 'Codex', 'dsh': 'DeepSeek Harness', 'cursor': 'Cursor', 'opencode': 'OpenCode', 'zcode': 'ZCode'}.get(agent, 'Claude Code') } · `{meta['cwd']}`", ""]
     tools: list[str] = []
 
     def flush():
@@ -142,7 +142,7 @@ def to_html(agent: str, raw: bytes, meta: dict) -> str:
     flush()
     raw_json = json.dumps({"v": 1, "agent": agent, "id": meta.get("id"), "sha256": sha, "size": len(raw), "title": title,
                            "cwd": meta.get("cwd"), "data": _pack(raw)}, ensure_ascii=False).replace("</", "<\\/")
-    src = {"codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor"}.get(agent, "Claude Code")
+    src = {"codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}.get(agent, "Claude Code")
     return (f'<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
             f'<meta name="generator" content="CC Session Sync {__version__}"><title>{H.escape(title)}</title><style>{CSS}</style></head><body><main>'
             f'<h1>{H.escape(title)}</h1><div class="meta">{src}{" · " + H.escape(meta["cwd"]) if meta.get("cwd") else ""} · '

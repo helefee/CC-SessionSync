@@ -226,6 +226,9 @@ def agent_file(agent: str, sid: str) -> Path | None:
     if agent == "cursor":                       # Cursor：本程序的镜像（~/.cc-sessionsync/cursor-mirror），不是 Cursor 自己的文件
         from . import cursor
         return cursor.find_file(sid)
+    if agent in ("opencode", "zcode"):          # OpenCode / ZCode：本程序的镜像（~/.cc-sessionsync/mirror/<应用>）
+        from . import ocstore
+        return ocstore.find_file(agent, sid)
     return codex_file(sid)
 
 
@@ -237,6 +240,9 @@ def parse_bytes(agent: str, data: bytes) -> list[dict]:
     if agent == "cursor":
         from . import cursor
         return cursor.entries_from_bytes(data)
+    if agent in ("opencode", "zcode"):
+        from . import ir
+        return ir.entries_from_bytes(data)
     parse = parse_claude if agent == "claude" else parse_codex
     out = []
     for line in data.splitlines():
@@ -253,6 +259,14 @@ def cursor_sessions(names: dict | None = None) -> list[dict]:
     try:
         from . import cursor
         return cursor.sessions(names if names is not None else _aliases())
+    except Exception:
+        return []
+
+
+def oc_sessions(agent: str, names: dict | None = None) -> list[dict]:
+    try:
+        from . import ocstore
+        return ocstore.sessions(agent, names if names is not None else _aliases())
     except Exception:
         return []
 
@@ -426,7 +440,9 @@ def list_all(agent: str | None = None) -> dict:
     items = (claude_sessions(names) if agent in (None, "", "claude") else []) + \
             (codex_sessions(names) if agent in (None, "", "codex") else []) + \
             (dsh_sessions(names) if agent in (None, "", "dsh") else []) + \
-            (cursor_sessions(names) if agent in (None, "", "cursor") else [])
+            (cursor_sessions(names) if agent in (None, "", "cursor") else []) + \
+            (oc_sessions("opencode", names) if agent in (None, "", "opencode") else []) + \
+            (oc_sessions("zcode", names) if agent in (None, "", "zcode") else [])
     items.sort(key=lambda x: -(x["last"] or 0))
     bk = backup_index()
     for x in items:
@@ -537,6 +553,17 @@ def account_groups(items: list[dict]) -> list[dict]:
                         "hint": "Cursor 的对话（编辑器 / agent 记录 / cursor-agent 命令行），按工作区分" + (f"：{w}" if w else "")}
             g[k]["n"] += 1
             x["gacct"] = k
+        elif x["agent"] in ("opencode", "zcode"):   # OpenCode / ZCode：按项目（工作目录）分，记录里没有账号
+            w = x.get("cwd") or ""
+            k = x["agent"] + ":" + (w or "-")
+            app = "OpenCode" if x["agent"] == "opencode" else "ZCode"
+            if k not in g:
+                base = re.split(r"[\\/]", w.rstrip("\\/"))[-1] if w else ""
+                g[k] = {"key": k, "kind": x["agent"], "rid": "", "provider": None, "cwd": w or None,
+                        "masked": f"{app} · " + (base or "没有项目"), "tags": [], "current": False, "folders": [], "n": 0,
+                        "hint": f"{app} 的会话，按项目分" + (f"：{w}" if w else "")}
+            g[k]["n"] += 1
+            x["gacct"] = k
         elif x["agent"] == "dsh":                # DeepSeek Harness：按供应商分（记录里只有 provider id，没有账号）
             prov = x.get("provider") or ("" if not x.get("imported") else "imported")
             k = "dsh:" + (prov or "-")
@@ -588,7 +615,7 @@ def _account_labels(prefixes: list[str]) -> dict:
 
 def find(agent: str, sid: str) -> dict | None:
     rows = claude_sessions() if agent == "claude" else dsh_sessions() if agent == "dsh" else cursor_sessions() if agent == "cursor" \
-        else codex_sessions()
+        else oc_sessions(agent) if agent in ("opencode", "zcode") else codex_sessions()
     return next((x for x in rows if x["id"] == sid), None)
 
 
@@ -600,6 +627,9 @@ def read(agent: str, sid: str, limit: int = 400) -> dict:
     if agent == "cursor":
         from . import cursor
         return cursor.read(sid, limit)
+    if agent in ("opencode", "zcode"):
+        from . import ocstore
+        return ocstore.read(agent, sid, limit)
     f = claude_file(sid) if agent == "claude" else codex_file(sid)
     if not f:
         return {"ok": False, "error": "找不到会话记录文件"}
@@ -631,6 +661,12 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
         files += [("cursor", Path(r["file"])) for r in cursor.refresh()]
     except Exception:
         pass
+    try:
+        from . import ocstore
+        for a in ("opencode", "zcode"):
+            files += [(a, Path(r["file"])) for r in ocstore.refresh(a)]
+    except Exception:
+        pass
     files.sort(key=lambda x: -x[1].stat().st_mtime)
     for agent, f in files:
         if time.time() - t0 > limit_s:
@@ -647,7 +683,7 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
             with open(f, "rb") as fh:
                 while chunk := fh.read(8 * 1024 * 1024):
                     if needle in chunk.lower():
-                        hits.append({"agent": agent, "id": f.stem if agent in ("claude", "cursor") else (_codex_meta(f).get("id") or f.stem[-36:])})
+                        hits.append({"agent": agent, "id": f.stem if agent in ("claude", "cursor", "opencode", "zcode") else (_codex_meta(f).get("id") or f.stem[-36:])})
                         break
         except OSError:
             continue
@@ -729,6 +765,9 @@ def count_msgs(agent: str, data: bytes) -> int:
     if agent == "cursor":
         from . import cursor
         return cursor.count_msgs(data)
+    if agent in ("opencode", "zcode"):
+        from . import ir
+        return ir.count_msgs(data)
     parse = parse_claude if agent == "claude" else parse_codex
     n = 0
     for line in data.splitlines():
@@ -806,6 +845,12 @@ def backup(full: bool = False, only: list[tuple[str, str]] | None = None, why: s
         try:
             from . import cursor                  # 镜像先更新（只读 Cursor 的数据），再按文件备份
             files += [("cursor", r["id"], Path(r["file"])) for r in cursor.refresh()]
+        except Exception:
+            pass
+        try:
+            from . import ocstore                 # OpenCode / ZCode 也一样：镜像（只读它们的库的副本）
+            for a in ("opencode", "zcode"):
+                files += [(a, r["id"], Path(r["file"])) for r in ocstore.refresh(a)]
         except Exception:
             pass
     n_new = n_snap = n_skip = 0
@@ -966,6 +1011,8 @@ def rename(agent: str, sid: str, name: str, write_tool: bool = False) -> dict:
                 errors.append("DeepSeek Harness 的会话不改它自己的文件，只改了本程序里的显示名")
             elif agent == "cursor":
                 errors.append("Cursor 的对话不改它的数据库，只改了本程序里的显示名")
+            elif agent in ("opencode", "zcode"):
+                errors.append(("OpenCode" if agent == "opencode" else "ZCode") + " 的会话不改它的数据库，只改了本程序里的显示名")
             else:
                 _rename_codex(sid, name, d, led)
         except Exception as e:
@@ -1263,7 +1310,7 @@ def restore_snapshot(snap_id: int) -> dict:
     data = _blob(r["sha"])
     dst = Path(r["path"])
     od, led = _new_op("restore-snapshot", items=[{"agent": r["agent"], "id": r["sid"]}], snap=r["id"])
-    if not dst.exists() and r["agent"] not in ("dsh", "cursor"):   # dsh / Cursor：本程序从不写它们的数据      # dsh 的目录本程序从不写：一律另存到导出目录
+    if not dst.exists() and r["agent"] not in ("dsh", "cursor", "opencode", "zcode"):   # dsh / Cursor：本程序从不写它们的数据      # dsh 的目录本程序从不写：一律另存到导出目录
         _atomic(dst, data)
         led["steps"].append({"t": "created", "path": str(dst)})
         res = {"ok": True, "path": str(dst), "how": "original"}
@@ -1279,7 +1326,8 @@ def restore_snapshot(snap_id: int) -> dict:
         res = {"ok": True, "path": str(f), "how": "export",
                "note": "另存到了 exports 目录，没有动 DeepSeek Harness 的文件（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
                if r["agent"] == "dsh" else "另存到了 exports 目录，没有动 Cursor 的数据（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
-               if r["agent"] == "cursor" else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
+               if r["agent"] == "cursor" else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话，或用「会话转换」）"
+               if r["agent"] in ("opencode", "zcode") else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
     led["summary"] = f"从备份库恢复（{ {'original': '写回原处', 'copy': '另存为新会话', 'export': '另存到导出目录'}[res['how']] }）"
     _save_led(od, led)
     return dict(res, op=od.name)
