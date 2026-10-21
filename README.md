@@ -18,7 +18,9 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    也能把 Claude Code 会话导成一个**新的** dsh 会话；dsh 已有的会话一个字节都不改。用量统计也算 dsh 的。
 7. **Cursor ⇄ Claude Code（0.2.6）**：Cursor 的对话（编辑器里的 Agent / Chat、agent 记录、`cursor-agent` 命令行）也在会话管理里（只读），
    能导成 Claude Code 会话接着聊；反方向导出一份给 Cursor 的上下文文件（不写 Cursor 的数据库，原因见下）。界面字号和缩放可调（0.2.6）。
-8. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
+8. **会话转换（0.2.7）**：Claude Code、Codex、DeepSeek Harness、Cursor、**OpenCode**、**ZCode** 任意两个之间转会话；能安全原生写的写成目标的新会话，
+   写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
+9. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
 > 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
 > （本程序的数据都在 `~/.cc-sessionsync`）。
@@ -289,6 +291,39 @@ DeepSeek Harness 分开的细线也画出来；每次备份一个点，拖竖线
 | ![只读看 Cursor 对话](docs/screenshots/v026-sessions-cursor-view.png) | ![给 Cursor 用](docs/screenshots/v026-context-dialog.png) |
 | 会话管理里的 Cursor 对话（只读）。 | 反方向：导出一份给 Cursor @ 的上下文文件。 |
 
+### 会话转换：任意 → 任意，新增 OpenCode / ZCode（0.2.7）
+
+左边会话列表多了 **OpenCode** 和 **ZCode** 的会话（只读，按项目目录分组），备份库 / 时间线也收它们。顶栏的「会话转换」页把以前的
+DeepSeek⇄Claude、Cursor⇄Claude 合成一个：**选来源应用 → 勾会话 → 选目标应用**，Claude Code、Codex、DeepSeek Harness、Cursor、OpenCode、
+ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`：问 / 答 / 思考 / 工具调用 / 图片占位），再写成目标的格式。
+
+| 到 → | Claude Code | Codex | DeepSeek Harness | OpenCode | Cursor | ZCode |
+|---|---|---|---|---|---|---|
+| 方式 | 原生 | 原生 | 原生 | 原生（找到它的命令行时） | 导出 | 导出 |
+
+- **原生**：写成目标应用自己的**新**会话，能在里面接着聊：Claude Code（jsonl，可选登记进桌面端列表）、Codex（rollout + 标题）、
+  dsh（新会话目录）、OpenCode（交给 OpenCode **自己的命令行** `opencode import` / `opencode session import` 导入，不直接写它的库；
+  桌面版自带的 `opencode-cli` 也认）。目标应用开着时走「关闭并执行（完成后重启）」/ 等它退出后自动做。
+- **导出**：Cursor 和 ZCode 不写它们的库（格式没公开、要几处一起改、写坏了可能影响应用本身），只写一份 Markdown 上下文文件 + 一句粘贴提示
+  （写好自动复制）；可以写进项目里的 `.cc-sessionsync/`。原生方向也可以勾「只导出上下文文件」。
+- 先**演练**；每次一本账，在「转换记录」里撤回（只删这次新建的；转过去以后又接着聊过的保留）。转过且没变的跳过，来源有新内容时标出来，
+  勾「再转一份」才新建；从 A 转来的会话不会被原生转回 A（防止来回导）。标题带来源前缀，比如「（OpenCode）」。
+- 工具调用变成文字摘要（输出截短），思考缺省不带（可以当文字带上），图片换成占位。
+- **OpenCode**（开源终端 / 桌面编码代理）：会话在 `~/.local/share/opencode/opencode.db`（Windows 也是 `%USERPROFILE%\.local\share\opencode`；
+  `XDG_DATA_HOME` 优先），1.x 的 `session/message/part` 和 2.x 的 `session_v2/session_message` 都读。
+  **ZCode**（智谱 Z.ai 的 GLM 编码桌面端，引擎是 OpenCode 的分支）：`~/.zcode/cli/db/db.sqlite`，标题 / 删除标记合并
+  `~/.zcode/v2/tasks-index.sqlite`；提醒、通知这类系统消息不算对话。两个都是复制一份（连同 -wal）到临时目录再读，应用开着也能读；
+  账号 / 凭据表和文件从不读。目录可在「诊断 → 数据目录」里改。
+
+| | |
+|---|---|
+| ![会话转换](docs/screenshots/v027-convert-page.png) | ![演练](docs/screenshots/v027-convert-dryrun.png) |
+| 来源 → 目标 + 全部方向一览（原生 / 导出）+ 按项目分组的会话。 | 演练：会新建几个、每个带了什么。 |
+| ![导出](docs/screenshots/v027-convert-export.png) | ![转换记录](docs/screenshots/v027-convert-applied.png) |
+| 导出方向：文件 + 粘贴提示。 | OpenCode / ZCode 检测 + 转换记录（可撤回）。 |
+| ![OpenCode 会话](docs/screenshots/v027-sessions-opencode.png) | ![深色](docs/screenshots/v027-convert-page-dark.png) |
+| 会话管理里的 OpenCode 会话（只读）。 | 深色主题。 |
+
 ### 字号与界面缩放（0.2.6）
 
 - 缺省字号调大了一号（正文 15px，最小的标签 12px）。
@@ -384,6 +419,14 @@ cc-sessionsync cursor to-claude [--only 末几位] [--reasoning] [--subagents] [
 cc-sessionsync cursor context <claude|codex|dsh|cursor> <会话号> [--project] [--apply]   # 给 Cursor 用的上下文文件
 cc-sessionsync cursor ledgers                          # 账本
 cc-sessionsync cursor undo 20261018-201957            # 撤回
+
+# ⑥ 会话转换：任意 → 任意（0.2.7）
+cc-sessionsync convert matrix                          # 方向表：哪些原生写、哪些只导出
+cc-sessionsync convert detect                          # OpenCode / ZCode 装在哪、数据在哪、几个会话、opencode 命令行
+cc-sessionsync convert list <claude|codex|dsh|cursor|opencode|zcode> [-n 50]
+cc-sessionsync convert run --from opencode --to claude --id 会话号[,会话号] [--apply] [--again] [--reasoning] [--no-desktop] [--export] [--project]
+cc-sessionsync convert ledgers                         # 账本
+cc-sessionsync convert undo 20261021-042339            # 撤回
 
 cc-sessionsync jobs [--cancel ID]         # 等桌面端退出再做的任务
 cc-sessionsync diag                       # 检测报告（家目录已打码，可以直接发出来）
@@ -554,6 +597,16 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Any-to-any session conversion + OpenCode / ZCode (0.2.7):** a unified "会话转换" page (and `cc-sessionsync convert …`) converts sessions
+  between Claude Code, Codex, DeepSeek Harness, Cursor, OpenCode and ZCode through a common intermediate model (`ccss-ir/1`). Native
+  targets write a **new** session the target can resume: Claude Code (jsonl, optional desktop registration), Codex (rollout + session index),
+  dsh (new session dir) and OpenCode (imported through OpenCode's own CLI: `opencode session import --standalone` on 2.x, `opencode import`
+  on 1.x, incl. the desktop app's bundled `opencode-cli`). Cursor and ZCode are export-only (Markdown context file + paste prompt), as is
+  OpenCode when no CLI is found. Dry-run, ledgers + undo (sessions continued after conversion are kept), idempotency (same / changed /
+  again), loop protection, origin title prefixes. OpenCode (`~/.local/share/opencode/opencode.db`, 1.x `session/message/part` and 2.x
+  `session_v2/session_message`) and ZCode (`~/.zcode/cli/db/db.sqlite` + `v2/tasks-index.sqlite`) are read from a temp copy (db + wal),
+  listed read-only in session management grouped by project, backed up and shown in the timeline; credential/account tables are never read.
+  CI resumes converted sessions with the real CLIs: `claude --resume`, `codex exec resume`, `dsh --session-id`, `opencode run -s` (1.x and 2.x).
 - **Cursor ⇄ Claude Code (0.2.6):** reads Cursor's editor DB (`User/globalStorage/state.vscdb`: `cursorDiskKV` `composerData:<id>` +
   `bubbleId:<id>:<bubble>`, `composerHeaders`; `workspaceStorage/<hash>/workspace.json` for grouping), agent transcripts
   (`~/.cursor/projects/*/agent-transcripts`) and `cursor-agent` CLI stores (`~/.cursor/chats/<md5(cwd)>/<id>/store.db`) strictly read-only
