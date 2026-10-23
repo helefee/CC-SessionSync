@@ -10,9 +10,9 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 3. **会话管理**：Claude Code 和 Codex 的会话放一起看；左侧按**账号**（这台电脑上所有 Claude 桌面端账号 / 组织文件夹，含商店版目录、
    命令行账号、Codex 账号 / 供应商）或按**项目**分组，搜（标题 / 全文）、筛，只读查看对话；改名、归档、在终端里接着聊、
    删除（先备份进会话备份库，再挪进回收站，不直接删）；**导出 .md / .html 再导回来**（文件里带原始记录，无损）。
-4. **时间线**：会话备份库**缺省每 10 分钟自动增量备份**一次；选一个时间点，预览那时候的对话、和现在比，一键**「恢复到 Claude」**另存成新会话
+4. **时间线与备份**（0.2.9 起是同一个页面）：会话备份库**缺省每 10 分钟自动增量备份**一次；选一个时间点，预览那时候的对话、和现在比，一键**「恢复到 Claude」**另存成新会话
    （也能换回那一版、恢复到 Codex）。单个会话、或一批会话恢复到同一个时间点。
-5. **备份与还原**：会话备份库（`~/.cc-sessionsync/sessions.sqlite`：只存追加的部分 + 相同内容只存一份 + 压缩，保留规则可调）、回收站、
+5. **备份与撤销记录**（「时间线与备份」页的「备份」「撤销记录」分栏）：会话备份库（`~/.cc-sessionsync/sessions.sqlite`：只存追加的部分 + 相同内容只存一份 + 压缩，保留规则可调）、回收站、
    操作记录（每一步都能撤回）。
 6. **DeepSeek Harness ⇄ Claude Code（0.2.5）**：DeepSeek Harness（dsh）的会话也在会话管理里（只读），能导成 Claude Code 会话接着聊，
    也能把 Claude Code 会话导成一个**新的** dsh 会话；dsh 已有的会话一个字节都不改。用量统计也算 dsh 的。
@@ -45,14 +45,14 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 ## 桌面程序
 
 - 只开一个：再点快捷方式会把已经开着的窗口叫出来。关窗口缺省缩到托盘（设置里能改），托盘菜单：显示 / 隐藏窗口、立即同步 Claude 会话、
-  自动同步、会话转换（Codex → Claude Code）、会话管理、用量、供应商、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
+  自动同步、会话转换（Codex → Claude Code）、会话管理、时间线与备份、用量、供应商、排队中的改动（有的时候）、开机自启、关窗口到托盘、启动时到托盘、通知、
   检查更新、诊断自检、退出。
 - 界面只听 `127.0.0.1:8766`，每个请求都要带页面里的一次性口令（别的网页 / 程序调不了）。
 - **系统通知**：同步 / 导入做完、排队的改动做完、检测到换号、有新版本。可以在设置里关。
 
 ### 界面
 
-- **顶部按钮栏**（0.2.2）：时间线 / 账号同步 / 会话转换 / 备份 / 用量 / 供应商 / 诊断自检 / 检查更新（红点）/ 主题，当前页高亮；
+- **顶部按钮栏**（0.2.2；0.2.9 起）：时间线与备份 / 账号同步 / 会话转换 / 用量 / 供应商 / 诊断自检 / 检查更新（红点）/ 主题，当前页高亮；
   **设置（齿轮）在右上角**。点了在主区域显示那一页（**不是弹窗**，用量、供应商也一样，供应商的新增 / 编辑表单也在页面里，只有写配置前的确认还是小对话框）。
   点左上角标题、左侧「会话」或任何一个会话就回到会话页。窗口窄的时候按钮只显示图标（鼠标停上去有名字）。
 - **左侧面板只放会话列表**：搜会话（Ctrl+K）、全文搜、Claude / Codex、时间、归档筛选，下面是**按账号 / 按项目**的分组树，最里层就是会话本身
@@ -64,7 +64,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 ### 时间线与自动备份
 
-- **自动备份**缺省开、每 10 分钟（设置 / 备份页能改：数字 + 分钟 / 小时 / 天，最短 5 分钟）。只备份变过的会话，后台低优先级；正在跑就跳过这一轮；
+- **自动备份**缺省开、每 10 分钟（设置 / 「时间线与备份 → 备份」能改：数字 + 分钟 / 小时 / 天，最短 5 分钟）。只备份变过的会话，后台低优先级；正在跑就跳过这一轮；
   睡眠 / 关机错过了，醒来补一次；**失败才弹通知**。0.2.0 里没改过这个设置的，升级后就是新的缺省；改过小时数的照旧。
 - 存法：同一个会话的新版本如果只是在后面追加，就只存追加的那段（每隔 30 版存一次完整的）；相同内容只存一份；zlib 压缩。
   保留：最近 7 天全留，90 天内每天留最后一版，更早的每周一版（天数可调），每个会话最新一版永远留；「清理旧版本」才删。
@@ -109,7 +109,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 - **取消**：什么都不改。
 
 关之前会列出：由桌面端启动、正在跑的 Claude Code 会话（`claude.exe`）有几个，关闭桌面端会中断它们；不是桌面端开的命令行
-`claude` 进程也会列出来，**永远不会动它们**。顶部「N 个改动在排队」提示条和「备份 → 排队中的改动」里也有「关闭并执行（完成后重启）」。
+`claude` 进程也会列出来，**永远不会动它们**。顶部「N 个改动在排队」提示条和「时间线与备份 → 撤销记录 → 排队中的改动」里也有「关闭并执行（完成后重启）」。
 托盘里「立即同步」遇到桌面端开着，会打开窗口直接问。
 
 | | |
@@ -325,13 +325,33 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | 会话管理里的 OpenCode 会话（只读）。 | 深色主题。 |
 
 **0.2.8**：顶栏的「Codex→Claude」也并进了「会话转换」——顶栏不再有任何一对一的转换页。在会话转换里选「从 Codex → 到 Claude Code」，
-下面就是原来的 Codex 导入器（按天数 / 项目 / 状态筛选、含子代理等、预览、就地更新、「防止 Codex 再导回去」开关），账本照旧在「备份」里撤回。
+下面就是原来的 Codex 导入器（按天数 / 项目 / 状态筛选、含子代理等、预览、就地更新、「防止 Codex 再导回去」开关），账本在「时间线与备份 → 撤销记录」里撤回（0.2.9 前叫「备份」页）。
 原来的 Codex→Claude、DeepSeek⇄Claude、Cursor⇄Claude 单独页面只留在会话转换页底的链接里；托盘菜单、通知、`?page=codex` 这类深链接和
 记住的上次页面会打开会话转换并预选对应方向。
 
 | 之前（0.2.7） | 之后（0.2.8） |
 |---|---|
 | ![](docs/screenshots/v028-nav-before.png) | ![](docs/screenshots/v028-nav-after.png) |
+
+**0.2.9**：「时间线」和「备份」合成一个页面 **「时间线与备份」**，顶栏变成 时间线与备份 / 账号同步 / 会话转换 / 用量 / 供应商 / 诊断自检。
+页面顶上三个分栏 **时间线 | 备份 | 撤销记录**，旁边一直显示上次 / 下次备份和「立即备份」：
+
+- **时间线**（缺省）：原来的时间线一样不少——分段条、选时间点、预览、恢复到 Claude、按账号 / 按项目分组、增长曲线。
+- **备份**：会话备份库（自动备份间隔、立即备份、保留规则、清理旧版本、数据库位置和大小、最近的版本）、回收站、导出 / 导入 .md / .html。
+- **撤销记录**：排队中的改动、会话操作记录、Claude 账号同步备份、Codex / DeepSeek Harness / Cursor 导入账本、会话转换账本，都能撤回。
+
+`?page=backups`、`#backups`、记住的上次页面「备份」、托盘、通知（备份失败 → 备份分栏；排队的改动 → 撤销记录）、会话转换页的「撤销记录」链接
+都打开这个页面并切到对应分栏；`?page=timeline&tab=bk|undo` 也行。分栏会记住。托盘菜单多了「时间线与备份…」。
+
+| 之前（0.2.8）：时间线 | 之前（0.2.8）：备份 |
+|---|---|
+| ![](docs/screenshots/v029-before-timeline.png) | ![](docs/screenshots/v029-before-backups.png) |
+
+| 之后（0.2.9）：时间线 | 之后：备份 |
+|---|---|
+| ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
+| **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
+| ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
 ### 字号与界面缩放（0.2.6）
 
@@ -553,8 +573,8 @@ no admin, Start-menu shortcut, uninstaller; uses the system Edge WebView2; unsig
 Or `pip install "cc-sessionsync[desktop]"` from the wheel / `pip install git+https://github.com/helefee/CC-SessionSync` (CLI + browser UI).
 
 **Desktop app:** single instance, tray icon (minimize/close to tray, autostart, start hidden), system notifications. The UI listens on
-127.0.0.1:8766 only and every request needs a per-launch token. Since 0.2.2 all pages live in a **top button bar** (Timeline, Account sync,
-Codex → Claude, Backups, Usage, Providers, Diagnostics, Check for updates with a red dot, theme; **settings gear at the top-right**), shown in the
+127.0.0.1:8766 only and every request needs a per-launch token. Since 0.2.2 all pages live in a **top button bar** (since 0.2.9: Timeline & backups, Account sync,
+会话转换 (conversion), Usage, Providers, Diagnostics, Check for updates with a red dot, theme; **settings gear at the top-right**), shown in the
 main area (Usage and Providers are full pages, not dialogs; tray entries open the window on that page). The resizable, collapsible (Ctrl+B)
 **left panel shows only the session list**: search, filters and a group tree whose leaves are the sessions, grouped
 **by account** (every Claude Desktop account/org folder on the PC incl. the MSIX store dir, the CLI account, Codex accounts/providers;
@@ -606,6 +626,11 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Timeline & backups (0.2.9):** the Timeline and Backups pages are merged into one top-bar page "时间线与备份" with sub-tabs
+  时间线 (timeline: segment bars, point-in-time picking, preview, restore to Claude, account/project grouping, growth curve) | 备份 (session
+  backup DB: schedule, back up now, retention, location/size, recent versions; recycle bin; export/import .md/.html) | 撤销记录 (queued changes,
+  session-operation log, account-sync backups, Codex/dsh/Cursor import ledgers and conversion ledgers, all with undo). `?page=backups`,
+  `#backups`, the remembered last page, tray, notifications and the 会话转换 undo link open the right sub-tab (`?page=timeline&tab=bk|undo`).
 - **Navigation (0.2.8):** the top bar no longer has per-pair pages; "Codex→Claude" is merged into "会话转换" (Codex → Claude Code
   embeds the Codex importer with its day/project/state filters, include-subagents, preview, in-place update and the anti-reimport switch).
   The old Codex / dsh / Cursor pages are only linked at the bottom of 会话转换; tray item, notifications, `?page=codex` deep links and the
@@ -639,7 +664,7 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   watcher reported a switch (and later a switch back). Now: last-known desktop account guarded by timestamp, 2 consecutive stable reads,
   persisted baseline (`watch-state.json`), 3P mode changes reported as mode switches, and a switch is marked handled after a sync or when
   there is nothing to sync.
-- **Backups:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
+- **Backups** (in 时间线与备份 since 0.2.9)**:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
   operation ledger with undo.
 - **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code
   and Codex providers, keys in Windows Credential Manager, `apiKeyHelper` / `model_providers`, model list, mapping, connection test, backups

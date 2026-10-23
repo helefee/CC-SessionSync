@@ -427,6 +427,7 @@ class Tray:
                  (6, "自动同步（切号后补齐会话）", {"check": bool(s.get("auto_sync"))}),
                  (7, "会话转换（Codex → Claude Code）…", {}),
                  (8, "会话管理…", {}),
+                 (14, "时间线与备份…", {}),
                  (3, "用量…", {}), (4, "供应商…", {})]
         if d.get("jobs"):
             items.append((9, f"{d['jobs']} 个活在等桌面端退出…", {}))
@@ -493,8 +494,9 @@ class Tray:
             elif cmd == 6:
                 settings.update(auto_sync=not settings.get("auto_sync", False))
                 self.refresh()
-            elif cmd in (3, 4, 7, 8, 9, 22):
+            elif cmd in (3, 4, 7, 8, 9, 14, 22):
                 self.app.open({"page": "convert", "src": "codex", "dst": "claude"} if cmd == 7 else
+                              {"page": "timeline", "tab": "tl"} if cmd == 14 else
                               {"page": {3: "usage", 4: "models", 8: "sessions", 9: "jobs", 22: "selfcheck"}[cmd]})
             elif cmd == 10:
                 autostart_set(not autostart_get(), self.app.port)

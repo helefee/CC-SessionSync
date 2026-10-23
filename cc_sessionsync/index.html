@@ -99,6 +99,8 @@ h2{font-size:calc(18px*var(--fk));font-weight:600;margin:2px 0 4px;display:flex;
 .tag{display:inline-flex;align-items:center;gap:3px;font-size:calc(12px*var(--fk));border-radius:6px;padding:0 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;line-height:calc(18px*var(--fk))}
 .tag.claude{color:var(--claude);border-color:currentColor}.tag.codex{color:var(--cxn);border-color:currentColor}.tag.dsh{color:var(--dsh,#4d6bfe);border-color:currentColor}
 .ic.logo.dshc{color:var(--dsh,#4d6bfe)}.ic.logo.curc{color:var(--cur,#3a3a38)}.tag.cursor{color:var(--cur,#3a3a38);border-color:currentColor}
+.tbhd{flex-wrap:wrap;gap:8px 12px;margin-bottom:4px}.tbhd .tbtabs button{display:inline-flex;align-items:center;gap:5px;padding:4px 12px}.tbmini{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:calc(13px*var(--fk))}
+.tbbody{max-width:1180px;margin:0 auto}.tbpane[hidden]{display:none}
 .ic.logo.occ{color:var(--oc,#1f7a8c)}.ic.logo.zcc{color:var(--zc,#5b4bd6)}.tag.opencode{color:var(--oc,#1f7a8c);border-color:currentColor}.tag.zcode{color:var(--zc,#5b4bd6);border-color:currentColor}
 .cvm{border-collapse:separate;border-spacing:4px;font-size:calc(13.5px*var(--fk))}.cvm th{font-weight:600;color:var(--muted);text-align:center;padding:4px 6px}.cvm th.r{text-align:right}.cvm td{text-align:center;padding:6px 8px;border-radius:7px;cursor:pointer;white-space:nowrap}.cvm td.nat{background:color-mix(in srgb,var(--ok,#2e7d32) 14%,transparent);color:var(--ok,#2e7d32)}.cvm td.exp{background:color-mix(in srgb,var(--warn,#b26a00) 14%,transparent);color:var(--warn,#b26a00)}.cvm td.same{color:var(--muted);cursor:default}.cvm td.on{outline:2px solid var(--accent);outline-offset:-2px}
 .cvpk{display:flex;flex-wrap:wrap;gap:6px}.cvpk button{display:inline-flex;align-items:center;gap:6px}.cvpk button.on{background:var(--accent);color:var(--ink-on)}.cvpk button.on .ic.logo{color:inherit}
@@ -491,10 +493,9 @@ td.nw{white-space:nowrap}
     <button class="tbx" id="tbSide" title="收起 / 展开会话列表（Ctrl+B）"><i data-ic="panelL"></i></button>
     <button class="brand" id="brand" title="回到会话"><img src="/icon.png" alt=""><span>CC Session Sync</span><span class="ver">v__VERSION__</span></button>
     <nav class="pnav" id="nav">
-      <button class="pb" data-p="timeline" title="时间线：选一个时间点，预览、恢复"><i data-ic="history"></i><span>时间线</span></button>
+      <button class="pb" data-p="timeline" title="时间线与备份：选时间点预览 / 恢复；自动备份、回收站；撤销记录（同步、导入、转换、会话操作）"><i data-ic="history"></i><span>时间线与备份</span></button>
       <button class="pb" data-p="sync" title="账号同步"><i data-ic="users"></i><span>账号同步</span></button>
       <button class="pb" data-p="convert" title="会话转换：Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 任意互转"><i data-ic="shuffle"></i><span>会话转换</span></button>
-      <button class="pb" data-p="backups" title="备份与还原"><i data-ic="download"></i><span>备份</span></button>
       <button class="pb" data-p="usage" title="用量统计"><i data-ic="chart"></i><span>用量</span></button>
       <button class="pb" data-p="models" title="供应商（模型与 API）"><i data-ic="key"></i><span>供应商</span></button>
       <button class="pb" data-p="diag" title="诊断与自检"><i data-ic="activity"></i><span>诊断自检</span><span class="cnt" id="diagCnt" hidden></span></button>
@@ -530,7 +531,6 @@ td.nw{white-space:nowrap}
       <section class="page" id="pg-dsh"></section>
       <section class="page" id="pg-cursor"></section>
       <section class="page" id="pg-convert"></section>
-      <section class="page" id="pg-backups"></section>
       <section class="page full" id="pg-usage"></section>
       <section class="page full" id="pg-models"></section>
       <section class="page" id="pg-settings"></section>
@@ -828,6 +828,8 @@ applyTheme(store.get("ccss.theme") || "system");
 let PAGE = "sessions";
 const R = {};          // 每个页面的 render
 function go(p){
+  // 0.2.9：「备份」并进「时间线与备份」：backups → 备份分栏；jobs / undo → 撤销记录分栏（排队中的改动在那里）
+  if (p === "backups" || p === "jobs" || p === "undo") { tbSetTab(p === "backups" ? "bk" : "undo"); p = "timeline"; }
   if (!R[p]) return;
   if (PAGE !== p && $("#dlg").classList.contains("open")) closeDlg();
   PAGE = p;
@@ -875,6 +877,7 @@ $("#sdRef").onclick = async () => { SS.d = null; await treeLoad(); if (PAGE === 
 const PAGE_ALIAS = {codex: ["codex", "claude"], dsh: ["dsh", "claude"], cursor: ["cursor", "claude"]};
 function goTo(p, o){
   o = o || {};
+  if (p === "timeline" && o.tab) tbSetTab(o.tab);
   const a = PAGE_ALIAS[p];
   if (a || (p === "convert" && (o.src || o.dst))) {
     const src = o.src || (a && a[0]), dst = o.dst || (a && a[1]);
@@ -891,7 +894,7 @@ window.ccOpen = target => {
   const t = typeof target === "string" ? {page: target} : (target || {});
   const p = {selfcheck: "diag"}[t.page] || t.page;
   if (p === "update") return updOpen(false);
-  if (p === "jobs") { go("backups"); setTimeout(() => { const j = $("#bkJobs"); if (j) j.scrollIntoView({block: "start"}); }, 300); return; }
+  if (p === "jobs") { go("jobs"); setTimeout(() => { const j = $("#bkJobs"); if (j) j.scrollIntoView({block: "start"}); }, 300); return; }
   if (p) goTo(p, t);
   if (t.closeRun) setTimeout(() => crAsk(t.closeRun), 200);       // 托盘「立即同步」时桌面端开着：打开窗口直接问
 };
@@ -1940,7 +1943,7 @@ async function cxDry(thenApply){
     try {
       const x = await api("/api/codex/import", {days: CX.days, only, all: CX.all ? 1 : 0, desktop: CX.desktop ? 1 : 0, reasoning: CX.reasoning ? 1 : 0, mark: CX.mark ? 1 : 0});
       closeDlg();
-      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「备份与还原」撤回）`)) { CX.touched = false; if (CX.host) R.convert(); else R.codex(); }
+      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「时间线与备份 → 撤销记录」撤回）`)) { CX.touched = false; if (CX.host) R.convert(); else R.codex(); }
     } catch(e){ b.disabled = false; toast("❌ " + e.message, 5000); }
   };
 }
@@ -2020,7 +2023,7 @@ async function dsDry(thenApply){
     try {
       const x = await api("/api/dsh/import", {dir: DS.dir, only: todo.filter(t => !t.error && t.valid !== false).map(t => t.id), again: DS.again, reasoning: DS.reasoning, images: DS.images, desktop: DS.desktop});
       closeDlg();
-      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「备份」撤回）`)) { DS.touched = false; DS.sel.clear(); DS.plan = null; SS.d = null; R.dsh(); treeLoad(); }
+      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「时间线与备份 → 撤销记录」撤回）`)) { DS.touched = false; DS.sel.clear(); DS.plan = null; SS.d = null; R.dsh(); treeLoad(); }
     } catch(e){ b.disabled = false; toast("❌ " + e.message, 5000); }
   };
 }
@@ -2096,7 +2099,7 @@ async function cuDry(thenApply){
     try {
       const x = await api("/api/cursor/import", {only: todo.filter(t => !t.error).map(t => t.id), reasoning: CU.reasoning, subagents: CU.sub, desktop: CU.desktop});
       closeDlg();
-      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「备份」撤回）`)) { CU.touched = false; CU.sel.clear(); CU.plan = null; SS.d = null; R.cursor(); treeLoad(); }
+      if (doneOrQueued(x, `导入了 ${x.done || 0} 个（账本 ${x.ledger || ""}，可在「时间线与备份 → 撤销记录」撤回）`)) { CU.touched = false; CU.sel.clear(); CU.plan = null; SS.d = null; R.cursor(); treeLoad(); }
     } catch(e){ b.disabled = false; toast("❌ " + e.message, 5000); }
   };
 }
@@ -2160,7 +2163,8 @@ R.convert = async () => {
         <div class="s dim ell">${(l.items || []).slice(0, 3).map(i => esc(i.title || i.id || "")).join(" · ")}${(l.items || []).length > 3 ? " …" : ""}</div></td>
         <td class="n">${l.count}${l.errors ? ` <span class="tag bad">${l.errors} 个出错</span>` : ""}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : ""}</td>
         <td class="nw">${l.undone || !l.count ? "" : `<button data-u="${esc(l.name)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="empty">还没转过</div>'}
-      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回只删这次新建的会话 / 文件；转过去以后在目标应用里又接着聊过的会保留（不会把你后来聊的内容删掉）。</div></div>
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回只删这次新建的会话 / 文件；转过去以后在目标应用里又接着聊过的会保留（不会把你后来聊的内容删掉）。
+        所有撤销记录（账号同步、导入、转换、会话操作）都在 <a href="#" id="cvAllUndo">时间线与备份 → 撤销记录</a>。</div></div>
     <div class="dim" style="font-size:calc(13px*var(--fk))">以前的专门页面还在：<a href="#" data-go="codex">Codex → Claude</a> · <a href="#" data-go="dsh">DeepSeek ⇄ Claude</a> · <a href="#" data-go="cursor">Cursor → Claude</a></div>`;
   if (cxMode) R.codex(false, $("#cvCodex")); else { const e = $("#pg-codex"); if (e) e.innerHTML = ""; cvList(); }
   $$("#cvSrc [data-a]").forEach(b => b.onclick = () => { if (CV.src === b.dataset.a) return; CV.src = b.dataset.a; CV.sel.clear(); CV.rows = null;
@@ -2173,6 +2177,7 @@ R.convert = async () => {
   on("#cvReas", "reasoning"); on("#cvDesk", "desktop"); on("#cvExp", "export"); on("#cvAgain", "again"); on("#cvProj", "project"); on("#cvSub", "sub");
   $$("#pg-convert [data-go]").forEach(a => a.onclick = e => { e.preventDefault(); go(a.dataset.go); });
   $$("#pg-convert [data-u]").forEach(b => b.onclick = () => cvUndo(b.dataset.u));
+  $("#cvAllUndo").onclick = e => { e.preventDefault(); goTo("timeline", {tab: "undo"}); };
   if ($("#cvDry")) { $("#cvDry").onclick = () => cvDry(false); $("#cvGo").onclick = () => cvDry(true); }
 };
 function cvList(){
@@ -2239,7 +2244,7 @@ async function cvUndo(name){
   try { const x = await api("/api/convert/undo", {ledger: name});
     if (x.deferred) { doneOrQueued(x); return; }
     toast(x.ok ? `✅ 撤回了 ${x.removed} 个${(x.kept || []).length ? `，保留 ${x.kept.length} 个（之后又聊过）` : ""}` : "❌ " + ((x.errors || []).join("；") || x.error || "没撤回干净"), 7000);
-    SS.d = null; treeLoad(); R.convert(); }
+    SS.d = null; treeLoad(); R[PAGE](); }
   catch(e){ toast("❌ " + e.message, 6000); }
 }
 // 任意会话 → 给 Cursor 用的上下文文件（不写 Cursor 的数据库）
@@ -2259,7 +2264,7 @@ async function ctxDlg(agent, id, x, proj){
   $("#cxProj").onchange = e => ctxDlg(agent, id, x, e.target.checked);
   $("#cxGo").onclick = async () => { $("#cxGo").disabled = true;
     try { const w = await api("/api/cursor/context", {agent, id, project: !!proj}); closeDlg(); copyText(w.prompt);
-      toast(`✅ 写好了：${w.path}（账本 ${w.ledger}，可在「备份」撤回）。已复制要发给 Cursor 的那句话`, 8000); }
+      toast(`✅ 写好了：${w.path}（账本 ${w.ledger}，可在「时间线与备份 → 撤销记录」撤回）。已复制要发给 Cursor 的那句话`, 8000); }
     catch(e){ $("#cxGo").disabled = false; toast("❌ " + e.message, 5000); } };
 }
 // ---------- 会话管理 ----------
@@ -2423,7 +2428,7 @@ function ssAct(act, items){
   const names = items.map(i => (SS.d.items.find(x => x.agent === i.agent && x.id === i.id) || {}).title || i.id).slice(0, 8);
   const lab = {archive: "归档", unarchive: "取消归档", delete: "删除"}[act];
   const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:calc(13.5px*var(--fk))">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
-    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「备份 → 回收站」还原，或在操作记录里撤回。</div>`
+    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「时间线与备份 → 备份 → 回收站」还原，或在操作记录里撤回。</div>`
       : `<div class="dim" style="font-size:calc(13.5px*var(--fk))">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
     <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
   confirmDlg(lab + "会话", html, lab, async () => {
@@ -2455,7 +2460,7 @@ function ssRename(agent, id, x){
 async function snapRestore(sid){
   try { const r = await api("/api/sessions/restore-snapshot", {snap: sid});
     if (r.ok === false) return toast("❌ " + r.error, 5000);
-    closeDlg(); toast(r.how === "original" ? "✅ 已放回原位" : `✅ 原文件还在，另存了一份：${r.path}`, 6000); if (PAGE === "sessions") R.sessions(); else R.backups(); }
+    closeDlg(); toast(r.how === "original" ? "✅ 已放回原位" : `✅ 原文件还在，另存了一份：${r.path}`, 6000); if (PAGE === "sessions") R.sessions(); else R[PAGE](); }
   catch(e){ toast("❌ " + e.message, 5000); }
 }
 
@@ -2463,7 +2468,7 @@ async function snapRestore(sid){
 const TL = {cur: null, vers: null, idx: -1, runs: null, ri: -1, t: null, pt: null, sel: new Set(), state: "changed", pv: null};
 const dtLocal = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const fullTime = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
-function tlOpen(agent, id){ TL.cur = {agent, id}; TL.vers = null; TL.idx = -1; go("timeline"); }
+function tlOpen(agent, id){ tbSetTab("tl"); TL.cur = {agent, id}; TL.vers = null; TL.idx = -1; go("timeline"); }
 try { TL.spark = localStorage.getItem("ccss.tlspark") !== "0"; } catch(e){ TL.spark = true; }
 document.addEventListener("keydown", e => {        // 单个会话的时间线：← / → 切换版本（输入框里不管）
   if (PAGE !== "timeline" || !TL.cur || !TL.step || $("#dlg").classList.contains("open")) return;
@@ -2475,14 +2480,37 @@ function tlGacct(x){
   if (m) return m.gacct;
   return x.agent === "codex" ? "codex:" + (x.provider || "openai") : x.agent === "dsh" ? "dsh:" + (x.provider || (x.imported ? "imported" : "-")) : x.agent === "cursor" ? "cursor:" + (x.cwd || "-") : x.agent === "opencode" || x.agent === "zcode" ? x.agent + ":" + (x.cwd || "-") : ((x.accounts || [])[0] || "unknown");
 }
+// ---------- 时间线与备份（0.2.9：原来的「时间线」「备份」两页合成一页，三个分栏）----------
+// 时间线：选时间点 / 单个会话的版本，预览、恢复；备份：会话备份库（自动备份、立即备份、保留规则、位置大小、最近版本）、回收站、导出 / 导入；
+// 撤销记录：排队中的改动、会话操作记录、账号同步、Codex / dsh / Cursor 导入账本、会话转换账本。
+const TB_TABS = [["tl", "时间线", "history"], ["bk", "备份", "download"], ["undo", "撤销记录", "undo"]];
+function tbSetTab(t){ if (TB_TABS.some(x => x[0] === t)) { TL.tab = t; store.set("ccss.tltab", t); } }
+const tbHead = () => `<div class="bar tbhd"><h2 style="margin:0">${ic("history")}时间线与备份</h2>
+  <span class="seg tbtabs" id="tbTab">${TB_TABS.map(([k, t, i]) => `<button data-t="${k}" class="${TL.tab === k ? "on" : ""}">${ic(i)} ${t}${k === "undo" && ST.jobs ? ` <span class="tag warn">${ST.jobs}</span>` : ""}</button>`).join("")}</span>
+  <span class="sp"></span><span class="tbmini" id="tbMini"></span></div>`;
+async function tbWire(){
+  $$("#tbTab button").forEach(b => b.onclick = () => { if (TL.tab === b.dataset.t) return; tbSetTab(b.dataset.t); R.timeline(); });
+  try { const bs = await api("/api/sessions/backup-status"), sc = bs.sched || {}, m = $("#tbMini"); if (!m) return;
+    m.innerHTML = `<span class="dim">上次备份 ${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没有"}${sc.auto ? ` · 下次 ${sc.next ? inTxt(sc.next) : "马上"}` : " · 自动备份已关"}</span>
+      <button id="tbBkNow" title="现在就把变过的会话备份进会话备份库">${ic("download")} 立即备份</button>`;
+    if (TL.tab === "bk") { $("#tbBkNow").remove(); return; }  // 备份页签里会话备份库卡片自己有「立即备份」
+    $("#tbBkNow").onclick = async () => { $("#tbBkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } TL.runs = null; TL.vers = null; R.timeline(); };
+  } catch(e){}
+}
 R.timeline = async () => {
+  if (!TL.tab) TL.tab = store.get("ccss.tltab") || "tl";
+  const pg = $("#pg-timeline");
+  if (TL.tab !== "tl") { pg.innerHTML = tbHead() + '<div class="tbbody" id="tbBody"><div class="empty">读取…</div></div>'; tbWire(); return bkRender($("#tbBody"), TL.tab); }
   if (!SS.d) await treeLoad();
   return TL.cur ? tlSession() : tlGlobal();
 };
-const tlHead = sub => `<div class="bar" style="margin-bottom:6px"><h2 style="margin:0">${ic("history")}时间线</h2>
+R.backups = () => go("backups");        // 旧页面名：深链接 / 记住的上次页面 / 通知 → 备份分栏
+R.jobs = () => go("jobs"); R.undo = () => go("undo");   // ?page=jobs / ?page=undo → 撤销记录分栏
+const tlHead = sub => tbHead() + `<div class="bar" style="margin:4px 0 6px">
   <span class="seg" id="tlMode"><button data-m="g" class="${TL.cur ? "" : "on"}">按时间点（全部会话）</button><button data-m="s" class="${TL.cur ? "on" : ""}" ${TL.cur ? "" : 'disabled title="在列表里点一个会话的「时间线」"'}>单个会话</button></span><span class="sp"></span>
   <button class="ghost" id="tlRef" title="刷新">${ic("refresh")}</button></div><p class="sub">${sub}</p>`;
 function tlWireHead(){
+  tbWire();
   $$("#tlMode button").forEach(b => b.onclick = () => { if (b.dataset.m === "g") { TL.cur = null; R.timeline(); } });
   $("#tlRef").onclick = () => { TL.vers = null; TL.runs = null; R.timeline(); };
 }
@@ -2774,21 +2802,39 @@ async function imDry(){
 // ---------- 备份与还原 ----------
 const BK_UNIT = {min: "分钟", hour: "小时", day: "天"};
 const inTxt = t => { const d = t - Date.now() / 1000; return d <= 30 ? "马上" : d < 3600 ? Math.round(d / 60) + " 分钟后" : d < 86400 ? (d / 3600).toFixed(1) + " 小时后" : (d / 86400).toFixed(1) + " 天后"; };
-R.backups = async () => {
-  const pg = $("#pg-backups");
+async function bkRender(pg, tab){
   let bk, led, jobs, bs, snaps, trash, ops, s;
   try { [bk, led, jobs, bs, snaps, trash, ops, s] = await Promise.all([api("/api/backups"), api("/api/codex/ledgers"), api("/api/jobs"), api("/api/sessions/backup-status"),
       api("/api/sessions/snapshots"), api("/api/sessions/trash"), api("/api/sessions/ops"), api("/api/settings")]); }
   catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   const dled = await api("/api/dsh/ledgers").catch(() => []);
   const cled = await api("/api/cursor/ledgers").catch(() => []);
+  const vled = await api("/api/convert/ledgers").catch(() => []);
   const waiting = jobs.filter(j => j.state === "waiting"), sc = bs.sched || {};
   const JST = {waiting: ["warn", "排队中"], closing: ["warn", "正在关闭桌面端"], done: ["ok", "做完了"], failed: ["bad", "失败"], cancelled: ["", "已取消"]};
-  pg.innerHTML = `<h2>${ic("download")}备份</h2><p class="sub">每次改动之前都先备份。这里能撤回同步 / 导入 / 会话操作，从回收站还原，或者从会话备份库恢复某个版本。</p>
+  const hid = k => tab === k ? "" : "hidden";
+  pg.innerHTML = `<div class="tbpane" data-tab="undo" ${hid("undo")}><p class="sub">每次改动之前都先备份。这里能撤回账号同步、各种导入 / 转换、会话操作（改名、归档、删除…）；桌面端开着时要改的，排在最上面。</p>
     <div class="card" id="bkJobs"><h3>排队中的改动 <span class="tag ${waiting.length ? "warn" : ""}">${waiting.length}</span></h3>
       ${jobs.length ? `<table class="t">${jobs.slice().reverse().slice(0, 12).map(j => `<tr><td>${esc(j.title)}</td><td>${when(j.queued)}</td><td><span class="tag ${(JST[j.state] || [""])[0]}">${(JST[j.state] || ["", j.state])[1]}</span></td>
         <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td class="nw">${j.state === "waiting" ? `<button data-crj="${esc(j.id)}" data-k="${esc(j.kind || "claude")}" title="关闭${APPN[j.kind] || "Claude"} 桌面端、做完、再按原来的方式打开它">${ic("power")} 关闭并执行</button> <button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
         : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
+    <div class="card"><h3>${ic("list")}会话操作记录（可撤回）</h3>
+      ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
+        <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}</div>
+    <div class="grid2"><div class="card"><h3>${ic("users")}Claude 账号同步备份</h3>
+      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。</div>'}</div>
+      <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
+      ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}</div></div>
+    <div class="card"><h3>${ic("dsh", "logo dshc")}DeepSeek Harness 导入账本</h3>
+      ${dled.length ? `<table class="t">${dled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "claude-to-dsh" ? "Claude Code → dsh" : "dsh → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-dled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回：新建的文件 / 会话目录挪进回收站（不直接删）；导过去之后又接着聊过的、dsh 正开着的，不动。</div></div>
+    <div class="card"><h3>${ic("cursor", "logo curc")}Cursor 导入 / 上下文文件账本</h3>
+      ${cled.length ? `<table class="t">${cled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "context-for-cursor" ? "给 Cursor 的上下文文件" : "Cursor → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-cled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回：新建的文件挪进回收站（不直接删）；之后又改过的不动。Cursor 自己的数据从来不写，也就不用撤。</div></div>
+    <div class="card"><h3>${ic("shuffle")}会话转换账本</h3>
+      ${vled.length ? `<table class="t">${vled.slice(0, 20).map(l => `<tr><td class="nw">${when(l.time)}</td><td>${esc(APPN[l.src] || l.src)} → ${esc(APPN[l.dst] || l.dst)} <span class="tag ${l.mode === "native" ? "ok" : "warn"}">${l.mode === "native" ? "原生" : "导出"}</span> · ${l.count} 个${l.errors ? ` <span class="tag bad">${l.errors} 个出错</span>` : ""}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : l.count ? `<button data-vled="${esc(l.name)}">撤回</button>` : ""}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有转换过。在「会话转换」里转。</div>'}
+      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回只删那次新建的会话 / 文件；转过去以后在目标应用里又接着聊过的保留。</div></div></div>
+    <div class="tbpane" data-tab="bk" ${hid("bk")}><p class="sub">会话备份库是时间线的数据来源：定时把变过的会话增量备份进来。删除的会话先进回收站。</p>
     <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkPrune" title="按保留规则清掉旧版本，再压缩数据库">${ic("trash")} 清理旧版本</button><button class="primary" id="bkNow">${ic("download")} 立即备份</button></h3>
       <div class="sched"><div>自动备份<b>${sc.auto ? `每 ${sc.every} ${BK_UNIT[sc.unit] || sc.unit}` : "已关"}</b>${sc.running || bs.running ? '<span class="tag warn">正在备份</span>' : ""}</div>
         <div>上次<b>${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没备份过"}</b>${sc.last_error ? `<span class="tag bad" title="${esc(sc.last_error)}">失败</span>` : sc.last_result ? `新版本 ${sc.last_result.snapshots} · 看了 ${sc.last_result.files} 个` : ""}</div>
@@ -2805,53 +2851,47 @@ R.backups = async () => {
       ${trash.items.length ? `<table class="t">${trash.items.map(t => `<tr><td><code>${esc(t.id)}</code></td><td>${when(t.time)}</td><td>${t.items.length} 个会话（${t.items.filter(i => i.agent === "claude").length} Claude / ${t.items.filter(i => i.agent === "codex").length} Codex）</td>
         <td>${t.restored ? `<span class="tag ok">已还原</span>` : ""}</td><td style="white-space:nowrap">${t.restored ? "" : `<button data-tr="${esc(t.id)}">${ic("undo")} 还原</button> `}<button class="ghost danger" data-tp="${esc(t.id)}">彻底删除</button></td></tr>`).join("")}</table>`
         : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">空的。在会话管理里删除的会话会先放在这里。</div>'}</div>
-    <div class="card"><h3>${ic("list")}会话操作记录（可撤回）</h3>
-      ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
-        <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}</div>
-    <div class="grid2"><div class="card"><h3>${ic("users")}Claude 账号同步备份</h3>
-      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。</div>'}</div>
-      <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
-      ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}</div></div>
-    <div class="card"><h3>${ic("dsh", "logo dshc")}DeepSeek Harness 导入账本</h3>
-      ${dled.length ? `<table class="t">${dled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "claude-to-dsh" ? "Claude Code → dsh" : "dsh → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-dled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}
-      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回：新建的文件 / 会话目录挪进回收站（不直接删）；导过去之后又接着聊过的、dsh 正开着的，不动。</div></div>
-    <div class="card"><h3>${ic("cursor", "logo curc")}Cursor 导入 / 上下文文件账本</h3>
-      ${cled.length ? `<table class="t">${cled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "context-for-cursor" ? "给 Cursor 的上下文文件" : "Cursor → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-cled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}
-      <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">撤回：新建的文件挪进回收站（不直接删）；之后又改过的不动。Cursor 自己的数据从来不写，也就不用撤。</div></div>`;
+    <div class="card"><h3>${ic("upload")}导出 / 导入 .md / .html</h3>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">导出：在「时间线」分栏勾选会话（那个时间点的版本）→ 底部「导出 .md / .html」；或者在会话详情的「…」菜单里导出现在的版本。导入：把以前导出的 .md / .html 变成一个新的 Claude Code 会话。</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button id="bkImp">${ic("upload")} 导入 .md / .html…</button><button id="bkToTl">${ic("history")} 去时间线选会话导出</button></div></div>
+    </div>`;
   $$("[data-cled]").forEach(b => b.onclick = () => confirmDlg("撤回", `撤回账本 <code>${esc(b.dataset.cled)}</code>：新建的文件挪进回收站，更新过的换回原来的。之后又改过的不动。`, "撤回", async () => {
     try { const r = await api("/api/cursor/undo", {ledger: b.dataset.cled}); closeDlg();
       if (r.ok === false) return toast("❌ " + r.error, 5000);
-      doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}${(r.kept || []).length ? `，${r.kept.length} 个没动` : ""}）`); R.backups(); } catch(e){ toast("❌ " + e.message); } }));
+      doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}${(r.kept || []).length ? `，${r.kept.length} 个没动` : ""}）`); R.timeline(); } catch(e){ toast("❌ " + e.message); } }));
   $$("[data-dled]").forEach(b => b.onclick = () => confirmDlg("撤回 DeepSeek Harness 导入", `撤回账本 <code>${esc(b.dataset.dled)}</code>：这次导入新建的会话挪进回收站，更新过的换回原来的。之后又接着聊过的不动。`, "撤回", async () => {
     try { const r = await api("/api/dsh/undo", {ledger: b.dataset.dled}); closeDlg();
       if (r.ok === false) return toast("❌ " + r.error, 5000);
-      doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}${(r.kept || []).length ? `，${r.kept.length} 个没动` : ""}）`); R.backups(); } catch(e){ toast("❌ " + e.message); } }));
+      doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}${(r.kept || []).length ? `，${r.kept.length} 个没动` : ""}）`); R.timeline(); } catch(e){ toast("❌ " + e.message); } }));
+  $$("[data-vled]").forEach(b => b.onclick = () => cvUndo(b.dataset.vled));
+  $("#bkImp").onclick = () => imDlg();
+  $("#bkToTl").onclick = () => { tbSetTab("tl"); TL.cur = null; R.timeline(); };
   $$("[data-crj]").forEach(b => b.onclick = () => crAsk({kind: b.dataset.k, jobs: [b.dataset.crj], banner: true}));
-  $$("[data-cj]").forEach(b => b.onclick = async () => { await api("/api/jobs/cancel", {id: b.dataset.cj}); toast("已取消"); poll(); R.backups(); });
-  $("#bkNow").onclick = async () => { $("#bkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } R.backups(); };
-  $("#bkAuto").onchange = async e => { await saveSetting({session_backup_auto: e.target.checked}); R.backups(); };
-  const bkEv = async () => { const r = await saveSetting({session_backup_every: +$("#bkEvery").value, session_backup_unit: $("#bkUnit").value}); R.backups(); };
+  $$("[data-cj]").forEach(b => b.onclick = async () => { await api("/api/jobs/cancel", {id: b.dataset.cj}); toast("已取消"); poll(); R.timeline(); });
+  $("#bkNow").onclick = async () => { $("#bkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } R.timeline(); };
+  $("#bkAuto").onchange = async e => { await saveSetting({session_backup_auto: e.target.checked}); R.timeline(); };
+  const bkEv = async () => { const r = await saveSetting({session_backup_every: +$("#bkEvery").value, session_backup_unit: $("#bkUnit").value}); R.timeline(); };
   $("#bkEvery").onchange = bkEv; $("#bkUnit").onchange = bkEv;
-  const bkKeep = async () => { await saveSetting({retention_all_days: +$("#bkKeepAll").value, retention_daily_days: +$("#bkKeepDay").value}); R.backups(); };
+  const bkKeep = async () => { await saveSetting({retention_all_days: +$("#bkKeepAll").value, retention_daily_days: +$("#bkKeepDay").value}); R.timeline(); };
   $("#bkKeepAll").onchange = bkKeep; $("#bkKeepDay").onchange = bkKeep;
   $("#bkPrune").onclick = () => confirmDlg("清理旧版本", `按保留规则清掉旧版本：最近 <b>${s.retention_all_days ?? 7}</b> 天全留，<b>${s.retention_daily_days ?? 90}</b> 天内每天留最后一版，更早的每周一版；每个会话最新的一版永远留着。然后压缩数据库（现在 ${kb(bs.db_bytes)}）。<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">只动备份库，不碰 Claude / Codex 的会话文件。</div>`, "清理", async () => {
-    try { const r = await api("/api/backup/prune", {vacuum: true}); closeDlg(); toast(`✅ 清掉 ${r.snapshots_dropped} 个旧版本，数据库 ${kb(r.db_before)} → ${kb(r.db_after)}`, 6000); R.backups(); } catch(e){ toast("❌ " + e.message); } });
+    try { const r = await api("/api/backup/prune", {vacuum: true}); closeDlg(); toast(`✅ 清掉 ${r.snapshots_dropped} 个旧版本，数据库 ${kb(r.db_before)} → ${kb(r.db_after)}`, 6000); R.timeline(); } catch(e){ toast("❌ " + e.message); } });
   $$("[data-tlo]").forEach(b => b.onclick = () => { const [a, ...i] = b.dataset.tlo.split(":"); tlOpen(a, i.join(":")); });
   $$("[data-tr]").forEach(b => b.onclick = () => confirmDlg("从回收站还原", `把 <code>${esc(b.dataset.tr)}</code> 里的会话放回去：原位置空着就放回原位；原位置已经有文件了就另存一份新的（不覆盖）。桌面端开着会排队。`, "还原", async () => {
-    const r = await api("/api/sessions/trash-restore", {batch: b.dataset.tr}); closeDlg(); doneOrQueued(r, `还原了 ${r.restored || 0} 个${(r.copies || []).length ? `（${r.copies.length} 个另存为新副本）` : ""}`); R.backups(); }));
+    const r = await api("/api/sessions/trash-restore", {batch: b.dataset.tr}); closeDlg(); doneOrQueued(r, `还原了 ${r.restored || 0} 个${(r.copies || []).length ? `（${r.copies.length} 个另存为新副本）` : ""}`); R.timeline(); }));
   $$("[data-tp]").forEach(b => b.onclick = () => {
     openDlg("彻底删除", `<div class="miss">彻底删除 <code>${esc(b.dataset.tp)}</code> 里的文件，<b>删了就找不回来了</b>（会话备份库里的版本不受影响）。</div>
       <div style="margin-top:10px">确认请输入 <code>DELETE</code>：</div><input id="tpIn" style="width:100%;margin-top:6px" autocomplete="off">`,
       `<button onclick="closeDlg()">取消</button><button class="primary danger" id="tpGo" disabled>彻底删除</button>`);
     $("#tpIn").oninput = e => $("#tpGo").disabled = e.target.value !== "DELETE";
-    $("#tpGo").onclick = async () => { try { const r = await api("/api/sessions/trash-purge", {batch: b.dataset.tp, confirm: $("#tpIn").value}); closeDlg(); doneOrQueued(r, "已彻底删除"); R.backups(); } catch(e){ toast("❌ " + e.message); } };
+    $("#tpGo").onclick = async () => { try { const r = await api("/api/sessions/trash-purge", {batch: b.dataset.tp, confirm: $("#tpIn").value}); closeDlg(); doneOrQueued(r, "已彻底删除"); R.timeline(); } catch(e){ toast("❌ " + e.message); } };
   });
   $$("[data-op]").forEach(b => b.onclick = () => confirmDlg("撤回", "按账本把这次操作撤回去（改过的文件换回备份；新建的挪进回收站，不直接删）。", "撤回", async () => {
-    const r = await api("/api/sessions/undo", {op: b.dataset.op}); closeDlg(); doneOrQueued(r, "已撤回"); R.backups(); }));
+    const r = await api("/api/sessions/undo", {op: b.dataset.op}); closeDlg(); doneOrQueued(r, "已撤回"); R.timeline(); }));
   $$("[data-bk]").forEach(b => b.onclick = () => confirmDlg("撤回同步", `撤回 <code>${esc(b.dataset.bk)}</code>：删掉那次补进来的登记、换回刷新前的版本（会话记录本身不动）。`, "撤回", async () => {
-    const r = await api("/api/restore", {backup: b.dataset.bk}); closeDlg(); doneOrQueued(r, "已撤回"); R.backups(); }));
+    const r = await api("/api/restore", {backup: b.dataset.bk}); closeDlg(); doneOrQueued(r, "已撤回"); R.timeline(); }));
   $$("[data-led]").forEach(b => b.onclick = () => confirmDlg("撤回导入", `撤回 Codex 导入 <code>${esc(b.dataset.led)}</code>：新建的会话挪进回收站，更新过的换回原来的版本；导过来之后在 Claude 里接着聊过的不动。`, "撤回", async () => {
-    const r = await api("/api/codex/undo", {ledger: b.dataset.led}); closeDlg(); doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}）`); R.backups(); }));
+    const r = await api("/api/codex/undo", {ledger: b.dataset.led}); closeDlg(); doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}）`); R.timeline(); }));
 };
 
 // ---------- 设置 ----------
@@ -3018,7 +3058,8 @@ async function updInstall(){
   rvPaint();
   await treeLoad();
   const qs = new URLSearchParams(location.search);
-  if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst")}); else go("sessions");
+  const fromUrl = !!(qs.get("page") || location.hash.replace("#", ""));
+  if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst"), tab: qs.get("tab") || (fromUrl && want === "timeline" ? "tl" : null)}); else go("sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);       // 老链接 ?dlg=usage 之类：现在都是页面
   poll();
   try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}
