@@ -2428,7 +2428,7 @@ function ssAct(act, items){
   const names = items.map(i => (SS.d.items.find(x => x.agent === i.agent && x.id === i.id) || {}).title || i.id).slice(0, 8);
   const lab = {archive: "归档", unarchive: "取消归档", delete: "删除"}[act];
   const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:calc(13.5px*var(--fk))">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
-    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「备份 → 回收站」还原，或在操作记录里撤回。</div>`
+    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「时间线与备份 → 备份 → 回收站」还原，或在操作记录里撤回。</div>`
       : `<div class="dim" style="font-size:calc(13.5px*var(--fk))">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
     <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
   confirmDlg(lab + "会话", html, lab, async () => {
@@ -2493,6 +2493,7 @@ async function tbWire(){
   try { const bs = await api("/api/sessions/backup-status"), sc = bs.sched || {}, m = $("#tbMini"); if (!m) return;
     m.innerHTML = `<span class="dim">上次备份 ${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没有"}${sc.auto ? ` · 下次 ${sc.next ? inTxt(sc.next) : "马上"}` : " · 自动备份已关"}</span>
       <button id="tbBkNow" title="现在就把变过的会话备份进会话备份库">${ic("download")} 立即备份</button>`;
+    if (TL.tab === "bk") { $("#tbBkNow").remove(); return; }  // 备份页签里会话备份库卡片自己有「立即备份」
     $("#tbBkNow").onclick = async () => { $("#tbBkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } TL.runs = null; TL.vers = null; R.timeline(); };
   } catch(e){}
 }
