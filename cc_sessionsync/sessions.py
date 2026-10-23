@@ -1468,7 +1468,7 @@ def auto_tick(s: dict, now: float | None = None) -> dict | None:
         except Exception as e:
             SCHED["last_error"] = f"{type(e).__name__}: {e}"
             from . import events
-            events.add("backup", "会话自动备份失败", SCHED["last_error"][:200], {"page": "backups"})
+            events.add("backup", "会话自动备份失败", SCHED["last_error"][:200], {"page": "timeline", "tab": "bk"})
             return {"ok": False, "error": SCHED["last_error"]}
         if now - SCHED["last_prune"] > 6 * 3600:
             SCHED["last_prune"] = now
