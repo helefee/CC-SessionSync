@@ -50,6 +50,7 @@ ok('id="pg-backups"' not in page and 'id="pg-timeline"' in page, "0.2.9: separat
 ok('if (p === "backups" || p === "jobs" || p === "undo") { tbSetTab(p === "backups" ? "bk" : "undo"); p = "timeline"; }' in page,
    "0.2.9: old backups / jobs / undo page names (deep links, #backups, remembered page, notifications) open the merged page on the right tab")
 ok('const TB_TABS = [["tl", "时间线", "history"], ["bk", "备份", "download"], ["undo", "撤销记录", "undo"]]' in page, "0.2.9: sub-tabs 时间线 | 备份 | 撤销记录")
+ok('R.backups = () => go("backups");' in page and 'R.jobs = () => go("jobs"); R.undo = () => go("undo");' in page, "0.2.9: ?page=backups / jobs / undo deep links resolve")
 ok('if (p === "timeline" && o.tab) tbSetTab(o.tab);' in page and 'qs.get("tab")' in page, "0.2.9: goTo / ?tab= select the sub-tab")
 bk = page[page.index("async function bkRender"):]
 bk = bk[:bk.index("\n}\n") + 3]

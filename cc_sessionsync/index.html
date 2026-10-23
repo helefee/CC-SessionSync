@@ -2505,6 +2505,7 @@ R.timeline = async () => {
   return TL.cur ? tlSession() : tlGlobal();
 };
 R.backups = () => go("backups");        // 旧页面名：深链接 / 记住的上次页面 / 通知 → 备份分栏
+R.jobs = () => go("jobs"); R.undo = () => go("undo");   // ?page=jobs / ?page=undo → 撤销记录分栏
 const tlHead = sub => tbHead() + `<div class="bar" style="margin:4px 0 6px">
   <span class="seg" id="tlMode"><button data-m="g" class="${TL.cur ? "" : "on"}">按时间点（全部会话）</button><button data-m="s" class="${TL.cur ? "on" : ""}" ${TL.cur ? "" : 'disabled title="在列表里点一个会话的「时间线」"'}>单个会话</button></span><span class="sp"></span>
   <button class="ghost" id="tlRef" title="刷新">${ic("refresh")}</button></div><p class="sub">${sub}</p>`;
