@@ -487,8 +487,13 @@ def is_reasoning(model: str, opt: dict) -> bool:
 
 
 def _anth_effort(b: dict, opt: dict):
-    if opt.get("effort"):
-        return opt["effort"]
+    """Claude Code 这次请求要的推理强度（/effort、/model 里选的、--effort、effortLevel）→ OpenAI reasoning.effort。
+    请求里没说的时候才用供应商 / 卡片设的缺省值。"""
+    got = _anth_effort_req(b)
+    return got if got is not None else (opt.get("effort") or None)
+
+
+def _anth_effort_req(b: dict):
     th = b.get("thinking") or {}
     eff = (b.get("output_config") or {}).get("effort")
     if th.get("type") == "enabled":

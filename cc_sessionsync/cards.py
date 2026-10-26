@@ -21,14 +21,14 @@ KIND_NAME = {"default": "默认", "claude": "Claude API Key", "openai": "OpenAI 
 CLIENT_NAME = {"codex": "Codex", "claude": "Claude Code"}
 OFFICIAL = {"claude": "https://api.anthropic.com", "openai": "https://api.openai.com/v1"}
 DEF_MODEL = {"claude": ("claude-opus-5-5", "claude-haiku-5-5"), "openai": ("gpt-5.5", "gpt-5.4-mini")}
-EFFORTS = ("", "minimal", "low", "medium", "high", "xhigh")
+EFFORTS = ("", "none", "minimal", "low", "medium", "high", "xhigh", "max")
 _ABSENT = {"__absent__": True}
 
 
 # ================================================================ 配置
 
 def _blank(client: str) -> dict:
-    return {"kind": "default", "base_url": "", "protocol": "anthropic" if client == "codex" else "responses", "model": "", "small_model": "",
+    return {"kind": "default", "base_url": "", "protocol": "anthropic" if client == "codex" else "responses", "model": "", "small_model": "", "sonnet_model": "",
             "effort": "", "profile_only": False, "enabled": False, "models": []}
 
 
@@ -116,7 +116,7 @@ def save_card(client: str, b: dict) -> dict:
             c["base_url"] = router._clean_url(u) if u else ""
         if b.get("protocol") in router.PROTOCOLS:
             c["protocol"] = b["protocol"]
-        for f in ("model", "small_model"):
+        for f in ("model", "small_model", "sonnet_model"):
             if f in b:
                 v = str(b.get(f) or "").strip()
                 if v and not re.match(r"^[A-Za-z0-9][A-Za-z0-9._:/@\[\]-]{0,127}$", v):
@@ -143,14 +143,24 @@ def save_card(client: str, b: dict) -> dict:
     return view(client)
 
 
-def provider(client: str, c: dict) -> dict:
+def provider(client: str, c: dict, model: str | None = None) -> dict:
     """卡片 → 路由内部用的供应商（不存进供应商列表，只在代理里用）。"""
     kind = c["kind"]
     p = router.clean_provider({"id": f"card-{client}", "name": f"{CLIENT_NAME[client]} · {KIND_NAME[kind]}", "protocol": proto(c) or "anthropic",
                                "base_url": upstream_url(c) or "http://invalid.local", "keys": [{"id": "k1", "name": key_name(client, kind)}],
-                               "effort": c.get("effort") if client == "claude" else ""}, set())
+                               "effort": "", "thinking": thinking_mode(c, model)}, set())
     p["card"] = client
     return p
+
+
+def thinking_mode(c: dict, model: str | None = None) -> str:
+    """Claude 的思考参数：新模型（Opus / Sonnet 4.6 起、Haiku 5 起）用 adaptive + effort；老模型用 budget_tokens。"""
+    m = (model or c.get("model") or "").lower()
+    if proto(c) != "anthropic" or not m.startswith("claude-"):
+        return "adaptive"
+    v = _ver(m)[0]
+    v = (v + (0, 0))[:2]
+    return "adaptive" if v >= ((5, 0) if "haiku" in m else (4, 6)) else "budget"
 
 
 def proxy_target(client: str, want: str, d: dict | None = None):
@@ -164,17 +174,19 @@ def proxy_target(client: str, want: str, d: dict | None = None):
     w = (want or "").strip()
     if client == "claude":
         low = w.lower()
-        if "haiku" in low and c.get("small_model"):
-            m = c["small_model"]
-        elif w and (w == c.get("small_model") or w in (c.get("models") or [])) and not low.startswith("claude-"):
-            m = w                                    # /model 里直接输了上游的模型名
+        if w and not low.startswith("claude-") and low not in ("opus", "sonnet", "haiku", "default", "fable"):
+            m = w                                    # /model gpt-5.4 或 claude --model gpt-5.4：照原样
+        elif "haiku" in low:
+            m = c.get("small_model") or c["model"]
+        elif "sonnet" in low:
+            m = c.get("sonnet_model") or c["model"]
         else:
             m = c["model"]
     else:
         ok = w and (w == c["model"] or w in (c.get("models") or []) or
                     (proto(c) == "anthropic" and w.startswith("claude-")) or (proto(c) != "anthropic" and not w.startswith("claude-")))
         m = w if ok else c["model"]                 # Codex 桌面端可能带着自己的 gpt-… 来：换成卡片的模型
-    return [(provider(client, c), m or w, None)] if (m or w) else []
+    return [(provider(client, c, m or w), m or w, None)] if (m or w) else []
 
 
 def not_ready_msg(client: str, d: dict | None = None) -> str:
@@ -325,22 +337,22 @@ def _codex_block(c: dict) -> tuple:
 def _codex_edits(c: dict) -> list:
     t, model, via = _codex_block(c)
     ed = [(["model_provider"], router.CODEX_PROFILE), (["model"], model)]
-    ed.append((["model_reasoning_effort"], c["effort"]) if c["effort"] else (["model_reasoning_effort"], _ABSENT))
-    if via and proto(c) == "anthropic":
-        ed.append((["model_context_window"], 200000))
+    if c["effort"]:                               # 只有用户选了缺省推理等级才写；不选就留着 Codex 自己的（/model 里随时能改）
+        ed.append((["model_reasoning_effort"], c["effort"]))
     ed.append((["model_providers", router.CODEX_PROFILE], t))
     return ed
 
 
 def _claude_edits(c: dict) -> list:
+    eff = [(["effortLevel"], c["effort"])] if c.get("effort") in ("low", "medium", "high", "xhigh", "max") else []   # 只是缺省值：/effort 随时能改
     if needs("claude", c):
         return [(["env", "ANTHROPIC_BASE_URL"], router.base_url()), (["env", "ANTHROPIC_AUTH_TOKEN"], router.token()),
-                (["env", "ANTHROPIC_API_KEY"], _ABSENT)]
+                (["env", "ANTHROPIC_API_KEY"], _ABSENT)] + eff
     ed = [(["apiKeyHelper"], keystore.helper_line(key_name("claude", c["kind"]))),
           (["env", "ANTHROPIC_AUTH_TOKEN"], _ABSENT), (["env", "ANTHROPIC_API_KEY"], _ABSENT)]
     url = c.get("base_url") if c["kind"] == "claude" else upstream_url(c)
     ed.append((["env", "ANTHROPIC_BASE_URL"], url) if url else (["env", "ANTHROPIC_BASE_URL"], _ABSENT))
-    return ed
+    return ed + eff
 
 
 def check(client: str, c: dict, d: dict):
@@ -386,6 +398,10 @@ def enable(client: str) -> dict:
                 g = paths.CODEX_HOME / "config.toml"
                 recs["config"] = apply_edits(g, "toml", _codex_edits(c), recs.get("config"), "card-codex-config")
                 files.append(str(g))
+            try:
+                (paths.CODEX_HOME / "models_cache.json").unlink()   # Codex 的模型目录缓存：删掉让它马上重新拉（/model 里马上看到新列表）
+            except OSError:
+                pass
         else:
             from . import modelcfg
             f = modelcfg.claude_file("user", None)
@@ -436,6 +452,76 @@ def run(client: str, act: str) -> dict:
                                  f"{'启用' if act == 'enable' else '停用'}「Codex 使用 {KIND_NAME[get(client, d)['kind']]}」")
     r = enable(client) if act == "enable" else disable(client)
     return dict(r, deferred=False)
+
+
+# ================================================================ 给 Codex 的模型目录（/model 里能选 Claude 模型、能调推理等级）
+
+LEVELS = {"none": "不思考，最快", "low": "想得少，快", "medium": "日常够用", "high": "复杂问题想得更深", "xhigh": "更深", "max": "最深，最慢"}
+LEVELS_CODEX = ("none", "low", "medium", "high", "xhigh", "max")
+# Codex 0.16x 内置目录里在 /model 列出来的模型（卡片走 Claude 时它们用不了）
+CODEX_BUILTIN = ("gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5",
+                 "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.2", "gpt-5.2-codex", "gpt-5.1-codex-max", "gpt-5.1-codex-mini")
+
+
+def pretty(m: str) -> str:
+    """claude-opus-5-5 → Claude Opus 5.5；gpt-5.4-mini → GPT-5.4-mini。"""
+    if m.startswith("claude-"):
+        parts = m.split("-")[1:]
+        fam = [x for x in parts if not x.isdigit()]
+        ver = [x for x in parts if x.isdigit() and len(x) < 8]
+        return "Claude " + " ".join(x.capitalize() for x in fam) + (" " + ".".join(ver) if ver else "")
+    if m.startswith("gpt-"):
+        return "GPT-" + m[4:]
+    return m
+
+
+def catalog_models(c: dict) -> list:
+    """卡片的默认模型在最前；然后是拉到的模型列表（Claude：每个系列按新到旧），没拉过就用常见的几个。"""
+    ms = [m for m in (c.get("models") or []) if isinstance(m, str)]
+    if proto(c) == "anthropic":
+        ms = [m for m in ms if m.startswith("claude-")] or ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]
+        ms.sort(key=lambda m: (0 if "opus" in m else 1 if "sonnet" in m else 2 if "haiku" in m else 3, tuple(-x for x in _ver(m)[0]), not _ver(m)[1]))
+    out = []
+    for m in [c.get("model")] + ms:
+        if m and m not in out:
+            out.append(m)
+    return out[:40]
+
+
+def _base_prompt() -> str:
+    try:
+        return (Path(__file__).with_name("codex_prompt.md")).read_text(encoding="utf-8")
+    except OSError:
+        return "You are a coding agent running in the Codex CLI. Be precise, safe, and helpful."
+
+
+def model_info(slug: str, prio: int, default_effort: str) -> dict:
+    """Codex 0.16x 的 ModelInfo。和 Codex 给不认识的模型用的兜底元数据一样（工具、提示词都不变），
+    只多了两样：在 /model 里列出来（visibility=list），以及能选推理等级（supported_reasoning_levels）。"""
+    return {"slug": slug, "display_name": pretty(slug), "description": "用你的 API key（CC Session Sync）",
+            "default_reasoning_level": default_effort or "medium",
+            "supported_reasoning_levels": [{"effort": e, "description": LEVELS[e]} for e in LEVELS_CODEX],
+            "shell_type": "unified_exec", "visibility": "list", "supported_in_api": True, "priority": prio,
+            "availability_nux": None, "upgrade": None, "base_instructions": _base_prompt(),
+            "include_skills_usage_instructions": False, "include_plugin_usage_instructions": False, "include_apps_usage_instructions": False,
+            "supports_reasoning_summary_parameter": True, "default_reasoning_summary": "auto",
+            "support_verbosity": False, "default_verbosity": None, "apply_patch_tool_type": None, "web_search_tool_type": "text",
+            "truncation_policy": {"mode": "bytes", "limit": 10000}, "supports_image_detail_original": False,
+            "context_window": 200000, "max_context_window": 200000, "effective_context_window_percent": 95,
+            "experimental_supported_tools": [], "input_modalities": ["text", "image"], "supports_search_tool": False}
+
+
+def codex_catalog(d: dict | None = None) -> list:
+    d = d or router.cfg()
+    c = get("codex", d)
+    if not (c["enabled"] and needs("codex", c)):
+        return []
+    ms = catalog_models(c)
+    out = [model_info(m, i + 1, c.get("effort") or "") for i, m in enumerate(ms)]
+    for s in CODEX_BUILTIN:                          # Codex 自带的 GPT 模型在这里用不了：同名条目盖掉、藏起来，/model 里只剩能用的
+        if s not in ms:
+            out.append(dict(model_info(s, 900, ""), visibility="hide"))
+    return out
 
 
 # ================================================================ 页面 / 自检

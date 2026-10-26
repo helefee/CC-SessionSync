@@ -824,8 +824,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/ccss/status":
             return self.send_json(200, status())
         if path.endswith("/models"):
-            if "client_version=" in self.path:          # Codex 拉自己的模型目录（ModelInfo 格式）：给空的，它就用内置的 + 兜底元数据
-                return self.send_json(200, {"models": []})
+            if "client_version=" in self.path:          # Codex 拉自己的模型目录（ModelInfo 格式）：卡片启用时给卡片能用的模型（/model 里能选、能调推理等级）
+                from . import cards
+                return self.send_json(200, {"models": cards.codex_catalog()})
             return self.send_json(200, _models_list(bool(self.headers.get("anthropic-version"))))
         self.send_json(404, {"error": {"message": "not found"}})
 

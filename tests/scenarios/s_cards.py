@@ -48,7 +48,7 @@ SET.write_bytes(SORIG)
 router.save(dict(router.load(), port=free()))
 
 # ================================================================ 1. Codex 使用 Claude API Key（中转站 Base URL = 假 Anthropic）
-v = cards.save_card("codex", {"kind": "claude", "secret": "sk-ant-card-good", "base_url": MB, "models": ["claude-haiku-5-5", "claude-opus-4-1-20250805", "claude-opus-5-5", "claude-sonnet-5-5"]})
+v = cards.save_card("codex", {"kind": "claude", "secret": "sk-ant-card-good", "base_url": MB, "models": ["claude-haiku-5-5", "claude-opus-4-1-20250805", "claude-opus-4-5", "claude-opus-5-5", "claude-sonnet-5-5"]})
 ok(v["model"] == "claude-opus-5-5" and v["needs_proxy"] and v["keys"]["claude"] and "card-good" not in json.dumps(v), f"saved: default model = newest Opus ({v['model']}), key masked")
 ok("sk-ant-card-good" not in (T / "ss" / "route.json").read_text(encoding="utf-8"), "route.json has no plaintext key")
 ok(cards.latest(["claude-opus-4-1-20250805", "claude-opus-4-5", "claude-opus-5-5", "claude-opus-5"], "opus") == "claude-opus-5-5", "latest(): picks newest opus")
@@ -80,6 +80,27 @@ ok(st == 200 and b"MOCK-UPSTREAM-OK" in b and last.get("path") == "/v1/messages"
    "Codex desktop's gpt-5.5 request → card model on the Anthropic upstream (converted, card key)")
 st, b = call("/v1/responses", {"model": "claude-sonnet-5-5", "input": "hi", "stream": False})
 ok(st == 200 and mlog()[-1]["body"]["model"] == "claude-sonnet-5-5", "explicit Claude model from /model kept")
+def rq(model, effort=None):
+    b = {"model": model, "input": "hi", "stream": False}
+    if effort: b["reasoning"] = {"effort": effort}
+    call("/v1/responses", b); return mlog()[-1]["body"]
+x = rq("claude-opus-5-5", "high"); ok(x.get("thinking") == {"type": "adaptive"} and x.get("output_config", {}).get("effort") == "high", "Codex effort high → adaptive thinking, effort high")
+x = rq("claude-opus-5-5", "low"); ok(x.get("output_config", {}).get("effort") == "low", "Codex effort low → effort low (per request)")
+x = rq("claude-opus-5-5", "xhigh"); ok(x.get("output_config", {}).get("effort") == "xhigh", "xhigh → xhigh")
+x = rq("claude-opus-5-5", "none"); ok("thinking" not in x, "none → no thinking")
+x = rq("claude-opus-5-5", "minimal"); ok("thinking" not in x, "minimal → no thinking")
+x = rq("claude-opus-4-5", "high"); ok(x.get("thinking", {}).get("type") == "enabled" and x["thinking"]["budget_tokens"] == 20000 and x["model"] == "claude-opus-4-5",
+                                      f"older model (Opus 4.5) → budget_tokens 20000 ({x.get('thinking')})")
+x = rq("claude-haiku-5-5", "medium"); ok(x["model"] == "claude-haiku-5-5", "/model claude-haiku-5-5 passes through")
+op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+cat = json.loads(op.open(urllib.request.Request(router.base_url() + "/v1/models?client_version=0.164.0", headers={"authorization": "Bearer " + TOK})).read())["models"]
+lst = [m["slug"] for m in cat if m["visibility"] == "list"]
+ok(lst[0] == "claude-opus-5-5" and "claude-sonnet-5-5" in lst and "claude-haiku-5-5" in lst and not any(m.startswith("gpt") for m in lst)
+   and all([l["effort"] for l in m["supported_reasoning_levels"]] == ["none", "low", "medium", "high", "xhigh", "max"] for m in cat)
+   and all(m["base_instructions"].startswith("You are a coding agent") for m in cat),
+   f"Codex model catalog: Claude models listed with effort levels, built-in GPT hidden ({lst})")
+ok(any(m["slug"] == "gpt-5.5" and m["visibility"] == "hide" for m in cat), "built-in gpt-5.5 overridden as hidden")
+ok("model_reasoning_effort" not in tomllib.loads(CFG.read_text(encoding="utf-8")), "no default effort chosen → model_reasoning_effort not written (Codex's own)")
 t = cards.test("codex")
 ok(t["ok"] and t.get("via") == "proxy", "测试 goes through the background proxy")
 
@@ -145,12 +166,25 @@ r = cards.run("claude", "enable")
 s = json.loads(SET.read_text(encoding="utf-8"))
 ok(r["proxy"] and r["proxy_ok"] and s["env"]["ANTHROPIC_BASE_URL"] == router.base_url() and s["env"]["ANTHROPIC_AUTH_TOKEN"] == TOK and s["env"]["FOO"] == "1"
    and s["apiKeyHelper"] == "my-helper.sh" and s["permissions"], "Claude Code card: settings.json env → local proxy, user's settings kept")
-st, b = call("/v1/messages", {"model": "claude-opus-5-5", "max_tokens": 50, "messages": [{"role": "user", "content": "hi"}]}, {"anthropic-version": "2023-06-01"})
+ok(s.get("effortLevel") == "high", "card default effort → settings.json effortLevel (Claude Code's own setting, /effort can change it)")
+AH = {"anthropic-version": "2023-06-01"}
+def cmsg(model, effort=None, thinking=True):
+    b = {"model": model, "max_tokens": 50, "messages": [{"role": "user", "content": "hi"}]}
+    if thinking: b["thinking"] = {"type": "adaptive"}
+    if effort: b["output_config"] = {"effort": effort}
+    return call("/v1/messages", b, AH)
+st, b = cmsg("claude-opus-5-5", "high")
 lg = mlog()[-1]
 ok(st == 200 and lg["path"] == "/v1/responses" and lg["body"]["model"] == "gpt-5.5" and lg["body"]["reasoning"]["effort"] == "high" and lg["key_ok"],
-   "claude-opus-… → gpt-5.5 on Responses with card effort")
-call("/v1/messages", {"model": "claude-haiku-5-5", "max_tokens": 50, "messages": [{"role": "user", "content": "hi"}]}, {"anthropic-version": "2023-06-01"})
-ok(mlog()[-1]["body"]["model"] == "gpt-5.4-mini", "haiku → small model")
+   "opus + effort high (from Claude Code) → gpt-5.5, reasoning.effort high")
+cmsg("claude-opus-5-5", "low"); ok(mlog()[-1]["body"]["reasoning"]["effort"] == "low", "/effort low → reasoning.effort low (per request, not fixed)")
+cmsg("claude-opus-5-5", "max"); ok(mlog()[-1]["body"]["reasoning"]["effort"] == "xhigh", "/effort max → xhigh")
+cmsg("claude-opus-5-5", None, thinking=False); ok("effort" not in (mlog()[-1]["body"].get("reasoning") or {}), "no thinking in request → no effort sent (model default)")
+cmsg("claude-haiku-5-5", "medium"); ok(mlog()[-1]["body"]["model"] == "gpt-5.4-mini", "/model haiku → small model")
+cmsg("claude-sonnet-5-5", "medium"); ok(mlog()[-1]["body"]["model"] == "gpt-5.5", "/model sonnet → main model (no sonnet model set)")
+cards.save_card("claude", {"sonnet_model": "gpt-5.4"})
+cmsg("claude-sonnet-5-5", "medium"); ok(mlog()[-1]["body"]["model"] == "gpt-5.4", "/model sonnet → sonnet model when set")
+cmsg("gpt-5.3-codex", "medium"); ok(mlog()[-1]["body"]["model"] == "gpt-5.3-codex", "/model gpt-5.3-codex (non-Claude name) passes through")
 ok(cards.overview()["proxy"]["running"], "overview: proxy running")
 r = cards.run("claude", "disable")
 ok(SET.read_bytes() == SORIG and not router.health(), "停用: settings.json byte-identical, proxy stopped")
