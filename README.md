@@ -22,6 +22,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
 9. **模型路由（0.3.0）**：本机协议转换代理，让 **Codex 用 Claude 模型**、**Claude Code 用 OpenAI / Gemini / 中转站的模型**；只用 API key（官方或兼容地址，
    多 key 轮换 / 失败换 key / 别名池，参考 CLIProxyAPI），**不支持订阅登录**；一键应用 / 撤销（按字节还原）。见下文。
+   **0.3.4**：「供应商」页重做：Agent（每个 Agent 一行 + 模型选择器）/ 服务商（贴一次 key 两边共用）/ 高级 三栏。
    **0.3.3**：Codex 桌面端的模型选择器列出卡片的模型（写自己的 model_catalog_json），修好「账号已切换」「配置被改过」误报。
    **0.3.2**：卡片能选 Claude / OpenAI / Gemini / DeepSeek / GLM / Kimi / Qwen / Grok / OpenRouter / 自定义；模型和推理等级在 Codex（`/model`）和 Claude Code（`/model`、`/effort`）里随时切换。
    **0.3.1 简化**：「供应商」页顶上两张卡片「Codex 使用…」「Claude Code 使用…」——选一个、贴 key、点「启用」就行，转换代理在后台自动跑。
@@ -357,6 +358,26 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### 供应商页重做：Agent / 服务商 / 高级（0.3.4）
+
+![Agent](docs/screenshots/v034-after-default.png)
+
+- **Agent**：Codex、Claude Code 各占一行，左边一个状态点和一句话（已接入 / 没接入 / 有设置指着别家的模型），右边是**模型选择器**和**开关**。
+  选择器可以搜索，按服务商分组，显示好认的名字（`deepseek-v4-pro` 显示成 DeepSeek V4 Pro），支持 ↑↓、回车、Esc；列表里没有的模型名可以直接输入。
+  选中模型就接入，关掉开关就停用（改过的文件按字节还原）。推理等级、Sonnet / Haiku 档位、`--profile`、测试连接这些放在「设置 ›」里，推理等级是一根滑块，只列这个模型支持的等级。
+- **服务商**：每家一个带图标的格子，分成「已添加」和「还可以添加」两组，可以搜索。点开以后贴 key，**贴完马上检查**（✓ key 可用 · 列出 N 个模型 / ✗ 原因），
+  再选地区、中转地址，然后保存。**key 两个 Agent 共用**，存成 `prov-<服务商>`。0.3.3 及以前存在某张卡片里的 key 继续能用，换 key 时旧名字也一起更新。
+  有 Agent 在用的服务商，保存后会自动重新接入；在用的不能删。
+- **高级**：v0.2 的供应商列表、模型路由（多 key 轮换 / 跨协议），东西没变，只是不再堆在主页面上。
+- 全局：顶部导航改成一条分段轨道，和页面里的分段按钮是同一种样式。顶部提示条有好几条时只展开第一条，其余收成「还有 N 条提示 ▾」。深色和「特大」字号都按同一套变量画。
+
+| 之前 | 之后 · 服务商 | 之后 · 模型选择器 |
+|---|---|---|
+| ![](docs/screenshots/v034-before-default.png) | ![](docs/screenshots/v034-after-providers.png) | ![](docs/screenshots/v034-after-picker.png) |
+
+借鉴自 [magpie](https://github.com/yetone/magpie)（MIT）的**思路**，代码都是自己写的：Agent 一行一个（状态点 + 一句话 + 模型下拉 + 开关）；服务商用带图标的格子挑，已添加的打勾；
+模型选择器能搜索、按服务商分组、用键盘操作；推理等级用带刻度的滑块；分段轨道式的导航。服务商图标来自 [lobehub/lobe-icons](https://github.com/lobehub/lobe-icons)（MIT，见 `licenses/lobe-icons-MIT.txt`）。
 
 ### Codex 桌面端的模型选择器（0.3.3）
 

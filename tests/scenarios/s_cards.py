@@ -155,7 +155,7 @@ apps.cancel(r["job"]); (T / "desktop-running").unlink()
 cards.save_card("codex", {"kind": "openai", "secret": "sk-oa-card-good", "base_url": MB + "/v1", "model": "gpt-5.5"})
 r = cards.run("codex", "enable")
 doc = tomllib.loads(CFG.read_text(encoding="utf-8"))
-ok(not r["proxy"] and doc["model_providers"]["cc-route"]["base_url"] == MB + "/v1" and doc["model_providers"]["cc-route"]["auth"]["args"][-1] == "card-codex-openai"
+ok(not r["proxy"] and doc["model_providers"]["cc-route"]["base_url"] == MB + "/v1" and doc["model_providers"]["cc-route"]["auth"]["args"][-1] == "prov-openai"
    and not router.health(), "OpenAI key: config.toml points straight at upstream, card key via helper, no proxy")
 cards.run("codex", "disable")
 ok(CFG.read_bytes() == ORIG, "disable → byte-identical")
@@ -193,7 +193,7 @@ ok(SET.read_bytes() == SORIG and not router.health(), "停用: settings.json byt
 cards.save_card("claude", {"kind": "claude", "secret": "sk-ant-card-good", "base_url": ""})
 r = cards.run("claude", "enable")
 s = json.loads(SET.read_text(encoding="utf-8"))
-ok(not r["proxy"] and "card-claude-claude" in s["apiKeyHelper"] and "ANTHROPIC_BASE_URL" not in s["env"] and not router.health(), "native Claude key: apiKeyHelper only, no proxy")
+ok(not r["proxy"] and "prov-claude" in s["apiKeyHelper"] and "ANTHROPIC_BASE_URL" not in s["env"] and not router.health(), "native Claude key: apiKeyHelper only, no proxy")
 p = subprocess.run(s["apiKeyHelper"], shell=True, capture_output=True, timeout=30)
 ok(p.stdout.decode().strip() == "sk-ant-card-good", "apiKeyHelper prints the stored key")
 cards.run("claude", "disable")
@@ -267,6 +267,47 @@ CFG.write_bytes(STALE.replace(b'review_model', b'model_provider = "other"\nrevie
 evs = watch.tick(now=5000) + watch.tick(now=5020) + watch.tick(now=5040)
 ok(any("供应商已切换" in e.get("title", "") for e in evs), f"external provider-only change → labelled 供应商已切换 ({[e.get('title') for e in evs]})")
 CFG.write_bytes(ORIG)
+
+
+# ---------- 7. 0.3.4 服务商：配一次，两个 Agent 共用 ----------
+print("-- 0.3.4 shared providers --")
+for n in ("prov-deepseek", "card-codex-deepseek", "card-claude-deepseek"):
+    keystore.delete(n)
+keystore.put("card-claude-deepseek", "sk-legacy-ds", "t")             # 0.3.3 只存在 Claude 卡片里的 key
+ok(cards.key_name("codex", "deepseek") == "card-claude-deepseek" and cards.prov_view("deepseek")["key"], "legacy per-card key is found by the other agent too")
+r = cards.prov_models({"kind": "deepseek", "secret": "sk-oa-card-good", "base_url": MB + "/v1"})
+ok(r.get("ok") and r["models"] == ["mock-model-a", "mock-model-b"] and r["labels"]["mock-model-a"] == "Mock Model A", f"prov-models lists with the pasted key, friendly labels ({r.get('reason')})")
+ok(keystore.get("card-claude-deepseek") == "sk-legacy-ds", "prov-models does not store the key")
+v = cards.prov_save({"kind": "deepseek", "secret": "sk-oa-card-good", "base_url": MB + "/v1", "models": r["models"], "ctx": {"mock-model-a": 64000}})
+ok(keystore.get("prov-deepseek") == "sk-oa-card-good" and keystore.get("card-claude-deepseek") == "sk-oa-card-good", "prov-save → shared prov-<id>, legacy name kept in sync (its apiKeyHelper may still point there)")
+ok(cards.key_name("codex", "deepseek") == "prov-deepseek" and cards.key_name("claude", "deepseek") == "prov-deepseek", "both agents now use the shared key")
+ok(v["models"] == ["mock-model-a", "mock-model-b"] and v["ctx"] == {"mock-model-a": 64000} and v["host"] == f"127.0.0.1:{MP}" and v["levels"]["mock-model-a"] == ["none", "low", "high", "max"],
+   "provider view: models / ctx / host / per-model effort levels (DeepSeek map)")
+try:
+    cards.prov_save({"kind": "glm"}); ok(False, "prov-save without a key refused")
+except ValueError:
+    ok(True, "prov-save without a key refused")
+lst = cards.prov_list()
+ok([p["id"] for p in lst["providers"]][-1] == "custom" and {p["id"] for p in lst["providers"] if p["key"]} >= {"deepseek"} and "codex" in lst["cards"], "prov-list: every preset + custom, keys masked, cards included")
+ok("sk-oa-card-good" not in json.dumps(lst), "prov-list never returns a key")
+# 在 Agent 里选：card-enable 带上服务商的设置
+CFG.write_bytes(ORIG)
+cards.save_card("codex", {"kind": "deepseek", "model": "mock-model-a", "base_url": v["base_url"], "models": v["models"], "ctx": v["ctx"], "fix_refs": []})
+e = cards.run("codex", "enable")
+doc = tomllib.loads(CFG.read_text(encoding="utf-8"))
+cat = json.loads((CX / cards.CATALOG_NAME).read_text(encoding="utf-8"))
+ok(doc.get("model") == "mock-model-a" and [m["slug"] for m in cat["models"]] == ["mock-model-a", "mock-model-b"] and cat["models"][0]["context_window"] == 64000,
+   "picked in the Agent row → Codex uses the shared provider (catalog from the provider's models)")
+ok(cards.prov_view("deepseek")["used_by"] == ["codex"], "provider shows which agent uses it")
+try:
+    cards.prov_delete({"kind": "deepseek"}); ok(False, "can't delete a provider in use")
+except ValueError as ex:
+    ok("Codex" in str(ex), "can't delete a provider in use")
+cards.run("codex", "disable")
+ok(CFG.read_bytes() == ORIG, "disable → byte-identical")
+cards.prov_delete({"kind": "deepseek"})
+ok(not any(keystore.get(n) for n in ("prov-deepseek", "card-codex-deepseek", "card-claude-deepseek")) and not cards.prov_view("deepseek")["key"]
+   and "deepseek" not in (router.load().get("provs") or {}), "prov-delete removes every stored name + settings")
 
 allt = "".join(f.read_text(encoding="utf-8", errors="replace") for f in (T / "ss").rglob("*") if f.is_file() and f.name != "keys.json" and f.suffix in (".json", ".jsonl", ".log", ".toml", ".txt"))
 allt += CFG.read_text(encoding="utf-8") + SET.read_text(encoding="utf-8")
