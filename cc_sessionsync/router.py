@@ -34,9 +34,12 @@ TOKEN_KEY = "route-token"
 PROTOCOLS = ("anthropic", "responses", "chat")
 PROTO_NAME = {"anthropic": "Anthropic Messages", "responses": "OpenAI Responses", "chat": "OpenAI Chat Completions"}
 PRESETS = {
-    "anthropic": {"name": "Anthropic 官方", "protocol": "anthropic", "base_url": "https://api.anthropic.com"},
-    "openai": {"name": "OpenAI 官方", "protocol": "responses", "base_url": "https://api.openai.com/v1"},
-    "gemini": {"name": "Gemini（OpenAI 兼容接口）", "protocol": "chat", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"},
+    "anthropic": {"name": "Anthropic 官方", "protocol": "anthropic", "base_url": "https://api.anthropic.com",
+                  "models": [{"name": "claude-opus-5-5", "alias": "opus"}, {"name": "claude-sonnet-5-5", "alias": "sonnet"}, {"name": "claude-haiku-5-5", "alias": "haiku"}]},
+    "openai": {"name": "OpenAI 官方", "protocol": "responses", "base_url": "https://api.openai.com/v1",
+               "models": [{"name": "gpt-5.5", "alias": "gpt"}, {"name": "gpt-5.4-mini", "alias": "gpt-mini"}]},
+    "gemini": {"name": "Gemini（OpenAI 兼容接口）", "protocol": "chat", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+               "models": [{"name": "gemini-3.5-flash", "alias": "gemini"}]},
     "custom": {"name": "自定义供应商", "protocol": "chat", "base_url": ""},
 }
 SLOTS = ("opus", "sonnet", "haiku", "default")
@@ -560,7 +563,10 @@ def forward(h, client: str, body: dict, count: bool = False):
         any_ready = any(_COOL.get(k["name"], 0) <= time.time() for p, _, _ in cands for k in p["keys"] if not k.get("disabled"))
         if rnd and not any_ready:
             soon = min([_COOL.get(k["name"], 0) for p, _, _ in cands for k in p["keys"] if not k.get("disabled")] or [time.time()])
-            time.sleep(max(0.0, min(soon - time.time(), float(d.get("max_retry_wait") or 20))))
+            wait = soon - time.time()
+            if wait > float(d.get("max_retry_wait") or 20):
+                break                                  # 最快的 key 也要冷却很久（比如 401 / 403）：不干等，直接把错误给客户端
+            time.sleep(max(0.0, wait))
         for p, upm, entry in cands:
             for k in pick_keys(p, d):
                 if _COOL.get(k["name"], 0) > time.time() and any_ready:
@@ -637,6 +643,10 @@ def _attempt(h, client, body, p, k, secret, upm, entry, want, stream, count, t0)
     _kstat(k["name"], True, resp.status)
     try:
         u = _relay(h, client, p, resp, ctx, want, stream, count)
+    except ClientGone:
+        _log({"ok": False, "client": client, "provider": p["name"], "key": k.get("label") or k["id"], "model": upm, "status": 499,
+              "ms": int((time.time() - t0) * 1000), "message": "客户端提前断开（比如按了 Esc / Ctrl+C）"})
+        raise
     finally:
         try:
             resp.close()

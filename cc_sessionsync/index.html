@@ -485,6 +485,16 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .crj{list-style:none;padding:0 !important}.crj li{display:flex;gap:6px;align-items:baseline}
 td.nw{white-space:nowrap}
 #mdCr{margin-left:6px;padding:1px 8px;font-size:calc(13px*var(--fk))}
+.rtnote{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--accent);background:var(--accent-weak);border-radius:10px;padding:8px 10px;margin:4px 0 10px;font-size:calc(13px*var(--fk))}.rtnote .ic{flex:none;margin-top:2px;color:var(--accent)}
+.rth{margin:14px 0 6px;font-size:calc(14px*var(--fk));display:flex;align-items:center;gap:6px;flex-wrap:wrap}.rth .dim{font-weight:400;font-size:calc(12px*var(--fk))}
+.rtp{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}.rtp.off{opacity:.6}.rtph{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.rtph .pvu{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:calc(12px*var(--fk))}
+.rtpk,.rtpm{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}.rtk{display:inline-flex;gap:4px;align-items:center;border:1px dashed var(--line);border-radius:6px;padding:1px 6px;font-size:calc(12px*var(--fk))}
+.rtslots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:4px 0 6px}.rtslots label{display:flex;flex-direction:column;gap:3px;font-size:calc(12px*var(--fk));color:var(--muted)}.rtslots select,.rtslots input{width:100%}
+.rtadv{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}.rtadv summary{cursor:pointer;color:var(--muted)}
+.rtl{width:100%;font-size:calc(12px*var(--fk))}.rtl td{text-align:left}.rtl td.n{text-align:right}.rtl th{text-align:left}.rtl td.ell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rtt{font-size:calc(12px*var(--fk));padding:6px 0;display:flex;flex-direction:column;gap:3px}.rtcmd{background:var(--hover);padding:6px 8px;border-radius:6px;user-select:all;white-space:pre-wrap}
+.rtmr,.rtkr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.rtmr input[data-m=name],.rtmr input[data-m=alias]{width:210px}.rtpr input{width:72px}.rtkr input[data-k=label]{width:110px}.rtkr input[data-k=weight]{width:52px}.rtkr input[data-k=proxy_url]{width:180px}
+.rtfm{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow:auto;margin-top:4px}.rtfm .on{opacity:.5}.rtsum{cursor:pointer}.rtsum:hover{background:var(--hover)}
 </style>
 </head>
 <body>
@@ -1424,12 +1434,12 @@ function mcBanner(){
   return [`<div class="mcban"><button class="mcbl${MC.ban ? " on" : ""}" id="mcBan" title="点开看详情">${ic("info")}<span>${n.map(x => esc(x.s)).join(" · ")}</span><span class="mcchev">${MC.ban ? "▾" : "▸"}</span></button></div>`,
     `<div class="mcbx" id="mcBx"${MC.ban ? "" : " hidden"}>${n.map(x => `<div>${x.h}</div>`).join("")}</div>`];
 }
-const MC_VIEWS = {backups: ["备份 / 恢复", () => mcBackups()], proxy: ["代理（opencodex / magpie）", () => mcProxy()], migrate: ["迁移明文 key", () => mcMigrate()], keys: ["Key 列表", () => mcKeys()],
+const MC_VIEWS = {route: ["模型路由（跨协议：Codex ⇄ Claude 模型）", () => rtView()], backups: ["备份 / 恢复", () => mcBackups()], proxy: ["代理（opencodex / magpie）", () => mcProxy()], migrate: ["迁移明文 key", () => mcMigrate()], keys: ["Key 列表", () => mcKeys()],
   claude: ["Claude 配置文件（直接改）", () => mcClaude()], codex: ["Codex 配置文件（直接改）", () => mcCodex()], slot: ["Codex 对话列表 id", () => mcSlot()]};
 function mcMenuHtml(){
   const d = MC.d, it = (k, t, extra = "") => `<button data-mcgo="${k}">${t}${extra}</button>`;
   return `<div class="menu mcm" id="mcMenu"><button class="ghost mcmb" id="mcMenuBtn" title="更多：备份、代理、明文 key、导入、Key 列表…">${ic("more")}</button><div class="list">
-    ${it("backups", "备份 / 恢复…")}${it("proxy", "代理（opencodex / magpie）…")}${it("migrate", "迁移明文 key…", d.plaintext.length ? ` <span class="mcnb">${d.plaintext.length}</span>` : "")}
+    ${it("route", "模型路由（跨协议）…")}${it("backups", "备份 / 恢复…")}${it("proxy", "代理（opencodex / magpie）…")}${it("migrate", "迁移明文 key…", d.plaintext.length ? ` <span class="mcnb">${d.plaintext.length}</span>` : "")}
     ${d.ccswitch.installed ? it("ccs", "从 CC Switch 导入…") : ""}${it("keys", "Key 列表…")}
     <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">${it("claude", "Claude 配置文件（直接改）…")}${it("codex", "Codex 配置文件（直接改）…")}${it("slot", "Codex 对话列表 id…")}</div></div>`;
 }
@@ -1567,6 +1577,229 @@ function mcSlot(){
     <div class="ufl"><code>[model_providers.</code><input id="pvSlot" value="${esc(MC.p.codex_slot)}" style="width:120px"><code>]</code><button class="primary" id="pvSlotSave">改</button></div>`;
   $("#pvSlotSave").onclick = async () => { try { await pvApi("slot", {slot: $("#pvSlot").value.trim()}); toast("已改"); } catch(e){ toast("没改：" + e.message); } mcOpen("slot"); };
 }
+// ---------- 模型路由（v0.3.0）：本机协议转换代理，Codex 用 Claude 模型 / Claude Code 用 OpenAI 等模型；只用 API key（官方或兼容的中转 / 自建），不碰订阅登录 ----------
+// 后端：cc_sessionsync/router.py（供应商 / 多 key 轮换 / 别名 / 代理）+ xproto.py（Anthropic Messages ⇄ OpenAI Responses / Chat 转换）
+const RT = {d: null, cpa: null};
+const RT_PROTO = {anthropic: "Anthropic Messages", responses: "OpenAI Responses", chat: "OpenAI Chat Completions"};
+const RT_PRE = [["anthropic", "Anthropic 官方"], ["openai", "OpenAI 官方"], ["gemini", "Gemini（OpenAI 兼容）"], ["custom", "自定义 / 中转"]];
+async function rtApi(act, body){ mcDirty(); return api("/api/route/" + act, body || {}); }
+async function rtLoad(){ try { RT.d = await api("/api/route"); } catch(e){ RT.d = null; RT.err = e.message; } return RT.d; }
+const rtAge = t => t ? when(t) : "—";
+function rtStat(s){
+  return s.running ? `<span class="tag ok">● 运行中</span> <code>127.0.0.1:${esc(s.port)}</code> <span class="dim">· 已转发 ${s.requests} 次${s.errors ? `，失败 ${s.errors} 次` : ""}${s.cooling ? `，${s.cooling} 个 key 冷却中` : ""}</span>`
+    : `<span class="tag ${s.error ? "bad" : "warn"}">● 没在运行</span> <span class="dim">${esc(s.error || "")}</span>`;
+}
+function rtKeyChip(k){
+  const st = k.cooling ? `<span class="tag warn" title="失败后暂停使用，到时自动恢复">冷却 ${k.cooling}s</span>` : k.disabled ? '<span class="tag">停用</span>' : "";
+  const n = (k.ok || k.fail) ? `<span class="dim" title="成功 / 失败（本次运行）">${k.ok || 0}/${k.fail || 0}</span>` : "";
+  return `<span class="rtk" title="${esc(k.label || k.id)}${k.weight > 1 ? " · 权重 " + k.weight : ""}${k.proxy_url ? " · 代理 " + esc(k.proxy_url) : ""}">${esc(k.label ? k.label + " " : "")}<code>${esc(k.masked || "（缺）")}</code>${k.weight > 1 ? `<span class="dim">×${k.weight}</span>` : ""}${st}${n}</span>`;
+}
+function rtPrice(m){ return m.price === "none" ? "—" : m.price ? `$${m.price.inp}/$${m.price.out}` : '<span class="dim">价格表</span>'; }
+function rtProvCard(p){
+  const ms = p.models.length ? p.models.map(m => `<span class="pvm" title="价格（美元 / 百万 token，输入/输出）：${m.price === "none" ? "不计费" : m.price ? m.price.inp + " / " + m.price.out : "按价格表"}">${m.alias ? `<b>${esc(m.alias)}</b> → ` : ""}${esc(m.name)} <span class="dim">${rtPrice(m)}</span></span>`).join("")
+    : '<span class="dim">（没列模型：客户端要什么模型名就原样转给它）</span>';
+  return `<div class="rtp${p.disabled ? " off" : ""}" data-rtp="${esc(p.id)}">
+    <div class="rtph"><b>${esc(p.name)}</b><span class="tag acc">${RT_PROTO[p.protocol]}</span>${p.prefix ? `<span class="tag" title="请求模型名写成 ${esc(p.prefix)}/模型 时只走这家">前缀 ${esc(p.prefix)}/</span>` : ""}${p.disabled ? '<span class="tag">已停用</span>' : ""}
+      <span class="pvu" title="${esc(p.base_url)}">${esc(p.base_url)}</span><span style="flex:1"></span>
+      <button class="pvmini" data-rtts="${esc(p.id)}" title="每个 key 拉一次模型列表（不花钱）；填了模型名就发 1 个 token 的请求">测试</button><button class="pvmini ghost" data-rted="${esc(p.id)}">编辑</button></div>
+    <div class="rtpk">${p.keys.length ? p.keys.map(rtKeyChip).join("") : '<span class="note">没有 key</span>'}</div>
+    <div class="rtpm">${ms}${p.excluded.length ? `<span class="dim" title="排除的模型（通配符）">排除：${p.excluded.map(esc).join("、")}</span>` : ""}</div>
+    <div class="pvo" data-rto="${esc(p.id)}"></div></div>`;
+}
+function rtAliasOpts(sel, none = "（不设）"){
+  const al = RT.d.aliases; const o = [`<option value="">${none}</option>`].concat(al.map(a => `<option ${a === sel ? "selected" : ""}>${esc(a)}</option>`));
+  if (sel && !al.includes(sel)) o.push(`<option selected>${esc(sel)}</option>`);
+  return o.join("");
+}
+function rtApplied(k){
+  const a = RT.d.applied[k]; if (!a) return '<span class="dim">没应用</span>';
+  const ch = a.files.some(f => f.changed);
+  return `<span class="tag ok">已应用</span> <span class="dim">${rtAge(a.at)}${a.default ? " · 设为默认" : ""}${ch ? " · 文件之后又被改过（撤销时只拿掉我们加的）" : ""}</span>`;
+}
+async function rtView(){
+  const box = $("#mcTab"); if (!box) return;
+  if (!RT.d) box.innerHTML = '<div class="dim">读取中…</div>';
+  const d = await rtLoad(); if (!$("#mcTab")) return;
+  if (!d) { box.innerHTML = `<div class="miss">读不到：${esc(RT.err)}</div>`; return; }
+  const s = d.status, cl = d.clients.claude.slots || {}, cx = d.clients.codex || {};
+  const run = d.running || {}, on = [run.claude && "Claude", run.codex && "Codex"].filter(Boolean);
+  box.innerHTML = `
+  <div class="rtnote">${ic("info")}<div>本机起一个协议转换代理（只听 127.0.0.1，带本机口令），让 <b>Codex 用 Claude 模型</b>、<b>Claude Code 用 OpenAI / Gemini / 中转站的模型</b>。只用 <b>API key</b>（官方或任何 Anthropic / OpenAI 兼容的地址）；<b>不支持把 Claude / ChatGPT 订阅登录拿到别的工具里用</b>（违反服务条款，有封号风险）。原来的登录不受影响，随时一键撤销。</div></div>
+  <div class="setrow"><div class="sl"><div><b>代理</b><div class="sd">${rtStat(s)}</div></div></div><span style="display:flex;gap:6px">${s.running ? '<button data-rtdo="restart">重启</button><button data-rtdo="stop">停止</button>' : '<button class="primary" data-rtdo="start">启动</button>'}</span></div>
+  <h4 class="rth">上游供应商 <span class="dim">（同一个别名挂在多个模型 / 供应商上 = 一个池子，轮流用、失败自动换）</span></h4>
+  <div id="rtProvs">${d.providers.map(rtProvCard).join("") || '<div class="dim" style="padding:8px 0">还没有。先加一个：</div>'}</div>
+  <div class="pvadd"><button class="ghost pvaddb" data-rtadd="custom">＋ 添加供应商</button><span class="dim">预设：</span>${RT_PRE.map(([k, t]) => `<button class="pvmini ghost" data-rtadd="${k}">${t}</button>`).join("")}<span style="flex:1"></span><button class="pvmini ghost" id="rtCpa" title="从 CLIProxyAPI 的 config.yaml 导入 API key 供应商（不导 OAuth 登录）">从 CLIProxyAPI 导入…</button></div>
+  <h4 class="rth">${logo("claude")} Claude Code 用哪个模型 <span class="dim">（Claude Code 请求的模型按名字里的 opus / sonnet / haiku 换成右边的别名）</span></h4>
+  <div class="rtslots">${[["opus", "Opus"], ["sonnet", "Sonnet"], ["haiku", "Haiku（后台小任务也用它）"], ["default", "其它"]].map(([k, t]) => `<label><span>${t}</span><select data-rts="${k}">${rtAliasOpts(cl[k], k === "default" ? "（不转）" : "（不设）")}</select></label>`).join("")}</div>
+  <div class="setrow"><div class="sl"><div><b>应用到 Claude Code</b><div class="sd">${rtApplied("claude")}。全局：在 <code>~/.claude/settings.json</code> 的 env 里设 ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN（先备份，撤销按字节还原）；只命令行：不改全局，用 <code>claude --settings "${esc(d.session_file)}"</code> 启动</div></div></div>
+    <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="primary" data-rtap="claude">应用（全局）</button><button data-rtap="claude-session">只给命令行</button>${d.applied.claude ? '<button data-rtrv="claude">撤销</button>' : ""}</span></div>
+  <h4 class="rth">${logo("codex")} Codex 用哪个模型</h4>
+  <div class="rtslots"><label><span>模型（别名）</span><select data-rtc="model">${rtAliasOpts(cx.model)}</select></label>
+    <label><span>思考强度</span><select data-rtc="effort">${["minimal", "low", "medium", "high", "xhigh"].map(e => `<option ${e === (cx.effort || "medium") ? "selected" : ""}>${e}</option>`).join("")}</select></label>
+    <label><span>Codex 发的格式</span><select data-rtc="wire"><option value="responses" ${cx.wire !== "chat" ? "selected" : ""}>Responses（推荐）</option><option value="chat" ${cx.wire === "chat" ? "selected" : ""}>Chat Completions（老版本 Codex）</option></select></label>
+    <label><span>上下文窗口</span><input data-rtc="context_window" type="number" min="0" placeholder="0 = Codex 默认" value="${cx.context_window || ""}"></label></div>
+  <div class="setrow"><div class="sl"><div><b>应用到 Codex</b><div class="sd">${rtApplied("codex")}。写一个单独的 profile（<code>cc-route.config.toml</code>），不动 config.toml 和 ChatGPT 登录；用 <code>${esc(d.codex_cmd)}</code> 启动。「设为默认」才会改 config.toml（先备份）</div></div></div>
+    <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="primary" data-rtap="codex">应用（profile）</button><button data-rtap="codex-default">应用并设为默认</button>${d.applied.codex ? '<button data-rtrv="codex">撤销</button>' : ""}</span></div>
+  <details class="rtadv"><summary>高级：轮换策略、重试、端口、上游代理、本机口令</summary>
+    <div class="setrow"><div class="sl"><div><b>多个 key 怎么用</b><div class="sd">轮流（按权重）或者先用满第一个；失败（401 / 403 / 429 / 5xx / 连不上）自动换下一个，出错的 key 冷却一会儿</div></div></div><select data-rtg="strategy"><option value="round-robin" ${d.strategy !== "fill-first" ? "selected" : ""}>轮流（round-robin）</option><option value="fill-first" ${d.strategy === "fill-first" ? "selected" : ""}>先用第一个（fill-first）</option></select></div>
+    <div class="setrow"><div class="sl"><div><b>全部 key 都失败后再试几轮</b><div class="sd">只在还没给客户端回任何内容时重试；一轮最多等 20 秒（冷却）</div></div></div><input data-rtg="request_retry" type="number" min="0" max="5" value="${d.request_retry}" style="width:80px"></div>
+    <div class="setrow"><div class="sl"><div><b>端口</b><div class="sd">第一次随机选好后固定；改了要重新「应用」</div></div></div><input data-rtg="port" type="number" min="1024" max="65535" value="${d.port || ""}" style="width:110px"></div>
+    <div class="setrow"><div class="sl"><div><b>上游代理</b><div class="sd">留空 = 系统代理；direct = 直连；或 http://host:port（每个供应商 / key 还能单独设）</div></div></div><input data-rtg="proxy_url" value="${esc(d.proxy_url || "")}" placeholder="（系统代理）" style="width:220px"></div>
+    <div class="setrow"><div class="sl"><div><b>随程序启动</b><div class="sd">CC Session Sync 开着（含托盘）代理就在</div></div></div>${sw("rtAuto", d.autostart)}</div>
+    <div class="setrow"><div class="sl"><div><b>本机口令</b><div class="sd"><code>${esc(d.token_masked || "（还没生成）")}</code> · 存在${esc(d.keystore === "wincred" ? "Windows 凭据管理器" : "本机凭据文件")}；Codex 每次用取 key 命令拿，Claude 写在 settings.json（只在本机有用）</div></div></div><button data-rtdo="rotate-token">换一个</button></div>
+    <div style="text-align:right"><button class="primary" id="rtSaveAdv">保存</button></div></details>
+  <h4 class="rth">最近的请求 <span class="dim">（不记内容；本次运行）</span>${s.cooling ? ' <button class="pvmini ghost" data-rtdo="reset-cooldown">解除冷却</button>' : ""}</h4>
+  <div id="rtLog">${rtLog(s.log)}</div>
+  <div class="dim" style="margin-top:10px">Claude 桌面版：模型路由只管 Claude Code（命令行 / IDE）。桌面版要用第三方模型，请用它自带的「API 模式（3P）」配网关地址。${on.length ? `<div class="miss" style="margin-top:6px">${on.join("、")} 在运行：应用 / 撤销后，已开着的会话要重开才生效。</div>` : ""}</div>`;
+  rtWire();
+}
+function rtLog(L){
+  if (!L || !L.length) return '<div class="dim">还没有。</div>';
+  const cn = {anthropic: "Claude Code", responses: "Codex", chat: "Chat"};
+  return `<table class="rtl"><tr><th class="l">时间</th><th class="l">客户端</th><th class="l">供应商 · key</th><th class="l">上游模型</th><th>状态</th><th>耗时</th><th>tokens</th><th class="l">说明</th></tr>` +
+    L.map(x => `<tr><td>${hm(x.at)}</td><td>${esc(cn[x.client] || x.client || "")}</td><td>${esc(x.provider || "—")}${x.key ? ` <span class="dim">· ${esc(x.key)}</span>` : ""}</td><td><code>${esc(x.model || "")}</code></td>
+      <td><span class="tag ${x.ok ? "ok" : x.retry ? "warn" : "bad"}">${esc(x.status ?? "")}</span></td><td class="n">${x.ms != null ? x.ms + " ms" : ""}</td><td class="n">${x.tokens != null ? x.tokens.toLocaleString() : ""}</td>
+      <td class="ell" title="${esc(x.message || "")}">${x.retry ? "已换 key 重试 · " : ""}${esc(x.message || (x.stream ? "流式" : ""))}</td></tr>`).join("") + "</table>";
+}
+function rtClients(){
+  const slots = {}; $$("#mcTab [data-rts]").forEach(s => slots[s.dataset.rts] = s.value);
+  const codex = {}; $$("#mcTab [data-rtc]").forEach(s => codex[s.dataset.rtc] = s.value);
+  return {claude: {slots}, codex};
+}
+async function rtSaveClients(extra){ await rtApi("clients", Object.assign(rtClients(), extra || {})); }
+function rtWire(){
+  const box = $("#mcTab");
+  $$("#mcTab [data-rtdo]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { const r = await rtApi(b.dataset.rtdo); if (r && r.note) toast(r.note, 6000); else toast("✅ 好了"); } catch(e){ toast("❌ " + e.message, 5000); }
+    rtView(); });
+  $$("#mcTab [data-rts], #mcTab [data-rtc]").forEach(s => s.onchange = async () => { try { await rtSaveClients(); toast("✅ 已保存（代理马上按新的映射转；Codex 的 profile 要重新「应用」）", 3500); } catch(e){ toast("❌ " + e.message, 5000); } });
+  $$("#mcTab [data-rtadd]").forEach(b => b.onclick = () => rtEdit(null, b.dataset.rtadd));
+  $$("#mcTab [data-rted]").forEach(b => b.onclick = () => rtEdit(RT.d.providers.find(p => p.id === b.dataset.rted)));
+  $$("#mcTab [data-rtts]").forEach(b => b.onclick = () => rtTest(b.dataset.rtts));
+  $$("#mcTab [data-rtap]").forEach(b => b.onclick = () => rtApply(b.dataset.rtap));
+  $$("#mcTab [data-rtrv]").forEach(b => b.onclick = () => rtRevert(b.dataset.rtrv));
+  $("#rtCpa").onclick = () => rtCpa();
+  $("#rtSaveAdv").onclick = async () => {
+    const g = {}; $$("#mcTab [data-rtg]").forEach(i => g[i.dataset.rtg] = i.value.trim());
+    try { await rtSaveClients(Object.assign(g, {autostart: $("#rtAuto").checked, request_retry: +g.request_retry || 0})); toast("✅ 已保存；端口改了的话点「重启」，再重新应用"); rtView(); } catch(e){ toast("❌ " + e.message, 5000); }
+  };
+}
+async function rtTest(id){
+  const o = $(`#mcTab [data-rto="${CSS.escape(id)}"]`); o.innerHTML = '<div class="dim">测试中…</div>';
+  try { const r = await rtApi("test", {id});
+    o.innerHTML = `<div class="rtt">${r.keys.map(k => `<div>${k.ok ? ic("ok") : ic("err")} <code>${esc(k.masked)}</code> ${esc(k.key)} · ${k.status ?? "—"} · ${k.ms != null ? k.ms + " ms" : ""} ${k.ok ? `<span class="dim">${esc(k.what || "")}</span>` : `<span class="note">${esc(k.reason || "")}</span>`}</div>`).join("") || '<div class="dim">没有 key</div>'}<div class="dim">${esc(r.url)}${r.model ? " · 模型 " + esc(r.model) : ""}（只看通不通，不显示回复内容）</div></div>`;
+  } catch(e){ o.innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
+}
+function rtApply(k){
+  const d = RT.d, run = d.running || {}, tool = k.startsWith("claude") ? "claude" : "codex", isOn = run[tool];
+  const what = {claude: `改 <code>~/.claude/settings.json</code>：env 里加 <code>ANTHROPIC_BASE_URL=http://127.0.0.1:${esc(d.port || "…")}</code> 和本机口令 <code>ANTHROPIC_AUTH_TOKEN</code>（先备份；撤销按字节还原）。claude.ai 登录不会被删，撤销后照常用。`,
+    "claude-session": `只写 <code>${esc(d.session_file)}</code>，全局配置不动。命令行这样开：<pre class="rtcmd">claude --settings "${esc(d.session_file)}"</pre>`,
+    codex: `写 <code>${esc("cc-route.config.toml")}</code>（Codex 的 profile，含 <code>[model_providers.cc-route]</code>，口令用取 key 命令拿），<b>不动</b> config.toml 和 ChatGPT 登录。这样开：<pre class="rtcmd">${esc(d.codex_cmd)}</pre>`,
+    "codex-default": `除了 profile，还会把 config.toml 的 <code>model_provider</code> / <code>model</code> 指向 cc-route（先备份；撤销按字节还原）。之后直接 <code>codex</code> 就走模型路由；ChatGPT 登录还在，撤销后照常用。`}[k];
+  const warn = [];
+  if (!d.providers.length) warn.push("还没有供应商。");
+  if (tool === "claude" && !Object.values(d.clients.claude.slots || {}).some(Boolean)) warn.push("Claude Code 的 Opus / Sonnet / Haiku 都没选别名：只有模型名正好等于某个别名时才转得动。");
+  if (tool === "codex" && !d.clients.codex.model) warn.push("Codex 的模型没选。");
+  if (isOn) warn.push(`${tool === "claude" ? "Claude" : "Codex"} 正在运行：写配置不影响它，但已开着的会话要重开才生效${tool === "claude" ? "（Claude 桌面版不受影响）" : ""}。`);
+  if (!d.status.running) warn.push("代理现在没在运行，应用时会顺便启动它。");
+  confirmDlg("应用模型路由", `<div>${what}</div>${warn.map(w => `<div class="miss" style="margin-top:6px">${esc(w)}</div>`).join("")}`, "应用", async () => {
+    await rtSaveClients();
+    const r = k === "claude" ? await rtApi("apply-claude", {mode: "global"}) : k === "claude-session" ? await rtApi("apply-claude", {mode: "session"})
+      : await rtApi("apply-codex", {default: k === "codex-default"});
+    closeDlg(); toast("✅ 已应用：" + (r.cmd || ""), 6000); rtView();
+  });
+}
+function rtRevert(tool){
+  confirmDlg("撤销", tool === "claude" ? "把 <code>~/.claude/settings.json</code> 还原成应用之前的样子（之后没被改过就按字节还原；改过的话只拿掉我们加的两个 env），并删掉命令行专用的 settings 文件。"
+    : "删掉 cc-route profile；如果设成过默认，把 config.toml 还原（之后没被改过就按字节还原；改过的话只拿掉我们加的）。", "撤销", async () => {
+    const r = await rtApi("revert-" + tool); closeDlg();
+    const res = (r.files || [r]).map(f => f.result).filter(Boolean);
+    toast("✅ 已撤销" + (res.includes("partial") ? "（文件之后被改过：只拿掉了我们加的）" : res.includes("restored") ? "（按字节还原）" : ""), 5000); rtView();
+  });
+}
+function rtModelRow(m){
+  const pm = m.price === "none" ? "none" : m.price ? "custom" : "auto", p = m.price && m.price !== "none" ? m.price : {};
+  return `<div class="rtmr"><input data-m="name" value="${esc(m.name || "")}" placeholder="上游模型名，如 claude-sonnet-5-5"><span class="pvarr">←</span><input data-m="alias" value="${esc(m.alias || "")}" placeholder="别名（客户端用的名字，可空）">
+    <select data-m="pm" title="这个模型怎么算钱"><option value="auto" ${pm === "auto" ? "selected" : ""}>按价格表</option><option value="custom" ${pm === "custom" ? "selected" : ""}>自定义价格</option><option value="none" ${pm === "none" ? "selected" : ""}>不计费（—）</option></select>
+    <span class="rtpr"${pm === "custom" ? "" : " hidden"}>${[["inp", "输入"], ["out", "输出"], ["cr", "缓存读"], ["cw", "缓存写"]].map(([k, t]) => `<input data-m="${k}" type="number" min="0" step="any" value="${p[k] ?? ""}" placeholder="${t}" title="${t}：美元 / 百万 token">`).join("")}</span>
+    <button class="pvmini ghost" data-mx title="删掉这行">✕</button></div>`;
+}
+function rtEdit(p, preset){
+  const isNew = !p, d = RT.d;
+  if (!p) { const pr = d.presets[preset] || d.presets.custom; p = {name: pr.name || "", protocol: pr.protocol || "chat", base_url: pr.base_url || "", preset, keys: [], models: (pr.models || []).map(m => ({name: m.name, alias: m.alias || ""})), excluded: [], headers: {}, prefix: "", proxy_url: "", max_tokens: 32000, thinking: "adaptive", reasoning: "auto", effort: "", cache: true, system_role: ""}; }
+  const keyRow = k => `<div class="rtkr" data-kn="${esc(k.name)}"><code>${esc(k.masked || "（缺）")}</code><input data-k="label" value="${esc(k.label || "")}" placeholder="备注"><label title="权重：轮流时按比例分">×<input data-k="weight" type="number" min="1" max="100" value="${k.weight || 1}"></label><input data-k="proxy_url" value="${esc(k.proxy_url || "")}" placeholder="这个 key 的代理（可空）"><label><input type="checkbox" data-k="disabled" ${k.disabled ? "checked" : ""}> 停用</label><button class="pvmini ghost" data-kx title="删掉这个 key（同时从凭据管理器删）">✕</button></div>`;
+  const hd = Object.entries(p.headers || {}).map(([k, v]) => k + ": " + v).join("\n");
+  pvPage((isNew ? "添加" : "编辑") + "模型路由供应商", `<div class="us mc pve rte">
+    <div class="setrow"><div class="sl"><div><b>名字</b></div></div><input id="reName" value="${esc(p.name)}" style="width:280px"></div>
+    <div class="setrow"><div class="sl"><div><b>上游协议</b><div class="sd">这家的接口说的是哪种格式（中转站一般是 OpenAI Chat Completions；有的也给 Anthropic Messages）</div></div></div><select id="reProto">${Object.entries(RT_PROTO).map(([k, t]) => `<option value="${k}" ${k === p.protocol ? "selected" : ""}>${t}</option>`).join("")}</select></div>
+    <div class="setrow"><div class="sl"><div><b>Base URL</b><div class="sd">Anthropic：https://api.anthropic.com；OpenAI：https://api.openai.com/v1；中转站填它给的（一般以 /v1 结尾）</div></div></div><input id="reUrl" value="${esc(p.base_url)}" style="width:340px" placeholder="https://…"></div>
+    <h4 class="rth">Key <span class="dim">（存${d.keystore === "wincred" ? " Windows 凭据管理器" : "本机凭据文件"}，界面只显示打码的；多个 key 自动轮换 / 失败换下一个）</span></h4>
+    <div id="reKeys">${p.keys.map(keyRow).join("")}</div>
+    <textarea id="reNew" rows="2" placeholder="新加的 key，一行一个（保存后就看不到明文了）" style="width:100%;margin-top:4px" autocomplete="off" spellcheck="false"></textarea>
+    <h4 class="rth">模型 <span class="dim">（别名 = Codex / Claude Code 里用的名字；没列模型 = 什么名字都原样转）</span> <button class="pvmini" id="reFetch">拉取模型列表</button></h4>
+    <div id="reModels">${p.models.map(rtModelRow).join("")}</div><button class="pvmini ghost" id="reAddM">＋ 加一行</button><div id="reFetched"></div>
+    <details class="rtadv"><summary>更多：排除、前缀、请求头、代理、思考 / 推理、缓存</summary>
+      <div class="setrow"><div class="sl"><div><b>排除的模型</b><div class="sd">逗号分隔，支持通配符，如 *-preview, gpt-4*</div></div></div><input id="reExcl" value="${esc(p.excluded.join(", "))}" style="width:280px"></div>
+      <div class="setrow"><div class="sl"><div><b>前缀</b><div class="sd">设了以后，客户端写「前缀/模型名」就只走这家（比如 relay/claude-sonnet-5-5）</div></div></div><input id="rePrefix" value="${esc(p.prefix)}" style="width:140px"></div>
+      <div class="setrow"><div class="sl"><div><b>额外请求头</b><div class="sd">一行一个「名字: 值」；值写 $x-foo 表示照抄客户端发来的 x-foo 头。认证头由程序自己设</div></div></div><textarea id="reHdr" rows="2" style="width:280px">${esc(hd)}</textarea></div>
+      <div class="setrow"><div class="sl"><div><b>代理</b><div class="sd">留空 = 用全局设置；direct = 直连；http://host:port</div></div></div><input id="reProxy" value="${esc(p.proxy_url)}" style="width:220px"></div>
+      <div class="setrow"><div class="sl"><div><b>转成 Anthropic 时：思考</b><div class="sd">adaptive（Claude 4.6+ 推荐）/ budget（老模型）/ off；max_tokens 缺省</div></div></div><span style="display:flex;gap:6px"><select id="reThink">${["adaptive", "budget", "off"].map(x => `<option ${x === p.thinking ? "selected" : ""}>${x}</option>`).join("")}</select><input id="reMax" type="number" value="${p.max_tokens}" style="width:100px"></span></div>
+      <div class="setrow"><div class="sl"><div><b>转成 OpenAI 时：推理模型</b><div class="sd">auto = 按模型名猜（o 系列 / gpt-5+ / codex）；系统提示用 system 还是 developer</div></div></div><span style="display:flex;gap:6px"><select id="reReason">${["auto", "on", "off"].map(x => `<option ${x === p.reasoning ? "selected" : ""}>${x}</option>`).join("")}</select><select id="reSys"><option value="" ${!p.system_role ? "selected" : ""}>自动</option><option ${p.system_role === "system" ? "selected" : ""}>system</option><option ${p.system_role === "developer" ? "selected" : ""}>developer</option></select></span></div>
+      <div class="setrow"><div class="sl"><div><b>固定思考强度</b><div class="sd">留空 = 跟着客户端</div></div></div><select id="reEffort">${["", "minimal", "low", "medium", "high", "xhigh"].map(x => `<option value="${x}" ${x === p.effort ? "selected" : ""}>${x || "（跟客户端）"}</option>`).join("")}</select></div>
+      <div class="setrow"><div class="sl"><div><b>提示缓存标记</b><div class="sd">发给 Anthropic 时自动加 cache_control（省钱）</div></div></div>${sw("reCache", p.cache !== false)}</div>
+      <div class="setrow"><div class="sl"><div><b>停用这个供应商</b></div></div>${sw("reOff", p.disabled)}</div>
+    </details></div>`,
+    `${isNew ? "" : '<button class="danger" id="reDel">删除</button>'}<span style="flex:1"></span><button id="reCancel">取消</button><button class="primary" id="reSave">保存</button>`);
+  $("#pvBack").onclick = $("#reCancel").onclick = () => mcOpen("route");
+  const wireRows = () => { $$("#reModels .rtmr").forEach(r => { r.querySelector("[data-mx]").onclick = () => r.remove(); r.querySelector('[data-m="pm"]').onchange = e => r.querySelector(".rtpr").hidden = e.target.value !== "custom"; });
+    $$("#reKeys [data-kx]").forEach(b => b.onclick = () => b.closest(".rtkr").remove()); };
+  wireRows();
+  $("#reAddM").onclick = () => { $("#reModels").insertAdjacentHTML("beforeend", rtModelRow({})); wireRows(); };
+  $("#reFetch").onclick = async () => {
+    const f = $("#reFetched"); f.innerHTML = '<div class="dim">拉取中…</div>';
+    const sec = $("#reNew").value.split(/\n/).map(s => s.trim()).find(Boolean);
+    try { const r = await rtApi("models", sec || isNew ? {draft: {protocol: $("#reProto").value, base_url: $("#reUrl").value, secret: sec, proxy_url: $("#reProxy").value}} : {id: p.id});
+      if (!r.ok) { f.innerHTML = `<div class="miss">${esc(r.reason)}</div>`; return; }
+      const have = new Set($$('#reModels [data-m="name"]').map(i => i.value));
+      f.innerHTML = `<div class="dim">${r.models.length} 个（${r.ms} ms），点一下加进上面：</div><div class="rtfm">${r.models.map(m => `<button class="pvmini ghost${have.has(m) ? " on" : ""}" data-fm="${esc(m)}">${esc(m)}</button>`).join("")}</div>`;
+      $$("#reFetched [data-fm]").forEach(b => b.onclick = () => { $("#reModels").insertAdjacentHTML("beforeend", rtModelRow({name: b.dataset.fm})); b.classList.add("on"); wireRows(); });
+    } catch(e){ f.innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
+  };
+  if (!isNew) $("#reDel").onclick = () => confirmDlg("删除供应商", `删除 <b>${esc(p.name)}</b>？它的 ${p.keys.length} 个 key 也会从凭据管理器删掉。`, "删除", async () => { await rtApi("delete", {id: p.id}); closeDlg(); toast("✅ 已删除"); mcOpen("route"); }, true);
+  $("#reSave").onclick = async () => {
+    const hdr = {}; $("#reHdr").value.split(/\n/).forEach(l => { const i = l.indexOf(":"); if (i > 0) hdr[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
+    const models = $$("#reModels .rtmr").map(r => { const g = k => r.querySelector(`[data-m="${k}"]`).value.trim(), pm = g("pm");
+      const price = pm === "none" ? "none" : pm === "custom" ? Object.fromEntries(["inp", "out", "cr", "cw"].filter(k => g(k) !== "").map(k => [k, +g(k)])) : null;
+      return {name: g("name"), alias: g("alias"), price}; }).filter(m => m.name);
+    const keys = $$("#reKeys .rtkr").map(r => ({name: r.dataset.kn, id: (p.keys.find(k => k.name === r.dataset.kn) || {}).id, label: r.querySelector('[data-k="label"]').value, weight: +r.querySelector('[data-k="weight"]').value || 1,
+      proxy_url: r.querySelector('[data-k="proxy_url"]').value.trim(), disabled: r.querySelector('[data-k="disabled"]').checked}));
+    const nk = $("#reNew").value.split(/\n/).map(s => s.trim()).filter(Boolean).map(secret => ({secret}));
+    const body = {provider: {id: isNew ? undefined : p.id, name: $("#reName").value.trim(), protocol: $("#reProto").value, preset: p.preset, base_url: $("#reUrl").value.trim(), keys, models,
+      excluded: $("#reExcl").value.split(",").map(s => s.trim()).filter(Boolean), prefix: $("#rePrefix").value.trim(), headers: hdr, proxy_url: $("#reProxy").value.trim(),
+      thinking: $("#reThink").value, max_tokens: +$("#reMax").value || 32000, reasoning: $("#reReason").value, system_role: $("#reSys").value, effort: $("#reEffort").value,
+      cache: $("#reCache").checked, disabled: $("#reOff").checked}, new_keys: nk};
+    try { await rtApi("save", body); $("#reNew").value = ""; toast("✅ 已保存（key 进了凭据管理器）"); mcOpen("route"); } catch(e){ toast("❌ " + e.message, 6000); }
+  };
+}
+function rtCpa(){
+  pvPage("从 CLIProxyAPI 导入", `<div class="dim" style="margin-bottom:8px">把 CLIProxyAPI 的 <code>config.yaml</code> 贴进来（或选文件）。只导 API key 供应商（claude / codex / gemini / openai-compatibility / xai 这几组，含 base-url、headers、prefix、models 别名、excluded-models、proxy-url、多个 key）；<b>OAuth 订阅登录那部分不导</b>。key 进凭据管理器，预览里只显示打码的。</div>
+    <input type="file" id="cpaFile" accept=".yaml,.yml,.txt"><textarea id="cpaText" rows="10" style="width:100%;margin-top:6px" spellcheck="false" placeholder="api-keys:&#10;  claude:&#10;    - api-key: …"></textarea>
+    <div id="cpaPrev" style="margin-top:8px"></div>`, '<span style="flex:1"></span><button id="cpaCancel">取消</button><button id="cpaGo">预览</button><button class="primary" id="cpaImp" disabled>导入选中的</button>');
+  $("#pvBack").onclick = $("#cpaCancel").onclick = () => mcOpen("route");
+  $("#cpaFile").onchange = async e => { const f = e.target.files[0]; if (f) $("#cpaText").value = await f.text(); };
+  $("#cpaGo").onclick = async () => {
+    try { const r = await rtApi("cpa-preview", {text: $("#cpaText").value});
+      $("#cpaPrev").innerHTML = (r.providers.length ? `<table><tr><th></th><th class="l">名字</th><th class="l">协议</th><th class="l">Base URL</th><th class="l">key</th><th class="l">模型</th></tr>${r.providers.map((p, i) => `<tr><td><input type="checkbox" data-ci="${i}" checked></td><td>${esc(p.name)}</td><td>${RT_PROTO[p.protocol]}</td><td><code>${esc(p.base_url)}</code>${p.prefix ? ` <span class="tag">${esc(p.prefix)}/</span>` : ""}</td><td>${p.keys.map(k => `<code>${esc(k.masked)}</code>`).join(" ")}</td><td>${p.models.map(m => esc(m.name + (m.alias ? "=" + m.alias : ""))).join("、") || '<span class="dim">任意</span>'}${p.note ? `<div class="note">${esc(p.note)}</div>` : ""}</td></tr>`).join("")}</table>` : '<div class="dim">没找到 API key 供应商。</div>')
+        + (r.skipped.length ? `<div class="dim" style="margin-top:6px">跳过：${r.skipped.map(esc).join("；")}</div>` : "");
+      $("#cpaImp").disabled = !r.providers.length;
+    } catch(e){ $("#cpaPrev").innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
+  };
+  $("#cpaImp").onclick = async () => {
+    const picks = $$("#cpaPrev [data-ci]").filter(c => c.checked).map(c => +c.dataset.ci);
+    try { const r = await rtApi("cpa-import", {text: $("#cpaText").value, picks}); $("#cpaText").value = ""; toast(`✅ 导入了 ${r.imported.length} 个供应商`, 4000); mcOpen("route"); } catch(e){ toast("❌ " + e.message, 6000); }
+  };
+}
 // ---------- 供应商（CC Session Sync 自己管；CC Switch 可选） ----------
 async function pvApi(act, body){
   if (!["test", "models", "ccs-preview"].includes(act)) mcDirty();
@@ -1595,7 +1828,10 @@ function mcList(){
         <div class="pvo" data-pvo="${tool}:${esc(p.id)}"></div>`).join("") +
       `<div class="pvadd"><button class="ghost pvaddb" data-pvadd="${tool}" data-pre="custom">＋ 添加供应商</button><span class="dim">预设：</span>${pvPresets(tool).map(([k, t]) => `<button class="pvmini ghost" data-pvadd="${tool}" data-pre="${k}">${t}</button>`).join("")}</div></div></div>`;
   }
+  h += `<div class="pvsec rtsum" data-mcgo="route" role="button" tabindex="0"><div class="pvhd"><b>模型路由</b><span class="pvh">Codex 用 Claude 模型 · Claude Code 用 OpenAI / Gemini / 中转站模型（本机协议转换，只用 API key）</span><span style="flex:1"></span><span id="rtSumSt" class="dim"></span><button class="pvmini">打开 ›</button></div></div>`;
   $("#mcTab").innerHTML = h;
+  $("#mcTab .rtsum").onclick = () => mcGo("route");
+  api("/api/route").then(r => { RT.d = r; const e = $("#rtSumSt"); if (e) e.innerHTML = r.providers.length ? `${r.status.running ? '<span class="tag ok">● 运行中</span>' : '<span class="tag warn">● 没在运行</span>'} ${r.providers.length} 个供应商${r.applied.codex ? " · Codex 已应用" : ""}${r.applied.claude ? " · Claude Code 已应用" : ""}` : "还没配置"; }).catch(() => {});
   const row = (t, id) => P[t].find(p => p.id === id);
   $$("#mcTab [data-pvadd]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.pvadd, null, b.dataset.pre); });
   $$("#mcTab [data-pved]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.t, row(b.dataset.t, b.dataset.pved)); });
@@ -2505,6 +2741,7 @@ R.timeline = async () => {
   return TL.cur ? tlSession() : tlGlobal();
 };
 R.backups = () => go("backups");        // 旧页面名：深链接 / 记住的上次页面 / 通知 → 备份分栏
+R.route = () => { MC.view = "route"; go("models"); };   // ?page=route → 供应商 › 模型路由
 R.jobs = () => go("jobs"); R.undo = () => go("undo");   // ?page=jobs / ?page=undo → 撤销记录分栏
 const tlHead = sub => tbHead() + `<div class="bar" style="margin:4px 0 6px">
   <span class="seg" id="tlMode"><button data-m="g" class="${TL.cur ? "" : "on"}">按时间点（全部会话）</button><button data-m="s" class="${TL.cur ? "on" : ""}" ${TL.cur ? "" : 'disabled title="在列表里点一个会话的「时间线」"'}>单个会话</button></span><span class="sp"></span>
