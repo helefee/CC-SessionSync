@@ -149,15 +149,3 @@ def _ver(m: str) -> tuple:
     x = re.search(r"(\d+)(?:\.(\d+))?", m)
     return (int(x.group(1)), int(x.group(2) or 0)) if x else (0, 0)
 
-
-TABLE = """\
-| 客户端选的 | Claude（官方 / 新模型） | Claude 老模型 | OpenAI / OpenRouter | Grok | Gemini | DeepSeek | GLM-5.3 | Kimi K3 | Qwen 3.8 / 其它 Qwen |
-|---|---|---|---|---|---|---|---|---|---|
-| none | 不思考 | 不思考 | none | low（关不掉） | none（2.5 Flash）/ low | thinking 关 | low（关不掉） | low | 关 / 关 |
-| minimal | 不思考 | 不思考 | minimal | low | low | low | low | low | low / 1024 |
-| low | effort low | budget 4000 | low | low | low | low | low | low | low / 4096 |
-| medium | effort medium | budget 10000 | medium | medium | medium | high | high | high | medium / 16384 |
-| high | effort high | budget 20000 | high | high | high | high | high | high | xhigh / 32768 |
-| xhigh | effort xhigh | budget 32000 | xhigh | xhigh | high | high | max | max | xhigh / 65536 |
-| max | effort max | budget 32000 | xhigh | xhigh | high | max | max | max | xhigh / 65536 |
-"""
