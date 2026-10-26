@@ -1,0 +1,172 @@
+# -*- coding: utf-8 -*-
+"""端到端验证模型路由（v0.3.0）：真的 codex / claude 命令行 → 本机路由代理 → 本机假上游（tools/mock_upstream.py）。
+不联网、不登录、不用真钥匙（假上游只认 up-anth / up-oai 这两个假 key）。全在临时目录（HOME / CODEX_HOME / CLAUDE_CONFIG_DIR 都指过去）。
+
+  1. `route add` 三个供应商（Anthropic Messages / OpenAI Responses / OpenAI Chat Completions，key 从环境变量读）
+  2. `route serve` 起代理；`route apply codex` 写 cc-route profile；`codex exec --profile cc-route` 让假模型调一次 shell 工具
+     → 工具结果回到假 Anthropic 上游 → 最终回复里有 ROUTE-FINAL: ROUTE-TOOL-OUT
+  3. `route apply claude` 改 settings.json；`claude -p` 让假模型调一次 Bash → 上游是 OpenAI Responses，再换成 Chat Completions 各来一遍
+  4. 用量里有路由记的行（真实上游模型名）；会话日志扫描不重复算
+  5. `route revert` 后 config.toml / settings.json 一个字节都没变
+
+    python tools/verify_route.py [codex 可执行文件] [claude 可执行文件] [端口基数]
+"""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import socket
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def wait_port(port, t=10.0):
+    end = time.time() + t
+    while time.time() < end:
+        try:
+            socket.create_connection(("127.0.0.1", port), 0.2).close()
+            return True
+        except OSError:
+            time.sleep(0.1)
+    return False
+
+
+def main() -> int:
+    for s in (sys.stdout, sys.stderr):
+        s.reconfigure(encoding="utf-8", errors="replace")
+    codex = (sys.argv[1] if len(sys.argv) > 1 else "") or shutil.which("codex") or "codex"
+    codex = shutil.which(codex) or codex
+    claude = (sys.argv[2] if len(sys.argv) > 2 else "") or shutil.which("claude") or "claude"
+    claude = shutil.which(claude) or claude
+    base = int(sys.argv[3]) if len(sys.argv) > 3 else 8780
+    up, rp = base, base + 1
+    T = Path(tempfile.mkdtemp(prefix="route-verify-"))
+    H, CH, CL = T / "home", T / "home" / ".codex", T / "home" / ".claude"
+    CH.mkdir(parents=True)
+    CL.mkdir(parents=True)
+    proj = T / "proj"
+    proj.mkdir()
+    cx_orig = b'# user config (must survive byte-identical)\napproval_policy = "never"\n\n[projects."/somewhere"]\ntrust_level = "trusted"\n'
+    (CH / "config.toml").write_bytes(cx_orig)
+    cl_orig = b'{\n  "permissions": {\n    "allow": []\n  },\n  "env": {\n    "DISABLE_AUTOUPDATER": "1"\n  }\n}\n'
+    (CL / "settings.json").write_bytes(cl_orig)
+    (H / ".claude.json").write_text(json.dumps({"hasCompletedOnboarding": True, "bypassPermissionsModeAccepted": True}), encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_", "CODEX_", "CC_SESSIONSYNC_", "OPENAI", "ANTHROPIC", "XDG_"))}
+    env.update(HOME=str(H), USERPROFILE=str(H), APPDATA=str(H / "AppData/Roaming"), LOCALAPPDATA=str(H / "AppData/Local"),
+               CLAUDE_CONFIG_DIR=str(CL), CODEX_HOME=str(CH), CC_SESSIONSYNC_HOME=str(T / "ss"),
+               CC_SESSIONSYNC_NO_WATCH="1", CC_SESSIONSYNC_NO_WATCHER="1", CC_SESSIONSYNC_NO_USAGE="1",
+               PYTHONIOENCODING="utf-8", PYTHONUTF8="1", RUST_LOG="error", NO_PROXY="127.0.0.1,localhost", no_proxy="127.0.0.1,localhost",
+               UP_ANTH="up-anth", UP_OAI="up-oai", DISABLE_AUTOUPDATER="1", CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1")
+    for k in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "ALL_PROXY", "all_proxy"):
+        env.pop(k, None)
+    log = T / "mock.jsonl"
+    procs = [subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_upstream.py"), str(up), str(log), "up-anth,up-oai"])]
+    fails = []
+
+    def ok(c, m):
+        print(("PASS " if c else "FAIL ") + m, flush=True)
+        c or fails.append(m)
+
+    def ccss(*args, check=True):
+        r = subprocess.run([sys.executable, "-m", "cc_sessionsync", *args], cwd=str(ROOT), env=env, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=120)
+        if check and r.returncode:
+            print(r.stdout[-1500:], r.stderr[-1500:])
+        return r
+
+    def mlog():
+        try:
+            return [json.loads(x) for x in log.read_text(encoding="utf-8").splitlines()]
+        except OSError:
+            return []
+
+    try:
+        ok(wait_port(up), "mock upstream up")
+        U = f"http://127.0.0.1:{up}"
+        r1 = ccss("route", "add", "--name", "Mock Anthropic", "--protocol", "anthropic", "--base-url", U, "--model", "claude-mock-1=opus", "--key-env", "UP_ANTH")
+        r2 = ccss("route", "add", "--name", "Mock OpenAI", "--protocol", "responses", "--base-url", U + "/v1", "--model", "gpt-mock=gpt", "--key-env", "UP_OAI")
+        r3 = ccss("route", "add", "--name", "Mock Chat", "--protocol", "chat", "--base-url", U + "/v1", "--model", "chat-mock=chatm", "--key-env", "UP_OAI")
+        ok(all(r.returncode == 0 for r in (r1, r2, r3)) and "up-anth" not in r1.stdout + r2.stdout + r3.stdout, "route add ×3 (keys from env, output masked)")
+        r = ccss("route", "clients", json.dumps({"claude": {"slots": {"opus": "gpt", "sonnet": "gpt", "haiku": "gpt", "default": "gpt"}},
+                                                 "codex": {"model": "opus", "effort": "medium"}, "port": rp}))
+        ok(r.returncode == 0, "route clients")
+        sv = subprocess.Popen([sys.executable, "-m", "cc_sessionsync", "route", "serve"], cwd=str(ROOT), env=env)
+        procs.append(sv)
+        ok(wait_port(rp, 20), f"route serve listening on {rp}")
+        r = ccss("route", "list")
+        print(r.stdout)
+        ok("up-anth" not in r.stdout and "up-oai" not in r.stdout, "route list masks keys")
+
+        # ---- Codex → Anthropic
+        r = ccss("route", "apply", "codex")
+        ok(r.returncode == 0 and (CH / "cc-route.config.toml").exists() and (CH / "config.toml").read_bytes() == cx_orig,
+           "apply codex: profile written, config.toml untouched")
+        n0 = len(mlog())
+        c = subprocess.run([codex, "exec", "--profile", "cc-route", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox",
+                            "USE-TOOL: run the shell command the tool asks for"], cwd=str(proj), env=env, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=240)
+        lg = mlog()[n0:]
+        print(c.stdout[-800:], c.stderr[-1200:])
+        ok(c.returncode == 0 and "ROUTE-FINAL" in c.stdout + c.stderr and "ROUTE-TOOL-OUT" in c.stdout + c.stderr,
+           f"codex exec --profile cc-route: tool round-trip through Anthropic upstream ({c.returncode})")
+        ok(lg and all(x["path"] == "/v1/messages" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg) and len(lg) >= 2,
+           f"upstream saw Anthropic Messages requests with the right key ({[x['path'] for x in lg]})")
+        ok(any(x["body"].get("model") == "claude-mock-1" for x in lg), "Codex model opus → claude-mock-1")
+
+        # ---- Claude Code → OpenAI Responses / Chat
+        r = ccss("route", "apply", "claude")
+        st = json.loads((CL / "settings.json").read_text(encoding="utf-8"))
+        ok(r.returncode == 0 and st["env"]["ANTHROPIC_BASE_URL"] == f"http://127.0.0.1:{rp}" and st["env"]["DISABLE_AUTOUPDATER"] == "1",
+           "apply claude: settings.json env points at the proxy, other env kept")
+        for alias, path in (("gpt", "/v1/responses"), ("chatm", "/v1/chat/completions")):
+            ccss("route", "clients", json.dumps({"claude": {"slots": {"opus": alias, "sonnet": alias, "haiku": alias, "default": alias}}}))
+            time.sleep(6)                    # 代理的配置缓存 5 秒
+            n0 = len(mlog())
+            c = subprocess.run([claude, "-p", "USE-TOOL: run the echo command", "--allowedTools", "Bash(echo:*)"], cwd=str(proj), env=env,
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
+            lg = mlog()[n0:]
+            print(c.stdout[-600:], c.stderr[-1200:])
+            ok(c.returncode == 0 and "ROUTE-FINAL: ROUTE-TOOL-OUT" in c.stdout, f"claude -p → proxy → {path}: Bash tool round-trip ({c.returncode})")
+            ok(lg and any(x["path"] == path and x["key_ok"] and x["kind"] == "tool" for x in lg), f"upstream saw {path} with the right key")
+
+        # ---- 用量
+        time.sleep(1)
+        db = sqlite3.connect(str(T / "ss" / "usage.sqlite"))
+        rows = db.execute("SELECT app, provider, model FROM calls WHERE src='route'").fetchall()
+        db.close()
+        ok(any(a == "codex" and m == "claude-mock-1" for a, p, m in rows) and any(a == "claude-code" and m == "gpt-mock" for a, p, m in rows)
+           and any(m == "chat-mock" for a, p, m in rows), f"usage rows recorded by the proxy ({len(rows)})")
+        r = ccss("usage")
+        db = sqlite3.connect(str(T / "ss" / "usage.sqlite"))
+        dup = db.execute("SELECT count(*) FROM calls WHERE src='log'").fetchone()[0]
+        db.close()
+        ok(r.returncode == 0 and dup == 0, f"log scanner skips proxied sessions (no double counting, {dup} log rows)")
+        r = ccss("selfcheck", "--offline", "--json", check=False)
+        items = {i["id"]: i for i in json.loads(r.stdout)["items"]}
+        ok(items.get("route", {}).get("status") == "pass" and items.get("route-keys", {}).get("status") == "pass", "selfcheck: route proxy + keys pass")
+
+        # ---- 撤销
+        r1, r2 = ccss("route", "revert", "codex"), ccss("route", "revert", "claude")
+        ok((CH / "config.toml").read_bytes() == cx_orig and not (CH / "cc-route.config.toml").exists(), "revert codex: byte-identical, profile removed")
+        ok((CL / "settings.json").read_bytes() == cl_orig, "revert claude: settings.json byte-identical")
+    finally:
+        for p in procs:
+            p.terminate()
+        for p in procs:
+            try:
+                p.wait(10)
+            except Exception:
+                p.kill()
+    print("FAILS", len(fails))
+    return 1 if fails else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

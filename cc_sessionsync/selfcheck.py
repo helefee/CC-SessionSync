@@ -199,7 +199,6 @@ def check_route() -> list[dict]:
     port = d.get("port")
     alive = False
     if port:
-        import urllib.request
         try:
             op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
             with op.open(f"http://127.0.0.1:{port}/health", timeout=3) as r:
