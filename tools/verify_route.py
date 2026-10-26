@@ -127,7 +127,7 @@ def main() -> int:
            "apply claude: settings.json env points at the proxy, other env kept")
         for alias, path in (("gpt", "/v1/responses"), ("chatm", "/v1/chat/completions")):
             ccss("route", "clients", json.dumps({"claude": {"slots": {"opus": alias, "sonnet": alias, "haiku": alias, "default": alias}}}))
-            time.sleep(6)                    # 代理的配置缓存 5 秒
+            time.sleep(0.2)                  # 代理按 route.json 的修改时间重读配置
             n0 = len(mlog())
             c = subprocess.run([claude, "-p", "USE-TOOL: run the echo command", "--allowedTools", "Bash(echo:*)"], cwd=str(proj), env=env,
                                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
@@ -156,7 +156,55 @@ def main() -> int:
         r1, r2 = ccss("route", "revert", "codex"), ccss("route", "revert", "claude")
         ok((CH / "config.toml").read_bytes() == cx_orig and not (CH / "cc-route.config.toml").exists(), "revert codex: byte-identical, profile removed")
         ok((CL / "settings.json").read_bytes() == cl_orig, "revert claude: settings.json byte-identical")
+
+        # ================= 0.3.1 卡片：普通 codex（不带 --profile）→ 后台代理（没预先起，取口令时自己拉起）→ 假 Anthropic
+        sv.terminate()
+        sv.wait(10)
+        procs.remove(sv)
+        r = ccss("route", "card", "codex", "set", json.dumps({"kind": "claude", "base_url": U, "model": "claude-mock-1", "effort": "medium", "key_env": "UP_ANTH"}))
+        ok(r.returncode == 0, "card codex set (Claude API key via env, relay base URL = mock)")
+        r = ccss("route", "card", "codex", "enable")
+        print(r.stdout[-400:])
+        ok(r.returncode == 0 and json.loads(r.stdout)["proxy_ok"], "card codex enable: config.toml default provider + background proxy")
+        cfg = (CH / "config.toml").read_text(encoding="utf-8")
+        ok('model_provider = "cc-route"' in cfg and "approval_policy" in cfg and "up-anth" not in cfg, "config.toml: default provider set, user keys kept, no key")
+        ccss("route", "stop")
+        ok(not wait_port(rp, 1), "background proxy stopped (simulates: app closed, no login item)")
+        n0 = len(mlog())
+        c = subprocess.run([codex, "exec", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox",
+                            "USE-TOOL: run the shell command the tool asks for"], cwd=str(proj), env=env, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=240)
+        lg = mlog()[n0:]
+        print(c.stdout[-800:], c.stderr[-1200:])
+        ok(c.returncode == 0 and "ROUTE-FINAL" in c.stdout + c.stderr and "ROUTE-TOOL-OUT" in c.stdout + c.stderr,
+           f"plain `codex exec` (no --profile): proxy auto-started by the token helper, tool round-trip via Anthropic ({c.returncode})")
+        ok(lg and all(x["path"] == "/v1/messages" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg)
+           and all(x["body"].get("model") == "claude-mock-1" for x in lg), f"upstream: Anthropic Messages, card key, card model ({len(lg)} requests)")
+        sh = json.loads(ccss("route", "card", "codex", "show").stdout)
+        ok(sh["enabled"] and sh["proxy_running"] and (sh["login_item"] or os.name != "nt"), f"card show: enabled, proxy running, login item {sh['login_item']}")
+
+        # ---- Claude Code 使用 OpenAI API Key
+        r = ccss("route", "card", "claude", "set", json.dumps({"kind": "openai", "base_url": U + "/v1", "model": "gpt-mock", "small_model": "gpt-mock", "key_env": "UP_OAI"}))
+        r = ccss("route", "card", "claude", "enable")
+        ok(r.returncode == 0 and json.loads(r.stdout)["proxy"], "card claude (OpenAI key) enable")
+        n0 = len(mlog())
+        c = subprocess.run([claude, "-p", "USE-TOOL: run the echo command", "--allowedTools", "Bash(echo:*)"], cwd=str(proj), env=env,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
+        lg = mlog()[n0:]
+        print(c.stdout[-600:], c.stderr[-1200:])
+        ok(c.returncode == 0 and "ROUTE-FINAL: ROUTE-TOOL-OUT" in c.stdout, f"claude -p with the OpenAI-key card: Bash tool round-trip ({c.returncode})")
+        ok(lg and all(x["path"] == "/v1/responses" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg)
+           and all(x["body"].get("model") == "gpt-mock" for x in lg), "upstream: OpenAI Responses, card key, card model")
+
+        # ---- 停用：字节还原
+        r1, r2 = ccss("route", "card", "codex", "disable"), ccss("route", "card", "claude", "disable")
+        ok(r1.returncode == 0 and (CH / "config.toml").read_bytes() == cx_orig and not (CH / "cc-route.config.toml").exists(), "card codex disable: config.toml byte-identical")
+        ok(r2.returncode == 0 and (CL / "settings.json").read_bytes() == cl_orig, "card claude disable: settings.json byte-identical")
+        time.sleep(1.5)
+        sh = json.loads(ccss("route", "card", "codex", "show").stdout)
+        ok(not sh["proxy_running"] and not sh["login_item"], "after disabling both: background proxy stopped, login item removed")
     finally:
+        ccss("route", "stop", check=False)
         for p in procs:
             p.terminate()
         for p in procs:

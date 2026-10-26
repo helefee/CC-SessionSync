@@ -90,10 +90,16 @@ def _invalidate():
 
 
 def cfg() -> dict:
+    """带缓存的配置：route.json 变了（别的进程改的也算：后台代理是单独的进程）就重读。"""
+    try:
+        st = STORE.stat()
+        sig = (st.st_mtime_ns, st.st_size)
+    except OSError:
+        sig = None
     c = _CACHE["cfg"]
-    if c is None or time.time() - _CACHE["at"] > 5:
+    if c is None or _CACHE.get("sig") != sig or time.time() - _CACHE["at"] > 30:
         c = _CACHE["cfg"] = load()
-        _CACHE["at"] = time.time()
+        _CACHE["at"], _CACHE["sig"] = time.time(), sig
     return c
 
 
@@ -1559,6 +1565,7 @@ def overview() -> dict:
 
 USAGE = """用法：cc-sessionsync route <命令>
   serve [--port N] [--background]  跑代理（一般不用手动：启用卡片后会自己在后台跑，登录时自启，取口令时按需拉起）
+  stop                             停掉后台代理
   card codex|claude show|enable|disable   「Codex 使用… / Claude Code 使用…」卡片
   card codex|claude set JSON       改卡片，例如 '{"kind":"claude","model":"claude-opus-5-5","key_env":"MY_KEY"}'（key 只从环境变量读）
   status                           代理状态
@@ -1604,13 +1611,17 @@ def main(argv: list[str]) -> int:
                 time.sleep(3600)
         except KeyboardInterrupt:
             return 0
+    if cmd == "stop":
+        print(json.dumps({"stopped": shutdown_background() if health() else False}))
+        return 0
     if cmd == "card" and len(argv) >= 3 and argv[1] in ("codex", "claude"):
         from . import cards
         act = argv[2]
         if act == "show":
             v = cards.view(argv[1])
-            print(json.dumps({k: v[k] for k in ("kind", "kind_name", "model", "small_model", "effort", "upstream", "enabled", "needs_proxy", "profile_only", "files", "keys")},
-                             ensure_ascii=False, indent=2))
+            out = {k: v[k] for k in ("kind", "kind_name", "model", "small_model", "effort", "upstream", "enabled", "needs_proxy", "profile_only", "files", "keys")}
+            out.update(proxy_running=health(), login_item=login_get())
+            print(json.dumps(out, ensure_ascii=False, indent=2))
             return 0
         if act == "set":
             b = json.loads(argv[3]) if len(argv) > 3 else {}
