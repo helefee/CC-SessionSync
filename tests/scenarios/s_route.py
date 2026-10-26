@@ -402,6 +402,19 @@ for p in list(router.load()["providers"]):
     router.delete_provider(p["id"])
 ok(not any(keystore.get(k["name"]) for k in imp["keys"]), "deleting a provider removes its keys from the keystore")
 
-router.stop(); mock.terminate()
+# 诊断自检
+from cc_sessionsync import selfcheck
+router.upsert_provider({"name": "Diag", "protocol": "chat", "base_url": MB + "/v1"}, [{"secret": "good-a"}])
+sc = {i["id"]: i for i in selfcheck.check_route()}
+ok(sc["route"]["status"] == "pass" and str(router.STATE["port"]) in sc["route"]["detail"] and sc["route-keys"]["status"] == "pass", "selfcheck: proxy running + port, keys present")
+router.stop()
+sc = {i["id"]: i for i in selfcheck.check_route()}
+ok(sc["route"]["status"] in ("warn", "fail"), "selfcheck: proxy stopped → warn")
+d = router.load(); d["applied"] = {"claude": {"file": str(H / "x.json"), "sha": "0"}}; router.save(d)
+ok({i["id"]: i for i in selfcheck.check_route()}["route"]["status"] == "fail", "selfcheck: applied but proxy not running → fail with a fix")
+d["applied"] = {}; router.save(d)
+keystore.delete(router.load()["providers"][0]["keys"][0]["name"])
+ok({i["id"]: i for i in selfcheck.check_route()}["route-keys"]["status"] == "fail", "selfcheck: key missing from the keystore → fail")
+mock.terminate()
 print("FAILS", len(FAILS))
 sys.exit(1 if FAILS else 0)
