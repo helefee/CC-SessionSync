@@ -204,9 +204,37 @@ def main() -> int:
         sh = json.loads(ccss("route", "card", "codex", "show").stdout)
         ok(sh["enabled"] and sh["proxy_running"] and (sh["login_item"] or os.name != "nt"), f"card show: enabled, proxy running, login item {sh['login_item']}")
 
+        # ---- 0.3.2：Codex 使用 DeepSeek（Responses → Chat Completions），工具来回 + 每次请求的模型 / 推理强度
+        r = ccss("route", "card", "codex", "set", json.dumps({"kind": "deepseek", "base_url": U, "key_env": "UP_OAI", "model": "",
+                                                                  "models": ["deepseek-v4-pro", "deepseek-flash"]}))
+        r = ccss("route", "card", "codex", "enable")
+        ok(r.returncode == 0 and json.loads(r.stdout)["proxy_ok"], "card codex → DeepSeek preset (base URL = mock) enabled")
+        n0 = len(mlog())
+        c = subprocess.run([codex, "exec", "-c", "model_reasoning_effort=high", "--skip-git-repo-check", "--dangerously-bypass-approvals-and-sandbox",
+                            "USE-TOOL: run the shell command the tool asks for"], cwd=str(proj), env=env, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace", timeout=240)
+        lg = mlog()[n0:]
+        print(c.stdout[-500:], c.stderr[-800:])
+        ok(c.returncode == 0 and "ROUTE-TOOL-OUT" in c.stdout + c.stderr and lg and all(x["path"] == "/chat/completions" for x in lg) and any(x["kind"] == "tool" for x in lg),
+           f"codex exec → DeepSeek Chat Completions: tool round-trip ({c.returncode}, {[x['path'] for x in lg]})")
+        ok(all(x["body"].get("model") == "deepseek-v4-pro" and x["body"].get("reasoning_effort") == "high" and x["body"].get("thinking") == {"type": "enabled"} for x in lg),
+           f"-c model_reasoning_effort=high → reasoning_effort high + thinking on {[(x['body'].get('model'), x['body'].get('reasoning_effort')) for x in lg]}")
+        n0 = len(mlog())
+        c = subprocess.run([codex, "exec", "-m", "deepseek-flash", "-c", "model_reasoning_effort=none", "--skip-git-repo-check", "say hi"], cwd=str(proj), env=env,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
+        b = (mlog()[n0:] or [{}])[-1].get("body") or {}
+        ok(c.returncode == 0 and b.get("model") == "deepseek-flash" and b.get("thinking") == {"type": "disabled"} and "reasoning_effort" not in b,
+           f"codex exec -m deepseek-flash -c model_reasoning_effort=none → {b.get('model')} thinking {b.get('thinking')}")
+        dm = subprocess.run([codex, "debug", "models"], cwd=str(proj), env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+        try:
+            listed = [m["slug"] for m in json.loads(dm.stdout)["models"] if m.get("visibility") == "list"]
+        except Exception:
+            listed = []
+        ok(listed[:2] == ["deepseek-v4-pro", "deepseek-flash"], f"codex /model list = DeepSeek models ({listed})")
+
         # ---- Claude Code 使用 OpenAI API Key
-        r = ccss("route", "card", "claude", "set", json.dumps({"kind": "openai", "base_url": U + "/v1", "model": "gpt-mock", "small_model": "gpt-mock-mini",
-                                                                   "sonnet_model": "gpt-mock-s", "key_env": "UP_OAI"}))
+        r = ccss("route", "card", "claude", "set", json.dumps({"kind": "openai", "base_url": U + "/v1", "model": "gpt-5.5", "small_model": "gpt-5.4-mini",
+                                                                   "sonnet_model": "gpt-5.4", "key_env": "UP_OAI"}))
         r = ccss("route", "card", "claude", "enable")
         ok(r.returncode == 0 and json.loads(r.stdout)["proxy"], "card claude (OpenAI key) enable")
         n0 = len(mlog())
@@ -216,8 +244,8 @@ def main() -> int:
         print(c.stdout[-600:], c.stderr[-1200:])
         ok(c.returncode == 0 and "ROUTE-FINAL: ROUTE-TOOL-OUT" in c.stdout, f"claude -p with the OpenAI-key card: Bash tool round-trip ({c.returncode})")
         ok(lg and all(x["path"] == "/v1/responses" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg)
-           and any(x["body"].get("model") == "gpt-mock" for x in lg), f"upstream: OpenAI Responses, card key, card model {[x['body'].get('model') for x in lg]}")
-        for slot, want in (("sonnet", "gpt-mock-s"), ("haiku", "gpt-mock-mini"), ("gpt-mock-direct", "gpt-mock-direct")):
+           and any(x["body"].get("model") == "gpt-5.5" for x in lg), f"upstream: OpenAI Responses, card key, card model {[x['body'].get('model') for x in lg]}")
+        for slot, want in (("sonnet", "gpt-5.4"), ("haiku", "gpt-5.4-mini"), ("gpt-5.2", "gpt-5.2")):
             n0 = len(mlog())
             c = subprocess.run([claude, "-p", "say hi", "--model", slot], cwd=str(proj), env=dict(env, CLAUDE_CODE_EFFORT_LEVEL="high"),
                                capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
@@ -225,7 +253,27 @@ def main() -> int:
             main = [x for x in lg if x["body"].get("model") == want]
             eff = [(x["body"].get("reasoning") or {}).get("effort") for x in main]
             print(f"claude --model {slot}:", [x["body"].get("model") for x in lg], eff)
-            ok(c.returncode == 0 and main and (slot == "gpt-mock-direct" or "high" in eff), f"claude -p --model {slot} → {want} (effort {eff})")
+            ok(c.returncode == 0 and main and "high" in eff, f"claude -p --model {slot} → {want} (effort {eff})")
+
+        # ---- 0.3.2：Claude Code 使用 Gemini（Anthropic → Chat Completions）
+        r = ccss("route", "card", "claude", "set", json.dumps({"kind": "gemini", "base_url": U + "/v1beta/openai", "model": "gemini-3.8-pro",
+                                                                   "small_model": "gemini-3.8-flash", "sonnet_model": "", "key_env": "UP_OAI"}))
+        r = ccss("route", "card", "claude", "enable")
+        ok(r.returncode == 0, "card claude → Gemini preset enabled")
+        n0 = len(mlog())
+        c = subprocess.run([claude, "-p", "USE-TOOL: run the echo command", "--allowedTools", "Bash(echo:*)", "--model", "sonnet"], cwd=str(proj),
+                           env=dict(env, CLAUDE_CODE_EFFORT_LEVEL="low"), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
+        lg = [x for x in mlog()[n0:] if x["path"].endswith("/chat/completions")]
+        main = [x for x in lg if x["body"].get("model") == "gemini-3.8-pro"]
+        print(c.stdout[-400:], c.stderr[-800:], [(x["body"].get("model"), x["body"].get("reasoning_effort")) for x in lg])
+        ok(c.returncode == 0 and "ROUTE-FINAL: ROUTE-TOOL-OUT" in c.stdout and any(x["kind"] == "tool" for x in main),
+           f"claude -p --model sonnet → Gemini Chat Completions: Bash tool round-trip ({c.returncode})")
+        ok(main and all(x["body"].get("reasoning_effort") == "low" for x in main), "CLAUDE_CODE_EFFORT_LEVEL=low → reasoning_effort low")
+        n0 = len(mlog())
+        c = subprocess.run([claude, "-p", "say hi", "--model", "gemini-3.7-pro"], cwd=str(proj), env=dict(env, CLAUDE_CODE_EFFORT_LEVEL="high"),
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
+        main = [x for x in mlog()[n0:] if x["body"].get("model") == "gemini-3.7-pro"]
+        ok(c.returncode == 0 and main and main[-1]["body"].get("reasoning_effort") == "high", "claude --model gemini-3.7-pro → passed through, effort high")
 
         # ---- 停用：字节还原
         r1, r2 = ccss("route", "card", "codex", "disable"), ccss("route", "card", "claude", "disable")
