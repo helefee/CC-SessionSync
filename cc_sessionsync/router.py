@@ -20,6 +20,8 @@ import os
 import re
 import secrets
 import socket
+import sys
+import subprocess
 import threading
 import time
 import urllib.error
@@ -548,9 +550,19 @@ def forward(h, client: str, body: dict, count: bool = False):
     """h：请求处理器（send_json / stream_start / stream_write / stream_end）。client：anthropic / responses / chat。"""
     d = cfg()
     want = str(body.get("model") or "")
-    alias = client_model("claude" if client == "anthropic" else "codex", want, d)
-    cands = resolve(alias, d)
     t0 = time.time()
+    from . import cards
+    cc = cards.proxy_target("claude" if client == "anthropic" else "codex", want, d)
+    if cc is not None:                        # 「Codex 使用… / Claude Code 使用…」卡片启用了：这个客户端只走卡片
+        cands, alias = cc, want
+        if not cands:
+            msg = cards.not_ready_msg("claude" if client == "anthropic" else "codex", d)
+            _log({"ok": False, "client": client, "model": want, "status": 503, "message": msg})
+            st, b = xproto.client_error(client, 503, {"message": msg, "code": "not_configured"})
+            return h.send_json(st, b)
+    else:
+        alias = client_model("claude" if client == "anthropic" else "codex", want, d)
+        cands = resolve(alias, d)
     if not cands:
         msg = f"模型路由里没有能处理「{alias or want}」的供应商（检查供应商的模型 / 别名，以及 Claude Code 的槽位设置）"
         _log({"ok": False, "client": client, "model": want, "status": 404, "message": msg})
@@ -803,6 +815,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(200, {"ok": True, "service": "cc-sessionsync-route"})
         if not self._auth():
             return self.send_json(401, {"error": {"message": "CC Session Sync 模型路由：本机口令不对", "type": "authentication_error"}})
+        if path == "/ccss/status":
+            return self.send_json(200, status())
         if path.endswith("/models"):
             if "client_version=" in self.path:          # Codex 拉自己的模型目录（ModelInfo 格式）：给空的，它就用内置的 + 兜底元数据
                 return self.send_json(200, {"models": []})
@@ -817,6 +831,10 @@ class Handler(BaseHTTPRequestHandler):
             st, b = xproto.client_error("anthropic" if anth else "responses", 401,
                                         {"message": "CC Session Sync 模型路由：本机口令不对（在「供应商 → 模型路由」里重新应用一次配置）"})
             return self.send_json(st, b)
+        if path == "/ccss/shutdown":
+            self.send_json(200, {"ok": True})
+            threading.Thread(target=stop, daemon=True).start()
+            return
         try:
             body = json.loads(raw or b"{}")
             if not isinstance(body, dict):
@@ -910,11 +928,142 @@ def status() -> dict:
             "log": list(reversed(LOG[-30:])), "errors_recent": [x for x in reversed(LOG) if not x.get("ok")][:10]}
 
 
+def needed(d: dict | None = None) -> bool:
+    """有没有什么在用代理：启用了要转换的卡片，或者高级里应用过模型路由。"""
+    from . import cards
+    d = d or load()
+    return cards.needs_proxy(d) or bool(d.get("applied"))
+
+
+# ---- 后台代理进程（0.3.1）：单独一个进程跑，桌面端退了它也在；桌面端 / 取口令命令 / 开机自启都能把它拉起来 ----
+
+PIDFILE = paths.HOME / "route.pid"
+
+
+def health(port: int | None = None, timeout: float = 1.5) -> bool:
+    port = port or load().get("port")
+    if not port:
+        return False
+    try:
+        op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with op.open(f"http://127.0.0.1:{port}/health", timeout=timeout) as r:
+            return b"cc-sessionsync-route" in r.read(200)
+    except Exception:
+        return False
+
+
+def _local(method: str, path: str, timeout: float = 3):
+    port = load().get("port")
+    tok = token(create=False)
+    if not port or not tok:
+        return None
+    op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=b"{}" if method == "POST" else None, method=method,
+                                 headers={"authorization": "Bearer " + tok, "content-type": "application/json"})
+    with op.open(req, timeout=timeout) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def spawn_background() -> None:
+    from . import apps
+    args = paths.self_cmd("route", "serve", "--background")
+    io = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}   # 别占着调用方（Codex 取口令）的管道
+    if os.name == "nt":
+        base = 0x00000008 | 0x00000200 | apps.NOWIN            # DETACHED_PROCESS | NEW_PROCESS_GROUP | NO_WINDOW
+        try:
+            subprocess.Popen(args, cwd=paths.self_cwd(), creationflags=base | 0x01000000, close_fds=True, **io)   # 脱离桌面端的作业对象
+        except OSError:
+            subprocess.Popen(args, cwd=paths.self_cwd(), creationflags=base, close_fds=True, **io)
+    else:
+        subprocess.Popen(args, cwd=paths.self_cwd(), start_new_session=True, close_fds=True, **io)
+
+
+ROUTE_RUN = "CC Session Sync Route"
+
+
+def login_cmd() -> str:
+    """开机自启后台代理的命令（HKCU Run）：不开窗口。"""
+    if paths.FROZEN:
+        return f'"{paths.EXE}" route serve --background'
+    exe = Path(sys.executable)
+    pyw = exe.with_name("pythonw.exe") if exe.with_name("pythonw.exe").exists() else exe
+    root = str(paths.PKG.parent).replace("'", "")
+    return (f'"{pyw}" -c "import sys;sys.path.insert(0,r\'{root}\');from cc_sessionsync.cli import main;'
+            f"sys.exit(main(['route','serve','--background']))\"")
+
+
+def login_get() -> bool:
+    if os.name != "nt":
+        return False
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run") as k:
+            return bool(winreg.QueryValueEx(k, ROUTE_RUN)[0])
+    except OSError:
+        return False
+
+
+def login_set(on: bool) -> bool:
+    """登录时自动起后台代理（只有 Windows；别的系统返回 False，靠取口令命令按需拉起）。"""
+    if os.name != "nt":
+        return False
+    import winreg
+    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE) as k:
+        if on:
+            winreg.SetValueEx(k, ROUTE_RUN, 0, winreg.REG_SZ, login_cmd())
+        else:
+            try:
+                winreg.DeleteValue(k, ROUTE_RUN)
+            except OSError:
+                pass
+    return on
+
+
+def ensure_running(wait: float = 6.0) -> bool:
+    """代理没在跑就在后台起一个（独立进程），等它能连上。"""
+    ensure_port()
+    token()
+    if _SRV["srv"] or health():
+        return True
+    spawn_background()
+    end = time.time() + wait
+    while time.time() < end:
+        if health(timeout=0.5):
+            return True
+        time.sleep(0.2)
+    return False
+
+
+def shutdown_background() -> bool:
+    try:
+        _local("POST", "/ccss/shutdown")
+    except Exception:
+        return False
+    for _ in range(20):
+        if not health(timeout=0.3):
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def live_status() -> dict:
+    """页面 / 自检用：本进程里跑着就直接给；否则问后台进程（拿它的请求记录）；都没有 → running False。"""
+    if _SRV["srv"]:
+        return dict(status(), where="app")
+    try:
+        r = _local("GET", "/ccss/status", timeout=2)
+        if r:
+            return dict(r, where="background")
+    except Exception:
+        pass
+    return dict(status(), running=False, where=None)
+
+
 def autostart():
-    """程序启动时：配过供应商 / 应用过配置、并且开着「随程序启动」就起代理。"""
+    """程序启动时：有东西在用代理（卡片 / 高级）就保证后台代理在跑。"""
     d = load()
-    if d.get("autostart", True) and (d["providers"] or d.get("applied")):
-        return start()
+    if d.get("autostart", True) and needed(d):
+        return ensure_running()
     return None
 
 
@@ -988,8 +1137,7 @@ def _ready():
     if not any(not p.get("disabled") and p["keys"] for p in d["providers"]):
         raise ValueError("先加一个带 key 的供应商")
     token()
-    if not STATE["running"]:
-        start()
+    ensure_running()
     return d
 
 
@@ -1200,6 +1348,10 @@ def test_provider(pid: str, model: str | None = None) -> dict:
     p = next((x for x in d["providers"] if x["id"] == pid), None)
     if not p:
         raise ValueError("没有这个供应商")
+    return test_provider_obj(p, model)
+
+
+def test_provider_obj(p: dict, model: str | None = None) -> dict:
     model = model or next((e["name"] for e in p["models"]), None)
     rows = []
     for k in p["keys"]:
@@ -1229,6 +1381,30 @@ def test_provider(pid: str, model: str | None = None) -> dict:
             rows.append(dict(row, ok=False, status=None, ms=int((time.time() - t0) * 1000), reason=_scrub(f"连不上：{type(reason).__name__}: {reason}")))
     return {"provider": p["name"], "model": model, "url": endpoint(p) if model else endpoint(p, "models"), "keys": rows,
             "ok": bool(rows) and all(r["ok"] for r in rows if not r.get("disabled"))}
+
+
+def test_via_proxy(client: str, model: str) -> dict:
+    """经本机代理发一个最小请求（客户端自己的协议），整条链路都走一遍。"""
+    port, tok = load().get("port"), token()
+    if client == "codex":
+        path, body, hd = "/v1/responses", {"model": model, "input": "ping", "max_output_tokens": 16}, {"authorization": "Bearer " + tok}
+    else:
+        path, body, hd = "/v1/messages", {"model": model, "max_tokens": 1, "messages": [{"role": "user", "content": "ping"}]}, \
+            {"x-api-key": tok, "anthropic-version": "2023-06-01"}
+    op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    t0 = time.time()
+    req = urllib.request.Request(f"http://127.0.0.1:{port}{path}", data=json.dumps(body).encode(), method="POST",
+                                 headers=dict(hd, **{"content-type": "application/json"}))
+    try:
+        with op.open(req, timeout=90) as r:
+            r.read(200000)
+            return {"ok": True, "status": r.status, "ms": int((time.time() - t0) * 1000), "model": model, "via": "proxy"}
+    except urllib.error.HTTPError as e:
+        txt = e.read(4000).decode("utf-8", "replace")
+        return {"ok": False, "status": e.code, "ms": int((time.time() - t0) * 1000), "model": model, "via": "proxy",
+                "reason": _scrub(xproto.parse_error(e.code, txt)["message"])}
+    except Exception as e:
+        return {"ok": False, "status": None, "via": "proxy", "reason": _scrub(f"连不上本机代理：{type(e).__name__}: {e}")}
 
 
 def list_models(pid: str | None = None, draft: dict | None = None) -> dict:
@@ -1365,6 +1541,7 @@ def cpa_import(text: str, picks: list | None = None) -> dict:
 # ================================================================ 给页面
 
 def overview() -> dict:
+    from . import cards
     d = load()
     try:
         from . import apps
@@ -1374,14 +1551,16 @@ def overview() -> dict:
     tok = token(create=False)
     return {"providers": [view_provider(p) for p in d["providers"]], "clients": d["clients"], "strategy": d.get("strategy"),
             "request_retry": d.get("request_retry"), "proxy_url": d.get("proxy_url"), "autostart": d.get("autostart", True),
-            "port": d.get("port"), "status": status(), "applied": applied_view(), "token_masked": keystore.mask(tok) if tok else "",
+            "port": d.get("port"), "status": live_status(), "applied": applied_view(), "cards": cards.overview(), "token_masked": keystore.mask(tok) if tok else "",
             "presets": PRESETS, "protocols": PROTO_NAME, "aliases": aliases(d), "running": run, "keystore": keystore.backend(),
             "codex_cmd": f"codex --profile {CODEX_PROFILE}", "session_file": str(session_settings_file()),
             "base_url": f"http://127.0.0.1:{d.get('port')}" if d.get("port") else ""}
 
 
 USAGE = """用法：cc-sessionsync route <命令>
-  serve [--port N]                 前台跑代理（桌面端开着时它自己会跑，不用这个）
+  serve [--port N] [--background]  跑代理（一般不用手动：启用卡片后会自己在后台跑，登录时自启，取口令时按需拉起）
+  card codex|claude show|enable|disable   「Codex 使用… / Claude Code 使用…」卡片
+  card codex|claude set JSON       改卡片，例如 '{"kind":"claude","model":"claude-opus-5-5","key_env":"MY_KEY"}'（key 只从环境变量读）
   status                           代理状态
   list                             供应商列表（key 打码）
   add --name 名字 --protocol anthropic|responses|chat [--base-url URL] [--model 上游名[=别名]]... [--key-env 环境变量名]...
@@ -1402,16 +1581,50 @@ def main(argv: list[str]) -> int:
         return 0 if cmd else 2
     if cmd == "serve":
         port = int(argv[argv.index("--port") + 1]) if "--port" in argv else None
+        bg = "--background" in argv
+        if bg and health(port):
+            return 0                                   # 已经有一个在跑了
         st = start(port)
         if not st["running"]:
+            if bg and health(port):
+                return 0
             print(st["error"], file=sys.stderr)
             return 1
+        if bg:
+            try:
+                PIDFILE.write_text(str(os.getpid()))
+            except OSError:
+                pass
+            while _SRV["srv"]:                         # 被 /ccss/shutdown 停掉就退出
+                time.sleep(1)
+            return 0
         print(f"CC Session Sync 模型路由：http://127.0.0.1:{st['port']}（Ctrl+C 退出）", flush=True)
         try:
             while True:
                 time.sleep(3600)
         except KeyboardInterrupt:
             return 0
+    if cmd == "card" and len(argv) >= 3 and argv[1] in ("codex", "claude"):
+        from . import cards
+        act = argv[2]
+        if act == "show":
+            v = cards.view(argv[1])
+            print(json.dumps({k: v[k] for k in ("kind", "kind_name", "model", "small_model", "effort", "upstream", "enabled", "needs_proxy", "profile_only", "files", "keys")},
+                             ensure_ascii=False, indent=2))
+            return 0
+        if act == "set":
+            b = json.loads(argv[3]) if len(argv) > 3 else {}
+            b.pop("secret", None)
+            if b.get("key_env"):
+                b["secret"] = os.environ.get(b.pop("key_env"), "")
+            cards.save_card(argv[1], b)
+            return 0
+        r = cards.enable(argv[1]) if act == "enable" else cards.disable(argv[1]) if act == "disable" else None
+        if r is None:
+            print(USAGE, file=sys.stderr)
+            return 2
+        print(json.dumps(r, ensure_ascii=False))
+        return 0
     if cmd == "status":
         s = status()
         print(json.dumps({k: s[k] for k in ("running", "port", "configured_port", "providers", "keys", "requests", "errors")}, ensure_ascii=False))

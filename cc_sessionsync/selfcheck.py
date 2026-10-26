@@ -191,11 +191,31 @@ def check_autostart() -> dict | None:
 
 def check_route() -> list[dict]:
     """模型路由（v0.3.0）：代理在不在跑、端口、key 在不在凭据管理器、最近的错误。没配过就不出现。"""
-    from . import keystore, router
+    from . import cards, keystore, router
     d = router.load()
-    if not d["providers"] and not d.get("applied"):
-        return []
     out = []
+    for cl in cards.CLIENTS:                        # 0.3.1 卡片
+        c = cards.get(cl, d)
+        if not c["enabled"]:
+            continue
+        nm = f"{cards.CLIENT_NAME[cl]} 使用 {cards.KIND_NAME[c['kind']]}"
+        v = cards.view(cl, d)
+        if not keystore.get(cards.key_name(cl, c["kind"])):
+            out.append(_item(f"card-{cl}", nm, "fail", "凭据管理器里找不到这张卡的 key", "在「供应商」里重新贴一次 key 再点「启用」"))
+        elif v["drift"]:
+            out.append(_item(f"card-{cl}", nm, "warn", "配置文件在启用后被改过（停用时只会拿掉我们写的那几项）", "想重新写一遍就再点一次「启用」"))
+        else:
+            out.append(_item(f"card-{cl}", nm, "pass", f"{c['model']} · {'后台转换' if cards.needs(cl, c) else '直连'} {cards.upstream_url(c)}"))
+    if cards.needs_proxy(d) and not d["providers"] and not d.get("applied"):
+        port = d.get("port")
+        if router.health(port, timeout=3):
+            out.append(_item("route", "后台转换（本机代理）", "pass", f"在跑：127.0.0.1:{port}" + ("；登录时自启" if router.login_get() else "")))
+        else:
+            out.append(_item("route", "后台转换（本机代理）", "fail", f"没在跑（127.0.0.1:{port}）：Codex / Claude Code 下次取口令时会自己拉起；拉不起来就会报连不上",
+                             "打开 CC Session Sync 会自动拉起；还不行就在「供应商」里点「测试」看原因，或者「停用」回到默认"))
+        return out
+    if not d["providers"] and not d.get("applied"):
+        return out
     port = d.get("port")
     alive = False
     if port:
@@ -209,7 +229,7 @@ def check_route() -> list[dict]:
     who = "、".join({"codex": "Codex", "claude": "Claude Code"}[k] for k in applied)
     if alive:
         out.append(_item("route", "模型路由代理", "pass", f"在跑：127.0.0.1:{port}" + (f"；{who} 已指向它" if who else "")))
-    elif applied:
+    elif applied or cards.needs_proxy(d):
         out.append(_item("route", "模型路由代理", "fail", f"{who} 已指向 127.0.0.1:{port}，但代理没在跑（请求会连不上）",
                          "打开 CC Session Sync（代理随程序启动），或在「供应商 → 模型路由」点「启动」；不用了就点「撤销」"))
     else:

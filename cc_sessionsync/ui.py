@@ -798,12 +798,33 @@ def _route(act: str, b: dict):
     if act == "clients":
         return router.set_clients(b)
     if act == "start":
-        return router.start()
+        router.ensure_running()
+        return router.live_status()
     if act == "stop":
-        return router.stop()
+        router.stop()
+        router.shutdown_background()
+        return router.live_status()
     if act == "restart":
         router.stop()
-        return router.start()
+        router.shutdown_background()
+        router.ensure_running()
+        return router.live_status()
+    if act.startswith("card-"):
+        from . import cards
+        cl = str(b.get("client") or "")
+        if cl not in cards.CLIENTS:
+            raise ValueError("只有 codex / claude 两张卡")
+        if act == "card-save":
+            return cards.save_card(cl, b)
+        if act == "card-enable":
+            cards.save_card(cl, b)
+            return cards.run(cl, "enable")
+        if act == "card-disable":
+            return cards.run(cl, "disable")
+        if act == "card-models":
+            return cards.fetch_models(cl, b)
+        if act == "card-test":
+            return cards.test(cl)
     if act == "test":
         return router.test_provider(str(b["id"]), b.get("model") or None)
     if act == "models":
@@ -865,11 +886,22 @@ def start_background(auto_sync: bool | None = None) -> None:
     sessions.start_auto(backup_settings)
     if not os.environ.get("CC_SESSIONSYNC_NO_ROUTE"):
         def route_up():
-            try:
-                from . import router
-                router.autostart()
-            except Exception:
-                pass
+            """后台代理看门狗：有卡片 / 高级路由在用就保证它活着，挂了自动拉起；拉不起来发一条通知（每次故障一条）。"""
+            from . import router
+            down = False
+            while True:
+                try:
+                    d = router.load()
+                    if router.needed(d) and d.get("autostart", True):
+                        ok = router.health() or router.ensure_running()
+                        if not ok and not down:
+                            events.add("route-down", "后台转换没在跑", "Codex / Claude Code 现在连不上本机代理：点这里看「诊断自检」", {"page": "selfcheck"})
+                        down = not ok
+                    else:
+                        down = False
+                except Exception:
+                    pass
+                time.sleep(20)
         threading.Thread(target=route_up, daemon=True, name="ccss-route-start").start()
     update.auto_check_later(lambda: settings.get("update_auto", True))
     if MODE["desktop"] and not settings.get("selfcheck_done") and not os.environ.get("CC_SESSIONSYNC_NO_SELFCHECK"):

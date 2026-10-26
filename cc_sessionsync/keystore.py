@@ -187,7 +187,7 @@ def helper_selftest(name: str) -> None:
     kw = {"creationflags": 0x08000000} if sys.platform == "win32" else {}
     try:
         r = subprocess.run(helper_cmd(name), cwd=tempfile.gettempdir(), stdin=subprocess.DEVNULL,
-                           capture_output=True, timeout=30, **kw)
+                           capture_output=True, timeout=30, env=dict(os.environ, CC_SESSIONSYNC_NO_ROUTE_SPAWN="1"), **kw)
     except Exception as e:
         raise RuntimeError(f"取 key 命令跑不起来：{type(e).__name__}，没改配置") from None
     got = r.stdout.decode("utf-8", "replace").strip()
@@ -198,6 +198,17 @@ def helper_selftest(name: str) -> None:
 def helper_line(name: str) -> str:
     """apiKeyHelper 用的一行命令：每段都加双引号（cmd 和 bash 都认）。"""
     return " ".join('"' + a.replace('"', '') + '"' if (" " in a or "\\" in a) else a for a in helper_cmd(name))
+
+
+def _wake_route() -> None:
+    """Codex / Claude Code 取本机代理口令时：后台代理没在跑就拉起来（桌面端没开、开机自启被关了也能用）。"""
+    try:
+        from . import router
+        if router.needed() and not router.health():
+            if not router.ensure_running(wait=8):
+                print("cc-sessionsync: 后台转换（本机代理）起不来，打开 CC Session Sync →「诊断自检」看原因", file=sys.stderr)
+    except Exception as e:
+        print(f"cc-sessionsync: 拉起后台转换失败：{type(e).__name__}", file=sys.stderr)
 
 
 def main(argv: list[str]) -> int:
@@ -211,6 +222,8 @@ def main(argv: list[str]) -> int:
         if not v:
             print(f"cc-sessionsync key: 凭据管理器里没有 {argv[1]}（在 CC Session Sync →「模型与 API」里存一个）", file=sys.stderr)
             return 1
+        if argv[1] == "route-token" and not os.environ.get("CC_SESSIONSYNC_NO_ROUTE_SPAWN"):
+            _wake_route()
         sys.stdout.write(v)
         sys.stdout.flush()
         return 0

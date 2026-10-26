@@ -114,7 +114,8 @@ def relaunch(info: dict | None) -> bool:
 
 VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "codex-import": "导入", "codex-undo": "撤回导入",
          "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
-         "timeline-replace": "恢复", "convert-run": "转换", "convert-undo": "撤回转换"}
+         "timeline-replace": "恢复", "convert-run": "转换", "convert-undo": "撤回转换",
+         "route-card-enable": "启用", "route-card-disable": "停用"}
 
 
 def verb(op: str, args: dict | None = None) -> str:
@@ -176,6 +177,11 @@ def _dsh():
     return dsh
 
 
+def _cards():
+    from . import cards
+    return cards
+
+
 def _convert():
     from . import convert
     return convert
@@ -201,6 +207,8 @@ def _ops():
         "sessions-undo": lambda **a: _sessions().undo(a["op"]),
         "desktop-register": lambda **a: _timeline().register_desktop(a["op"], a["regs"]),
         "timeline-replace": lambda **a: _timeline().replace(a["snaps"]),
+        "route-card-enable": lambda **a: _cards().enable(a["client"]),
+        "route-card-disable": lambda **a: _cards().disable(a["client"]),
     }
     for p in EXTRA_OPS:
         try:
