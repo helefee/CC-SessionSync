@@ -71,7 +71,7 @@ foreach ($f in @("LICENSE", "README.md", "THIRD_PARTY_NOTICES.md")) { Copy-Item 
 Copy-Item -Recurse (Join-Path $root "licenses") (Join-Path $out "licenses")
 $py = @(Get-ChildItem $out -Recurse -File -Include *.py, *.pyw, *.pyc)
 if ($py.Count) { $py | ForEach-Object { Write-Host "    $($_.FullName)" }; throw "python sources found in $out" }
-foreach ($need in @("cc_sessionsync\index.html", "cc_sessionsync\icon.ico", "cc_sessionsync\icon.png", "cc_sessionsync\tray-badge.ico", "cc_sessionsync\usage_prices.json", "cc_sessionsync\fonts\inter-regular.woff2")) {
+foreach ($need in @("cc_sessionsync\index.html", "cc_sessionsync\icon.ico", "cc_sessionsync\icon.png", "cc_sessionsync\tray-badge.ico", "cc_sessionsync\usage_prices.json", "cc_sessionsync\codex_prompt.md", "cc_sessionsync\fonts\inter-regular.woff2")) {
     if (-not (Test-Path (Join-Path $out $need))) { throw "missing in dist: $need" }
 }
 # manifest for 自检 (install integrity)

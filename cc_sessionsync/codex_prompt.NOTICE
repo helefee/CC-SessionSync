@@ -1,0 +1,4 @@
+codex_prompt.md is the default base prompt of OpenAI Codex CLI (codex-rs/models-manager/prompt.md at tag rust-v0.164.0),
+Copyright OpenAI, licensed under the Apache License 2.0 (https://github.com/openai/codex/blob/main/LICENSE). Unmodified.
+CC Session Sync hands it back to Codex in the model catalog for models routed through the local proxy, which is exactly
+what Codex itself uses for models it has no metadata for.

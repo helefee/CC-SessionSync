@@ -36,7 +36,7 @@ cc-sessionsync = "cc_sessionsync.cli:main"
 packages = ["cc_sessionsync"]
 
 [tool.setuptools.package-data]
-cc_sessionsync = ["index.html", "*.ico", "*.png", "usage_prices.json", "fonts/*"]
+cc_sessionsync = ["index.html", "*.ico", "*.png", "usage_prices.json", "fonts/*", "codex_prompt.md", "codex_prompt.NOTICE"]
 
 [tool.setuptools.dynamic]
 version = { attr = "cc_sessionsync.__version__" }

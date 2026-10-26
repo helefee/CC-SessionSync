@@ -22,6 +22,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
 9. **模型路由（0.3.0）**：本机协议转换代理，让 **Codex 用 Claude 模型**、**Claude Code 用 OpenAI / Gemini / 中转站的模型**；只用 API key（官方或兼容地址，
    多 key 轮换 / 失败换 key / 别名池，参考 CLIProxyAPI），**不支持订阅登录**；一键应用 / 撤销（按字节还原）。见下文。
+   **0.3.2**：卡片能选 Claude / OpenAI / Gemini / DeepSeek / GLM / Kimi / Qwen / Grok / OpenRouter / 自定义；模型和推理等级在 Codex（`/model`）和 Claude Code（`/model`、`/effort`）里随时切换。
    **0.3.1 简化**：「供应商」页顶上两张卡片「Codex 使用…」「Claude Code 使用…」——选一个、贴 key、点「启用」就行，转换代理在后台自动跑。
 10. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
@@ -355,6 +356,67 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### 任意服务商 + 在 Codex / Claude Code 里随时换模型和推理等级（0.3.2）
+
+两张卡片现在一样简单：**用哪个账号/Key**（下拉）→ 贴 **Key** → 选**默认模型**（贴完 key 自动列出这家能用的模型）→「启用」。
+地址、协议、转换这些都不用管；「更多」里才有：默认推理等级（可不设）、地区、中转地址、Claude Code 的 Sonnet / Haiku 对应模型、Codex 只用 profile。
+
+**在 Codex 里换模型 / 推理等级**（卡片只定默认值，不再写死）：
+
+- 交互界面输入 `/model` → 列表里是这家的全部模型（Codex 自带的 GPT 模型会藏起来）→ 选模型 → 再选推理等级（none / low / medium / high / xhigh / max）。
+- 命令行：`codex -m deepseek-flash`、`codex -c model_reasoning_effort=high`，或者在 `config.toml` 里自己写 `model_reasoning_effort`。
+- Codex 桌面端：模型选择器和推理等级选择器读的是同一份模型目录，也是每次请求带过来，随时切换。
+
+**在 Claude Code 里换模型 / 推理等级**：
+
+- `/model`：选 Opus / Sonnet / Haiku → 实际用卡片的默认模型 / 「Sonnet 用」/「Haiku 用」（「更多」里设，不设就同默认模型）。
+- 想用别的模型：`/model glm-5.1`、`claude --model deepseek-v4-pro` —— 不是 Claude 名字的模型名原样转给服务商。
+- `/effort high`（或 settings 的 `effortLevel`、环境变量 `CLAUDE_CODE_EFFORT_LEVEL`）→ 每次请求都带，按下表换成那家的写法。
+
+**能选的服务商**（地址 / 协议都照官方文档；「原样转发」= 客户端和服务商协议一样，只换模型名、按那家写法改推理参数）：
+
+| 选项 | Codex 用的接口 | Claude Code 用的接口 | 官方地址（缺省 / 「更多 → 地区」） | 来源 |
+|---|---|---|---|---|
+| Claude API Key | Anthropic Messages（转换） | Anthropic（直连，不经后台） | `https://api.anthropic.com` | [docs.anthropic.com](https://docs.anthropic.com/en/api/messages) |
+| OpenAI API Key | Responses（直连，不经后台） | Responses（转换） | `https://api.openai.com/v1` | [platform.openai.com](https://platform.openai.com/docs/api-reference/responses) |
+| Gemini | Chat Completions（转换） | Chat Completions（转换） | `https://generativelanguage.googleapis.com/v1beta/openai` | [ai.google.dev/gemini-api/docs/openai](https://ai.google.dev/gemini-api/docs/openai) |
+| DeepSeek | Chat Completions `https://api.deepseek.com` | Anthropic `https://api.deepseek.com/anthropic`（原样转发） | 同左 | [api-docs.deepseek.com](https://api-docs.deepseek.com/) · [Anthropic API](https://api-docs.deepseek.com/guides/anthropic_api) |
+| 智谱 GLM | Chat Completions | Anthropic（原样转发） | 中国 `https://open.bigmodel.cn/api/paas/v4` + `…/api/anthropic`；国际 `https://api.z.ai/api/paas/v4` + `https://api.z.ai/api/anthropic`；Coding Plan `https://open.bigmodel.cn/api/coding/paas/v4` | [docs.bigmodel.cn Claude Code](https://docs.bigmodel.cn/cn/guide/develop/claude) · [docs.z.ai](https://docs.z.ai/api-reference/llm/chat-completion) · [接入工具](https://docs.bigmodel.cn/cn/guide/develop/others) |
+| Kimi（月之暗面） | Responses（原样转发） | Anthropic（原样转发） | 中国 `https://api.moonshot.cn/v1` + `…/anthropic`；国际 `https://api.moonshot.ai/v1` + `…/anthropic` | [platform.kimi.com](https://platform.kimi.com/docs/api/overview) · [思考模型](https://platform.kimi.ai/docs/guide/use-thinking-models) |
+| 通义千问 Qwen（百炼） | Chat Completions | Anthropic（原样转发） | 北京 `https://dashscope.aliyuncs.com/compatible-mode/v1` + `…/apps/anthropic`；新加坡 `https://dashscope-intl.aliyuncs.com/…` | [百炼 OpenAI 兼容](https://help.aliyun.com/zh/model-studio/qwen-api-via-openai-chat-completions) · [Claude Code](https://www.alibabacloud.com/help/en/model-studio/claude-code) |
+| Grok（xAI） | Responses（原样转发） | Responses（转换） | `https://api.x.ai/v1` | [docs.x.ai](https://docs.x.ai/developers/model-capabilities/text/reasoning) |
+| OpenRouter | Chat Completions | Chat Completions | `https://openrouter.ai/api/v1` | [openrouter.ai/docs](https://openrouter.ai/docs/api_reference/parameters) |
+| 自定义 | 填地址，**按地址认接口**：`…/anthropic`、`…/v1/messages` → Anthropic；`…/responses` → Responses；Gemini 原生地址 → 它的 OpenAI 兼容接口；其它 → Chat Completions（「更多 → 接口类型」可以手选） | 同左（Anthropic 接口直连） | — | — |
+
+除了「Codex + OpenAI」「Claude Code + Claude / 自定义 Anthropic」直连，其它都经本机后台服务：要转换协议，或者要给 Codex 一份模型目录（`/model` 列表 + 推理等级），给 Claude Code 换模型名。
+
+**推理等级怎么对应**（客户端每次请求带的等级 → 发给服务商的参数；服务商不支持的级别就近折算，不支持关闭的用最低档）：
+
+| 客户端选的 | Claude 新模型（Opus / Sonnet 4.6+、Haiku 5+） | Claude 老模型 | OpenAI / OpenRouter | Grok | Gemini | DeepSeek（Chat） | GLM-5.3 / 5.2 / 更早 | Kimi K3 / K2.6 | Qwen 3.8 / 其它 Qwen |
+|---|---|---|---|---|---|---|---|---|---|
+| none | 不思考 | 不思考 | none | low（关不掉） | none（仅 2.5 Flash）/ 其它 low | thinking 关 | low / thinking 关 / thinking 关 | low / thinking 关 | thinking 关 |
+| minimal | 不思考 | 不思考 | minimal | low | low | low | low / minimal / 开 | low / 开 | low / budget 1024 |
+| low | effort low | budget 4000 | low | low | low | low | low / low / 开 | low / 开 | low / budget 4096 |
+| medium | effort medium | budget 10000 | medium | medium | medium | high | high / medium / 开 | high / 开 | medium / budget 16384 |
+| high | effort high | budget 20000 | high | high | high | high | high / high / 开 | high / 开 | xhigh / budget 32768 |
+| xhigh | effort xhigh | budget 32000 | xhigh | xhigh | high | high | max / xhigh / 开 | max / 开 | xhigh / budget 65536 |
+| max | effort max | budget 32000 | xhigh | xhigh | high | max | max / max / 开 | max / 开 | xhigh / budget 65536 |
+
+- 参数名：OpenAI / Gemini / DeepSeek / GLM / Kimi / Qwen 3.8 用 `reasoning_effort`（Responses 接口是 `reasoning.effort`）；DeepSeek / GLM / Kimi K2.6 另带 `thinking.type` 开关；
+  Qwen 用 `enable_thinking` + `thinking_budget`；OpenRouter 用 `reasoning.effort`。客户端没带等级就什么都不加（用服务商自己的默认）。
+- Claude Code → Anthropic 兼容接口（DeepSeek / GLM / Kimi / Qwen）：`thinking` / `output_config.effort` 原样转过去，由服务商自己折算。
+
+**限制**：Codex 的模型目录里上下文长度统一按 200K 报；模型列表是贴 key / 点「刷新」时拉的，服务商新上的模型要点一下「刷新」；
+Claude Code 的 `/model` 菜单仍显示 Opus / Sonnet / Haiku 三个名字（实际模型看卡片），别的模型用 `/model 模型名`；
+自定义只按地址认接口（不发探测请求，不花钱），认错了在「更多」里手选；Gemini 只走它的 OpenAI 兼容接口（不支持原生 `generateContent`）；
+OpenRouter 只走 Chat Completions；不做订阅登录（OAuth）复用。
+
+| 之前（0.3.1） | 之后（0.3.2） |
+|---|---|
+| ![](docs/screenshots/v032-before-default.png) | ![](docs/screenshots/v032-after-default.png) |
+| ![](docs/screenshots/v032-before-xl.png)（特大字号） | ![](docs/screenshots/v032-after-xl.png)（特大字号） |
+| | ![](docs/screenshots/v032-after-more.png)（展开「更多」） |
 
 ### 两张卡片：Codex 使用… / Claude Code 使用…（0.3.1）
 
@@ -731,6 +793,12 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Any provider, switch model / effort inside the client (0.3.2):** both cards offer Claude API key, OpenAI API key, Gemini, DeepSeek, GLM/Zhipu,
+  Kimi/Moonshot, Qwen/DashScope, Grok/xAI, OpenRouter and a custom URL (protocol detected from the URL). Endpoints follow each vendor's docs
+  (table above). Codex gets a model catalog, so `/model` lists the provider's models with reasoning levels; `codex -m …` /
+  `-c model_reasoning_effort=…` work too. Claude Code's `/model` (Opus/Sonnet/Haiku slots or any model name) and `/effort` are honored.
+  The per-request effort is mapped to each provider's parameter (`reasoning_effort`, `reasoning.effort`, `thinking.type`, `enable_thinking` /
+  `thinking_budget`, Claude adaptive effort or budget_tokens); the card's effort is only an optional default.
 - **Simple cards (0.3.1):** the 供应商 page now opens with two cards, "Codex 使用…" (default ChatGPT login / Claude API key /
   OpenAI API key / custom) and "Claude Code 使用…" (default claude.ai login / OpenAI API key / native Claude API key / custom). Pick one,
   paste the key (credential store), pick a model (fetched list; newest Opus by default) and effort, click 启用. Conversion happens in a

@@ -205,7 +205,7 @@ def check_route() -> list[dict]:
         elif v["drift"]:
             out.append(_item(f"card-{cl}", nm, "warn", "配置文件在启用后被改过（停用时只会拿掉我们写的那几项）", "想重新写一遍就再点一次「启用」"))
         else:
-            out.append(_item(f"card-{cl}", nm, "pass", f"{c['model']} · {'后台转换' if cards.needs(cl, c) else '直连'} {cards.upstream_url(c)}"))
+            out.append(_item(f"card-{cl}", nm, "pass", f"{c['model']} · {'后台转换' if cards.needs(cl, c) else '直连'} {cards.upstream_url(c, cl)}"))
     if cards.needs_proxy(d) and not d["providers"] and not d.get("applied"):
         port = d.get("port")
         if router.health(port, timeout=3):

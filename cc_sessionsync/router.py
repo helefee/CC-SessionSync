@@ -625,6 +625,9 @@ def _attempt(h, client, body, p, k, secret, upm, entry, want, stream, count, t0)
     else:
         url = endpoint(p)
         ub, ctx = xproto.convert_request(client, p["protocol"], body, upm, opt_of(p))
+    if not count and p.get("style"):                 # 卡片：这次请求要的推理强度 → 上游那家的写法（effort.py）
+        from . import effort
+        ub = effort.adapt(p["style"], p["protocol"], ub, effort.requested(client, body), upm)
     beta = None
     if p["protocol"] == "anthropic":
         if client == "anthropic":
@@ -824,8 +827,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/ccss/status":
             return self.send_json(200, status())
         if path.endswith("/models"):
-            if "client_version=" in self.path:          # Codex 拉自己的模型目录（ModelInfo 格式）：给空的，它就用内置的 + 兜底元数据
-                return self.send_json(200, {"models": []})
+            if "client_version=" in self.path:          # Codex 拉自己的模型目录（ModelInfo 格式）：卡片启用时给卡片能用的模型（/model 里能选、能调推理等级）
+                from . import cards
+                return self.send_json(200, {"models": cards.codex_catalog()})
             return self.send_json(200, _models_list(bool(self.headers.get("anthropic-version"))))
         self.send_json(404, {"error": {"message": "not found"}})
 
