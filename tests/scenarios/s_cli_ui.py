@@ -27,7 +27,7 @@ for a, o, n in ((A1, O1, 2), (A2, O2, 0)):
 ldb = T / "cfg/Claude/Local Storage/leveldb"; ldb.mkdir(parents=True)
 (ldb / "000003.log").write_bytes(b'{"eventName":"e","clientTimestamp":"2026-10-16T00:00:00Z","accountUuid":"%s","organizationUuid":"%s"}' % (A2.encode(), O2.encode()))
 rollout(H / ".codex", str(T / "proj"))
-rc, out = cli("--version"); ok(rc == 0 and "0.3.3" in out, "--version")
+rc, out = cli("--version"); ok(rc == 0 and "0.3.4" in out, "--version")
 rc, out = cli("status"); ok(rc == 0 and A2 in out and "Codex 对话 1 个" in out, "status")
 rc, out = cli("sync", "--dry-run"); ok(rc == 0 and "可以补进来 2 个" in out and not list((root / A2 / O2).glob("local_*")), "sync --dry-run")
 (T / "desktop-running").write_text("1")
@@ -63,7 +63,7 @@ try:
         except Exception:
             time.sleep(0.2)
     tok = html.split('const TOKEN = "')[1].split('"')[0]
-    ok("<title>CC Session Sync</title>" in html and len(tok) > 10 and 'VERSION = "0.3.3"' in html, "UI page served with token")
+    ok("<title>CC Session Sync</title>" in html and len(tok) > 10 and 'VERSION = "0.3.4"' in html, "UI page served with token")
     def g(u, t=None):
         rq = urllib.request.Request("http://127.0.0.1:8799" + u, headers={"x-token": tok if t is None else t})
         try:
@@ -85,6 +85,9 @@ try:
     ok(post("/api/sync", {"source": "desktop"}, "wrong").get("code") == 403, "POST without the token → 403")
     r = post("/api/sync", {"source": "desktop"}); ok(r.get("done") == 2, "api/sync")
     ok(len(g("/api/backups")) >= 2, "api/backups")
+    pv = post("/api/route/prov-list", {}); ok([x["id"] for x in pv.get("providers", [])][-1:] == ["custom"] and "codex" in pv.get("cards", {}), "0.3.4: api/route/prov-list")
+    ok(post("/api/route/prov-save", {"kind": "glm"}).get("code") == 400, "0.3.4: prov-save without a key → 400")
+    ok(all(x in html for x in ('data-mtab="', "function agPickOpen", "function pgRender", "function pvSheet", "lobehub/lobe-icons", "magpie")), "0.3.4: providers page (Agent / 服务商 / 高级) in the page")
     cp = g("/api/codex/plan?days=0"); ok(cp["counts"]["new"] == 1 and cp["rows"][0]["turns"], "api/codex/plan (dry)")
     r = post("/api/codex/import", {"days": "0", "only": [cp["rows"][0]["thread"]], "desktop": "1"}); ok(r.get("done") == 1, "api/codex/import")
     r = post("/api/codex/undo", {"ledger": r["ledger"]}); ok(r.get("ok") and r["moved"] == 2, "api/codex/undo")

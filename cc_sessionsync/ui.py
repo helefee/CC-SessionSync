@@ -809,6 +809,12 @@ def _route(act: str, b: dict):
         router.shutdown_background()
         router.ensure_running()
         return router.live_status()
+    if act.startswith("prov-"):
+        from . import cards
+        fn = {"prov-list": lambda: cards.prov_list(), "prov-save": lambda: cards.prov_save(b), "prov-models": lambda: cards.prov_models(b),
+              "prov-delete": lambda: cards.prov_delete(b)}.get(act)
+        if fn:
+            return fn()
     if act.startswith("card-"):
         from . import cards
         cl = str(b.get("client") or "")
