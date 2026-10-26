@@ -22,6 +22,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
 9. **模型路由（0.3.0）**：本机协议转换代理，让 **Codex 用 Claude 模型**、**Claude Code 用 OpenAI / Gemini / 中转站的模型**；只用 API key（官方或兼容地址，
    多 key 轮换 / 失败换 key / 别名池，参考 CLIProxyAPI），**不支持订阅登录**；一键应用 / 撤销（按字节还原）。见下文。
+   **0.3.1 简化**：「供应商」页顶上两张卡片「Codex 使用…」「Claude Code 使用…」——选一个、贴 key、点「启用」就行，转换代理在后台自动跑。
 10. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
 > 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
@@ -355,6 +356,37 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
+### 两张卡片：Codex 使用… / Claude Code 使用…（0.3.1）
+
+「供应商」页打开就是两张卡片，不用懂代理 / 别名 / 路由：
+
+| 卡片 | 选项 |
+|---|---|
+| **Codex 使用…** | 默认（ChatGPT 登录）· **Claude API Key** · OpenAI API Key · 自定义（Base URL + key + 协议） |
+| **Claude Code 使用…** | 默认（claude.ai 登录）· **OpenAI API Key** · Claude API Key（原生，不转换）· 自定义 |
+
+选好 → 粘贴 key（存凭据管理器 / DPAPI，界面只显示打码）→ 自动拉一次模型列表（Claude 默认选最新的 Opus）→ 选思考强度 →「启用」。
+Claude / OpenAI 都可以填一个**中转站地址**（兼容 Anthropic / OpenAI 的接口），留空就是官方地址。
+
+- **要不要转换是程序自己判断的**：Codex + OpenAI key、Claude Code + Claude key 直连上游（不经过代理）；Codex + Claude key、Claude Code + OpenAI key
+  走本机转换代理。代理是**单独的后台进程**：程序 / 托盘启动时拉起、挂了自动重启、端口自动选；**启用卡片时同时加开机自启**（HKCU Run「CC Session Sync Route」）；
+  就算桌面端没开、自启被关了，Codex / Claude Code 取本机口令时也会把它拉起来（第一次多等一两秒）。卡片下面只有一行状态「已启用 · 后台转换正常」+「测试」「停用」。
+- **Codex**：缺省改 `~/.codex/config.toml`——顶层 `model_provider = "cc-route"`、`model`、思考强度，加 `[model_providers.cc-route]`（先备份；
+  `auth.json` 里的 ChatGPT 登录不动）。所以**普通 `codex` 和 Codex 桌面端**都直接用它。勾「只在 `codex --profile cc-route` 时使用」就只写 profile，默认不变。
+  Codex 桌面端开着时会提示退出重开（排队，退出后自动写好、再打开）。
+- **Codex 桌面端**：Windows 上的 Codex 桌面端和命令行共用 `%USERPROFILE%\.codex`（`CODEX_HOME`），会读同一个 `config.toml` 的 `model_provider`，
+  所以启用后桌面端新开的对话也走卡片的模型（见 openai/codex [#50910](https://github.com/openai/codex/issues/50910)、[#39195](https://github.com/openai/codex/issues/39195)）。
+  注意：用第三方供应商时桌面端会把它当成当前供应商，**原来 ChatGPT 账号下的模型列表 / 对话列表可能暂时看不到**（不是删了）；点「停用」、重开桌面端就回来。
+- **Claude Code**：改 `~/.claude/settings.json`（转换：env 里 `ANTHROPIC_BASE_URL` → 本机代理 + 本机口令；原生 Claude key：`apiKeyHelper` 从凭据管理器取 key），
+  新开的会话生效。Claude 桌面版不读这个文件。
+- **停用**：文件启用后没被动过就**按字节还原**；动过就只拿掉我们写的那几项。不再有卡片要转换时，后台代理和开机自启也一起去掉。
+- **出问题时**：代理挂了 → 托盘通知 +「诊断自检」标红；key 丢了 / 没填地址 → Codex / Claude Code 直接收到一条说明怎么修的错误。
+- 原来的「供应商列表（v0.2）」和「模型路由（多供应商 / 多 key / 别名池 / CLIProxyAPI 导入）」都在卡片下面折叠的「高级」里，照旧能用。
+
+| 两张卡片 | 启用后 | 深色 |
+|---|---|---|
+| ![](docs/screenshots/v031-01-cards-light.png) | ![](docs/screenshots/v031-02-enabled-light.png) | ![](docs/screenshots/v031-03-cards-dark.png) |
+
 ### 模型路由：Codex 用 Claude 模型、Claude Code 用 OpenAI 等模型（0.3.0）
 
 「供应商 → 模型路由」。程序里带一个**本机协议转换代理**（只听 `127.0.0.1`，每个请求都要带本机口令 `ccss-local-…`，口令存凭据管理器），
@@ -535,7 +567,12 @@ cc-sessionsync route apply codex [--default]              # 写 cc-route profile
 cc-sessionsync route apply claude [--session]             # settings.json env（--session：只写 claude --settings 用的文件）
 cc-sessionsync route revert codex|claude
 cc-sessionsync route test <供应商 id> [模型]
-cc-sessionsync route serve [--port N]                     # 前台跑代理（不开桌面端时）
+cc-sessionsync route serve [--port N] [--background]      # 跑代理（一般不用：卡片启用后自己在后台跑）
+cc-sessionsync route stop                                 # 停掉后台代理
+# 卡片（0.3.1）：key 只从环境变量读
+MY_KEY=… cc-sessionsync route card codex set '{"kind":"claude","key_env":"MY_KEY","effort":"high"}'
+cc-sessionsync route card codex enable|disable|show
+cc-sessionsync route card claude set '{"kind":"openai","key_env":"MY_KEY","model":"gpt-5.5","small_model":"gpt-5.4-mini"}' 
 ```
 
 导入后命令行会打印每个会话的打开方式，例如：
@@ -694,6 +731,14 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Simple cards (0.3.1):** the 供应商 page now opens with two cards, "Codex 使用…" (default ChatGPT login / Claude API key /
+  OpenAI API key / custom) and "Claude Code 使用…" (default claude.ai login / OpenAI API key / native Claude API key / custom). Pick one,
+  paste the key (credential store), pick a model (fetched list; newest Opus by default) and effort, click 启用. Conversion happens in a
+  separate background proxy process (started with the app/tray, restarted if it dies, auto port, login item added on enable, and also
+  started on demand by the token helper when Codex/Claude Code needs it). Codex: by default writes `model_provider` + `[model_providers.cc-route]`
+  into `~/.codex/config.toml` (backup first, ChatGPT `auth.json` untouched), so plain `codex` **and the Codex desktop app** (which shares
+  `%USERPROFILE%\.codex`) use it; optional "only with `codex --profile cc-route`". 停用 restores byte-identical when untouched, otherwise
+  removes only our keys. The v0.3.0 routing UI and the v0.2 provider list moved into a collapsed 高级 section.
 - **Model routing (0.3.0):** 供应商 → 模型路由. A built-in **local protocol-conversion proxy** (127.0.0.1 only, every request needs a local
   token `ccss-local-…` kept in the credential store; runs while the app/tray runs, optional autostart) lets **Codex use Claude models** and
   **Claude Code use OpenAI / Gemini / relay models**: Anthropic Messages ⇄ OpenAI Responses / Chat Completions, both directions, plus

@@ -1825,7 +1825,7 @@ const pvModels = (tool, p) => { const m = p.models || {}, ks = Object.keys(m); i
 const pvPresets = tool => [[tool === "claude" ? "login" : "chatgpt", tool === "claude" ? "官方登录" : "ChatGPT 登录"], ["official", "官方 API Key"], ["openkey", "OpenKey"], ["custom", "自定义"]];
 const pvLast4 = p => p.mode !== "key" ? "" : p.key_missing ? '<span class="note">缺 key</span>' : `<span class="pvkm" title="${esc(p.key_masked || "")}">…${esc((p.key_masked || "").slice(-4))}</span>`;
 // ---------- 0.3.1：两张卡片「Codex 使用… / Claude Code 使用…」（选一个、贴 key、启用；转换 / 端口全自动，细节在「高级」里） ----------
-const CC = {d: null, draft: {}, models: {}, busy: {}};
+const CC = {d: null, draft: {}, models: {}, busy: {}, out: {}};
 const CC_OPT = {codex: [["default", "默认（ChatGPT 登录）"], ["claude", "Claude API Key"], ["openai", "OpenAI API Key"], ["custom", "自定义"]],
   claude: [["default", "默认（claude.ai 登录）"], ["openai", "OpenAI API Key"], ["claude", "Claude API Key"], ["custom", "自定义"]]};
 const CC_NAME = {codex: "Codex", claude: "Claude Code"};
@@ -1843,7 +1843,7 @@ function ccProxyLine(cl){
   const st = !v.needs_proxy ? `<span class="tag ok">● 已启用</span> <span class="dim">· ${nm} · 直连</span>`
     : p.running ? `<span class="tag ok">● 已启用</span> <span class="dim">· ${nm} · 后台转换正常</span>`
     : `<span class="tag warn">● 已启用 · 后台转换没在跑</span> <span class="dim">下次 ${CC_NAME[cl]} 取口令时会自己拉起；也可以点「测试」</span>`;
-  return `<div class="ccst">${st}${fix}<span style="flex:1"></span><button class="pvmini" data-cct="${cl}">测试</button><button class="pvmini ghost" data-ccoff="${cl}">停用</button></div><div class="ccout" id="ccOut-${cl}"></div>`;
+  return `<div class="ccst">${st}${fix}<span style="flex:1"></span><button class="pvmini" data-cct="${cl}">测试</button><button class="pvmini ghost" data-ccoff="${cl}">停用</button></div><div class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</div>`;
 }
 function ccCard(cl){
   const v = CC.d[cl], dr = ccDraft(cl), k = dr.kind, on = v.enabled;
@@ -1890,7 +1890,7 @@ function ccRender(){
   $$("#ccBox [data-cct]").forEach(b => b.onclick = async () => { const o = $("#ccOut-" + b.dataset.cct); o.innerHTML = '<div class="dim">测试中…</div>';
     const r = await rtApi("card-test", {client: b.dataset.cct}).catch(e => ({ok: false, reason: e.message}));
     const row = r.keys ? r.keys[0] || r : r;
-    o.innerHTML = r.ok ? `<div><span class="tag ok">✓ 通了</span> <span class="dim">${row.ms != null ? `（${row.ms} ms${r.via === "proxy" ? "，经本机后台转换" : ""}）` : ""}${r.note ? " · " + esc(r.note) : ""}</span></div>`
+    o.innerHTML = CC.out[b.dataset.cct] = r.ok ? `<div><span class="tag ok">✓ 通了</span> <span class="dim">${row.ms != null ? `（${row.ms} ms${r.via === "proxy" ? "，经本机后台转换" : ""}）` : ""}${r.note ? " · " + esc(r.note) : ""}</span></div>`
       : `<div class="miss">✗ ${row.status ? "HTTP " + row.status + "：" : ""}${esc(row.reason || r.reason || "不通")}</div>`; ccLoad(); });
 }
 async function ccModels(cl, quiet){
@@ -1908,7 +1908,7 @@ async function ccEnable(cl, dr){
   msg.textContent = "启用中…";
   try {
     const r = await rtApi("card-enable", Object.assign({client: cl, models: CC.models[cl + ":" + dr.kind] || undefined}, dr));
-    CC.draft[cl] = null;
+    CC.draft[cl] = null; CC.out[cl] = "";
     if (doneOrQueued(r, r.deferred ? "" : `${CC_NAME[cl]} 已改用「${CC_OPT[cl].find(o => o[0] === dr.kind)[1]}」${cl === "codex" ? (dr.profile_only ? "（codex --profile cc-route）" : "：codex 和 Codex 桌面端新开的对话就用它") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
   } catch(e){ msg.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
   ccLoad();
@@ -1916,7 +1916,7 @@ async function ccEnable(cl, dr){
 function ccDisable(cl){
   confirmDlg(`停用「${CC_NAME[cl]} 使用 ${esc(CC.d[cl].kind_name)}」`, `${CC_NAME[cl]} 回到${cl === "codex" ? " ChatGPT 登录" : " claude.ai 登录"}。改过的文件没被别的工具动过就按字节还原，动过就只拿掉我们写的那几项。key 留在凭据管理器里，下次启用不用再贴。`, "停用", async () => {
     closeDlg();
-    try { const r = await rtApi("card-disable", {client: cl}); CC.draft[cl] = null; doneOrQueued(r, `已停用，${CC_NAME[cl]} 回到默认`); } catch(e){ toast("❌ " + e.message); }
+    try { const r = await rtApi("card-disable", {client: cl}); CC.draft[cl] = null; CC.out[cl] = ""; doneOrQueued(r, `已停用，${CC_NAME[cl]} 回到默认`); } catch(e){ toast("❌ " + e.message); }
     ccLoad(); });
 }
 async function ccLoad(){
