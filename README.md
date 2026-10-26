@@ -22,6 +22,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
 9. **模型路由（0.3.0）**：本机协议转换代理，让 **Codex 用 Claude 模型**、**Claude Code 用 OpenAI / Gemini / 中转站的模型**；只用 API key（官方或兼容地址，
    多 key 轮换 / 失败换 key / 别名池，参考 CLIProxyAPI），**不支持订阅登录**；一键应用 / 撤销（按字节还原）。见下文。
+   **0.3.3**：Codex 桌面端的模型选择器列出卡片的模型（写自己的 model_catalog_json），修好「账号已切换」「配置被改过」误报。
    **0.3.2**：卡片能选 Claude / OpenAI / Gemini / DeepSeek / GLM / Kimi / Qwen / Grok / OpenRouter / 自定义；模型和推理等级在 Codex（`/model`）和 Claude Code（`/model`、`/effort`）里随时切换。
    **0.3.1 简化**：「供应商」页顶上两张卡片「Codex 使用…」「Claude Code 使用…」——选一个、贴 key、点「启用」就行，转换代理在后台自动跑。
 10. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
@@ -356,6 +357,31 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### Codex 桌面端的模型选择器（0.3.3）
+
+Codex 只要设了 `model_catalog_json`，就只用那个文件里的模型（不再问服务商要列表），桌面端的模型选择器也读它。
+以前别的工具（或 CC Session Sync 旧版「高级」）留下的目录里没有卡片的模型时，桌面端就只显示「自定义」。
+
+- 启用 Codex 卡片（走后台服务时）会写 `~/.codex/ccss-models-cc-route.json`，并把 `model_catalog_json` 指向它：
+  - 文件里是这家的全部模型，默认模型排第一；
+  - 名字好认（如 Claude Opus 5.5、DeepSeek V4 Pro）；
+  - 每个模型只列它支持的推理等级；
+  - 上下文长度优先用模型列表给的数，没有就用已知值，再没有就按 128K。
+  - 格式就是 Codex 的 `ModelInfo`（openai/codex `codex-rs/protocol/src/openai_models.rs`，`{"models":[…]}`）。
+- 直连 OpenAI 时则拿掉 `model_catalog_json`，用 Codex 自带的 GPT 列表。
+- 停用时原来的值放回去，没被改过就按字节还原；我们的目录文件删掉，别人的不动。
+- 「刷新」模型列表时，如果卡片正在用这一家，目录会马上重写。
+- `review_model`、`agents.default_subagent_model`、shell 环境变量里的模型名不在这家的列表里，或者 `model_context_window` 比模型大时，卡片里会提醒。
+  点「一键改成…」即可修复；改动和卡片一起记录，停用时放回原样。
+- 「账号已切换」误报修好了：同一个账号只是被卡片换成 / 换回 cc-route，不再提醒；别的工具只换了供应商，就叫「供应商已切换」。
+- 「配置被改过」现在只看我们写的那几项：
+  - Codex 自己记的项目信任、桌面端偏好，或者在 /model 里切换模型，都不算；
+  - 卡片启用时，旧「供应商列表」也不再显示「Codex 配置被改过」。
+
+**更新后**：在「供应商」页的 Codex 卡片点「保存并重新启用」，然后完全退出 Codex 桌面端再打开。
+
+![](docs/screenshots/v033-card-warnings.png)
 
 ### 任意服务商 + 在 Codex / Claude Code 里随时换模型和推理等级（0.3.2）
 
