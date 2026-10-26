@@ -494,6 +494,15 @@ td.nw{white-space:nowrap}
 .rtl{width:100%;font-size:calc(12px*var(--fk))}.rtl td{text-align:left}.rtl td.n{text-align:right}.rtl th{text-align:left}.rtl td.ell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rtt{font-size:calc(12px*var(--fk));padding:6px 0;display:flex;flex-direction:column;gap:3px}.rtcmd{background:var(--hover);padding:6px 8px;border-radius:6px;user-select:all;white-space:pre-wrap}
 .rtmr,.rtkr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.rtmr input[data-m=name],.rtmr input[data-m=alias]{width:210px}.rtpr input{width:72px}.rtkr input[data-k=label]{width:110px}.rtkr input[data-k=weight]{width:52px}.rtkr input[data-k=proxy_url]{width:180px}
+.ccbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px}
+.cc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel)}.cc.on{border-color:var(--accent)}
+.cchd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:calc(15px*var(--fk))}.cchd .logo{width:20px;height:20px}
+.ccseg{flex-wrap:wrap;margin-bottom:10px}.ccdesc{margin:8px 0;font-size:calc(12.5px*var(--fk))}
+.ccf{display:grid;grid-template-columns:76px 1fr;gap:8px 10px;align-items:center}.ccl{color:var(--muted);font-size:calc(13px*var(--fk))}.ccv .sd{color:var(--muted);font-size:calc(12px*var(--fk));margin-top:2px}
+.ccrow{display:flex;gap:6px}.ccchk{display:flex;gap:6px;align-items:flex-start;font-size:calc(13px*var(--fk))}.ccchk code{white-space:nowrap}.ccchk input{margin-top:3px}
+.ccbtn{display:flex;align-items:center;gap:10px}.ccmsg{font-size:calc(12.5px*var(--fk));color:var(--muted)}.ccmsg .err{color:var(--err,#c33)}
+.ccst{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:calc(13px*var(--fk))}.ccout{margin-top:4px}
+.mcadv{margin-top:6px}.mcadv>summary{cursor:pointer;padding:6px 2px;font-weight:600}.mcadv>summary .dim{font-weight:400;margin-left:6px}
 .rtfm{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow:auto;margin-top:4px}.rtfm .on{opacity:.5}.rtsum{cursor:pointer}.rtsum:hover{background:var(--hover)}
 </style>
 </head>
@@ -1394,7 +1403,7 @@ async function mcOpen(view){
   if (PAGE !== "models") return go("models");
   MC.scope = "user";
   const c = mcCacheGet();
-  $("#pg-models").innerHTML = `<div class="pgv"><h2>${ic("key")}供应商</h2><p class="sub">Claude Code / Codex 用哪个供应商、模型映射、连通测试；key 存 Windows 凭据管理器。每次写配置之前都先备份（⋯ → 备份 / 恢复）。</p>
+  $("#pg-models").innerHTML = `<div class="pgv"><h2>${ic("key")}供应商</h2><p class="sub">Codex / Claude Code 用什么模型：选一个、贴 key、点「启用」。跨协议的转换在后台自动做；key 存 Windows 凭据管理器，写配置前先备份。</p>
     <div class="card"><div class="us mc" id="mcBox">${c ? "" : '<div class="dim">读取中…</div>'}</div></div></div>`;
   if (c) { [MC.d, MC.p] = c; mcRender(); }          // 先用上次的（内存 / 本地缓存）立刻画出来，后台再刷新
   await mcLoad(!!c);
@@ -1815,9 +1824,114 @@ const pvModels = (tool, p) => { const m = p.models || {}, ks = Object.keys(m); i
   return ks.map(k => `<span class="pvm">${lab[k]||k} <b>${esc(m[k])}</b></span>`).join("") + (p.effort ? `<span class="pvm">思考 <b>${esc(p.effort)}</b></span>` : ""); };
 const pvPresets = tool => [[tool === "claude" ? "login" : "chatgpt", tool === "claude" ? "官方登录" : "ChatGPT 登录"], ["official", "官方 API Key"], ["openkey", "OpenKey"], ["custom", "自定义"]];
 const pvLast4 = p => p.mode !== "key" ? "" : p.key_missing ? '<span class="note">缺 key</span>' : `<span class="pvkm" title="${esc(p.key_masked || "")}">…${esc((p.key_masked || "").slice(-4))}</span>`;
+// ---------- 0.3.1：两张卡片「Codex 使用… / Claude Code 使用…」（选一个、贴 key、启用；转换 / 端口全自动，细节在「高级」里） ----------
+const CC = {d: null, draft: {}, models: {}, busy: {}, out: {}};
+const CC_OPT = {codex: [["default", "默认（ChatGPT 登录）"], ["claude", "Claude API Key"], ["openai", "OpenAI API Key"], ["custom", "自定义"]],
+  claude: [["default", "默认（claude.ai 登录）"], ["openai", "OpenAI API Key"], ["claude", "Claude API Key"], ["custom", "自定义"]]};
+const CC_NAME = {codex: "Codex", claude: "Claude Code"};
+const CC_EFF = [["", "默认"], ["low", "低"], ["medium", "中"], ["high", "高"], ["xhigh", "超高"]];
+const CC_PH = {claude: "sk-ant-…", openai: "sk-…", custom: "API Key"};
+function ccDraft(cl){
+  const v = CC.d[cl];
+  if (!CC.draft[cl]) CC.draft[cl] = {kind: v.kind, base_url: v.base_url, protocol: v.protocol, model: v.model, small_model: v.small_model, effort: v.effort, profile_only: v.profile_only, secret: ""};
+  return CC.draft[cl];
+}
+function ccProxyLine(cl){
+  const v = CC.d[cl], p = CC.d.proxy || {};
+  if (!v.enabled) return "";
+  const nm = esc(v.kind_name), fix = v.drift ? ' <span class="tag warn" title="启用后配置文件被别的工具改过；停用时只拿掉我们写的那几项">配置被改过</span>' : "";
+  const st = !v.needs_proxy ? `<span class="tag ok">● 已启用</span> <span class="dim">· ${nm} · 直连</span>`
+    : p.running ? `<span class="tag ok">● 已启用</span> <span class="dim">· ${nm} · 后台转换正常</span>`
+    : `<span class="tag warn">● 已启用 · 后台转换没在跑</span> <span class="dim">下次 ${CC_NAME[cl]} 取口令时会自己拉起；也可以点「测试」</span>`;
+  return `<div class="ccst">${st}${fix}<span style="flex:1"></span><button class="pvmini" data-cct="${cl}">测试</button><button class="pvmini ghost" data-ccoff="${cl}">停用</button></div><div class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</div>`;
+}
+function ccCard(cl){
+  const v = CC.d[cl], dr = ccDraft(cl), k = dr.kind, on = v.enabled;
+  const opts = CC_OPT[cl].map(([kk, t]) => `<button data-cck="${cl}:${kk}" class="${k === kk ? "on" : ""}">${t}</button>`).join("");
+  let body = "";
+  if (k === "default") {
+    body = `<div class="dim ccdesc">${cl === "codex" ? "用 Codex 自己的 ChatGPT 登录（不经过 CC Session Sync）。" : "用 Claude Code 自己的 claude.ai 登录（不经过 CC Session Sync）。"}${on ? ` 现在启用的是「${esc(v.kind_name)}」，点「停用」回到默认。` : ""}</div>`;
+  } else {
+    const saved = (v.keys || {})[k], ms = CC.models[cl + ":" + k] || (v.kind === k ? v.models : []) || [];
+    const isClaudeModels = k === "claude" || (k === "custom" && dr.protocol === "anthropic");
+    const conv = cl === "codex" ? (k === "openai" || (k === "custom" && dr.protocol === "responses") ? "直连，不用转换" : "本机后台自动转换协议（Responses ⇄ " + (k === "claude" || dr.protocol === "anthropic" ? "Anthropic" : "Chat") + "）")
+      : (k === "claude" || (k === "custom" && dr.protocol === "anthropic") ? "直连，不用转换" : "本机后台自动转换协议（Anthropic ⇄ " + (k === "openai" || dr.protocol === "responses" ? "Responses" : "Chat") + "）");
+    body = `<div class="ccf">
+      <label class="ccl">API Key</label><div class="ccv"><input type="password" autocomplete="off" spellcheck="false" data-ccf="${cl}:secret" value="" placeholder="${saved ? "已保存 " + esc(saved) + "（要换就粘贴新的）" : "粘贴 " + CC_PH[k]}" style="width:100%">
+        <div class="sd">存进 Windows 凭据管理器（DPAPI），配置文件里没有明文。</div></div>
+      ${k === "custom" ? `<label class="ccl">Base URL</label><div class="ccv"><input data-ccf="${cl}:base_url" value="${esc(dr.base_url)}" placeholder="https://…/v1" style="width:100%"></div>
+        <label class="ccl">接口协议</label><div class="ccv"><select data-ccf="${cl}:protocol">${[["anthropic", "Anthropic Messages"], ["responses", "OpenAI Responses"], ["chat", "OpenAI Chat Completions"]].map(([p, t]) => `<option value="${p}" ${dr.protocol === p ? "selected" : ""}>${t}</option>`).join("")}</select></div>`
+        : `<label class="ccl">中转站地址</label><div class="ccv"><input data-ccf="${cl}:base_url" value="${esc(dr.base_url)}" placeholder="（可选）留空 = ${k === "claude" ? "api.anthropic.com" : "api.openai.com"}" style="width:100%"></div>`}
+      <label class="ccl">模型</label><div class="ccv ccrow"><input data-ccf="${cl}:model" list="ccM-${cl}" value="${esc(dr.model)}" placeholder="${isClaudeModels ? "claude-opus-…" : "gpt-…"}" style="flex:1"><button class="pvmini ghost" data-ccm="${cl}" title="用这个 key 拉一下可用模型">拉取模型</button></div>
+      ${cl === "claude" ? `<label class="ccl">小模型</label><div class="ccv"><input data-ccf="${cl}:small_model" list="ccM-${cl}" value="${esc(dr.small_model)}" placeholder="后台小任务 / Haiku 用（可空 = 同主模型）" style="width:100%"></div>` : ""}
+      <label class="ccl">思考强度</label><div class="ccv"><div class="seg">${CC_EFF.map(([e, t]) => `<button data-cce="${cl}:${e}" class="${(dr.effort || "") === e ? "on" : ""}">${t}</button>`).join("")}</div></div>
+      ${cl === "codex" ? `<label class="ccl"></label><div class="ccv"><label class="ccchk"><input type="checkbox" data-ccf="${cl}:profile_only" ${dr.profile_only ? "checked" : ""}><span>只在 <code>codex --profile cc-route</code> 时使用<div class="sd">勾上就不改默认：普通 codex 和 Codex 桌面端照旧用 ChatGPT 登录</div></span></label></div>` : ""}
+      <datalist id="ccM-${cl}">${ms.map(m => `<option value="${esc(m)}">`).join("")}</datalist>
+    </div><div class="dim ccdesc">${conv}。${cl === "codex" && !dr.profile_only ? "普通 <code>codex</code> 和 Codex 桌面端都会用它（改 <code>~/.codex/config.toml</code>，先备份；ChatGPT 登录保留）。" : ""}${cl === "claude" ? "改 <code>~/.claude/settings.json</code>（先备份），新开的 Claude Code 会话生效。" : ""}</div>
+    <div class="ccbtn"><button class="primary" data-ccon="${cl}">${on && v.kind === k ? "重新启用" : "启用"}</button><span class="ccmsg" id="ccMsg-${cl}"></span></div>`;
+  }
+  return `<div class="cc${on ? " on" : ""}" data-cc="${cl}"><div class="cchd">${logo(cl)}<b>${CC_NAME[cl]} 使用…</b><span style="flex:1"></span>${on ? `<span class="tag ok">${esc(v.kind_name)}</span>` : '<span class="dim">默认</span>'}</div>
+    <div class="seg ccseg">${opts}</div>${body}${ccProxyLine(cl)}</div>`;
+}
+function ccRender(){
+  const el = $("#ccBox"); if (!el || !CC.d) return;
+  el.innerHTML = ccCard("codex") + ccCard("claude");
+  const read = cl => { const dr = ccDraft(cl); $$(`#ccBox [data-ccf^="${cl}:"]`).forEach(i => { const f = i.dataset.ccf.split(":")[1]; dr[f] = i.type === "checkbox" ? i.checked : i.value.trim(); }); return dr; };
+  $$("#ccBox [data-cck]").forEach(b => b.onclick = () => { const [cl, k] = b.dataset.cck.split(":"); const dr = read(cl);
+    if (dr.kind !== k) { dr.kind = k; dr.secret = ""; dr.base_url = CC.d[cl].kind === k ? CC.d[cl].base_url : ""; dr.model = CC.d[cl].kind === k ? CC.d[cl].model : ""; dr.small_model = CC.d[cl].kind === k ? CC.d[cl].small_model : "";
+      if (k === "custom") dr.protocol = CC.d[cl].protocol || (cl === "codex" ? "anthropic" : "responses"); }
+    ccRender(); if (k !== "default" && (CC.d[cl].keys || {})[k] && !dr.model) ccModels(cl, true); });
+  $$("#ccBox [data-cce]").forEach(b => b.onclick = () => { const [cl, e] = b.dataset.cce.split(":"); read(cl).effort = e; ccRender(); });
+  $$("#ccBox select[data-ccf]").forEach(s => s.onchange = () => { read(s.dataset.ccf.split(":")[0]); ccRender(); });
+  $$("#ccBox input[data-ccf$=':secret']").forEach(i => i.onchange = () => { const cl = i.dataset.ccf.split(":")[0]; const dr = read(cl); if (dr.secret && ["claude", "openai"].includes(dr.kind)) ccModels(cl, true); });
+  $$("#ccBox [data-ccm]").forEach(b => b.onclick = () => { read(b.dataset.ccm); ccModels(b.dataset.ccm, false); });
+  $$("#ccBox [data-ccon]").forEach(b => b.onclick = () => ccEnable(b.dataset.ccon, read(b.dataset.ccon)));
+  $$("#ccBox [data-ccoff]").forEach(b => b.onclick = () => ccDisable(b.dataset.ccoff));
+  $$("#ccBox [data-cct]").forEach(b => b.onclick = async () => { const o = $("#ccOut-" + b.dataset.cct); o.innerHTML = '<div class="dim">测试中…</div>';
+    const r = await rtApi("card-test", {client: b.dataset.cct}).catch(e => ({ok: false, reason: e.message}));
+    const row = r.keys ? r.keys[0] || r : r;
+    o.innerHTML = CC.out[b.dataset.cct] = r.ok ? `<div><span class="tag ok">✓ 通了</span> <span class="dim">${row.ms != null ? `（${row.ms} ms${r.via === "proxy" ? "，经本机后台转换" : ""}）` : ""}${r.note ? " · " + esc(r.note) : ""}</span></div>`
+      : `<div class="miss">✗ ${row.status ? "HTTP " + row.status + "：" : ""}${esc(row.reason || r.reason || "不通")}</div>`; ccLoad(); });
+}
+async function ccModels(cl, quiet){
+  const dr = ccDraft(cl), msg = $("#ccMsg-" + cl);
+  if (msg) msg.textContent = "拉取模型中…";
+  const r = await rtApi("card-models", {client: cl, kind: dr.kind, base_url: dr.base_url, protocol: dr.protocol, secret: dr.secret}).catch(e => ({ok: false, reason: e.message}));
+  if (r.ok) { CC.models[cl + ":" + dr.kind] = r.models; if (!dr.model || quiet) dr.model = dr.model || r.default; if (cl === "claude" && !dr.small_model) dr.small_model = r.small || "";
+    ccRender(); const m = $("#ccMsg-" + cl); if (m) m.textContent = `拉到 ${r.models.length} 个模型`; }
+  else if (msg) msg.innerHTML = quiet ? "" : `<span class="err">${esc(r.reason || "拉不到")}</span>`;
+}
+async function ccEnable(cl, dr){
+  const msg = $("#ccMsg-" + cl);
+  const v = CC.d[cl];
+  if (!dr.secret && !(v.keys || {})[dr.kind]) return msg.innerHTML = '<span class="err">先粘贴 API Key</span>';
+  msg.textContent = "启用中…";
+  try {
+    const r = await rtApi("card-enable", Object.assign({client: cl, models: CC.models[cl + ":" + dr.kind] || undefined}, dr));
+    CC.draft[cl] = null; CC.out[cl] = "";
+    if (doneOrQueued(r, r.deferred ? "" : `${CC_NAME[cl]} 已改用「${CC_OPT[cl].find(o => o[0] === dr.kind)[1]}」${cl === "codex" ? (dr.profile_only ? "（codex --profile cc-route）" : "：codex 和 Codex 桌面端新开的对话就用它") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
+  } catch(e){ msg.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
+  ccLoad();
+}
+function ccDisable(cl){
+  confirmDlg(`停用「${CC_NAME[cl]} 使用 ${esc(CC.d[cl].kind_name)}」`, `${CC_NAME[cl]} 回到${cl === "codex" ? " ChatGPT 登录" : " claude.ai 登录"}。改过的文件没被别的工具动过就按字节还原，动过就只拿掉我们写的那几项。key 留在凭据管理器里，下次启用不用再贴。`, "停用", async () => {
+    closeDlg();
+    try { const r = await rtApi("card-disable", {client: cl}); CC.draft[cl] = null; CC.out[cl] = ""; doneOrQueued(r, `已停用，${CC_NAME[cl]} 回到默认`); } catch(e){ toast("❌ " + e.message); }
+    ccLoad(); });
+}
+async function ccLoad(){
+  try { const r = await api("/api/route"); RT.d = r; CC.d = r.cards; } catch(e){ const el = $("#ccBox"); if (el && !CC.d) el.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  const f = document.activeElement; if (f && f.closest && f.closest("#ccBox") && f.tagName === "INPUT") return;   // 正在输入就不重画
+  ccRender(); rtSumUpdate();
+}
+function rtSumUpdate(){
+  const r = RT.d, e = $("#rtSumSt"); if (!e || !r) return;
+  e.innerHTML = r.providers.length ? `${r.status.running ? '<span class="tag ok">● 运行中</span>' : '<span class="tag warn">● 没在运行</span>'} ${r.providers.length} 个供应商${r.applied.codex ? " · Codex 已应用" : ""}${r.applied.claude ? " · Claude Code 已应用" : ""}` : "还没配置";
+}
 function mcList(){
   const P = MC.p;
   let h = "";
+  const advOpen = localStorage.getItem("ccss.mcadv") === "1";
   for (const tool of ["claude", "codex"]) {
     h += `<div class="pvsec"><div class="pvhd"><b>${PV_TOOL[tool]}</b>${pvHint(tool, "global")}</div><div class="pvl" role="radiogroup" aria-label="${PV_TOOL[tool]} 供应商">` +
       P[tool].map(p => `<div class="pvrow${p.live ? " on" : ""}" data-pvsw="${esc(p.id)}" data-t="${tool}" role="radio" aria-checked="${p.live ? "true" : "false"}" tabindex="0" title="${p.live ? "当前在用" : "点一下切换到它"}">
@@ -1828,10 +1942,13 @@ function mcList(){
         <div class="pvo" data-pvo="${tool}:${esc(p.id)}"></div>`).join("") +
       `<div class="pvadd"><button class="ghost pvaddb" data-pvadd="${tool}" data-pre="custom">＋ 添加供应商</button><span class="dim">预设：</span>${pvPresets(tool).map(([k, t]) => `<button class="pvmini ghost" data-pvadd="${tool}" data-pre="${k}">${t}</button>`).join("")}</div></div></div>`;
   }
-  h += `<div class="pvsec rtsum" data-mcgo="route" role="button" tabindex="0"><div class="pvhd"><b>模型路由</b><span class="pvh">Codex 用 Claude 模型 · Claude Code 用 OpenAI / Gemini / 中转站模型（本机协议转换，只用 API key）</span><span style="flex:1"></span><span id="rtSumSt" class="dim"></span><button class="pvmini">打开 ›</button></div></div>`;
-  $("#mcTab").innerHTML = h;
+  h += `<div class="pvsec rtsum" data-mcgo="route" role="button" tabindex="0"><div class="pvhd"><b>模型路由</b><span class="pvh">多个供应商 / 多 key 轮换 / 别名池 / CLIProxyAPI 导入（卡片背后用的就是它）</span><span style="flex:1"></span><span id="rtSumSt" class="dim"></span><button class="pvmini">打开 ›</button></div></div>`;
+  $("#mcTab").innerHTML = `<div id="ccBox" class="ccbox">${CC.d ? "" : '<div class="dim">读取中…</div>'}</div>
+    <details class="mcadv" id="mcAdv"${advOpen ? " open" : ""}><summary>高级 <span class="dim">供应商列表（v0.2 切换方式）· 模型路由（多供应商 / 多 key）</span></summary>${h}</details>`;
+  $("#mcAdv").ontoggle = () => localStorage.setItem("ccss.mcadv", $("#mcAdv").open ? "1" : "0");
   $("#mcTab .rtsum").onclick = () => mcGo("route");
-  api("/api/route").then(r => { RT.d = r; const e = $("#rtSumSt"); if (e) e.innerHTML = r.providers.length ? `${r.status.running ? '<span class="tag ok">● 运行中</span>' : '<span class="tag warn">● 没在运行</span>'} ${r.providers.length} 个供应商${r.applied.codex ? " · Codex 已应用" : ""}${r.applied.claude ? " · Claude Code 已应用" : ""}` : "还没配置"; }).catch(() => {});
+  if (CC.d) { ccRender(); rtSumUpdate(); }
+  ccLoad();
   const row = (t, id) => P[t].find(p => p.id === id);
   $$("#mcTab [data-pvadd]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.pvadd, null, b.dataset.pre); });
   $$("#mcTab [data-pved]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.t, row(b.dataset.t, b.dataset.pved)); });
