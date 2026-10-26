@@ -17,7 +17,7 @@ H = T / "home"; H.mkdir(parents=True, exist_ok=True)
 FAILS = []
 def ok(c, m): print(("PASS " if c else "FAIL ") + m); c or FAILS.append(m)
 
-from cc_sessionsync import cards, keystore, modelcfg, router, selfcheck
+from cc_sessionsync import cards, keystore, router, selfcheck
 from cc_sessionsync import _toml as tomllib
 
 def free():
