@@ -954,7 +954,7 @@ def ir_from_chat_json(r: dict) -> list:
 
 
 def ir_from_chat_stream(events):
-    cur, tool_idx, stop, usage, started, saw = None, None, None, {}, False, False
+    cur, stop, usage, started, tools = None, None, {}, False, {}
     for name, data in events:
         if data.strip() == "[DONE]":
             break
@@ -990,24 +990,26 @@ def ir_from_chat_stream(events):
                     yield ("block", {"type": "text"})
                 yield ("text", dl["content"])
             for tc in dl.get("tool_calls") or []:
-                idx = tc.get("index", 0)
+                # 工具调用先攒着、最后按顺序一次给（有的服务会把几个并行调用的参数交错着发）
+                idx = tc.get("index", len(tools))
                 f = tc.get("function") or {}
-                if not (cur == "tool" and idx == tool_idx):
-                    if cur == "thinking":
-                        yield ("sig", pack({"k": "rc"}))
-                    if cur:
-                        yield ("end", {})
-                    cur, tool_idx, saw = "tool", idx, True
-                    yield ("block", {"type": "tool", "id": tc.get("id") or uid("call"), "name": f.get("name")})
-                if f.get("arguments"):
-                    yield ("args", f["arguments"])
+                t = tools.setdefault(idx, {"id": None, "name": None, "args": ""})
+                t["id"] = t["id"] or tc.get("id")
+                t["name"] = t["name"] or f.get("name")
+                t["args"] += f.get("arguments") or ""
             if ch.get("finish_reason"):
                 stop = CHAT_STOP.get(ch["finish_reason"], "end_turn")
     if cur == "thinking":
         yield ("sig", pack({"k": "rc"}))
     if cur:
         yield ("end", {})
-    yield ("finish", {"stop": "tool_use" if saw else (stop or "end_turn"), "usage": usage})
+    for idx in sorted(tools):
+        t = tools[idx]
+        yield ("block", {"type": "tool", "id": t["id"] or uid("call"), "name": t["name"]})
+        if t["args"]:
+            yield ("args", t["args"])
+        yield ("end", {})
+    yield ("finish", {"stop": "tool_use" if tools else (stop or "end_turn"), "usage": usage})
 
 
 def ir_from(upstream: str, stream: bool, src):

@@ -307,7 +307,7 @@ def _claude_live(scope="user", root=None) -> dict:
     s = modelcfg._read_json(modelcfg.claude_file(scope, root))
     env = s.get("env") if isinstance(s.get("env"), dict) else {}
     return {"base_url": (env.get("ANTHROPIC_BASE_URL") or "").rstrip("/"), "helper_key": modelcfg._helper_name(s.get("apiKeyHelper")),
-            "plaintext": [k for k in modelcfg.CLAUDE_SECRET_ENV if env.get(k)], "has_helper": "apiKeyHelper" in s}
+            "plaintext": [k for k in modelcfg.CLAUDE_SECRET_ENV if env.get(k) and not str(env.get(k)).startswith("ccss-local-")], "has_helper": "apiKeyHelper" in s}
 
 
 def _codex_cfg(p: Path) -> dict:
@@ -448,7 +448,7 @@ def _claude_owned(k: str) -> list:
 def _apply_claude_file(f: Path, p: dict, kn: str | None, scope: str, drop_plaintext: bool = False) -> dict:
     s = modelcfg._read_json(f)
     cur_env = s.get("env") if isinstance(s.get("env"), dict) else {}
-    plain = [k for k in modelcfg.CLAUDE_SECRET_ENV if cur_env.get(k)]
+    plain = [k for k in modelcfg.CLAUDE_SECRET_ENV if cur_env.get(k) and not str(cur_env.get(k)).startswith("ccss-local-")]
     if plain and not drop_plaintext:
         raise PlaintextError(f"{f.name} 里有明文 key：" + "、".join(plain) + "。它会压过 CC Session Sync 设的 key，切换要把它拿掉（备份里还在）。确认后再切。",
                              [{"field": "env." + k, "masked": keystore.mask(cur_env[k])} for k in plain])

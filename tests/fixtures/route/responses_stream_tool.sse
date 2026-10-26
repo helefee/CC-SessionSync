@@ -1,0 +1,54 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_demo1","object":"response","created_at":1790000000,"status":"in_progress","model":"gpt-5.5","output":[],"usage":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_demo1","object":"response","status":"in_progress","model":"gpt-5.5","output":[]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"id":"rs_demo1","type":"reasoning","summary":[]}}
+
+event: response.reasoning_summary_part.added
+data: {"type":"response.reasoning_summary_part.added","sequence_number":3,"item_id":"rs_demo1","output_index":0,"summary_index":0,"part":{"type":"summary_text","text":""}}
+
+event: response.reasoning_summary_text.delta
+data: {"type":"response.reasoning_summary_text.delta","sequence_number":4,"item_id":"rs_demo1","output_index":0,"summary_index":0,"delta":"**Planning** run the listing"}
+
+event: response.reasoning_summary_text.done
+data: {"type":"response.reasoning_summary_text.done","sequence_number":5,"item_id":"rs_demo1","output_index":0,"summary_index":0,"text":"**Planning** run the listing"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":6,"output_index":0,"item":{"id":"rs_demo1","type":"reasoning","encrypted_content":"gAAAAABdemoEncrypted==","summary":[{"type":"summary_text","text":"**Planning** run the listing"}]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":7,"output_index":1,"item":{"id":"msg_demo1","type":"message","status":"in_progress","role":"assistant","content":[]}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":8,"item_id":"msg_demo1","output_index":1,"content_index":0,"part":{"type":"output_text","text":"","annotations":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":9,"item_id":"msg_demo1","output_index":1,"content_index":0,"delta":"Running it."}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":10,"item_id":"msg_demo1","output_index":1,"content_index":0,"text":"Running it."}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":11,"output_index":1,"item":{"id":"msg_demo1","type":"message","status":"completed","role":"assistant","content":[{"type":"output_text","text":"Running it.","annotations":[]}]}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":12,"output_index":2,"item":{"id":"fc_demo1","type":"function_call","status":"in_progress","arguments":"","call_id":"call_demo1","name":"Bash"}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":13,"item_id":"fc_demo1","output_index":2,"delta":"{\"command\":\"ls -la\","}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":14,"item_id":"fc_demo1","output_index":2,"delta":"\"description\":\"List files\"}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":15,"item_id":"fc_demo1","output_index":2,"arguments":"{\"command\":\"ls -la\",\"description\":\"List files\"}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":16,"output_index":2,"item":{"id":"fc_demo1","type":"function_call","status":"completed","arguments":"{\"command\":\"ls -la\",\"description\":\"List files\"}","call_id":"call_demo1","name":"Bash"}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":17,"response":{"id":"resp_demo1","object":"response","status":"completed","model":"gpt-5.5","output":[],"usage":{"input_tokens":5000,"input_tokens_details":{"cached_tokens":4096},"output_tokens":120,"output_tokens_details":{"reasoning_tokens":64},"total_tokens":5120}}}
+

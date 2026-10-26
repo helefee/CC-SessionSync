@@ -20,7 +20,7 @@ classifiers = [
   "Environment :: Console",
   "Environment :: Win32 (MS Windows)",
 ]
-dependencies = ["tomlkit>=0.12", "zstandard>=0.22"]
+dependencies = ["tomlkit>=0.12", "zstandard>=0.22", "pyyaml>=6"]
 
 [project.optional-dependencies]
 desktop = ["pywebview>=5,<7"]

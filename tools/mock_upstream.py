@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """本地假上游（Anthropic Messages + OpenAI Responses + OpenAI Chat Completions），给模型路由的测试用：不连外网、不用真钥匙。
 
-    python tools/mock_upstream.py PORT LOG [EXPECTED_KEY]
+    python tools/mock_upstream.py PORT LOG [EXPECTED_KEYS]
+
+- EXPECTED_KEYS：逗号分隔，任一个对就行（LOG 里只记第几个，不记钥匙）；以 rl- 开头的钥匙一律回 429（测换 key），
+  以 dead- 开头的回 503。
 
 - 每个请求记一行 JSON 到 LOG：路径、请求体、钥匙对不对（只记对 / 错，不记钥匙本身）。
 - 对话里用户说了 USE-TOOL、还没有工具结果 → 调一次 shell 类工具（按请求里有的工具挑：Bash / exec_command / shell_command / shell），
@@ -18,7 +21,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT, LOG = int(sys.argv[1]), sys.argv[2]
-KEY = sys.argv[3] if len(sys.argv) > 3 else ""
+KEYS = [k for k in (sys.argv[3] if len(sys.argv) > 3 else "").split(",") if k]
 CMD = "echo ROUTE-TOOL-OUT"
 USAGE = {"in": 120, "cached": 20, "out": 30}
 
@@ -147,10 +150,12 @@ class H(BaseHTTPRequestHandler):
             b = json.loads(raw or b"{}")
         except ValueError:
             b = {}
-        key_ok = (not KEY) or self._key() == KEY
+        got = self._key()
+        key_n = KEYS.index(got) if got in KEYS else -1
+        key_ok = (not KEYS) or key_n >= 0
         a, kind, val = plan(path, b) if key_ok else ({}, "", None)
         with open(LOG, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"path": path, "key_ok": key_ok, "body": b, "beta": self.headers.get("anthropic-beta"),
+            f.write(json.dumps({"path": path, "key_ok": key_ok, "key_n": key_n, "body": b, "beta": self.headers.get("anthropic-beta"),
                                 "version": self.headers.get("anthropic-version"), "kind": kind,
                                 "echo_sig": a.get("sig"), "echo_enc": a.get("enc")}, ensure_ascii=False) + "\n")
         anth = path.endswith("/messages") or path.endswith("/count_tokens")
@@ -158,7 +163,10 @@ class H(BaseHTTPRequestHandler):
             return self._send(401, {"type": "error", "error": {"type": "authentication_error", "message": "invalid x-api-key"}} if anth
                               else {"error": {"message": "Incorrect API key provided", "type": "invalid_request_error", "code": "invalid_api_key"}})
         last = (a.get("users") or [""])[-1]
-        if "RATE-LIMIT" in last:
+        if got.startswith("dead-"):
+            return self._send(503, {"type": "error", "error": {"type": "overloaded_error", "message": "mock overloaded"}} if anth
+                              else {"error": {"message": "mock overloaded", "type": "server_error", "code": None}})
+        if "RATE-LIMIT" in last or got.startswith("rl-"):
             return self._send(429, {"type": "error", "error": {"type": "rate_limit_error", "message": "mock rate limit"}} if anth
                               else {"error": {"message": "mock rate limit", "type": "requests", "code": "rate_limit_exceeded"}}, extra={"retry-after": "7"})
         if "BAD-REQUEST" in last:

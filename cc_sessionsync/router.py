@@ -289,7 +289,7 @@ _COOL: dict = {}          # key 名 → 冷却到什么时候
 _KSTAT: dict = {}         # key 名 → {ok, fail, last_status, last_at}
 
 
-def resolve(model: str, d: dict | None = None) -> list:
+def resolve(model: str, d: dict | None = None, rotate: bool = True) -> list:
     """客户端请求的模型名 → [(供应商, 上游模型名, 模型条目)]（同一个别名多个上游：按轮询转一下起点）。"""
     d = d or cfg()
     m = (model or "").strip()
@@ -309,7 +309,7 @@ def resolve(model: str, d: dict | None = None) -> list:
         elif not any(_wild(x, m) for x in p.get("excluded") or []):
             catch.append((p, m, None))
     out = exact or catch
-    if len(out) > 1:
+    if len(out) > 1 and rotate:
         i = _RR.get(("alias", m.lower()), 0)
         _RR[("alias", m.lower())] = i + 1
         i %= len(out)
@@ -321,7 +321,7 @@ def client_model(client: str, model: str, d: dict | None = None) -> str:
     """Claude Code 的模型名（claude-opus-…）按槽位换成别名；能直接解析的（用户在 /model 里输了别名）照原样。"""
     d = d or cfg()
     if client == "claude":
-        if resolve(model, d) and any(e for _, _, e in resolve(model, d)):
+        if any(e for _, _, e in resolve(model, d, False)):
             return model
         sl = d["clients"]["claude"].get("slots") or {}
         low = (model or "").lower()
@@ -332,7 +332,7 @@ def client_model(client: str, model: str, d: dict | None = None) -> str:
             return sl["default"]
         return model
     cx = d["clients"].get("codex") or {}
-    if not resolve(model, d) and cx.get("model"):
+    if not resolve(model, d, False) and cx.get("model"):
         return cx["model"]
     return model
 
@@ -862,6 +862,11 @@ def start(port: int | None = None) -> dict:
         if _SRV["srv"]:
             return status()
         token()
+        if port:
+            d = load()
+            if d.get("port") != port:
+                d["port"] = port
+                save(d)
         port = port or ensure_port()
         try:
             srv = _Srv(("127.0.0.1", port), Handler)
