@@ -825,6 +825,8 @@ def _route(act: str, b: dict):
             return cards.fetch_models(cl, b)
         if act == "card-test":
             return cards.test(cl)
+        if act == "card-fixrefs":
+            return cards.fix_refs(cl)
     if act == "test":
         return router.test_provider(str(b["id"]), b.get("model") or None)
     if act == "models":

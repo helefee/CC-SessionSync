@@ -161,6 +161,13 @@ def main() -> int:
         sv.terminate()
         sv.wait(10)
         procs.remove(sv)
+        # 0.3.3：用户以前留下的模型目录（旧版「高级」/ CC Switch 写的，只有两个别家的模型）+ review_model 指着别家的模型
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from cc_sessionsync import cards as _cards
+        stale = {"models": [dict(_cards.model_info(m, i + 1, "high"), display_name=m) for i, m in enumerate(["gemini-3.8-flash-high", "grok-4.7"])]}
+        (CH / "ccss-models-cpa.json").write_text(json.dumps(stale), encoding="utf-8")
+        cx_orig = b'model_catalog_json = "ccss-models-cpa.json"\nreview_model = "grok-4.7"\n' + cx_orig
+        (CH / "config.toml").write_bytes(cx_orig)
         r = ccss("route", "card", "codex", "set", json.dumps({"kind": "claude", "base_url": U, "model": "claude-opus-5-5", "key_env": "UP_ANTH",
                                                                   "models": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]}))
         ok(r.returncode == 0, "card codex set (Claude API key via env, relay base URL = mock)")
@@ -182,6 +189,10 @@ def main() -> int:
         ok(lg and all(x["path"] == "/v1/messages" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg)
            and all(x["body"].get("model") == "claude-opus-5-5" for x in lg), f"upstream: Anthropic Messages, card key, card model ({len(lg)} requests)")
         ok("model_reasoning_effort" not in cfg, "no default effort picked → config.toml has no model_reasoning_effort (Codex decides)")
+        ok('model_catalog_json = "ccss-models-cc-route.json"' in cfg and (CH / "ccss-models-cc-route.json").exists(),
+           "config.toml model_catalog_json → our catalog (replaces the stale one; Codex Desktop's picker reads it)")
+        sh = json.loads(ccss("route", "card", "codex", "show").stdout)
+        ok([w["value"] for w in sh.get("warnings") or []] == ["grok-4.7"], f"warning: review_model points at a model this provider doesn't have ({sh.get('warnings')})")
 
         # Codex 自己切推理等级 / 模型（-c model_reasoning_effort=…、-m …，和 /model 里选是一回事）
         dm = subprocess.run([codex, "debug", "models"], cwd=str(proj), env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
@@ -190,7 +201,12 @@ def main() -> int:
         except Exception:
             listed = []
         print("codex /model list:", listed)
-        ok(listed[:3] == ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"], "codex model catalog (what /model shows) = the card's Claude models, built-in GPT hidden")
+        ok(listed == ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"], f"codex debug models (what /model and the Desktop picker show) = the card's Claude models only ({listed})")
+        try:
+            names = {m["slug"]: (m["display_name"], [x["effort"] for x in m["supported_reasoning_levels"]]) for m in json.loads(dm.stdout)["models"]}
+        except Exception:
+            names = {}
+        ok(names.get("claude-opus-5-5") == ("Claude Opus 5.5", ["none", "low", "medium", "high", "xhigh", "max"]), f"friendly name + effort levels ({names.get('claude-opus-5-5')})")
         for args, want_model, want in ((["-c", "model_reasoning_effort=high"], "claude-opus-5-5", ("adaptive", "high")),
                                         (["-m", "claude-sonnet-5-5", "-c", "model_reasoning_effort=low"], "claude-sonnet-5-5", ("adaptive", "low")),
                                         (["-m", "claude-haiku-5-5", "-c", "model_reasoning_effort=none"], "claude-haiku-5-5", None)):
@@ -204,6 +220,9 @@ def main() -> int:
         sh = json.loads(ccss("route", "card", "codex", "show").stdout)
         ok(sh["enabled"] and sh["proxy_running"] and (sh["login_item"] or os.name != "nt"), f"card show: enabled, proxy running, login item {sh['login_item']}")
 
+        r = ccss("route", "card", "codex", "fix-refs")
+        cfg = (CH / "config.toml").read_text(encoding="utf-8")
+        ok(r.returncode == 0 and 'review_model = "claude-opus-5-5"' in cfg, "one-click fix: review_model → card model")
         # ---- 0.3.2：Codex 使用 DeepSeek（Responses → Chat Completions），工具来回 + 每次请求的模型 / 推理强度
         r = ccss("route", "card", "codex", "set", json.dumps({"kind": "deepseek", "base_url": U, "key_env": "UP_OAI", "model": "",
                                                                   "models": ["deepseek-v4-pro", "deepseek-flash"]}))

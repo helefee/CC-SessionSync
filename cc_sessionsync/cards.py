@@ -31,7 +31,7 @@ _ABSENT = {"__absent__": True}
 
 def _blank(client: str) -> dict:
     return {"kind": "default", "base_url": "", "protocol": "anthropic" if client == "codex" else "responses", "model": "", "small_model": "", "sonnet_model": "",
-            "effort": "", "region": "", "profile_only": False, "enabled": False, "models": []}
+            "effort": "", "region": "", "ctx": {}, "fix_refs": [], "profile_only": False, "enabled": False, "models": []}
 
 
 def get(client: str, d: dict | None = None) -> dict:
@@ -140,7 +140,7 @@ def save_card(client: str, b: dict) -> dict:
         if kind not in KINDS[client]:
             raise ValueError("不支持这个选项")
         if kind != c["kind"]:
-            c.update(model="", small_model="", sonnet_model="", models=[], base_url="", region="")
+            c.update(model="", small_model="", sonnet_model="", models=[], base_url="", region="", ctx={})
         c["kind"] = kind
         if "region" in b and presets.get(kind):
             r = str(b.get("region") or "")
@@ -164,6 +164,8 @@ def save_card(client: str, b: dict) -> dict:
             c["profile_only"] = bool(b["profile_only"])
         if isinstance(b.get("models"), list):
             c["models"] = [str(x) for x in b["models"] if isinstance(x, str)][:300]
+        if isinstance(b.get("ctx"), dict):
+            c["ctx"] = {str(k): int(v) for k, v in b["ctx"].items() if isinstance(v, (int, float)) and 1000 <= v <= 100_000_000}
         if kind == "custom" and not c["base_url"] and c["enabled"]:
             raise ValueError("自定义要填 Base URL")
         sec = (b.get("secret") or "").strip()
@@ -376,6 +378,10 @@ def _codex_block(c: dict) -> tuple:
 def _codex_edits(c: dict) -> list:
     t, model, via = _codex_block(c)
     ed = [(["model_provider"], router.CODEX_PROFILE), (["model"], model)]
+    # 模型目录：Codex 设了 model_catalog_json 就只用那个文件（不再问服务商要列表），桌面端的模型选择器也读它。
+    # 走后台服务 → 指向我们写的目录；直连 OpenAI → 先拿掉（用 Codex 自带的 GPT 列表）。停用时都放回原样。
+    ed.append((["model_catalog_json"], CATALOG_NAME if via else _ABSENT))
+    ed += _fix_edits("codex", c)
     if c["effort"]:                               # 只有用户选了缺省推理等级才写；不选就留着 Codex 自己的（/model 里随时能改）
         ed.append((["model_reasoning_effort"], c["effort"]))
     ed.append((["model_providers", router.CODEX_PROFILE], t))
@@ -386,12 +392,12 @@ def _claude_edits(c: dict) -> list:
     eff = [(["effortLevel"], c["effort"])] if c.get("effort") in ("low", "medium", "high", "xhigh", "max") else []   # 只是缺省值：/effort 随时能改
     if needs("claude", c):
         return [(["env", "ANTHROPIC_BASE_URL"], router.base_url()), (["env", "ANTHROPIC_AUTH_TOKEN"], router.token()),
-                (["env", "ANTHROPIC_API_KEY"], _ABSENT)] + eff
+                (["env", "ANTHROPIC_API_KEY"], _ABSENT)] + eff + _fix_edits("claude", c)
     ed = [(["apiKeyHelper"], keystore.helper_line(key_name("claude", c["kind"]))),
           (["env", "ANTHROPIC_AUTH_TOKEN"], _ABSENT), (["env", "ANTHROPIC_API_KEY"], _ABSENT)]
     url = c.get("base_url") if c["kind"] == "anthropic" else upstream_url(c, "claude")
     ed.append((["env", "ANTHROPIC_BASE_URL"], url) if url else (["env", "ANTHROPIC_BASE_URL"], _ABSENT))
-    return ed + eff
+    return ed + eff + _fix_edits("claude", c)
 
 
 def check(client: str, c: dict, d: dict):
@@ -423,7 +429,12 @@ def enable(client: str) -> dict:
             keystore.helper_selftest(key_name(client, c["kind"]))
         recs = dict((d.get("cards_applied") or {}).get(client) or {})
         files = []
+        _self_write(client)
         if client == "codex":
+            if via:
+                files.append(write_catalog(c))
+            else:
+                remove_catalog()
             prof = paths.CODEX_HOME / f"{router.CODEX_PROFILE}.config.toml"
             if c["profile_only"]:
                 if recs.get("config"):
@@ -465,7 +476,10 @@ def disable(client: str) -> dict:
     with router._lock:
         d = router.load()
         recs = (d.get("cards_applied") or {}).get(client) or {}
+        _self_write(client)
         res = [{"file": r["file"], "result": revert_edits(r)} for r in recs.values()]
+        if client == "codex":
+            remove_catalog()
         d.setdefault("cards_applied", {}).pop(client, None)
         if client in (d.get("cards") or {}):
             d["cards"][client]["enabled"] = False
@@ -502,18 +516,6 @@ CODEX_BUILTIN = ("gpt-6-astra", "gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna", "gpt-5
                  "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex", "gpt-5.2", "gpt-5.2-codex", "gpt-5.1-codex-max", "gpt-5.1-codex-mini")
 
 
-def pretty(m: str) -> str:
-    """claude-opus-5-5 → Claude Opus 5.5；gpt-5.4-mini → GPT-5.4-mini。"""
-    if m.startswith("claude-"):
-        parts = m.split("-")[1:]
-        fam = [x for x in parts if not x.isdigit()]
-        ver = [x for x in parts if x.isdigit() and len(x) < 8]
-        return "Claude " + " ".join(x.capitalize() for x in fam) + (" " + ".".join(ver) if ver else "")
-    if m.startswith("gpt-"):
-        return "GPT-" + m[4:]
-    return m
-
-
 def catalog_models(c: dict) -> list:
     """卡片的默认模型在最前；然后是拉到的模型列表（Claude：每个系列按新到旧），没拉过就用常见的几个。"""
     ms = [m for m in (c.get("models") or []) if isinstance(m, str) and not SKIP.search(m)]
@@ -527,6 +529,82 @@ def catalog_models(c: dict) -> list:
     return out[:80]
 
 
+CATALOG_NAME = "ccss-models-cc-route.json"       # 相对名：Codex 按 config.toml 所在目录（CODEX_HOME）解析
+DEFAULT_CTX = 128000
+KNOWN_CTX = (("claude-", 200000), ("gpt-6", 272000), ("gpt-5.6", 272000), ("gpt-5.5", 272000), ("gpt-5.4", 272000))
+
+
+def catalog_path() -> Path:
+    return paths.CODEX_HOME / CATALOG_NAME
+
+
+def levels_for(c: dict, slug: str) -> list:
+    """这个模型在 Codex 里能选的推理等级（按 effort.py 的对应表：服务商不支持的级别不列出来）。"""
+    m = slug.lower()
+    k = c.get("kind")
+    style = presets.get(k)["style"] if presets.get(k) else ("anthropic" if proto(c, "codex") == "anthropic" else "generic")
+    if style == "anthropic":
+        return ["none", "low", "medium", "high", "xhigh"] + (["max"] if thinking_mode(c, slug, "codex") == "adaptive" else [])
+    if style == "xai":
+        return ["low", "medium", "high", "xhigh"]
+    if style == "gemini":
+        return (["none"] if "2.5" in m and "pro" not in m else []) + ["low", "medium", "high"]
+    if style == "deepseek":
+        return ["none", "low", "high", "max"]
+    if style == "glm":
+        from .effort import _ver as ev
+        v = ev(m)
+        return ["low", "high", "max"] if v >= (5, 3) else ["none", "low", "medium", "high", "xhigh", "max"] if v >= (5, 2) else ["none", "high"]
+    if style == "kimi":
+        return ["low", "high", "max"] if m.startswith("kimi-k3") else ["none", "high"] if m.startswith("kimi-k2.6") else ["high"]
+    if style == "qwen":
+        return ["none", "low", "medium", "xhigh"] if m.startswith("qwen3.8") else ["none", "low", "medium", "high", "xhigh"]
+    return ["none", "low", "medium", "high", "xhigh"]
+
+
+def ctx_for(c: dict, slug: str) -> int:
+    v = (c.get("ctx") or {}).get(slug)
+    if v:
+        return int(v)
+    for pre, n in KNOWN_CTX:
+        if slug.lower().startswith(pre):
+            return n
+    return DEFAULT_CTX
+
+
+_UP = {"gpt": "GPT", "glm": "GLM", "ai": "AI", "vl": "VL", "oss": "OSS", "r1": "R1", "v3": "V3", "v4": "V4", "k2": "K2", "k3": "K3"}
+
+
+def pretty(m: str) -> str:
+    """模型 ID → 选择器里好认的名字：claude-opus-5-5 → Claude Opus 5.5，deepseek-v4-pro → DeepSeek V4 Pro，
+    kimi-k3.1-pro → Kimi K3.1 Pro，glm-5.3 → GLM-5.3，qwen3.8-max → Qwen3.8 Max，anthropic/claude-opus-5.5 → Claude Opus 5.5（anthropic）。"""
+    vendor = ""
+    if "/" in m:
+        vendor, m2 = m.rsplit("/", 1)
+        return pretty(m2) + f"（{vendor}）"
+    if m.startswith("claude-"):
+        parts = m.split("-")[1:]
+        fam = [x for x in parts if not x.isdigit()]
+        ver = [x for x in parts if x.isdigit() and len(x) < 8]
+        return "Claude " + " ".join(x.capitalize() for x in fam) + (" " + ".".join(ver) if ver else "")
+    if m.startswith("gpt-"):
+        return "GPT-" + m[4:]
+    if m.startswith("glm-"):
+        return "GLM-" + m[4:].replace("-", " ").title().replace(" ", "-") if m[4:] else "GLM"
+    brand = {"deepseek": "DeepSeek", "kimi": "Kimi", "grok": "Grok", "gemini": "Gemini", "qwen": "Qwen", "moonshot": "Moonshot"}
+    out = []
+    for i, w in enumerate(m.split("-")):
+        lw = w.lower()
+        if i == 0:
+            b = next((v for kk, v in brand.items() if lw.startswith(kk)), None)
+            out.append(b + w[len(b):] if b else w[:1].upper() + w[1:])
+        elif lw in _UP or (lw[:1] in "vkr" and lw[1:2].isdigit()):
+            out.append(_UP.get(lw, w.upper()))
+        else:
+            out.append(w[:1].upper() + w[1:])
+    return " ".join(out)
+
+
 def _base_prompt() -> str:
     try:
         return (Path(__file__).with_name("codex_prompt.md")).read_text(encoding="utf-8")
@@ -534,33 +612,148 @@ def _base_prompt() -> str:
         return "You are a coding agent running in the Codex CLI. Be precise, safe, and helpful."
 
 
-def model_info(slug: str, prio: int, default_effort: str) -> dict:
-    """Codex 0.16x 的 ModelInfo。和 Codex 给不认识的模型用的兜底元数据一样（工具、提示词都不变），
-    只多了两样：在 /model 里列出来（visibility=list），以及能选推理等级（supported_reasoning_levels）。"""
+def model_info(slug: str, prio: int, default_effort: str, levels: list | None = None, ctx: int | None = None) -> dict:
+    """Codex 的 ModelInfo（openai/codex rust-v0.164.0 codex-rs/protocol/src/openai_models.rs），也是 model_catalog_json 文件里每一项的格式。
+    和 Codex 给不认识的模型用的兜底元数据一样（工具、提示词都不变），多了：在选择器里列出来、能选推理等级、好认的名字、上下文长度。
+    老版本 Codex（0.162 起）要的几个字段也带上（additional_speed_tiers / service_tiers / supports_reasoning_summaries），多出来的字段新版本会忽略。"""
+    levels = levels or list(LEVELS_CODEX)
+    de = default_effort if default_effort in levels else ("medium" if "medium" in levels else "high" if "high" in levels else levels[0])
+    ctx = ctx or DEFAULT_CTX
     return {"slug": slug, "display_name": pretty(slug), "description": "用你的 API key（CC Session Sync）",
-            "default_reasoning_level": default_effort or "medium",
-            "supported_reasoning_levels": [{"effort": e, "description": LEVELS[e]} for e in LEVELS_CODEX],
+            "default_reasoning_level": de,
+            "supported_reasoning_levels": [{"effort": e, "description": LEVELS.get(e, e)} for e in levels],
             "shell_type": "unified_exec", "visibility": "list", "supported_in_api": True, "priority": prio,
+            "additional_speed_tiers": [], "service_tiers": [],
             "availability_nux": None, "upgrade": None, "base_instructions": _base_prompt(),
             "include_skills_usage_instructions": False, "include_plugin_usage_instructions": False, "include_apps_usage_instructions": False,
-            "supports_reasoning_summary_parameter": True, "default_reasoning_summary": "auto",
+            "supports_reasoning_summary_parameter": True, "supports_reasoning_summaries": True, "default_reasoning_summary": "auto",
             "support_verbosity": False, "default_verbosity": None, "apply_patch_tool_type": None, "web_search_tool_type": "text",
-            "truncation_policy": {"mode": "bytes", "limit": 10000}, "supports_image_detail_original": False,
-            "context_window": 200000, "max_context_window": 200000, "effective_context_window_percent": 95,
+            "truncation_policy": {"mode": "bytes", "limit": 10000}, "supports_image_detail_original": False, "supports_parallel_tool_calls": False,
+            "context_window": ctx, "max_context_window": ctx, "effective_context_window_percent": 95,
             "experimental_supported_tools": [], "input_modalities": ["text", "image"], "supports_search_tool": False}
 
 
+def catalog_doc(c: dict) -> dict:
+    """写进 ~/.codex/ccss-models-cc-route.json 的内容：{"models": [ModelInfo…]}，卡片的默认模型排第一。"""
+    return {"models": [model_info(m, i + 1, c.get("effort") or "", levels_for(c, m), ctx_for(c, m)) for i, m in enumerate(catalog_models(c))]}
+
+
+def write_catalog(c: dict) -> str:
+    from . import modelcfg
+    f = catalog_path()
+    f.parent.mkdir(parents=True, exist_ok=True)
+    modelcfg.atomic_write(f, (json.dumps(catalog_doc(c), ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+    return str(f)
+
+
+def remove_catalog():
+    try:
+        catalog_path().unlink()
+    except OSError:
+        pass
+
+
 def codex_catalog(d: dict | None = None) -> list:
+    """本机后台服务的 /v1/models（没设 model_catalog_json 的 Codex 用）。和目录文件同一份，另外把 Codex 自带的 GPT 模型藏起来。"""
     d = d or router.cfg()
     c = get("codex", d)
     if not (c["enabled"] and needs("codex", c)):
         return []
-    ms = catalog_models(c)
-    out = [model_info(m, i + 1, c.get("effort") or "") for i, m in enumerate(ms)]
-    for s in CODEX_BUILTIN:                          # Codex 自带的 GPT 模型在这里用不了：同名条目盖掉、藏起来，/model 里只剩能用的
-        if s not in ms:
-            out.append(dict(model_info(s, 900, ""), visibility="hide"))
+    out = catalog_doc(c)["models"]
+    ms = {m["slug"] for m in out}
+    for s_ in CODEX_BUILTIN:
+        if s_ not in ms:
+            out.append(dict(model_info(s_, 900, ""), visibility="hide"))
     return out
+
+
+# ---------------------------------------------------------------- 别的设置还指着这家没有的模型（review_model 等）：提醒 + 一键改成卡片的模型
+
+CODEX_REFS = ((["review_model"], "审查（/review）用的模型 review_model"), (["agents", "default_subagent_model"], "子代理默认模型 agents.default_subagent_model"))
+CLAUDE_REFS = ("ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL",
+               "ANTHROPIC_DEFAULT_HAIKU_MODEL", "CLAUDE_CODE_SUBAGENT_MODEL")
+
+
+def _cfg_doc(client: str, c: dict):
+    try:
+        if client == "codex":
+            f = paths.CODEX_HOME / (f"{router.CODEX_PROFILE}.config.toml" if c.get("profile_only") else "config.toml")
+            return Doc(f, "toml").doc, f
+        from . import modelcfg
+        f = modelcfg.claude_file("user", None)
+        return Doc(f, "json").doc, f
+    except Exception:
+        return None, None
+
+
+def ref_warnings(client: str, c: dict | None = None) -> list:
+    """别的设置引用了这家列表里没有的模型 → [{path, value, label, fix}]。不挡启用，只提醒。"""
+    c = c or get(client)
+    if c["kind"] == "default" or not c.get("enabled"):
+        return []
+    have = set(catalog_models(c)) | set(c.get("models") or [])
+    if not c.get("models"):
+        return []
+    doc, _f = _cfg_doc(client, c)
+    if doc is None:
+        return []
+    out = []
+    fixed = {json.dumps(x.get("path")) for x in c.get("fix_refs") or []}
+
+    def bad(v):
+        if not isinstance(v, str) or not v or v in have:
+            return False
+        if client == "claude" and (v.lower() in ("opus", "sonnet", "haiku", "default", "fable") or v.lower().startswith("claude-")):
+            return False                               # Claude 名字会被换成卡片的模型
+        return True
+    if client == "codex":
+        for path, label in CODEX_REFS:
+            v = _get(doc, path)
+            if v is not _ABSENT and bad(v) and json.dumps(path) not in fixed:
+                out.append({"path": path, "value": v, "label": label, "fix": "model"})
+        env = (_get(doc, ["shell_environment_policy", "set"]))
+        if isinstance(env, dict):
+            for k, v in env.items():
+                if "MODEL" in k.upper() and bad(v) and json.dumps(["shell_environment_policy", "set", k]) not in fixed:
+                    out.append({"path": ["shell_environment_policy", "set", k], "value": v, "label": f"shell 环境变量 {k}", "fix": "model"})
+        mcw = _get(doc, ["model_context_window"])
+        if isinstance(mcw, int) and mcw > ctx_for(c, c["model"]) and json.dumps(["model_context_window"]) not in fixed:
+            out.append({"path": ["model_context_window"], "value": mcw, "label": f"上下文长度 model_context_window（{c['model']} 大约 {ctx_for(c, c['model']):,}）", "fix": "absent"})
+    else:
+        env = _get(doc, ["env"])
+        for k in CLAUDE_REFS:
+            v = env.get(k) if isinstance(env, dict) else None
+            if bad(v) and json.dumps(["env", k]) not in fixed:
+                out.append({"path": ["env", k], "value": v, "label": f"环境变量 {k}", "fix": "model"})
+    return out
+
+
+def _fix_edits(client: str, c: dict) -> list:
+    return [(x["path"], _ABSENT if x.get("fix") == "absent" else c["model"]) for x in c.get("fix_refs") or []
+            if isinstance(x, dict) and isinstance(x.get("path"), list)]
+
+
+def fix_refs(client: str, direct: bool = False) -> dict:
+    """「一键改成卡片的模型」：记进卡片（下次启用 / 停用一起管，停用时放回原样），再重新启用一次。"""
+    with router._lock:
+        d = router.load()
+        c = get(client, d)
+        ws = ref_warnings(client, c)
+        if not ws:
+            return {"ok": True, "fixed": 0}
+        c["fix_refs"] = (c.get("fix_refs") or []) + [{"path": w["path"], "fix": w["fix"]} for w in ws]
+        d.setdefault("cards", {})[client] = c
+        router.save(d)
+    return dict(enable(client) if direct else run(client, "enable"), fixed=len(ws))
+
+
+def _self_write(client: str):
+    """告诉「账号切换」监视：接下来一会儿 Codex 配置的变化是我们自己写的（启用 / 停用卡片），别当成切换账号。"""
+    try:
+        from . import watch
+        watch.note_self(client)
+    except Exception:
+        pass
 
 
 # ================================================================ 页面 / 自检
@@ -571,10 +764,27 @@ def view(client: str, d: dict | None = None, live: dict | None = None) -> dict:
     rec = (d.get("cards_applied") or {}).get(client) or {}
     out = dict(c, client=client, kind_name=KIND_NAME[c["kind"]], needs_proxy=needs(client, c) if c["kind"] != "default" else False,
                upstream=upstream_url(c, client), protocol_used=proto(c, client), keys={k: _mask(key_name(client, k)) for k in KINDS[client] if k != "default"},
-               files=[r["file"] for r in rec.values()], drift=False)
+               files=[r["file"] for r in rec.values()], drift=False, drift_keys=[],
+               catalog=str(catalog_path()) if client == "codex" and c["enabled"] and needs(client, c) else None)
+    # 「配置被改过」只看我们写的那几项还在不在：文件别处被改（Codex 记项目信任、桌面端偏好等）不算；
+    # model / model_reasoning_effort 被 Codex 的 /model 改掉也不算（那是用户在客户端里切换）。
     for r in rec.values():
-        if router._sha(router._read(Path(r["file"]))) != r.get("sha"):
-            out["drift"] = True
+        if router._sha(router._read(Path(r["file"]))) == r.get("sha"):
+            continue
+        try:
+            doc = Doc(Path(r["file"]), r["fmt"]).doc
+        except Exception:
+            continue
+        for e in r.get("edits") or []:
+            if e["path"] in (["model"], ["model_reasoning_effort"], ["effortLevel"]):
+                continue
+            if _get(doc, e["path"]) != e["ours"]:
+                out["drift_keys"].append(".".join(e["path"]))
+    out["drift"] = bool(out["drift_keys"])
+    if client == "codex" and out["catalog"] and not catalog_path().exists():
+        out["drift"] = True
+        out["drift_keys"].append(CATALOG_NAME)
+    out["warnings"] = ref_warnings(client, c)
     return out
 
 
@@ -603,11 +813,25 @@ def fetch_models(client: str, b: dict) -> dict:
     r = router.list_models(draft={"protocol": pr, "base_url": url, "secret": sec})
     if r.get("ok"):
         r["models"] = [m for m in r["models"] if not SKIP.search(m)]
+        r["ctx"] = {k: v for k, v in (r.get("ctx") or {}).items() if k in r["models"]}
         r["default"], r["small"] = defaults_for(kind, r["models"])
         if kind == "custom":
             r["protocol"], r["base_url"] = c.get("protocol"), c.get("base_url")
         if kind == "anthropic":
             r["models"] = sorted(r["models"], key=lambda m: (0 if "opus" in m else 1 if "sonnet" in m else 2 if "haiku" in m else 3, tuple(-x for x in _ver(m)[0])))
+        # 「刷新」时卡片正在用同一家：马上更新卡片的模型列表；Codex 的目录文件也重写（新开的 Codex 窗口 / 会话就能看到）
+        cur = get(client)
+        if cur["enabled"] and cur["kind"] == kind and not b.get("secret") and (b.get("region") or "") == (cur.get("region") or "") \
+                and (b.get("base_url") or "") == (cur.get("base_url") or ""):
+            with router._lock:
+                d = router.load()
+                cc = get(client, d)
+                cc["models"], cc["ctx"] = r["models"][:300], r["ctx"]
+                d.setdefault("cards", {})[client] = cc
+                router.save(d)
+            if client == "codex" and needs(client, cc):
+                write_catalog(cc)
+                r["catalog_updated"] = True
     return r
 
 

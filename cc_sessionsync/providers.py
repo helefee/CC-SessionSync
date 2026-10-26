@@ -350,6 +350,16 @@ def matches(tool: str, p: dict) -> bool:
     return lv["base_url"] == p["base_url"].rstrip("/") and lv["helper_key"] == p.get("key")
 
 
+def _card_owns(tool: str) -> bool:
+    """「Codex 使用… / Claude Code 使用…」卡片启用中（不是只写 profile）→ 全局配置是卡片写的，不是别的工具改的。"""
+    try:
+        from . import cards
+        c = cards.get(tool)
+        return bool(c["enabled"] and c["kind"] != "default" and not (tool == "codex" and c.get("profile_only")))
+    except Exception:
+        return False
+
+
 def overview(root: str | None = None) -> dict:
     d = load()
     out = {"reach": REACH, "codex_slot": codex_slot(d), "projects": d["projects"], "cli": {"claude": claude_exe(), "codex": codex_exe()}}
@@ -363,7 +373,7 @@ def overview(root: str | None = None) -> dict:
             v["projects"] = [r for r, x in d["projects"].items() if x.get(tool) == p["id"]]
             rows.append(v)
         out[tool] = rows
-        out[tool + "_drift"] = bool(act and not any(r["live"] for r in rows if r["id"] == act))
+        out[tool + "_drift"] = bool(act and not any(r["live"] for r in rows if r["id"] == act)) and not _card_owns(tool)
     out["claude_live"] = _claude_live()
     out["codex_live"] = _codex_live()
     if root:

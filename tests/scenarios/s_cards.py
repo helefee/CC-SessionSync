@@ -96,7 +96,7 @@ op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 cat = json.loads(op.open(urllib.request.Request(router.base_url() + "/v1/models?client_version=0.164.0", headers={"authorization": "Bearer " + TOK})).read())["models"]
 lst = [m["slug"] for m in cat if m["visibility"] == "list"]
 ok(lst[0] == "claude-opus-5-5" and "claude-sonnet-5-5" in lst and "claude-haiku-5-5" in lst and not any(m.startswith("gpt") for m in lst)
-   and all([l["effort"] for l in m["supported_reasoning_levels"]] == ["none", "low", "medium", "high", "xhigh", "max"] for m in cat)
+   and all([l["effort"] for l in m["supported_reasoning_levels"]] == ["none", "low", "medium", "high", "xhigh", "max"] for m in cat if m["slug"] in ("claude-opus-5-5", "claude-sonnet-5-5"))
    and all(m["base_instructions"].startswith("You are a coding agent") for m in cat),
    f"Codex model catalog: Claude models listed with effort levels, built-in GPT hidden ({lst})")
 ok(any(m["slug"] == "gpt-5.5" and m["visibility"] == "hide" for m in cat), "built-in gpt-5.5 overridden as hidden")
@@ -213,6 +213,60 @@ try:
     cards.run("claude", "enable"); ok(False, "custom without url accepted")
 except ValueError as e:
     ok("地址" in str(e), "custom without Base URL → error")
+
+# ================================================================ 6. 0.3.3：Codex 桌面端的模型选择器（model_catalog_json）、旧目录、监视误报、引用别家模型的设置
+from cc_sessionsync import watch, providers
+STALE = b'model_catalog_json = "ccss-models-cpa.json"\nreview_model = "grok-4.7"\nmodel_context_window = 500000\n\n[agents]\ndefault_subagent_model = "gemini-3.8-flash-high"\n\n' + ORIG
+CFG.write_bytes(STALE)
+(CX / "ccss-models-cpa.json").write_text('{"models":[{"slug":"gemini-3.8-flash-high","display_name":"x"}]}', encoding="utf-8")
+os.environ.pop("CC_SESSIONSYNC_NO_WATCH", None)
+watch.STATE.clear(); watch.STATE.update({"last": [], "error": None}); watch._sig.clear(); watch._cand.clear()
+watch.tick(now=1000)
+cards.save_card("codex", {"kind": "anthropic", "secret": "sk-ant-card-good", "base_url": MB, "model": "claude-opus-5-5", "fix_refs": [],
+                          "models": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-4-5"], "ctx": {"claude-sonnet-5-5": 1000000}})
+cards.run("codex", "enable")
+doc = tomllib.loads(CFG.read_text(encoding="utf-8"))
+catf = CX / "ccss-models-cc-route.json"
+cat = json.loads(catf.read_text(encoding="utf-8"))["models"] if catf.exists() else []
+ok(doc.get("model_catalog_json") == "ccss-models-cc-route.json" and [m["slug"] for m in cat][:1] == ["claude-opus-5-5"] and len(cat) == 4,
+   f"enable → model_catalog_json = our catalog, all card models, default first ({[m['slug'] for m in cat]})")
+by = {m["slug"]: m for m in cat}
+ok(by["claude-opus-5-5"]["display_name"] == "Claude Opus 5.5" and by["claude-sonnet-5-5"]["context_window"] == 1000000 and by["claude-opus-5-5"]["context_window"] == 200000
+   and [x["effort"] for x in by["claude-opus-4-5"]["supported_reasoning_levels"]] == ["none", "low", "medium", "high", "xhigh"]
+   and all(m["visibility"] == "list" and m["base_instructions"] for m in cat), "catalog: friendly names, context from the model list / known, per-model effort levels (old Opus: no max)")
+evs = watch.tick(now=1100) + watch.tick(now=1200) + watch.tick(now=1300)
+ok(not evs and watch.STATE["codex"]["id"].endswith("|cc-route"), "watcher: our own provider switch (custom → cc-route, same account) is not an account switch")
+v = cards.view("codex")
+ok(not v["drift"], "freshly enabled → not 「配置被改过」")
+t = CFG.read_text(encoding="utf-8").replace("[features]", '[projects."/x"]\ntrust_level = "trusted"\n\n[features]')
+CFG.write_text(t.replace('model = "claude-opus-5-5"', 'model = "claude-sonnet-5-5"'), encoding="utf-8")
+ok(not cards.view("codex")["drift"], "Codex itself editing other parts / /model switching the model → not drift")
+ok(not providers.overview()["codex_drift"], "v0.2 provider list doesn't call the card's own write 「Codex 配置被改过」")
+ws = cards.view("codex")["warnings"]
+ok(sorted(w["value"] if isinstance(w["value"], str) else "ctx" for w in ws) == ["ctx", "gemini-3.8-flash-high", "grok-4.7"],
+   f"warnings: review_model, agents.default_subagent_model, model_context_window > model's ({[w['label'] for w in ws]})")
+cards.run("codex", "disable")
+ok(CFG.read_bytes() != STALE, "(user edited the file meanwhile → partial revert)")
+CFG.write_bytes(STALE)
+cards.run("codex", "enable")
+r = cards.fix_refs("codex")
+doc = tomllib.loads(CFG.read_text(encoding="utf-8"))
+ok(r["fixed"] == 3 and doc["review_model"] == "claude-opus-5-5" and doc["agents"]["default_subagent_model"] == "claude-opus-5-5" and "model_context_window" not in doc
+   and not cards.view("codex")["warnings"], "one-click fix → card model / context back to auto")
+cards.run("codex", "disable")
+ok(CFG.read_bytes() == STALE and not catf.exists() and (CX / "ccss-models-cpa.json").exists(), "disable → byte-identical (old catalog value restored), our catalog file removed, theirs kept")
+cards.save_card("codex", {"kind": "openai", "secret": "sk-oa-card-good", "base_url": "", "model": "gpt-5.5", "fix_refs": []})
+cards.run("codex", "enable")
+doc = tomllib.loads(CFG.read_text(encoding="utf-8"))
+ok("model_catalog_json" not in doc and not catf.exists(), "OpenAI key (direct): stale model_catalog_json removed so Codex shows its own GPT list")
+cards.run("codex", "disable"); ok(CFG.read_bytes() == STALE, "… and restored on disable")
+# 别的工具真的切了供应商（同一个账号）→ 叫「供应商已切换」，不是「账号已切换」
+watch._SELF.clear()
+watch.tick(now=4000); watch.tick(now=4020); watch.tick(now=4040)
+CFG.write_bytes(STALE.replace(b'review_model', b'model_provider = "other"\nreview_model'))
+evs = watch.tick(now=5000) + watch.tick(now=5020) + watch.tick(now=5040)
+ok(any("供应商已切换" in e.get("title", "") for e in evs), f"external provider-only change → labelled 供应商已切换 ({[e.get('title') for e in evs]})")
+CFG.write_bytes(ORIG)
 
 allt = "".join(f.read_text(encoding="utf-8", errors="replace") for f in (T / "ss").rglob("*") if f.is_file() and f.name != "keys.json" and f.suffix in (".json", ".jsonl", ".log", ".toml", ".txt"))
 allt += CFG.read_text(encoding="utf-8") + SET.read_text(encoding="utf-8")

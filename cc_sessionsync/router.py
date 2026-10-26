@@ -1445,12 +1445,19 @@ def list_models(pid: str | None = None, draft: dict | None = None) -> dict:
         reason = getattr(e, "reason", None) or e
         return {"ok": False, "status": None, "reason": _scrub(f"连不上：{type(reason).__name__}: {reason}")}
     rows = j.get("data") if isinstance(j, dict) else j
-    ids = []
+    ids, ctx = [], {}
     for m in rows or []:
         v = m.get("id") or m.get("name") if isinstance(m, dict) else m
         if isinstance(v, str) and v and v not in ids and not any(_wild(x, v) for x in p.get("excluded") or []):
-            ids.append(v.split("models/")[-1])
-    return {"ok": True, "ms": int((time.time() - t0) * 1000), "models": sorted(ids)}
+            mid = v.split("models/")[-1]
+            ids.append(mid)
+            if isinstance(m, dict):                 # 上下文长度：各家字段名不同（OpenRouter / Kimi context_length，Anthropic max_input_tokens …）
+                for f in ("context_length", "context_window", "max_context_length", "max_input_tokens", "input_token_limit", "max_model_len"):
+                    n = m.get(f)
+                    if isinstance(n, (int, float)) and 1000 <= n <= 100_000_000:
+                        ctx[mid] = int(n)
+                        break
+    return {"ok": True, "ms": int((time.time() - t0) * 1000), "models": sorted(ids), "ctx": ctx}
 
 
 # ================================================================ 从 CLIProxyAPI 的 config.yaml 导入（只导 API key 供应商）
@@ -1570,7 +1577,7 @@ def overview() -> dict:
 USAGE = """用法：cc-sessionsync route <命令>
   serve [--port N] [--background]  跑代理（一般不用手动：启用卡片后会自己在后台跑，登录时自启，取口令时按需拉起）
   stop                             停掉后台代理
-  card codex|claude show|enable|disable   「Codex 使用… / Claude Code 使用…」卡片
+  card codex|claude show|enable|disable|fix-refs  「Codex 使用… / Claude Code 使用…」卡片
   card codex|claude set JSON       改卡片，例如 '{"kind":"claude","model":"claude-opus-5-5","key_env":"MY_KEY"}'（key 只从环境变量读）
   status                           代理状态
   list                             供应商列表（key 打码）
@@ -1623,7 +1630,7 @@ def main(argv: list[str]) -> int:
         act = argv[2]
         if act == "show":
             v = cards.view(argv[1])
-            out = {k: v[k] for k in ("kind", "kind_name", "model", "small_model", "effort", "upstream", "enabled", "needs_proxy", "profile_only", "files", "keys")}
+            out = {k: v[k] for k in ("kind", "kind_name", "model", "small_model", "effort", "upstream", "enabled", "needs_proxy", "profile_only", "files", "keys", "warnings", "drift", "drift_keys", "catalog")}
             out.update(proxy_running=health(), login_item=login_get())
             print(json.dumps(out, ensure_ascii=False, indent=2))
             return 0
@@ -1634,7 +1641,8 @@ def main(argv: list[str]) -> int:
                 b["secret"] = os.environ.get(b.pop("key_env"), "")
             cards.save_card(argv[1], b)
             return 0
-        r = cards.enable(argv[1]) if act == "enable" else cards.disable(argv[1]) if act == "disable" else None
+        r = cards.enable(argv[1]) if act == "enable" else cards.disable(argv[1]) if act == "disable" else \
+            cards.fix_refs(argv[1], direct=True) if act == "fix-refs" else None
         if r is None:
             print(USAGE, file=sys.stderr)
             return 2
