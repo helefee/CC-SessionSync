@@ -208,6 +208,23 @@ def _nothing_to_sync(k: str) -> bool:
         return False
 
 
+_SELF: dict = {}
+SELF_WINDOW = 90
+
+
+def note_self(client: str) -> None:
+    """CC Session Sync 自己要改 Codex / Claude Code 的配置了（启用 / 停用卡片）：这段时间里的变化不算「切换」。"""
+    _SELF["codex" if client == "codex" else "claude-cli"] = time.time()
+
+
+def _split_codex(i: str) -> tuple:
+    acct, _, prov = (i or "").rpartition("|")
+    return acct, prov
+
+
+OWN_PROVIDERS = ("cc-route",)
+
+
 def _ts(x: str) -> float:
     from . import claude_sync
     return claude_sync._iso(x)
@@ -241,6 +258,13 @@ def tick(now: float | None = None, stable: float = 9) -> list[dict]:
                 STATE[k] = v                  # 同一个号：时间戳 / 标签更新一下
                 _save()
             continue
+        if k == "codex":
+            (a0, p0), (a1, p1) = _split_codex(cur["id"]), _split_codex(v["id"])
+            if a0 == a1 and (p0 in OWN_PROVIDERS or p1 in OWN_PROVIDERS or now - _SELF.get(k, 0) < SELF_WINDOW):
+                _cand.pop(k, None)            # 同一个账号，只是我们自己的卡片把供应商换成 / 换回 cc-route：不是切换账号，不提醒
+                STATE[k] = v
+                _save()
+                continue
         mode_switch = (cur.get("mode") or "1p") != (v.get("mode") or "1p")
         if not mode_switch and v.get("seen") and cur.get("seen") and _ts(v["seen"]) <= _ts(cur["seen"]):
             _cand.pop(k, None)                # 认出的「新号」的事件比记下的还旧：是旧文件里残留的，不算换号
@@ -258,7 +282,9 @@ def tick(now: float | None = None, stable: float = 9) -> list[dict]:
             title = "Claude 桌面端切换到 API 模式（3P）" if v.get("mode") == "3p" else "Claude 桌面端切回订阅登录模式"
             text = f"{cur['label']} → {v['label']}（这是模式切换，不是换账号；两边的会话列表分开放）"
         else:
-            title, text = f"检测到 {NAMES[k]} 账号已切换", f"{cur['label']} → {v['label']}"
+            prov_only = k == "codex" and _split_codex(cur["id"])[0] == _split_codex(v["id"])[0]
+            title = f"检测到 {NAMES[k]} 供应商已切换" if prov_only else f"检测到 {NAMES[k]} 账号已切换"
+            text = f"{cur['label']} → {v['label']}"
         if not mode_switch and _nothing_to_sync(k):
             STATE.setdefault("handled", {})[k] = {"id": v["id"], "at": now}
             STATE["notes"] = (STATE.get("notes", []) + [{"time": now, "who": k, "text": text + "：当前账号已经不缺会话，不提醒"}])[-10:]

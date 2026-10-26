@@ -503,6 +503,7 @@ td.nw{white-space:nowrap}
 .ccbtn{display:flex;align-items:center;gap:10px}.ccmsg{font-size:calc(12.5px*var(--fk));color:var(--muted)}.ccmsg .err{color:var(--err,#c33)}
 .cchow{margin:10px 0 4px;font-size:calc(13.5px*var(--fk))}.ccmore{font-size:calc(12.5px*var(--fk));margin:2px 0 6px}.ccmore a{color:var(--muted)}
 .ccadv{margin:4px 0 8px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px}.ccnote{color:var(--faint,var(--muted));font-size:calc(12px*var(--fk));margin:6px 0 8px}
+.ccwarn{margin-top:10px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--warn,#b7791f) 10%,transparent);font-size:calc(12.5px*var(--fk))}.ccwarn>div{margin-top:2px}.ccwbtn{display:flex;gap:8px;align-items:center;margin-top:6px}
 .ccst{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:calc(13px*var(--fk))}.ccout{margin-top:4px}
 .mcadv{margin-top:6px}.mcadv>summary{cursor:pointer;padding:6px 2px;font-weight:600}.mcadv>summary .dim{font-weight:400;margin-left:6px}
 .rtfm{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow:auto;margin-top:4px}.rtfm .on{opacity:.5}.rtsum{cursor:pointer}.rtsum:hover{background:var(--hover)}
@@ -1827,7 +1828,7 @@ const pvModels = (tool, p) => { const m = p.models || {}, ks = Object.keys(m); i
 const pvPresets = tool => [[tool === "claude" ? "login" : "chatgpt", tool === "claude" ? "官方登录" : "ChatGPT 登录"], ["official", "官方 API Key"], ["openkey", "OpenKey"], ["custom", "自定义"]];
 const pvLast4 = p => p.mode !== "key" ? "" : p.key_missing ? '<span class="note">缺 key</span>' : `<span class="pvkm" title="${esc(p.key_masked || "")}">…${esc((p.key_masked || "").slice(-4))}</span>`;
 // ---------- 0.3.2：两张卡片「Codex 使用… / Claude Code 使用…」——选账号、贴 key、选默认模型、启用。模型和推理等级在 Codex / Claude Code 里随时切换 ----------
-const CC = {d: null, draft: {}, models: {}, busy: {}, out: {}, more: {}};
+const CC = {d: null, draft: {}, models: {}, ctx: {}, busy: {}, out: {}, more: {}};
 const CC_NAME = {codex: "Codex", claude: "Claude Code"};
 const CC_DEF = {codex: "默认（Codex 自己的 ChatGPT 登录）", claude: "默认（Claude Code 自己的 claude.ai 登录）"};
 const CC_EFF = [["", "不设（用客户端里选的）"], ["low", "低"], ["medium", "中"], ["high", "高"], ["xhigh", "超高"], ["max", "最高"]];
@@ -1845,10 +1846,12 @@ function ccDraft(cl){
 function ccProxyLine(cl){
   const v = CC.d[cl], p = CC.d.proxy || {};
   if (!v.enabled) return "";
-  const nm = esc(ccKindName(v.kind)), fix = v.drift ? ' <span class="tag warn" title="启用后配置文件被别的工具改过；停用时只拿掉我们写的那几项">配置被改过</span>' : "";
+  const nm = esc(ccKindName(v.kind)), fix = v.drift ? ` <span class="tag warn" title="${esc("启用后被别的工具改掉了：" + (v.drift_keys || []).join("、") + "。点「保存并重新启用」写回去；停用时只拿掉我们写的那几项")}">配置被改过</span>` : "";
   const st = !v.needs_proxy || p.running ? `<span class="tag ok">● 正在用</span> <span class="dim">${nm} · ${esc(v.model || "")}${v.needs_proxy ? " · 后台服务正常" : ""}</span>`
     : `<span class="tag warn">● 正在用 · 后台服务没在跑</span> <span class="dim">下次打开 ${CC_NAME[cl]} 时会自己拉起；也可以点「测试」</span>`;
-  return `<div class="ccst">${st}${fix}<span style="flex:1"></span><button class="pvmini" data-cct="${cl}">测试</button><button class="pvmini ghost" data-ccoff="${cl}">停用</button></div><div class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</div>`;
+  const ws = (v.warnings || []).length ? `<div class="ccwarn"><b>⚠ 这些设置还指着「${esc(ccKindName(v.kind))}」没有的模型</b>${v.warnings.map(w => `<div>${esc(w.label)}：<code>${esc(String(w.value))}</code></div>`).join("")}
+    <div class="ccwbtn"><button class="pvmini" data-ccfix="${cl}">一键改成 ${esc(v.model)}${v.warnings.some(w => w.fix === "absent") ? "（上下文长度改回自动）" : ""}</button><span class="dim">先备份，停用时放回原样</span></div></div>` : "";
+  return ws + `<div class="ccst">${st}${fix}<span style="flex:1"></span><button class="pvmini" data-cct="${cl}">测试</button><button class="pvmini ghost" data-ccoff="${cl}">停用</button></div><div class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</div>`;
 }
 const ccSel = (cl, f, cur, opts) => `<select data-ccf="${cl}:${f}" style="width:100%">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
 function ccModelField(cl, f, cur, ms, ph){
@@ -1904,6 +1907,8 @@ function ccRender(){
   $$("#ccBox [data-ccm]").forEach(b => b.onclick = () => { read(b.dataset.ccm); ccModels(b.dataset.ccm, false); });
   $$("#ccBox [data-ccon]").forEach(b => b.onclick = () => ccEnable(b.dataset.ccon, read(b.dataset.ccon)));
   $$("#ccBox [data-ccoff]").forEach(b => b.onclick = () => ccDisable(b.dataset.ccoff));
+  $$("#ccBox [data-ccfix]").forEach(b => b.onclick = async () => { const cl = b.dataset.ccfix; b.disabled = true;
+    try { const r = await rtApi("card-fixrefs", {client: cl}); doneOrQueued(r, `已改好 ${r.fixed || 0} 项（停用时放回原样）`); } catch(e){ toast("❌ " + e.message, 6000); } ccLoad(); });
   $$("#ccBox [data-cct]").forEach(b => b.onclick = async () => { const o = $("#ccOut-" + b.dataset.cct); o.innerHTML = '<div class="dim">测试中…</div>';
     const r = await rtApi("card-test", {client: b.dataset.cct}).catch(e => ({ok: false, reason: e.message}));
     const row = r.keys ? r.keys[0] || r : r;
@@ -1914,10 +1919,10 @@ async function ccModels(cl, quiet){
   const dr = ccDraft(cl), msg = $("#ccMsg-" + cl);
   if (msg) msg.textContent = "正在列出模型…";
   const r = await rtApi("card-models", {client: cl, kind: dr.kind, base_url: dr.base_url, protocol: dr.protocol, region: dr.region, secret: dr.secret}).catch(e => ({ok: false, reason: e.message}));
-  if (r.ok) { CC.models[cl + ":" + dr.kind] = r.models; if (!dr.model || !r.models.includes(dr.model)) dr.model = dr.model && quiet ? dr.model : (r.default || r.models[0] || dr.model);
+  if (r.ok) { CC.models[cl + ":" + dr.kind] = r.models; CC.ctx[cl + ":" + dr.kind] = r.ctx || {}; if (!dr.model || !r.models.includes(dr.model)) dr.model = dr.model && quiet ? dr.model : (r.default || r.models[0] || dr.model);
     if (cl === "claude" && !dr.small_model) dr.small_model = r.small || "";
     if (r.protocol && dr.kind === "custom" && (!dr.protocol || dr.protocol === "auto")) dr.protocol = "auto";
-    ccRender(); const m = $("#ccMsg-" + cl); if (m) m.textContent = `能用 ${r.models.length} 个模型（启用后在 ${CC_NAME[cl]} 的 /model 里都能选）`; }
+    if (r.catalog_updated) toast("✅ Codex 的模型列表已更新（新开的 Codex 窗口 / 会话生效）", 4000); ccRender(); const m = $("#ccMsg-" + cl); if (m) m.textContent = `能用 ${r.models.length} 个模型（启用后在 ${CC_NAME[cl]} 的 /model 里都能选）`; }
   else { ccRender(); const m = $("#ccMsg-" + cl); if (m) m.innerHTML = quiet ? "" : `<span class="err">${esc(r.reason || "列不出模型：可以直接手填模型名")}</span>`; }
 }
 async function ccEnable(cl, dr){
@@ -1927,9 +1932,9 @@ async function ccEnable(cl, dr){
   if (!dr.model) return msg.innerHTML = '<span class="err">先选默认模型（列不出来就手填模型名）</span>';
   msg.textContent = "启用中…";
   try {
-    const r = await rtApi("card-enable", Object.assign({client: cl, models: CC.models[cl + ":" + dr.kind] || undefined}, dr));
+    const r = await rtApi("card-enable", Object.assign({client: cl, models: CC.models[cl + ":" + dr.kind] || undefined, ctx: CC.ctx[cl + ":" + dr.kind] || undefined}, dr));
     CC.draft[cl] = null; CC.out[cl] = "";
-    if (doneOrQueued(r, r.deferred ? "" : `${CC_NAME[cl]} 已改用「${ccKindName(dr.kind)}」${cl === "codex" ? (dr.profile_only ? "（codex --profile cc-route）" : "：codex 和 Codex 桌面端新开的对话就用它") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
+    if (doneOrQueued(r, r.deferred ? "" : `${CC_NAME[cl]} 已改用「${ccKindName(dr.kind)}」${cl === "codex" ? (dr.profile_only ? "（codex --profile cc-route）" : "：重开 Codex 桌面端 / 新开 codex，模型选择器里就是这家的模型") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
   } catch(e){ msg.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
   ccLoad();
 }
