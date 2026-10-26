@@ -1368,10 +1368,27 @@ def overview() -> dict:
             "base_url": f"http://127.0.0.1:{d.get('port')}" if d.get("port") else ""}
 
 
+USAGE = """用法：cc-sessionsync route <命令>
+  serve [--port N]                 前台跑代理（桌面端开着时它自己会跑，不用这个）
+  status                           代理状态
+  list                             供应商列表（key 打码）
+  add --name 名字 --protocol anthropic|responses|chat [--base-url URL] [--model 上游名[=别名]]... [--key-env 环境变量名]...
+                                   加供应商；key 只从环境变量读（不要写在命令行里）
+  clients JSON                     设客户端映射，例如 '{"claude":{"slots":{"opus":"gpt"}},"codex":{"model":"opus"}}'
+  apply codex [--default] | apply claude [--session]
+  revert codex | revert claude
+  test 供应商id [模型]
+"""
+
+
 def main(argv: list[str]) -> int:
-    """cc-sessionsync route serve [--port N] | status"""
+    import argparse
     import sys
-    if argv[:1] == ["serve"]:
+    cmd = argv[0] if argv else ""
+    if cmd in ("", "-h", "--help", "help"):
+        print(USAGE)
+        return 0 if cmd else 2
+    if cmd == "serve":
         port = int(argv[argv.index("--port") + 1]) if "--port" in argv else None
         st = start(port)
         if not st["running"]:
@@ -1383,16 +1400,54 @@ def main(argv: list[str]) -> int:
                 time.sleep(3600)
         except KeyboardInterrupt:
             return 0
-    if argv[:1] == ["status"]:
+    if cmd == "status":
         s = status()
         print(json.dumps({k: s[k] for k in ("running", "port", "configured_port", "providers", "keys", "requests", "errors")}, ensure_ascii=False))
         return 0
-    if argv[:1] == ["apply"] and len(argv) > 1:
+    if cmd == "list":
+        for p in overview()["providers"]:
+            ks = ", ".join(k["masked"] or "(缺)" for k in p["keys"])
+            ms = ", ".join(e["name"] + (f"={e['alias']}" if e["alias"] else "") for e in p["models"]) or "（任意模型）"
+            print(f"{p['id']:<16} {PROTO_NAME[p['protocol']]:<24} {p['base_url']}  keys: {ks}  models: {ms}")
+        return 0
+    if cmd == "add":
+        ap = argparse.ArgumentParser(prog="cc-sessionsync route add")
+        ap.add_argument("--name", required=True)
+        ap.add_argument("--protocol", required=True, choices=PROTOCOLS)
+        ap.add_argument("--base-url", default="")
+        ap.add_argument("--model", action="append", default=[])
+        ap.add_argument("--key-env", action="append", default=[])
+        ap.add_argument("--prefix", default="")
+        a = ap.parse_args(argv[1:])
+        base = a.base_url or {"anthropic": PRESETS["anthropic"]["base_url"], "responses": PRESETS["openai"]["base_url"]}.get(a.protocol, "")
+        keys = []
+        for e in a.key_env:
+            v = os.environ.get(e)
+            if not v:
+                print(f"环境变量 {e} 是空的", file=sys.stderr)
+                return 2
+            keys.append({"secret": v})
+        models = [{"name": m.split("=", 1)[0], "alias": m.split("=", 1)[1] if "=" in m else ""} for m in a.model]
+        p = upsert_provider({"name": a.name, "protocol": a.protocol, "base_url": base, "models": models, "prefix": a.prefix}, keys)
+        print(json.dumps({"id": p["id"], "keys": [k["masked"] for k in p["keys"]]}, ensure_ascii=False))
+        return 0
+    if cmd == "clients" and len(argv) > 1:
+        d = load()
+        c = json.loads(argv[1])
+        merged = {"claude": c.get("claude") or d["clients"]["claude"], "codex": {**d["clients"]["codex"], **(c.get("codex") or {})},
+                  **{k: v for k, v in c.items() if k not in ("claude", "codex")}}
+        print(json.dumps(set_clients(merged), ensure_ascii=False))
+        return 0
+    if cmd == "apply" and len(argv) > 1:
         r = apply_codex("--default" in argv) if argv[1] == "codex" else apply_claude("session" if "--session" in argv else "global")
         print(json.dumps(r, ensure_ascii=False))
         return 0
-    if argv[:1] == ["revert"] and len(argv) > 1:
+    if cmd == "revert" and len(argv) > 1:
         print(json.dumps(revert_codex() if argv[1] == "codex" else revert_claude(), ensure_ascii=False))
         return 0
-    print("用法：route serve [--port N] | status | apply codex [--default] | apply claude [--session] | revert codex|claude", file=sys.stderr)
+    if cmd == "test" and len(argv) > 1:
+        r = test_provider(argv[1], argv[2] if len(argv) > 2 else None)
+        print(json.dumps(r, ensure_ascii=False, indent=1))
+        return 0 if r["ok"] else 1
+    print(USAGE, file=sys.stderr)
     return 2
