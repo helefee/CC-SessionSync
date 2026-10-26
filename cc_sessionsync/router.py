@@ -1005,7 +1005,7 @@ def login_get() -> bool:
 
 def login_set(on: bool) -> bool:
     """登录时自动起后台代理（只有 Windows；别的系统返回 False，靠取口令命令按需拉起）。"""
-    if os.name != "nt":
+    if os.name != "nt" or os.environ.get("CC_SESSIONSYNC_NO_LOGIN_ITEM"):
         return False
     import winreg
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE) as k:
