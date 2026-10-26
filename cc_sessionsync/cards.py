@@ -13,14 +13,16 @@ import json
 import re
 from pathlib import Path
 
-from . import keystore, paths, router
+from . import keystore, paths, presets, router
 
 CLIENTS = ("codex", "claude")
-KINDS = {"codex": ("default", "claude", "openai", "custom"), "claude": ("default", "openai", "claude", "custom")}
-KIND_NAME = {"default": "默认", "claude": "Claude API Key", "openai": "OpenAI API Key", "custom": "自定义"}
+_ALL = ("default",) + tuple(x["id"] for x in presets.PRESETS) + ("custom",)
+KINDS = {"codex": _ALL, "claude": _ALL}       # 两张卡能选的一样（0.3.2）
+KIND_NAME = dict({"default": "默认（客户端自己的登录）", "custom": "自定义"}, **{x["id"]: x["name"] for x in presets.PRESETS})
+LEGACY = {"claude": "anthropic"}             # 0.3.1 的卡片 kind
 CLIENT_NAME = {"codex": "Codex", "claude": "Claude Code"}
 OFFICIAL = {"claude": "https://api.anthropic.com", "openai": "https://api.openai.com/v1"}
-DEF_MODEL = {"claude": ("claude-opus-5-5", "claude-haiku-5-5"), "openai": ("gpt-5.5", "gpt-5.4-mini")}
+DEF_MODEL = {"anthropic": ("claude-opus-5-5", "claude-haiku-5-5"), "openai": ("gpt-5.5", "gpt-5.4-mini")}
 EFFORTS = ("", "none", "minimal", "low", "medium", "high", "xhigh", "max")
 _ABSENT = {"__absent__": True}
 
@@ -29,22 +31,25 @@ _ABSENT = {"__absent__": True}
 
 def _blank(client: str) -> dict:
     return {"kind": "default", "base_url": "", "protocol": "anthropic" if client == "codex" else "responses", "model": "", "small_model": "", "sonnet_model": "",
-            "effort": "", "profile_only": False, "enabled": False, "models": []}
+            "effort": "", "region": "", "profile_only": False, "enabled": False, "models": []}
 
 
 def get(client: str, d: dict | None = None) -> dict:
     d = d or router.cfg()
     c = dict(_blank(client), **((d.get("cards") or {}).get(client) or {}))
+    c["kind"] = LEGACY.get(c["kind"], c["kind"])
+    if c["kind"] not in KINDS[client]:
+        c["kind"] = "default"
     return c
 
 
-def proto(c: dict) -> str | None:
-    if c["kind"] == "claude":
-        return "anthropic"
-    if c["kind"] == "openai":
-        return "responses"
-    if c["kind"] == "custom":
+def proto(c: dict, client: str | None = None) -> str | None:
+    """上游用哪种协议。预设：客户端自己的协议优先（原样转发），没有再挑能转换的。"""
+    k = c["kind"]
+    if k == "custom":
         return c.get("protocol") or None
+    if presets.get(k):
+        return presets.pick(k, client or c.get("_client") or "codex", c.get("region"))[0]
     return None
 
 
@@ -52,9 +57,17 @@ def native(client: str) -> str:
     return "responses" if client == "codex" else "anthropic"
 
 
+def direct(client: str, c: dict) -> bool:
+    """不经后台服务、客户端直接连上游：Codex + OpenAI key；Claude Code + Claude key / 自定义 Anthropic 接口。
+    其它都经后台服务：要转换协议，或者要给 Codex 一份模型目录（/model 列表、推理等级）、给 Claude Code 换模型名。"""
+    if client == "codex":
+        return c["kind"] == "openai"
+    return c["kind"] == "anthropic" or (c["kind"] == "custom" and proto(c, client) == "anthropic")
+
+
 def needs(client: str, c: dict) -> bool:
-    """这张卡要不要后台代理做协议转换。"""
-    return c["kind"] != "default" and proto(c) != native(client)
+    """这张卡要不要后台服务。"""
+    return c["kind"] != "default" and not direct(client, c)
 
 
 def needs_proxy(d: dict | None = None) -> bool:
@@ -63,13 +76,18 @@ def needs_proxy(d: dict | None = None) -> bool:
 
 
 def key_name(client: str, kind: str) -> str:
+    kind = {"anthropic": "claude"}.get(kind, kind)          # 0.3.1 存的名字不变（升级后 key 还在）
     return keystore.check_name(f"card-{client}-{kind}")
 
 
-def upstream_url(c: dict) -> str:
+def upstream_url(c: dict, client: str | None = None) -> str:
     if c["kind"] == "custom":
         return c.get("base_url") or ""
-    return c.get("base_url") or OFFICIAL.get(c["kind"], "")
+    if c.get("base_url"):                                   # 「更多 → 中转地址」
+        return c["base_url"]
+    if presets.get(c["kind"]):
+        return presets.pick(c["kind"], client or c.get("_client") or "codex", c.get("region"))[1]
+    return ""
 
 
 def _mask(name: str) -> str | None:
@@ -90,13 +108,24 @@ def latest(models: list, family: str) -> str | None:
     return max(xs, key=_ver) if xs else None
 
 
+SKIP = re.compile(r"embed|tts|whisper|dall-e|image|audio|moderation|rerank|transcribe|realtime|speech|ocr|vision-preview|search-preview", re.I)
+
+
 def defaults_for(kind: str, models: list | None = None) -> tuple:
-    models = models or []
-    if kind == "claude":
-        return (latest(models, "opus") or DEF_MODEL["claude"][0], latest(models, "haiku") or DEF_MODEL["claude"][1])
+    models = [m for m in (models or []) if not SKIP.search(m)]
+    kind = LEGACY.get(kind, kind)
+    if kind == "anthropic":
+        return (latest(models, "opus") or DEF_MODEL["anthropic"][0], latest(models, "haiku") or DEF_MODEL["anthropic"][1])
     if kind == "openai":
         big = [m for m in models if m.startswith("gpt-") and "mini" not in m and "nano" not in m and not re.search(r"audio|realtime|image|search|tts|transcribe", m)]
         return (max(big, key=_ver) if big else DEF_MODEL["openai"][0], latest([m for m in models if m.startswith("gpt-")], "mini") or DEF_MODEL["openai"][1])
+    pr = presets.get(kind)
+    if pr and models:
+        big, small = pr["default"]
+        cand = [m for m in models if big.lower() in m.lower() and not (small and small.lower() in m.lower())] or models
+        b = max(cand, key=_ver) if big else models[0]
+        sm = latest(models, small.lower()) if small else None
+        return b, sm or ""
     return ((models or [""])[0], "")
 
 
@@ -107,12 +136,19 @@ def save_card(client: str, b: dict) -> dict:
     with router._lock:
         d = router.load()
         c = get(client, d)
-        kind = b.get("kind", c["kind"])
+        kind = LEGACY.get(b.get("kind", c["kind"]), b.get("kind", c["kind"]))
         if kind not in KINDS[client]:
             raise ValueError("不支持这个选项")
+        if kind != c["kind"]:
+            c.update(model="", small_model="", sonnet_model="", models=[], base_url="", region="")
         c["kind"] = kind
+        if "region" in b and presets.get(kind):
+            r = str(b.get("region") or "")
+            c["region"] = r if r in presets.get(kind)["regions"] else ""
         if "base_url" in b:
             u = str(b.get("base_url") or "").strip()
+            if u and kind == "custom" and b.get("protocol") in (None, "", "auto"):
+                c["protocol"], u = presets.detect(u)        # 认地址：…/anthropic → Anthropic；Gemini 原生地址 → 它的 OpenAI 兼容接口；其它 → Chat
             c["base_url"] = router._clean_url(u) if u else ""
         if b.get("protocol") in router.PROTOCOLS:
             c["protocol"] = b["protocol"]
@@ -137,6 +173,8 @@ def save_card(client: str, b: dict) -> dict:
             keystore.put(key_name(client, kind), sec, f"CC Session Sync · {CLIENT_NAME[client]} 使用 {KIND_NAME[kind]}")
         if kind != "default" and not c["model"]:
             c["model"], small = defaults_for(kind if kind != "custom" else "", c["models"])
+            if not c["model"] and kind in DEF_MODEL:
+                c["model"], small = DEF_MODEL[kind]
             c["small_model"] = c["small_model"] or small
         d.setdefault("cards", {})[client] = c
         router.save(d)
@@ -146,17 +184,19 @@ def save_card(client: str, b: dict) -> dict:
 def provider(client: str, c: dict, model: str | None = None) -> dict:
     """卡片 → 路由内部用的供应商（不存进供应商列表，只在代理里用）。"""
     kind = c["kind"]
-    p = router.clean_provider({"id": f"card-{client}", "name": f"{CLIENT_NAME[client]} · {KIND_NAME[kind]}", "protocol": proto(c) or "anthropic",
-                               "base_url": upstream_url(c) or "http://invalid.local", "keys": [{"id": "k1", "name": key_name(client, kind)}],
-                               "effort": "", "thinking": thinking_mode(c, model)}, set())
+    pr = proto(c, client) or "anthropic"
+    p = router.clean_provider({"id": f"card-{client}", "name": f"{CLIENT_NAME[client]} · {KIND_NAME[kind]}", "protocol": pr,
+                               "base_url": upstream_url(c, client) or "http://invalid.local", "keys": [{"id": "k1", "name": key_name(client, kind)}],
+                               "effort": "", "thinking": thinking_mode(c, model, client)}, set())
     p["card"] = client
+    p["style"] = presets.get(kind)["style"] if presets.get(kind) else ("anthropic" if pr == "anthropic" else "generic")
     return p
 
 
-def thinking_mode(c: dict, model: str | None = None) -> str:
+def thinking_mode(c: dict, model: str | None = None, client: str | None = None) -> str:
     """Claude 的思考参数：新模型（Opus / Sonnet 4.6 起、Haiku 5 起）用 adaptive + effort；老模型用 budget_tokens。"""
     m = (model or c.get("model") or "").lower()
-    if proto(c) != "anthropic" or not m.startswith("claude-"):
+    if proto(c, client) != "anthropic" or not m.startswith("claude-"):
         return "adaptive"
     v = _ver(m)[0]
     v = (v + (0, 0))[:2]
@@ -169,7 +209,7 @@ def proxy_target(client: str, want: str, d: dict | None = None):
     c = get(client, d)
     if not (c["enabled"] and needs(client, c)):
         return None
-    if not upstream_url(c) or not keystore.get(key_name(client, c["kind"])):
+    if not upstream_url(c, client) or not keystore.get(key_name(client, c["kind"])):
         return []
     w = (want or "").strip()
     if client == "claude":
@@ -183,16 +223,15 @@ def proxy_target(client: str, want: str, d: dict | None = None):
         else:
             m = c["model"]
     else:
-        ok = w and (w == c["model"] or w in (c.get("models") or []) or
-                    (proto(c) == "anthropic" and w.startswith("claude-")) or (proto(c) != "anthropic" and not w.startswith("claude-")))
-        m = w if ok else c["model"]                 # Codex 桌面端可能带着自己的 gpt-… 来：换成卡片的模型
+        ok = w and (w == c["model"] or w in (c.get("models") or []) or w not in CODEX_BUILTIN)
+        m = w if ok else c["model"]                 # Codex 桌面端可能带着自己内置的 gpt-… 来：换成卡片的默认模型
     return [(provider(client, c, m or w), m or w, None)] if (m or w) else []
 
 
 def not_ready_msg(client: str, d: dict | None = None) -> str:
     c = get(client, d)
-    if not upstream_url(c):
-        return f"CC Session Sync：「{CLIENT_NAME[client]} 使用…」卡片没填 Base URL。打开 CC Session Sync → 供应商 补上，或者点「停用」。"
+    if not upstream_url(c, client):
+        return f"CC Session Sync：「{CLIENT_NAME[client]} 使用…」卡片没填地址。打开 CC Session Sync → 供应商 补上，或者点「停用」。"
     return f"CC Session Sync：「{CLIENT_NAME[client]} 使用 {KIND_NAME[c['kind']]}」没有可用的 key（凭据管理器里找不到）。打开 CC Session Sync → 供应商 重新贴一次 key，或者点「停用」。"
 
 
@@ -327,7 +366,7 @@ def _codex_block(c: dict) -> tuple:
     keyn = router.TOKEN_KEY if via else key_name("codex", c["kind"])
     cmd = keystore.helper_cmd(keyn)
     t = {"name": "CC Session Sync · " + KIND_NAME[c["kind"]],
-         "base_url": (router.base_url() + "/v1") if via else upstream_url(c),
+         "base_url": (router.base_url() + "/v1") if via else upstream_url(c, "codex"),
          "wire_api": "responses",
          "auth": {"command": cmd[0], "args": cmd[1:], "timeout_ms": 15000, "refresh_interval_ms": 0},
          "request_max_retries": 1 if via else 4}
@@ -350,7 +389,7 @@ def _claude_edits(c: dict) -> list:
                 (["env", "ANTHROPIC_API_KEY"], _ABSENT)] + eff
     ed = [(["apiKeyHelper"], keystore.helper_line(key_name("claude", c["kind"]))),
           (["env", "ANTHROPIC_AUTH_TOKEN"], _ABSENT), (["env", "ANTHROPIC_API_KEY"], _ABSENT)]
-    url = c.get("base_url") if c["kind"] == "claude" else upstream_url(c)
+    url = c.get("base_url") if c["kind"] == "anthropic" else upstream_url(c, "claude")
     ed.append((["env", "ANTHROPIC_BASE_URL"], url) if url else (["env", "ANTHROPIC_BASE_URL"], _ABSENT))
     return ed + eff
 
@@ -358,10 +397,10 @@ def _claude_edits(c: dict) -> list:
 def check(client: str, c: dict, d: dict):
     if c["kind"] == "default":
         raise ValueError("「默认」不用启用：点「停用」回到客户端自己的登录")
-    if not upstream_url(c):
-        raise ValueError("自定义要填 Base URL")
-    if c["kind"] == "custom" and proto(c) not in router.PROTOCOLS:
-        raise ValueError("自定义要选接口协议")
+    if not upstream_url(c, client):
+        raise ValueError("自定义要填地址")
+    if c["kind"] == "custom" and proto(c, client) not in router.PROTOCOLS:
+        raise ValueError("自定义要选接口类型")
     if not keystore.get(key_name(client, c["kind"])):
         raise ValueError("先贴 key")
     if not c["model"]:
@@ -477,15 +516,15 @@ def pretty(m: str) -> str:
 
 def catalog_models(c: dict) -> list:
     """卡片的默认模型在最前；然后是拉到的模型列表（Claude：每个系列按新到旧），没拉过就用常见的几个。"""
-    ms = [m for m in (c.get("models") or []) if isinstance(m, str)]
-    if proto(c) == "anthropic":
+    ms = [m for m in (c.get("models") or []) if isinstance(m, str) and not SKIP.search(m)]
+    if c["kind"] == "anthropic" or (c["kind"] == "custom" and proto(c, "codex") == "anthropic"):
         ms = [m for m in ms if m.startswith("claude-")] or ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]
         ms.sort(key=lambda m: (0 if "opus" in m else 1 if "sonnet" in m else 2 if "haiku" in m else 3, tuple(-x for x in _ver(m)[0]), not _ver(m)[1]))
     out = []
     for m in [c.get("model")] + ms:
         if m and m not in out:
             out.append(m)
-    return out[:40]
+    return out[:80]
 
 
 def _base_prompt() -> str:
@@ -531,7 +570,7 @@ def view(client: str, d: dict | None = None, live: dict | None = None) -> dict:
     c = get(client, d)
     rec = (d.get("cards_applied") or {}).get(client) or {}
     out = dict(c, client=client, kind_name=KIND_NAME[c["kind"]], needs_proxy=needs(client, c) if c["kind"] != "default" else False,
-               upstream=upstream_url(c), keys={k: _mask(key_name(client, k)) for k in KINDS[client] if k != "default"},
+               upstream=upstream_url(c, client), protocol_used=proto(c, client), keys={k: _mask(key_name(client, k)) for k in KINDS[client] if k != "default"},
                files=[r["file"] for r in rec.values()], drift=False)
     for r in rec.values():
         if router._sha(router._read(Path(r["file"]))) != r.get("sha"):
@@ -543,7 +582,7 @@ def overview() -> dict:
     d = router.load()
     need = needs_proxy(d)
     st = router.live_status() if need or d.get("applied") else {"running": False}
-    return {"codex": view("codex", d), "claude": view("claude", d),
+    return {"codex": view("codex", d), "claude": view("claude", d), "presets": presets.view(),
             "proxy": {"needed": need, "running": bool(st.get("running")), "port": st.get("port") or d.get("port"), "where": st.get("where"),
                       "login": router.login_get(), "autostart": d.get("autostart", True), "requests": st.get("requests", 0),
                       "errors": st.get("errors", 0), "errors_recent": [x for x in st.get("errors_recent") or [] if str(x.get("provider") or "").startswith("card-") or not x.get("provider")][:5]}}
@@ -551,14 +590,23 @@ def overview() -> dict:
 
 def fetch_models(client: str, b: dict) -> dict:
     """「拉取模型」：用刚贴的 key（没贴就用已存的）。"""
-    kind = b.get("kind") or get(client)["kind"]
-    c = dict(get(client), **{k: v for k, v in b.items() if k in ("kind", "base_url", "protocol")})
+    kind = LEGACY.get(b.get("kind") or get(client)["kind"], b.get("kind") or get(client)["kind"])
+    c = dict(get(client), **{k: v for k, v in b.items() if k in ("kind", "base_url", "protocol", "region")})
     c["kind"] = kind
+    if kind == "custom" and c.get("base_url") and b.get("protocol") in (None, "", "auto"):
+        c["protocol"], c["base_url"] = presets.detect(c["base_url"])
     sec = (b.get("secret") or "").strip() or keystore.get(key_name(client, kind)) or ""
-    r = router.list_models(draft={"protocol": proto(c) or "chat", "base_url": upstream_url(c), "secret": sec})
+    if presets.get(kind) and not b.get("base_url"):
+        pr, url = presets.models_endpoint(kind, c.get("region"))    # 列表从它家的 OpenAI 兼容 /models 拉（Claude Code 走 Anthropic 接口时也一样）
+    else:
+        pr, url = proto(c, client) or "chat", upstream_url(c, client)
+    r = router.list_models(draft={"protocol": pr, "base_url": url, "secret": sec})
     if r.get("ok"):
+        r["models"] = [m for m in r["models"] if not SKIP.search(m)]
         r["default"], r["small"] = defaults_for(kind, r["models"])
-        if kind == "claude":
+        if kind == "custom":
+            r["protocol"], r["base_url"] = c.get("protocol"), c.get("base_url")
+        if kind == "anthropic":
             r["models"] = sorted(r["models"], key=lambda m: (0 if "opus" in m else 1 if "sonnet" in m else 2 if "haiku" in m else 3, tuple(-x for x in _ver(m)[0])))
     return r
 

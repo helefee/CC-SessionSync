@@ -49,7 +49,7 @@ router.save(dict(router.load(), port=free()))
 
 # ================================================================ 1. Codex 使用 Claude API Key（中转站 Base URL = 假 Anthropic）
 v = cards.save_card("codex", {"kind": "claude", "secret": "sk-ant-card-good", "base_url": MB, "models": ["claude-haiku-5-5", "claude-opus-4-1-20250805", "claude-opus-4-5", "claude-opus-5-5", "claude-sonnet-5-5"]})
-ok(v["model"] == "claude-opus-5-5" and v["needs_proxy"] and v["keys"]["claude"] and "card-good" not in json.dumps(v), f"saved: default model = newest Opus ({v['model']}), key masked")
+ok(v["model"] == "claude-opus-5-5" and v["needs_proxy"] and v["keys"]["anthropic"] and "card-good" not in json.dumps(v), f"saved: default model = newest Opus ({v['model']}), key masked")
 ok("sk-ant-card-good" not in (T / "ss" / "route.json").read_text(encoding="utf-8"), "route.json has no plaintext key")
 ok(cards.latest(["claude-opus-4-1-20250805", "claude-opus-4-5", "claude-opus-5-5", "claude-opus-5"], "opus") == "claude-opus-5-5", "latest(): picks newest opus")
 ok(not router.health(), "proxy not running before 启用")
@@ -212,7 +212,7 @@ cards.save_card("claude", {"kind": "custom", "protocol": "chat", "base_url": ""}
 try:
     cards.run("claude", "enable"); ok(False, "custom without url accepted")
 except ValueError as e:
-    ok("Base URL" in str(e), "custom without Base URL → error")
+    ok("地址" in str(e), "custom without Base URL → error")
 
 allt = "".join(f.read_text(encoding="utf-8", errors="replace") for f in (T / "ss").rglob("*") if f.is_file() and f.name != "keys.json" and f.suffix in (".json", ".jsonl", ".log", ".toml", ".txt"))
 allt += CFG.read_text(encoding="utf-8") + SET.read_text(encoding="utf-8")

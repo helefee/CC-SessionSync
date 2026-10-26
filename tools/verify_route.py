@@ -161,7 +161,8 @@ def main() -> int:
         sv.terminate()
         sv.wait(10)
         procs.remove(sv)
-        r = ccss("route", "card", "codex", "set", json.dumps({"kind": "claude", "base_url": U, "model": "claude-mock-1", "effort": "medium", "key_env": "UP_ANTH"}))
+        r = ccss("route", "card", "codex", "set", json.dumps({"kind": "claude", "base_url": U, "model": "claude-opus-5-5", "key_env": "UP_ANTH",
+                                                                  "models": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]}))
         ok(r.returncode == 0, "card codex set (Claude API key via env, relay base URL = mock)")
         r = ccss("route", "card", "codex", "enable")
         print(r.stdout[-400:])
@@ -179,12 +180,33 @@ def main() -> int:
         ok(c.returncode == 0 and "ROUTE-FINAL" in c.stdout + c.stderr and "ROUTE-TOOL-OUT" in c.stdout + c.stderr,
            f"plain `codex exec` (no --profile): proxy auto-started by the token helper, tool round-trip via Anthropic ({c.returncode})")
         ok(lg and all(x["path"] == "/v1/messages" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg)
-           and all(x["body"].get("model") == "claude-mock-1" for x in lg), f"upstream: Anthropic Messages, card key, card model ({len(lg)} requests)")
+           and all(x["body"].get("model") == "claude-opus-5-5" for x in lg), f"upstream: Anthropic Messages, card key, card model ({len(lg)} requests)")
+        ok("model_reasoning_effort" not in cfg, "no default effort picked → config.toml has no model_reasoning_effort (Codex decides)")
+
+        # Codex 自己切推理等级 / 模型（-c model_reasoning_effort=…、-m …，和 /model 里选是一回事）
+        dm = subprocess.run([codex, "debug", "models"], cwd=str(proj), env=env, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+        try:
+            listed = [m["slug"] for m in json.loads(dm.stdout)["models"] if m.get("visibility") == "list"]
+        except Exception:
+            listed = []
+        print("codex /model list:", listed)
+        ok(listed[:3] == ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"], "codex model catalog (what /model shows) = the card's Claude models, built-in GPT hidden")
+        for args, want_model, want in ((["-c", "model_reasoning_effort=high"], "claude-opus-5-5", ("adaptive", "high")),
+                                        (["-m", "claude-sonnet-5-5", "-c", "model_reasoning_effort=low"], "claude-sonnet-5-5", ("adaptive", "low")),
+                                        (["-m", "claude-haiku-5-5", "-c", "model_reasoning_effort=none"], "claude-haiku-5-5", None)):
+            n0 = len(mlog())
+            c = subprocess.run([codex, "exec", *args, "--skip-git-repo-check", "say hi"], cwd=str(proj), env=env, capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=240)
+            lg = mlog()[n0:]
+            b = lg[-1]["body"] if lg else {}
+            got = ((b.get("thinking") or {}).get("type"), (b.get("output_config") or {}).get("effort")) if b.get("thinking") else None
+            ok(c.returncode == 0 and b.get("model") == want_model and got == want, f"codex exec {' '.join(args)} → {b.get('model')} thinking={got}")
         sh = json.loads(ccss("route", "card", "codex", "show").stdout)
         ok(sh["enabled"] and sh["proxy_running"] and (sh["login_item"] or os.name != "nt"), f"card show: enabled, proxy running, login item {sh['login_item']}")
 
         # ---- Claude Code 使用 OpenAI API Key
-        r = ccss("route", "card", "claude", "set", json.dumps({"kind": "openai", "base_url": U + "/v1", "model": "gpt-mock", "small_model": "gpt-mock", "key_env": "UP_OAI"}))
+        r = ccss("route", "card", "claude", "set", json.dumps({"kind": "openai", "base_url": U + "/v1", "model": "gpt-mock", "small_model": "gpt-mock-mini",
+                                                                   "sonnet_model": "gpt-mock-s", "key_env": "UP_OAI"}))
         r = ccss("route", "card", "claude", "enable")
         ok(r.returncode == 0 and json.loads(r.stdout)["proxy"], "card claude (OpenAI key) enable")
         n0 = len(mlog())
@@ -194,7 +216,16 @@ def main() -> int:
         print(c.stdout[-600:], c.stderr[-1200:])
         ok(c.returncode == 0 and "ROUTE-FINAL: ROUTE-TOOL-OUT" in c.stdout, f"claude -p with the OpenAI-key card: Bash tool round-trip ({c.returncode})")
         ok(lg and all(x["path"] == "/v1/responses" and x["key_ok"] for x in lg) and any(x["kind"] == "tool" for x in lg)
-           and all(x["body"].get("model") == "gpt-mock" for x in lg), "upstream: OpenAI Responses, card key, card model")
+           and any(x["body"].get("model") == "gpt-mock" for x in lg), f"upstream: OpenAI Responses, card key, card model {[x['body'].get('model') for x in lg]}")
+        for slot, want in (("sonnet", "gpt-mock-s"), ("haiku", "gpt-mock-mini"), ("gpt-mock-direct", "gpt-mock-direct")):
+            n0 = len(mlog())
+            c = subprocess.run([claude, "-p", "say hi", "--model", slot], cwd=str(proj), env=dict(env, CLAUDE_CODE_EFFORT_LEVEL="high"),
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=240)
+            lg = [x for x in mlog()[n0:] if x["path"] == "/v1/responses"]
+            main = [x for x in lg if x["body"].get("model") == want]
+            eff = [(x["body"].get("reasoning") or {}).get("effort") for x in main]
+            print(f"claude --model {slot}:", [x["body"].get("model") for x in lg], eff)
+            ok(c.returncode == 0 and main and (slot == "gpt-mock-direct" or "high" in eff), f"claude -p --model {slot} → {want} (effort {eff})")
 
         # ---- 停用：字节还原
         r1, r2 = ccss("route", "card", "codex", "disable"), ccss("route", "card", "claude", "disable")
