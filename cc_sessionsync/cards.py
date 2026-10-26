@@ -75,9 +75,30 @@ def needs_proxy(d: dict | None = None) -> bool:
     return any(get(x, d)["enabled"] and needs(x, get(x, d)) for x in CLIENTS)
 
 
+def _key_names(kind: str) -> list:
+    """一个服务商的 key 可能存在的名字：0.3.4 起两边共用 prov-<id>；之前每张卡各存一份 card-<client>-<id>。"""
+    k = {"anthropic": "claude"}.get(kind, kind)              # 0.3.1 存的名字不变（升级后 key 还在）
+    return [keystore.check_name(f"prov-{k}")] + [keystore.check_name(f"card-{cl}-{k}") for cl in CLIENTS]
+
+
 def key_name(client: str, kind: str) -> str:
-    kind = {"anthropic": "claude"}.get(kind, kind)          # 0.3.1 存的名字不变（升级后 key 还在）
-    return keystore.check_name(f"card-{client}-{kind}")
+    """这张卡用哪个 key：共用的那份优先，然后是自己卡片以前存的，再是另一张卡存的（贴一次两边都能用）。"""
+    names = _key_names(kind)
+    own = keystore.check_name(f"card-{client}-{({'anthropic': 'claude'}.get(kind, kind))}")
+    for n in [names[0], own] + names[1:]:
+        if keystore.get(n):
+            return n
+    return names[0]
+
+
+def put_key(kind: str, sec: str):
+    """存 key：写共用的 prov-<id>；以前存过的旧名字也一起更新（已经写进配置的 apiKeyHelper 还指着它们）。"""
+    names = _key_names(kind)
+    label = f"CC Session Sync · 服务商 {KIND_NAME.get(kind, kind)}"
+    keystore.put(names[0], sec, label)
+    for n in names[1:]:
+        if keystore.get(n):
+            keystore.put(n, sec, label)
 
 
 def upstream_url(c: dict, client: str | None = None) -> str:
@@ -172,13 +193,15 @@ def save_card(client: str, b: dict) -> dict:
         if sec and kind != "default":
             if any(ch in sec for ch in "\r\n \t"):
                 raise ValueError("key 里不能有空格或换行")
-            keystore.put(key_name(client, kind), sec, f"CC Session Sync · {CLIENT_NAME[client]} 使用 {KIND_NAME[kind]}")
+            put_key(kind, sec)
         if kind != "default" and not c["model"]:
             c["model"], small = defaults_for(kind if kind != "custom" else "", c["models"])
             if not c["model"] and kind in DEF_MODEL:
                 c["model"], small = DEF_MODEL[kind]
             c["small_model"] = c["small_model"] or small
         d.setdefault("cards", {})[client] = c
+        if kind != "default":                               # 服务商设置两张卡共用（「服务商」页里也能直接改）
+            _prov_merge(d, kind, {f: c.get(f) for f in PROV_FIELDS if f in b or f in ("models", "ctx")} if b else {})
         router.save(d)
     return view(client)
 
@@ -847,3 +870,145 @@ def test(client: str) -> dict:
     if not router.ensure_running():
         return {"ok": False, "reason": "后台转换没在跑，也拉不起来（看「诊断自检」）"}
     return router.test_via_proxy(client, c["model"])
+
+
+# ================================================================ 服务商（0.3.4：配一次，两个 Agent 都能用）
+
+PROV_FIELDS = ("region", "base_url", "protocol", "models", "ctx")
+
+
+def _prov_merge(d: dict, kind: str, vals: dict):
+    pv = d.setdefault("provs", {}).setdefault(kind, {})
+    for f, v in vals.items():
+        if f in ("models", "ctx") and not v:
+            continue                                         # 空列表不覆盖已经拉到的
+        if f == "protocol" and kind != "custom":
+            continue
+        pv[f] = v
+
+
+def prov_get(kind: str, d: dict | None = None) -> dict:
+    """服务商的设置：自己存的优先；老版本只存在卡片里的，从卡片里拿。"""
+    d = d or router.load()
+    pv = dict((d.get("provs") or {}).get(kind) or {})
+    for cl in CLIENTS:
+        c = get(cl, d)
+        if c["kind"] == kind:
+            for f in PROV_FIELDS:
+                if not pv.get(f) and c.get(f) and not (f == "protocol" and kind != "custom"):
+                    pv[f] = c[f]
+    return {"region": pv.get("region") or "", "base_url": pv.get("base_url") or "", "protocol": pv.get("protocol") or "",
+            "models": list(pv.get("models") or []), "ctx": dict(pv.get("ctx") or {})}
+
+
+def _host(u: str) -> str:
+    m = re.match(r"^[a-z]+://([^/]+)", u or "")
+    return m.group(1) if m else ""
+
+
+def prov_view(kind: str, d: dict | None = None) -> dict:
+    d = d or router.load()
+    pv = prov_get(kind, d)
+    pre = presets.get(kind)
+    fake = {"kind": kind, "region": pv["region"], "base_url": pv["base_url"], "protocol": pv["protocol"] or "chat", "ctx": pv["ctx"]}
+    n = key_name("codex", kind)
+    url = pv["base_url"] or (presets.region_of(pre, pv["region"]).get(pre["models"]) or next(iter(v for k, v in presets.region_of(pre, pv["region"]).items() if not k.startswith("_"))) if pre else "")
+    used = [cl for cl in CLIENTS if get(cl, d)["enabled"] and get(cl, d)["kind"] == kind]
+    return dict(pv, id=kind, name=KIND_NAME[kind], vendor=(pre or {}).get("vendor", ""), host=_host(url), relay=bool(pre and pv["base_url"]),
+                key=_mask(n), key_hint=(pre or {}).get("key", "API Key"), src=(pre or {}).get("src", ""),
+                regions=[{"id": k, "label": v.get("_label") or ""} for k, v in pre["regions"].items()] if pre else [],
+                labels={m: pretty(m) for m in pv["models"]}, levels={m: levels_for(fake, m) for m in pv["models"]},
+                default=defaults_for(kind if kind != "custom" else "", pv["models"])[0] if pv["models"] else "", used_by=used)
+
+
+def prov_list() -> dict:
+    d = router.load()
+    kinds = [p["id"] for p in presets.PRESETS] + ["custom"]
+    return {"providers": [prov_view(k, d) for k in kinds], "cards": {cl: view(cl, d) for cl in CLIENTS}}
+
+
+def prov_save(b: dict) -> dict:
+    kind = LEGACY.get(str(b.get("kind") or ""), str(b.get("kind") or ""))
+    if kind not in _ALL or kind == "default":
+        raise ValueError("不支持这个服务商")
+    sec = (b.get("secret") or "").strip()
+    if sec and any(ch in sec for ch in "\r\n \t"):
+        raise ValueError("key 里不能有空格或换行")
+    vals = {}
+    if "region" in b and presets.get(kind):
+        r = str(b.get("region") or "")
+        vals["region"] = r if r in presets.get(kind)["regions"] else ""
+    proto_v = b.get("protocol") if b.get("protocol") in router.PROTOCOLS else None
+    if "base_url" in b:
+        u = str(b.get("base_url") or "").strip()
+        if u and kind == "custom" and not proto_v:
+            proto_v, u = presets.detect(u)
+        vals["base_url"] = router._clean_url(u) if u else ""
+    if kind == "custom":
+        if not (vals.get("base_url") or prov_get(kind)["base_url"]):
+            raise ValueError("自定义要填地址")
+        if proto_v:
+            vals["protocol"] = proto_v
+    if isinstance(b.get("models"), list):
+        vals["models"] = [str(x) for x in b["models"] if isinstance(x, str) and not SKIP.search(x)][:300]
+    if isinstance(b.get("ctx"), dict):
+        vals["ctx"] = {str(k): int(v) for k, v in b["ctx"].items() if isinstance(v, (int, float)) and 1000 <= v <= 100_000_000}
+    if not sec and not keystore.get(key_name("codex", kind)):
+        raise ValueError("先贴 key")
+    if sec:
+        put_key(kind, sec)
+    with router._lock:
+        d = router.load()
+        _prov_merge(d, kind, vals)
+        router.save(d)
+    return prov_view(kind)
+
+
+def prov_models(b: dict) -> dict:
+    """服务商页「检查 key / 刷新模型」：不改任何卡片。"""
+    kind = LEGACY.get(str(b.get("kind") or ""), str(b.get("kind") or ""))
+    if kind not in _ALL or kind == "default":
+        raise ValueError("不支持这个服务商")
+    pv = prov_get(kind)
+    c = {"kind": kind, "region": b.get("region", pv["region"]) or "", "base_url": b.get("base_url", pv["base_url"]) or "",
+         "protocol": b.get("protocol") or pv["protocol"] or ""}
+    if kind == "custom" and c["base_url"] and c["protocol"] in ("", "auto"):
+        c["protocol"], c["base_url"] = presets.detect(c["base_url"])
+    sec = (b.get("secret") or "").strip() or keystore.get(key_name("codex", kind)) or ""
+    if not sec:
+        return {"ok": False, "reason": "先贴 key"}
+    if presets.get(kind) and not c["base_url"]:
+        pr, url = presets.models_endpoint(kind, c["region"])
+    else:
+        pr, url = c["protocol"] or "chat", c["base_url"]
+    if not url:
+        return {"ok": False, "reason": "先填地址"}
+    r = router.list_models(draft={"protocol": pr, "base_url": url, "secret": sec})
+    if r.get("ok"):
+        r["models"] = [m for m in r["models"] if not SKIP.search(m)]
+        if kind == "anthropic":
+            r["models"] = sorted(r["models"], key=lambda m: (0 if "opus" in m else 1 if "sonnet" in m else 2 if "haiku" in m else 3, tuple(-x for x in _ver(m)[0])))
+        r["ctx"] = {k: v for k, v in (r.get("ctx") or {}).items() if k in r["models"]}
+        r["default"], r["small"] = defaults_for(kind if kind != "custom" else "", r["models"])
+        r["labels"] = {m: pretty(m) for m in r["models"]}
+        if kind == "custom":
+            r["protocol"], r["base_url"] = c["protocol"], c["base_url"]
+    return r
+
+
+def prov_delete(b: dict) -> dict:
+    kind = LEGACY.get(str(b.get("kind") or ""), str(b.get("kind") or ""))
+    if kind not in _ALL or kind == "default":
+        raise ValueError("不支持这个服务商")
+    d = router.load()
+    on = [CLIENT_NAME[cl] for cl in CLIENTS if get(cl, d)["enabled"] and get(cl, d)["kind"] == kind]
+    if on:
+        raise ValueError(f"{'、'.join(on)} 正在用它：先停用再删")
+    for n in _key_names(kind):
+        if keystore.get(n):
+            keystore.delete(n)
+    with router._lock:
+        d = router.load()
+        (d.get("provs") or {}).pop(kind, None)
+        router.save(d)
+    return {"ok": True}

@@ -507,6 +507,81 @@ td.nw{white-space:nowrap}
 .ccst{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:calc(13px*var(--fk))}.ccout{margin-top:4px}
 .mcadv{margin-top:6px}.mcadv>summary{cursor:pointer;padding:6px 2px;font-weight:600}.mcadv>summary .dim{font-weight:400;margin-left:6px}
 .rtfm{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow:auto;margin-top:4px}.rtfm .on{opacity:.5}.rtsum{cursor:pointer}.rtsum:hover{background:var(--hover)}
+
+/* ---- 0.3.4 供应商页（Agent 行 / 服务商格子 / 模型选择器；思路借鉴 magpie，自己实现） ---- */
+.mtabs{display:flex;align-items:center;gap:12px;margin:2px 0 12px;flex-wrap:wrap}
+.mseg{padding:3px;background:var(--hover)}.mseg button{padding:4px 16px;font-size:calc(13.5px*var(--fk));display:inline-flex;align-items:center;gap:6px}
+.mseg button.on{font-weight:600}.mseg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.mcnt{font-size:calc(11.5px*var(--fk));background:var(--line);color:var(--muted);border-radius:9px;padding:0 6px;line-height:calc(16px*var(--fk));font-weight:500}
+.mhint{color:var(--muted);font-size:calc(13px*var(--fk))}
+.agl{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);overflow:hidden}
+.ag+.ag{border-top:1px solid var(--line2)}
+.agm{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:calc(56px*var(--fk))}
+.agi{width:calc(30px*var(--fk));height:calc(30px*var(--fk));border-radius:9px;background:var(--panel2);display:grid;place-items:center;flex:none;font-size:calc(17px*var(--fk))}
+.ag[data-ag=claude] .agi{color:var(--claude)}.ag[data-ag=codex] .agi{color:var(--text)}
+.agt{flex:1;min-width:0}.agt b{font-size:calc(14.5px*var(--fk));font-weight:600}
+.ags{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:calc(12.5px*var(--fk));margin-top:2px;min-width:0}
+.ags span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--faint)}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+.agx{display:inline-flex;align-items:center;gap:4px;font-size:calc(13px*var(--fk));padding:4px 8px}
+.agx .chev{display:inline-block;transition:transform .15s;font-size:1.1em}.ag.open .agx .chev{transform:rotate(90deg)}
+.agpick{display:inline-flex;align-items:center;gap:8px;min-width:calc(210px*var(--fk));max-width:calc(300px*var(--fk));background:var(--hover);border-radius:9px;padding:6px 10px;font-size:calc(13.5px*var(--fk));text-align:left}
+.agpick:hover{background:var(--hover2)}.agpick:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.agmn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:500}.agmn.ph{color:var(--muted);font-weight:400}
+.caret{color:var(--faint);font-size:.8em}
+.plg{display:inline-grid;place-items:center;width:calc(18px*var(--fk));height:calc(18px*var(--fk));flex:none}
+.plg .pl{width:100%;height:100%;fill:currentColor}.plg .ic{width:100%;height:100%}
+.ag.busy{opacity:.6;pointer-events:none}.ag.busy .agpick:after{content:"";width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:crspin .8s linear infinite}
+.agd{padding:4px 16px 14px calc(56px*var(--fk));animation:agin .16s ease-out}
+@keyframes agin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.agf{display:grid;grid-template-columns:calc(104px*var(--fk)) 1fr;gap:10px 12px;align-items:start;font-size:calc(13.5px*var(--fk))}
+.agf>label{color:var(--muted);padding-top:4px}.agf select{min-width:calc(260px*var(--fk))}
+.agn{display:flex;gap:8px;padding:9px 12px;border-radius:10px;margin:2px 0 12px;font-size:calc(13px*var(--fk))}
+.agn.warn{background:var(--warn-weak)}.agn.warn>.ic{color:var(--warn);margin-top:2px}.agn>div>div{margin-top:2px}
+.agnb{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.eff{max-width:calc(420px*var(--fk))}.eff input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 0}
+.effl{position:relative;height:1.6em;font-size:calc(12px*var(--fk));color:var(--faint);margin:0 8px}.effl span{position:absolute;transform:translateX(-50%);cursor:pointer;padding:0 2px;white-space:nowrap}.effl span.on{color:var(--accent);font-weight:600}
+.agempty{display:flex;align-items:center;gap:12px;border:1px dashed var(--line);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px;background:var(--panel2)}
+.agempty>.ic{width:22px;height:22px;color:var(--accent)}.agempty>div{flex:1}
+.agpop{position:fixed;z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:agin .12s ease-out}
+.pkq{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line2)}.pkq .ic{color:var(--faint)}
+.pkq input{border:0;background:transparent;padding:4px 0;flex:1;min-width:0}.pkq input:focus{border:0}
+.pkls{overflow:auto;padding:4px 6px;flex:1;min-height:0}
+.pkg{display:flex;align-items:center;gap:6px;padding:8px 8px 4px;font-size:calc(12px*var(--fk));color:var(--muted)}.pkg b{color:var(--text);font-weight:600}.pkg>.pkh{color:var(--faint);margin-left:auto}
+.pki{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:calc(13.5px*var(--fk))}
+.pki.sel{background:var(--hover)}.pki.cur .pkl>span{font-weight:600}.pki.ref{color:var(--muted)}
+.pkl{flex:1;min-width:0;display:flex;flex-direction:column}.pkl small{color:var(--faint);font-size:calc(11.5px*var(--fk));font-family:var(--mono)}
+.pkd{font-style:normal;font-size:calc(11px*var(--fk));color:var(--accent);background:var(--accent-weak);border-radius:5px;padding:0 5px;margin-left:4px}
+.pkc{color:var(--accent);font-weight:700}.pke{padding:16px;color:var(--muted);text-align:center}
+.pkf{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 8px;border-top:1px solid var(--line2);font-size:calc(12px*var(--fk))}.pkf button{font-size:calc(13px*var(--fk));display:inline-flex;gap:4px;align-items:center}
+.pgtop{display:flex;align-items:center;gap:12px;margin-bottom:6px}.pgq{max-width:320px;flex:1}
+.pgh{font-size:calc(12.5px*var(--fk));color:var(--muted);margin:12px 2px 6px;font-weight:600}.pgh .dim{font-weight:400}
+.pgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(210px*var(--fk)),1fr));gap:8px}
+.pvtile{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px;text-align:left;transition:border-color .15s,box-shadow .15s,transform .15s}
+.pvtile:hover{background:var(--panel);border-color:var(--faint);box-shadow:0 2px 10px rgba(0,0,0,.06)}.pvtile:active{transform:scale(.99)}
+.pvtile .plg{width:calc(24px*var(--fk));height:calc(24px*var(--fk))}
+.pvtile.add{border-style:dashed;background:transparent}
+.pvtt{flex:1;min-width:0;display:flex;flex-direction:column}.pvtt b{font-weight:600;font-size:calc(13.5px*var(--fk))}
+.pvtt span{color:var(--faint);font-size:calc(12px*var(--fk));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pvtile.have .pvtt span{color:var(--muted)}
+.pvok{color:var(--ok);font-weight:700}.pvu2{display:flex;gap:2px;color:var(--muted)}
+.shf{display:grid;grid-template-columns:calc(76px*var(--fk)) 1fr;gap:10px 12px;align-items:start}.shf>label{color:var(--muted);padding-top:6px;font-size:calc(13.5px*var(--fk))}
+.shf input,.shf select{width:100%}.shst{min-height:1.5em;font-size:calc(12.5px*var(--fk));margin-top:4px}.shst .ok{color:var(--ok)}.shst .err{color:var(--bad)}
+.shst .spin{display:inline-block;width:10px;height:10px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:crspin .8s linear infinite;margin-right:6px;vertical-align:-1px}
+.mchips{display:flex;flex-wrap:wrap;gap:4px;padding-top:4px}.mchip{font-size:calc(12px*var(--fk));background:var(--hover);border-radius:6px;padding:1px 7px}
+.shmore{margin-top:8px;font-size:calc(12.5px*var(--fk))}.shmore a{color:var(--muted)}
+#dlgTitle .plg{width:22px;height:22px}
+/* 顶部导航：一条分段轨道（和页面里的分段按钮同一套样式） */
+.pnav{background:var(--hover);border-radius:11px;padding:3px;gap:1px}
+.pb{border-radius:8px;padding:4px 10px}.pb:hover{background:var(--hover2)}
+.pb.on{background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.06)}
+/* 顶部提示条：多条时只展开第一条，其余收成一行 */
+.card.plain{background:transparent;border:0;padding:0}
+#mcTab [hidden]{display:none!important}
+.mctop.intabs{margin:0 0 0 auto;min-height:0;gap:4px}.mtabs .mhint{flex:0 1 auto}
+.us .mseg{border:0;border-radius:999px;overflow:visible}.us .mseg button{border-radius:999px;color:var(--muted)}.us .mseg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.banmore{display:flex;justify-content:center;margin:-6px auto 12px;max-width:1180px}
+.banmore button{font-size:calc(12.5px*var(--fk));padding:2px 12px;border-radius:999px;color:var(--muted);background:var(--hover)}
 </style>
 </head>
 <body>
@@ -1020,7 +1095,9 @@ function renderBans(){
   const cr = ST.cr;
   if (cr) out.push(`<div class="ban acc">${ic("power")}<div class="tx">正在关闭 ${esc(cr.app)} 并执行排队的改动，做完自动重新打开…</div><div class="acts"><button data-crv="${esc(cr.id)}">查看进度</button></div></div>`);
   else if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等${ST.jobKinds.map(k => APPN[k] || k).join(" / ")} 桌面端完全退出后自动做（会弹通知）</div><div class="acts">${ST.jobKinds.map(k => `<button class="primary" data-crk="${esc(k)}">${ic("power")} 关闭 ${APPN[k] || k} 并执行（完成后重启）</button>`).join("")}<button data-j="1">查看</button></div></div>`);
-  $("#bans").innerHTML = out.join("");
+  const more = out.length > 1 && !ST.bansAll ? out.length - 1 : 0;           // 0.3.4：多条提示不再一条条叠下去
+  $("#bans").innerHTML = (more ? out[0] + `<div class="banmore"><button id="banMore">还有 ${more} 条提示 ▾</button></div>` : out.join("") + (out.length > 1 ? '<div class="banmore"><button id="banMore">收起 ▴</button></div>' : ""));
+  const bm = $("#banMore"); if (bm) bm.onclick = () => { ST.bansAll = !ST.bansAll; renderBans(); };
   $$("#bans [data-u]").forEach(b => b.onclick = () => {
     const k = b.dataset.u;
     if (k === "install") return updInstall();
@@ -1406,7 +1483,7 @@ async function mcOpen(view){
   if (PAGE !== "models") return go("models");
   MC.scope = "user";
   const c = mcCacheGet();
-  $("#pg-models").innerHTML = `<div class="pgv"><h2>${ic("key")}供应商</h2><p class="sub">让 Codex / Claude Code 用你自己的 Key：选服务商、贴 Key、选默认模型、点「启用」。Key 只存在本机 Windows 凭据管理器里。</p>
+  $("#pg-models").innerHTML = `<div class="pgv"><h2>${ic("key")}供应商</h2><p class="sub">让 Codex / Claude Code 用你自己的服务商和模型：先在「服务商」贴 key，再在「Agent」里选模型。Key 只存在本机凭据管理器里。</p>
     <div class="card"><div class="us mc" id="mcBox">${c ? "" : '<div class="dim">读取中…</div>'}</div></div></div>`;
   if (c) { [MC.d, MC.p] = c; mcRender(); }          // 先用上次的（内存 / 本地缓存）立刻画出来，后台再刷新
   await mcLoad(!!c);
@@ -1458,6 +1535,7 @@ function mcMenuHtml(){
 function mcGo(k){ if (k === "ccs") return pvCcs(); MC.view = k; MC.ban = false; mcRender(); }
 function mcRender(){
   const sub = MC_VIEWS[MC.view];
+  const cd = $("#mcBox") && $("#mcBox").closest(".card"); if (cd) cd.classList.remove("plain");
   if (!sub) MC.view = "list";
   const [bl, bx] = sub ? ["", ""] : mcBanner();
   $("#mcBox").innerHTML = `<div class="mctop">${sub ? `<button class="ghost mcback" data-mcgo="list">‹ 供应商</button><b class="mcvt">${sub[0]}</b>` : bl}<span style="flex:1"></span>${mcMenuHtml()}</div>${bx}<div id="mcTab"></div>${MC_DL}`;
@@ -1830,112 +1908,264 @@ const pvLast4 = p => p.mode !== "key" ? "" : p.key_missing ? '<span class="note"
 // ---------- 0.3.2：两张卡片「Codex 使用… / Claude Code 使用…」——选账号、贴 key、选默认模型、启用。模型和推理等级在 Codex / Claude Code 里随时切换 ----------
 const CC = {d: null, draft: {}, models: {}, ctx: {}, busy: {}, out: {}, more: {}};
 const CC_NAME = {codex: "Codex", claude: "Claude Code"};
-const CC_DEF = {codex: "默认（Codex 自己的 ChatGPT 登录）", claude: "默认（Claude Code 自己的 claude.ai 登录）"};
-const CC_EFF = [["", "不设（用客户端里选的）"], ["low", "低"], ["medium", "中"], ["high", "高"], ["xhigh", "超高"], ["max", "最高"]];
-const CC_HOW = {codex: "启用后直接在 Codex 里用，模型和推理等级可以在 Codex 里随时切换（输入 /model）。",
-  claude: "启用后直接在 Claude Code 里用，用 /model 换模型、/effort 换推理等级，随时生效。"};
 const CC_FILE = {codex: "会改 ~/.codex/config.toml（改前备份，停用时还原；ChatGPT 登录保留）", claude: "会改 ~/.claude/settings.json（改前备份，停用时还原）"};
 const ccPre = id => ((CC.d || {}).presets || []).find(p => p.id === id);
 const ccKindName = k => k === "default" ? "默认" : k === "custom" ? "自定义" : (ccPre(k) || {}).name || k;
-function ccDraft(cl){
-  const v = CC.d[cl];
-  if (!CC.draft[cl]) CC.draft[cl] = {kind: v.kind, base_url: v.base_url, region: v.region || "", protocol: v.kind === "custom" ? v.protocol : "", model: v.model, small_model: v.small_model,
-    sonnet_model: v.sonnet_model || "", effort: v.effort, profile_only: v.profile_only, secret: ""};
-  return CC.draft[cl];
+// 服务商图标：lobehub/lobe-icons（MIT，Copyright (c) 2023 LobeHub），见 THIRD_PARTY_NOTICES.md
+const PLOGO = {"anthropic": "<svg class=\"pl\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z\" fill=\"#D97757\" fill-rule=\"nonzero\"></path></svg>", "openai": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z\"></path></svg>", "gemini": "<img class=\"pl\" alt=\"\" src=\"data:image/svg+xml,%3Csvg width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22%233186FF%22%3E%3C/path%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22url%28%23lobe-icons-gemini-0-_R_0_%29%22%3E%3C/path%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22url%28%23lobe-icons-gemini-1-_R_0_%29%22%3E%3C/path%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22url%28%23lobe-icons-gemini-2-_R_0_%29%22%3E%3C/path%3E%3Cdefs%3E%3ClinearGradient gradientUnits=%22userSpaceOnUse%22 id=%22lobe-icons-gemini-0-_R_0_%22 x1=%227%22 x2=%2211%22 y1=%2215.5%22 y2=%2212%22%3E%3Cstop stop-color=%22%2308B962%22%3E%3C/stop%3E%3Cstop offset=%221%22 stop-color=%22%2308B962%22 stop-opacity=%220%22%3E%3C/stop%3E%3C/linearGradient%3E%3ClinearGradient gradientUnits=%22userSpaceOnUse%22 id=%22lobe-icons-gemini-1-_R_0_%22 x1=%228%22 x2=%2211.5%22 y1=%225.5%22 y2=%2211%22%3E%3Cstop stop-color=%22%23F94543%22%3E%3C/stop%3E%3Cstop offset=%221%22 stop-color=%22%23F94543%22 stop-opacity=%220%22%3E%3C/stop%3E%3C/linearGradient%3E%3ClinearGradient gradientUnits=%22userSpaceOnUse%22 id=%22lobe-icons-gemini-2-_R_0_%22 x1=%223.5%22 x2=%2217.5%22 y1=%2213.5%22 y2=%2212%22%3E%3Cstop stop-color=%22%23FABC12%22%3E%3C/stop%3E%3Cstop offset=%22.46%22 stop-color=%22%23FABC12%22 stop-opacity=%220%22%3E%3C/stop%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E\">", "deepseek": "<svg class=\"pl\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 01-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 00-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 01-.465.137 9.597 9.597 0 00-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 001.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 011.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 01.415-.287.302.302 0 01.2.288.306.306 0 01-.31.307.303.303 0 01-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 01-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 01.016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 01-.254-.078c-.11-.054-.2-.19-.114-.358.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z\" fill=\"#4D6BFE\"></path></svg>", "glm": "<svg class=\"pl\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M11.991 23.503a.24.24 0 00-.244.248.24.24 0 00.244.249.24.24 0 00.245-.249.24.24 0 00-.22-.247l-.025-.001zM9.671 5.365a1.697 1.697 0 011.099 2.132l-.071.172-.016.04-.018.054c-.07.16-.104.32-.104.498-.035.71.47 1.279 1.186 1.314h.366c1.309.053 2.338 1.173 2.286 2.523-.052 1.332-1.152 2.38-2.478 2.327h-.174c-.715.018-1.274.64-1.239 1.368 0 .124.018.23.053.337.209.373.54.658.96.8.75.23 1.517-.125 1.9-.782l.018-.035c.402-.64 1.17-.96 1.92-.711.854.284 1.378 1.226 1.099 2.167a1.661 1.661 0 01-2.077 1.102 1.711 1.711 0 01-.907-.711l-.017-.035c-.2-.323-.463-.58-.851-.711l-.056-.018a1.646 1.646 0 00-1.954.746 1.66 1.66 0 01-1.065.764 1.677 1.677 0 01-1.989-1.279c-.209-.906.332-1.83 1.257-2.043a1.51 1.51 0 01.296-.035h.018c.68-.071 1.151-.622 1.116-1.333a1.307 1.307 0 00-.227-.693 2.515 2.515 0 01-.366-1.403 2.39 2.39 0 01.366-1.208c.14-.195.21-.444.227-.693.018-.71-.506-1.261-1.186-1.332l-.07-.018a1.43 1.43 0 01-.299-.07l-.05-.019a1.7 1.7 0 01-1.047-2.114 1.68 1.68 0 012.094-1.101zm-5.575 10.11c.26-.264.639-.367.994-.27.355.096.633.379.728.74.095.362-.007.748-.267 1.013-.402.41-1.053.41-1.455 0a1.062 1.062 0 010-1.482zm14.845-.294c.359-.09.738.024.992.297.254.274.344.665.237 1.025-.107.36-.396.634-.756.718-.551.128-1.1-.22-1.23-.781a1.05 1.05 0 01.757-1.26zm-.064-4.39c.314.32.49.753.49 1.206 0 .452-.176.886-.49 1.206-.315.32-.74.5-1.185.5-.444 0-.87-.18-1.184-.5a1.727 1.727 0 010-2.412 1.654 1.654 0 012.369 0zm-11.243.163c.364.484.447 1.128.218 1.691a1.665 1.665 0 01-2.188.923c-.855-.36-1.26-1.358-.907-2.228a1.68 1.68 0 011.33-1.038c.593-.08 1.183.169 1.547.652zm11.545-4.221c.368 0 .708.2.892.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.892.524c-.568 0-1.03-.47-1.03-1.048 0-.579.462-1.048 1.03-1.048zm-14.358 0c.368 0 .707.2.891.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.891.524c-.569 0-1.03-.47-1.03-1.048 0-.579.461-1.048 1.03-1.048zm10.031-1.475c.925 0 1.675.764 1.675 1.706s-.75 1.705-1.675 1.705-1.674-.763-1.674-1.705c0-.942.75-1.706 1.674-1.706zm-2.626-.684c.362-.082.653-.356.761-.718a1.062 1.062 0 00-.238-1.028 1.017 1.017 0 00-.996-.294c-.547.14-.881.7-.752 1.257.13.558.675.907 1.225.783zm0 16.876c.359-.087.644-.36.75-.72a1.062 1.062 0 00-.237-1.019 1.018 1.018 0 00-.985-.301 1.037 1.037 0 00-.762.717c-.108.361-.017.754.239 1.028.245.263.606.377.953.305l.043-.01zM17.19 3.5a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64a.631.631 0 00-.628.64c0 .355.28.64.628.64zm-10.38 0a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64a.631.631 0 00-.628.64c0 .355.279.64.628.64zm-5.182 7.852a.631.631 0 00-.628.64c0 .354.28.639.628.639a.63.63 0 00.627-.606l.001-.034a.62.62 0 00-.628-.64zm5.182 9.13a.631.631 0 00-.628.64c0 .355.279.64.628.64a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm10.38.018a.631.631 0 00-.628.64c0 .355.28.64.628.64a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64zm5.182-9.148a.631.631 0 00-.628.64c0 .354.279.639.628.639a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm-.384-4.992a.24.24 0 00.244-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249c0 .142.122.249.244.249zM11.991.497a.24.24 0 00.245-.248A.24.24 0 0011.99 0a.24.24 0 00-.244.249c0 .133.108.236.223.247l.021.001zM2.011 6.36a.24.24 0 00.245-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249.24.24 0 00.244.249zm0 11.263a.24.24 0 00-.243.248.24.24 0 00.244.249.24.24 0 00.244-.249.252.252 0 00-.244-.248zm19.995-.018a.24.24 0 00-.245.248.24.24 0 00.245.25.24.24 0 00.244-.25.252.252 0 00-.244-.248z\" fill=\"#3859FF\" fill-rule=\"nonzero\"></path></svg>", "kimi": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21.846 0a1.923 1.923 0 110 3.846H20.15a.226.226 0 01-.227-.226V1.923C19.923.861 20.784 0 21.846 0z\"></path><path d=\"M11.065 11.199l7.257-7.2c.137-.136.06-.41-.116-.41H14.3a.164.164 0 00-.117.051l-7.82 7.756c-.122.12-.302.013-.302-.179V3.82c0-.127-.083-.23-.185-.23H3.186c-.103 0-.186.103-.186.23V19.77c0 .128.083.23.186.23h2.69c.103 0 .186-.102.186-.23v-3.25c0-.069.025-.135.069-.178l2.424-2.406a.158.158 0 01.205-.023l6.484 4.772a7.677 7.677 0 003.453 1.283c.108.012.2-.095.2-.23v-3.06c0-.117-.07-.212-.164-.227a5.028 5.028 0 01-2.027-.807l-5.613-4.064c-.117-.078-.132-.279-.028-.381z\"></path></svg>", "qwen": "<img class=\"pl\" alt=\"\" src=\"data:image/svg+xml,%3Csvg width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath d=%22M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z%22 fill=%22url%28%23lobe-icons-qwen-_R_0_%29%22 fill-rule=%22nonzero%22%3E%3C/path%3E%3Cdefs%3E%3ClinearGradient id=%22lobe-icons-qwen-_R_0_%22 x1=%220%25%22 x2=%22100%25%22 y1=%220%25%22 y2=%220%25%22%3E%3Cstop offset=%220%25%22 stop-color=%22%236336E7%22 stop-opacity=%22.84%22%3E%3C/stop%3E%3Cstop offset=%22100%25%22 stop-color=%22%236F69F7%22 stop-opacity=%22.84%22%3E%3C/stop%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E\">", "xai": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9.27 15.29l7.978-5.897c.391-.29.95-.177 1.137.272.98 2.369.542 5.215-1.41 7.169-1.951 1.954-4.667 2.382-7.149 1.406l-2.711 1.257c3.889 2.661 8.611 2.003 11.562-.953 2.341-2.344 3.066-5.539 2.388-8.42l.006.007c-.983-4.232.242-5.924 2.75-9.383.06-.082.12-.164.179-.248l-3.301 3.305v-.01L9.267 15.292M7.623 16.723c-2.792-2.67-2.31-6.801.071-9.184 1.761-1.763 4.647-2.483 7.166-1.425l2.705-1.25a7.808 7.808 0 00-1.829-1A8.975 8.975 0 005.984 5.83c-2.533 2.536-3.33 6.436-1.962 9.764 1.022 2.487-.653 4.246-2.34 6.022-.599.63-1.199 1.259-1.682 1.925l7.62-6.815\"></path></svg>", "openrouter": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M18.654 3.87a5.087 5.087 0 110 10.174L23.7 19.09c.64.641.187 1.737-.72 1.737H8.48a8.479 8.479 0 010-16.958h10.175zM8.479 7.26a5.087 5.087 0 100 10.176 5.087 5.087 0 000-10.175z\"></path></svg>"};
+// ---------- 0.3.4 供应商页：Agent | 服务商 | 高级 ----------
+// 布局和交互的思路借鉴 magpie（MIT，github.com/yetone/magpie）：每个 Agent 一行（状态点 + 一句话 + 模型选择 + 开关）、
+// 服务商用带图标的格子挑、模型选择器可搜索 / 按服务商分组 / 键盘操作、推理等级用滑块。代码是自己写的，没有拷贝。
+const PV = {list: null, tab: localStorage.getItem("ccss.mctab") || "agent", open: {}, q: "", pk: null, sh: null};
+const EFF_NAME = {"": "默认", none: "关", minimal: "最低", low: "低", medium: "中", high: "高", xhigh: "超高", max: "最高"};
+const PROTO_NAME = {anthropic: "Anthropic Messages", responses: "OpenAI Responses", chat: "OpenAI Chat Completions"};
+const plogo = id => `<span class="plg">${PLOGO[id] || ic(id === "default" ? "user" : "plus")}</span>`;
+const pvById = id => (PV.list || []).find(p => p.id === id);
+const pvReady = () => (PV.list || []).filter(p => p.key);
+const mLabel = (p, m) => (p && p.labels && p.labels[m]) || m;
+async function pvLoad(){ try { PV.list = (await api("/api/route/prov-list", {})).providers; PV.err = ""; } catch(e){ PV.err = e.message; } }
+function mcTabs(){
+  const n = pvReady().length;
+  const tabs = [["agent", "Agent", "给 Codex / Claude Code 各选一个模型，新开会话就用上"], ["prov", "服务商", "贴一次 key，两个 Agent 都能用；key 只存在本机凭据管理器"],
+    ["adv", "高级", "v0.2 的供应商列表、多 key 轮换 / 跨协议路由"]];
+  return `<div class="mtabs"><div class="seg mseg" role="tablist">${tabs.map(([k, t]) => `<button role="tab" data-mtab="${k}" class="${PV.tab === k ? "on" : ""}" aria-selected="${PV.tab === k}">${t}${k === "prov" && n ? `<span class="mcnt">${n}</span>` : ""}</button>`).join("")}</div>
+    <span class="mhint">${esc((tabs.find(t => t[0] === PV.tab) || tabs[0])[2])}</span></div>`;
 }
-function ccProxyLine(cl){
-  const v = CC.d[cl], p = CC.d.proxy || {};
-  if (!v.enabled) return "";
-  const nm = esc(ccKindName(v.kind)), fix = v.drift ? ` <span class="tag warn" title="${esc("启用后被别的工具改掉了：" + (v.drift_keys || []).join("、") + "。点「保存并重新启用」写回去；停用时只拿掉我们写的那几项")}">配置被改过</span>` : "";
-  const st = !v.needs_proxy || p.running ? `<span class="tag ok">● 正在用</span> <span class="dim">${nm} · ${esc(v.model || "")}${v.needs_proxy ? " · 后台服务正常" : ""}</span>`
-    : `<span class="tag warn">● 正在用 · 后台服务没在跑</span> <span class="dim">下次打开 ${CC_NAME[cl]} 时会自己拉起；也可以点「测试」</span>`;
-  const ws = (v.warnings || []).length ? `<div class="ccwarn"><b>⚠ 这些设置还指着「${esc(ccKindName(v.kind))}」没有的模型</b>${v.warnings.map(w => `<div>${esc(w.label)}：<code>${esc(String(w.value))}</code></div>`).join("")}
-    <div class="ccwbtn"><button class="pvmini" data-ccfix="${cl}">一键改成 ${esc(v.model)}${v.warnings.some(w => w.fix === "absent") ? "（上下文长度改回自动）" : ""}</button><span class="dim">先备份，停用时放回原样</span></div></div>` : "";
-  return ws + `<div class="ccst">${st}${fix}<span style="flex:1"></span><button class="pvmini" data-cct="${cl}">测试</button><button class="pvmini ghost" data-ccoff="${cl}">停用</button></div><div class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</div>`;
+function mcSetTab(k){
+  PV.tab = k; localStorage.setItem("ccss.mctab", k);
+  $$("#mcTab [data-mtab]").forEach(b => { b.classList.toggle("on", b.dataset.mtab === k); b.setAttribute("aria-selected", b.dataset.mtab === k); });
+  $("#ccBox").hidden = k !== "agent"; $("#pvGrid").hidden = k !== "prov"; $("#mcAdvBox").hidden = k !== "adv";
+  const h = $("#mcTab .mhint"); if (h) h.outerHTML = mcTabs().match(/<span class="mhint">[\s\S]*?<\/span>/)[0];
+  if (k === "prov") pgRender();
 }
-const ccSel = (cl, f, cur, opts) => `<select data-ccf="${cl}:${f}" style="width:100%">${opts.map(([v, t]) => `<option value="${esc(v)}" ${String(cur || "") === v ? "selected" : ""}>${esc(t)}</option>`).join("")}</select>`;
-function ccModelField(cl, f, cur, ms, ph){
-  const list = ms.slice(); if (cur && !list.includes(cur)) list.unshift(cur);
-  if (!list.length) return `<input data-ccf="${cl}:${f}" value="${esc(cur || "")}" placeholder="${esc(ph)}" style="width:100%">`;
-  return ccSel(cl, f, cur, (f === "model" ? [] : [["", ph]]).concat(list.map(m => [m, m])));
+// ---- Agent 行 ----
+function agState(cl){
+  const v = CC.d[cl], px = CC.d.proxy || {};
+  if (!v.enabled) return ["off", cl === "codex" ? "没接入 · 用 Codex 自己的 ChatGPT 登录" : "没接入 · 用 Claude Code 自己的 claude.ai 登录"];
+  if (v.drift) return ["warn", "已接入 · 配置被别的工具改过，展开看看"];
+  if ((v.warnings || []).length) return ["warn", `已接入 · ${v.warnings.length} 项设置还指着别家的模型，展开一键改`];
+  if (v.needs_proxy && !px.running) return ["ok", `已接入 · 后台服务待命（打开 ${CC_NAME[cl]} 时自动拉起）`];
+  const n = (v.models || []).length || 1;
+  return ["ok", "已接入 · " + (cl === "codex" ? (v.profile_only ? "只在 codex --profile cc-route 时用" : `Codex 的 /model 和桌面端选择器里有 ${n} 个模型`) : "在 /model 里切换 opus · sonnet · haiku 档位，或直接 /model 模型名")];
 }
-function ccCard(cl){
-  const v = CC.d[cl], dr = ccDraft(cl), k = dr.kind, on = v.enabled, pre = ccPre(k);
-  const kinds = [["default", CC_DEF[cl]]].concat(((CC.d || {}).presets || []).map(p => [p.id, p.name]), [["custom", "自定义（填地址）"]]);
-  let body = "";
-  if (k === "default") {
-    body = `<div class="dim ccdesc">${on ? `现在用的是「${esc(ccKindName(v.kind))}」。点「停用」回到 ${cl === "codex" ? "ChatGPT" : "claude.ai"} 登录。` : `不经过 CC Session Sync。要用自己的 API Key，在上面选一个。`}</div>`;
-  } else {
-    const saved = (v.keys || {})[k], ms = CC.models[cl + ":" + k] || (v.kind === k ? v.models : []) || [];
-    const more = !!CC.more[cl], regs = pre ? pre.regions : [];
-    body = `<div class="ccf">
-      <label class="ccl">Key</label><div class="ccv"><input type="password" autocomplete="off" spellcheck="false" data-ccf="${cl}:secret" value="" placeholder="${saved ? "已保存 " + esc(saved) + "（要换就粘贴新的）" : "粘贴 " + esc(pre ? pre.key : "API Key")}" style="width:100%"></div>
-      ${k === "custom" ? `<label class="ccl">地址</label><div class="ccv"><input data-ccf="${cl}:base_url" value="${esc(dr.base_url)}" placeholder="服务商给的地址，例如 https://…/v1" style="width:100%"></div>` : ""}
-      <label class="ccl">默认模型</label><div class="ccv ccrow"><div style="flex:1;min-width:0">${ccModelField(cl, "model", dr.model, ms, "先贴 key，会自动列出模型")}</div><button class="pvmini ghost" data-ccm="${cl}" title="重新拉一下这个 key 能用的模型">刷新</button></div>
-    </div>
-    <div class="cchow">${CC_HOW[cl]}</div>
-    <div class="ccmore"><a href="#" data-ccmore="${cl}">${more ? "收起 ▴" : "更多 ▾"}</a></div>
-    ${more ? `<div class="ccf ccadv">
-      <label class="ccl">默认推理等级</label><div class="ccv">${ccSel(cl, "effort", dr.effort, CC_EFF)}<div class="sd">只是打开时的默认值；在 ${CC_NAME[cl]} 里${cl === "codex" ? "用 /model" : "用 /effort"} 随时改。</div></div>
-      ${regs.length > 1 ? `<label class="ccl">地区</label><div class="ccv">${ccSel(cl, "region", dr.region || regs[0].id, regs.map(r => [r.id, r.label]))}</div>` : ""}
-      ${cl === "claude" ? `<label class="ccl">Sonnet 用</label><div class="ccv">${ccModelField(cl, "sonnet_model", dr.sonnet_model, ms, "同默认模型")}</div>
-        <label class="ccl">Haiku 用</label><div class="ccv">${ccModelField(cl, "small_model", dr.small_model, ms, "同默认模型")}<div class="sd">Claude Code 的 /model 里选 Sonnet / Haiku 时实际用的模型；也可以直接 /model 任意模型名</div></div>` : ""}
-      ${k === "custom" ? `<label class="ccl">接口类型</label><div class="ccv">${ccSel(cl, "protocol", dr.protocol || "auto", [["auto", "自动（看地址）"], ["anthropic", "Anthropic Messages"], ["responses", "OpenAI Responses"], ["chat", "OpenAI Chat Completions（Gemini 也选这个）"]])}</div>`
-        : `<label class="ccl">中转地址</label><div class="ccv"><input data-ccf="${cl}:base_url" value="${esc(dr.base_url)}" placeholder="（可选）留空 = 官方地址" style="width:100%"></div>`}
-      ${cl === "codex" ? `<label class="ccl"></label><div class="ccv"><label class="ccchk"><input type="checkbox" data-ccf="${cl}:profile_only" ${dr.profile_only ? "checked" : ""}><span>只在 <code>codex --profile cc-route</code> 时用<div class="sd">勾上就不改默认：普通 codex 和 Codex 桌面端照旧用 ChatGPT 登录</div></span></label></div>` : ""}
-      ${v.kind === k && v.upstream ? `<label class="ccl">实际连接</label><div class="ccv sd"><code>${esc(v.upstream)}</code> · ${esc({anthropic: "Anthropic Messages", responses: "OpenAI Responses", chat: "OpenAI Chat Completions"}[v.protocol_used] || "")} · ${v.needs_proxy ? "经本机后台服务" : "直连"}</div>` : ""}
-    </div>` : ""}
-    <div class="ccnote">${CC_FILE[cl]}${cl === "codex" && dr.profile_only ? "（只写 cc-route 这个 profile）" : ""}</div>
-    <div class="ccbtn"><button class="primary" data-ccon="${cl}">${on && v.kind === k ? "保存并重新启用" : "启用"}</button><span class="ccmsg" id="ccMsg-${cl}"></span></div>`;
-  }
-  return `<div class="cc${on ? " on" : ""}" data-cc="${cl}"><div class="cchd">${logo(cl)}<b>${CC_NAME[cl]} 使用…</b><span style="flex:1"></span>${on ? `<span class="tag ok">${esc(ccKindName(v.kind))}</span>` : '<span class="dim">默认</span>'}</div>
-    <div class="ccf"><label class="ccl">用哪个账号/Key</label><div class="ccv">${ccSel(cl, "kind", k, kinds)}</div></div>${body}${ccProxyLine(cl)}</div>`;
+function agRow(cl){
+  const v = CC.d[cl], on = v.enabled, [st, txt] = agState(cl), p = pvById(v.kind), open = on && !!PV.open[cl];
+  const pick = on ? `${plogo(v.kind)}<span class="agmn">${esc(mLabel(p, v.model))}</span>` : `<span class="agmn ph">${pvReady().length ? "选一个模型…" : "先添加服务商"}</span>`;
+  return `<div class="ag${on ? " on" : ""}${open ? " open" : ""}" data-ag="${cl}">
+    <div class="agm"><span class="agi">${logo(cl)}</span>
+      <div class="agt"><b>${CC_NAME[cl]}</b><div class="ags"><i class="dot ${st}"></i><span>${esc(txt)}</span></div></div>
+      ${on ? `<button class="ghost agx" data-agx="${cl}" aria-expanded="${open}" title="推理等级、档位、测试连接">${v.effort ? "推理 " + esc(EFF_NAME[v.effort] || v.effort) + " · " : ""}设置<span class="chev">›</span></button>` : ""}
+      <button class="agpick" data-agpick="${cl}" aria-haspopup="listbox" title="${on ? esc(p ? p.name + " · " + v.model : v.model) : "选模型就接入"}">${pick}<span class="caret">▾</span></button>
+      <label class="switch" title="${on ? "停用：回到自己的登录（改过的文件按字节还原）" : "接入"}"><input type="checkbox" data-agsw="${cl}" ${on ? "checked" : ""}><i></i></label></div>
+    ${open ? `<div class="agd">${agDetail(cl)}</div>` : ""}</div>`;
+}
+function agDetail(cl){
+  const v = CC.d[cl], p = pvById(v.kind) || {}, lv = [""].concat(((p.levels || {})[v.model]) || ["low", "medium", "high", "xhigh", "max"]);
+  if (v.effort && !lv.includes(v.effort)) lv.push(v.effort);
+  const i = Math.max(0, lv.indexOf(v.effort || ""));
+  const ms = (p.models && p.models.length ? p.models : v.models) || [];
+  const sel = (f, cur, ph) => `<select data-agf="${cl}:${f}"><option value="">${ph}</option>${(cur && !ms.includes(cur) ? [cur] : []).concat(ms).map(m => `<option value="${esc(m)}" ${m === cur ? "selected" : ""}>${esc(mLabel(p, m))}</option>`).join("")}</select>`;
+  const ws = (v.warnings || []).length ? `<div class="agn warn">${ic("warn")}<div><b>这些设置还指着「${esc(p.name || v.kind_name)}」没有的模型</b>${v.warnings.map(w => `<div>${esc(w.label)}：<code>${esc(String(w.value))}</code></div>`).join("")}
+      <div class="agnb"><button class="pvmini" data-ccfix="${cl}">一键改成 ${esc(mLabel(p, v.model))}${v.warnings.some(w => w.fix === "absent") ? "（上下文长度改回自动）" : ""}</button><span class="dim">先备份，停用时放回原样</span></div></div></div>` : "";
+  const dr = v.drift ? `<div class="agn warn">${ic("warn")}<div>启用后被别的工具改掉了：${(v.drift_keys || []).map(k => `<code>${esc(k)}</code>`).join(" ")}<div class="agnb"><button class="pvmini" data-agre="${cl}">写回去</button><span class="dim">停用时只拿掉我们写的那几项</span></div></div></div>` : "";
+  return `${ws}${dr}<div class="agf">
+    <label>默认推理等级</label><div><div class="eff"><input type="range" min="0" max="${lv.length - 1}" step="1" value="${i}" data-agef="${cl}" aria-label="默认推理等级" style="--n:${lv.length - 1}"><div class="effl">${lv.map((x, j) => `<span class="${j === i ? "on" : ""}" data-effi="${cl}:${j}" style="left:${lv.length > 1 ? (100 * j / (lv.length - 1)).toFixed(2) : 0}%">${EFF_NAME[x] || x}</span>`).join("")}</div></div>
+      <div class="sd">打开时的默认值；在 ${CC_NAME[cl]} 里${cl === "codex" ? "用 /model" : "用 /effort"} 随时改。列出来的是 ${esc(mLabel(p, v.model))} 支持的等级。</div></div>
+    ${cl === "claude" ? `<label>Sonnet 档用</label><div>${sel("sonnet_model", v.sonnet_model, "同上（" + esc(mLabel(p, v.model)) + "）")}</div>
+      <label>Haiku 档用</label><div>${sel("small_model", v.small_model, "同上（" + esc(mLabel(p, v.model)) + "）")}<div class="sd">Claude Code 的 /model 里选 Sonnet / Haiku 时实际用的模型</div></div>` : ""}
+    ${cl === "codex" ? `<label>范围</label><div><label class="ccchk"><input type="checkbox" data-agf="${cl}:profile_only" ${v.profile_only ? "checked" : ""}><span>只在 <code>codex --profile cc-route</code> 时用<div class="sd">勾上就不改默认：普通 codex 和 Codex 桌面端照旧用 ChatGPT 登录</div></span></label></div>` : ""}
+    <label>连接</label><div class="sd"><code>${esc(v.upstream || "")}</code> · ${esc(PROTO_NAME[v.protocol_used] || "")} · ${v.needs_proxy ? "经本机后台服务转换" : "直连"}<br>${CC_FILE[cl]}</div>
+    <label></label><div class="agnb"><button class="pvmini" data-cct="${cl}">测试连接</button><span class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</span></div></div>`;
+}
+function agEmpty(){
+  return pvReady().length ? "" : `<div class="agempty">${ic("key")}<div><b>先添加一个服务商</b><div class="sd">贴一次 key（DeepSeek、Kimi、GLM、Qwen、Gemini、Grok、OpenRouter、Claude / OpenAI API Key 或任意兼容地址），然后回来给 Agent 选模型。</div></div><button class="primary" data-mtabgo="prov">添加服务商</button></div>`;
 }
 function ccRender(){
   const el = $("#ccBox"); if (!el || !CC.d) return;
-  el.innerHTML = ccCard("codex") + ccCard("claude");
-  const read = cl => { const dr = ccDraft(cl); $$(`#ccBox [data-ccf^="${cl}:"]`).forEach(i => { const f = i.dataset.ccf.split(":")[1]; if (f === "kind") return; dr[f] = i.type === "checkbox" ? i.checked : i.value.trim(); }); return dr; };
-  $$("#ccBox select[data-ccf$=':kind']").forEach(s => s.onchange = () => { const cl = s.dataset.ccf.split(":")[0], k = s.value, dr = read(cl), v = CC.d[cl];
-    if (dr.kind !== k) { const same = v.kind === k; Object.assign(dr, {kind: k, secret: "", base_url: same ? v.base_url : "", region: same ? v.region : "", protocol: same && k === "custom" ? v.protocol : "",
-      model: same ? v.model : "", small_model: same ? v.small_model : "", sonnet_model: same ? v.sonnet_model : ""}); }
-    ccRender(); if (k !== "default" && (v.keys || {})[k] && !dr.model) ccModels(cl, true); });
-  $$("#ccBox select[data-ccf]:not([data-ccf$=':kind'])").forEach(s => s.onchange = () => { const cl = s.dataset.ccf.split(":")[0], dr = read(cl);
-    if (s.dataset.ccf.endsWith(":region")) { dr.model = ""; ccModels(cl, true); } else ccRender(); });
-  $$("#ccBox input[data-ccf$=':secret'], #ccBox input[data-ccf$=':base_url']").forEach(i => i.onchange = () => { const cl = i.dataset.ccf.split(":")[0]; const dr = read(cl);
-    if ((dr.secret || (CC.d[cl].keys || {})[dr.kind]) && (dr.kind !== "custom" || dr.base_url)) ccModels(cl, true); });
-  $$("#ccBox [data-ccmore]").forEach(a => a.onclick = e => { e.preventDefault(); const cl = a.dataset.ccmore; read(cl); CC.more[cl] = !CC.more[cl]; ccRender(); });
-  $$("#ccBox [data-ccm]").forEach(b => b.onclick = () => { read(b.dataset.ccm); ccModels(b.dataset.ccm, false); });
-  $$("#ccBox [data-ccon]").forEach(b => b.onclick = () => ccEnable(b.dataset.ccon, read(b.dataset.ccon)));
-  $$("#ccBox [data-ccoff]").forEach(b => b.onclick = () => ccDisable(b.dataset.ccoff));
+  if (!PV.list) { el.innerHTML = '<div class="dim">读取中…</div>'; return; }
+  el.innerHTML = agEmpty() + `<div class="agl">${agRow("codex")}${agRow("claude")}</div>`;
+  $$("#ccBox [data-mtabgo]").forEach(b => b.onclick = () => mcSetTab(b.dataset.mtabgo));
+  $$("#ccBox [data-agx]").forEach(b => b.onclick = () => { PV.open[b.dataset.agx] = !PV.open[b.dataset.agx]; ccRender(); });
+  $$("#ccBox [data-agpick]").forEach(b => b.onclick = e => { e.stopPropagation(); agPickOpen(b.dataset.agpick, b); });
+  $$("#ccBox [data-agsw]").forEach(s => s.onchange = () => { const cl = s.dataset.agsw, v = CC.d[cl];
+    if (!s.checked) { s.checked = true; return ccDisable(cl); }
+    s.checked = false;
+    const p = pvById(v.kind);
+    if (v.kind !== "default" && v.model && p && p.key) agApply(cl, {}); else agPickOpen(cl, $(`#ccBox [data-agpick="${cl}"]`)); });
+  $$("#ccBox [data-agef]").forEach(r => { const cl = r.dataset.agef, v = CC.d[cl], p = pvById(v.kind) || {};
+    const lv = [""].concat(((p.levels || {})[v.model]) || ["low", "medium", "high", "xhigh", "max"]); if (v.effort && !lv.includes(v.effort)) lv.push(v.effort);
+    r.oninput = () => $$(`#ccBox [data-effi^="${cl}:"]`).forEach((s, j) => s.classList.toggle("on", j === +r.value));
+    r.onchange = () => agApply(cl, {effort: lv[+r.value] || ""}, `默认推理等级：${EFF_NAME[lv[+r.value] || ""]}`);
+    $$(`#ccBox [data-effi^="${cl}:"]`).forEach((s, j) => s.onclick = () => { r.value = j; r.oninput(); r.onchange(); }); });
+  $$("#ccBox [data-agf]").forEach(i => i.onchange = () => { const [cl, f] = i.dataset.agf.split(":"); agApply(cl, {[f]: i.type === "checkbox" ? i.checked : i.value}); });
+  $$("#ccBox [data-agre]").forEach(b => b.onclick = () => agApply(b.dataset.agre, {}, "已写回去"));
   $$("#ccBox [data-ccfix]").forEach(b => b.onclick = async () => { const cl = b.dataset.ccfix; b.disabled = true;
     try { const r = await rtApi("card-fixrefs", {client: cl}); doneOrQueued(r, `已改好 ${r.fixed || 0} 项（停用时放回原样）`); } catch(e){ toast("❌ " + e.message, 6000); } ccLoad(); });
-  $$("#ccBox [data-cct]").forEach(b => b.onclick = async () => { const o = $("#ccOut-" + b.dataset.cct); o.innerHTML = '<div class="dim">测试中…</div>';
+  $$("#ccBox [data-cct]").forEach(b => b.onclick = async () => { const o = $("#ccOut-" + b.dataset.cct); o.innerHTML = '<span class="dim">测试中…</span>';
     const r = await rtApi("card-test", {client: b.dataset.cct}).catch(e => ({ok: false, reason: e.message}));
     const row = r.keys ? r.keys[0] || r : r;
-    o.innerHTML = CC.out[b.dataset.cct] = r.ok ? `<div><span class="tag ok">✓ 通了</span> <span class="dim">${row.ms != null ? `（${row.ms} ms）` : ""}${r.note ? " · " + esc(r.note) : ""}</span></div>`
-      : `<div class="miss">✗ ${row.status ? "HTTP " + row.status + "：" : ""}${esc(row.reason || r.reason || "不通")}</div>`; ccLoad(); });
+    o.innerHTML = CC.out[b.dataset.cct] = r.ok ? `<span class="tag ok">✓ 通了</span> <span class="dim">${row.ms != null ? `${row.ms} ms` : ""}${r.note ? " · " + esc(r.note) : ""}</span>`
+      : `<span class="tag bad">✗ ${row.status ? "HTTP " + row.status + "：" : ""}${esc(row.reason || r.reason || "不通")}</span>`; });
+  if (PV.tab === "prov") pgRender();
 }
-async function ccModels(cl, quiet){
-  const dr = ccDraft(cl), msg = $("#ccMsg-" + cl);
-  if (msg) msg.textContent = "正在列出模型…";
-  const r = await rtApi("card-models", {client: cl, kind: dr.kind, base_url: dr.base_url, protocol: dr.protocol, region: dr.region, secret: dr.secret}).catch(e => ({ok: false, reason: e.message}));
-  if (r.ok) { CC.models[cl + ":" + dr.kind] = r.models; CC.ctx[cl + ":" + dr.kind] = r.ctx || {}; if (!dr.model || !r.models.includes(dr.model)) dr.model = dr.model && quiet ? dr.model : (r.default || r.models[0] || dr.model);
-    if (cl === "claude" && !dr.small_model) dr.small_model = r.small || "";
-    if (r.protocol && dr.kind === "custom" && (!dr.protocol || dr.protocol === "auto")) dr.protocol = "auto";
-    if (r.catalog_updated) toast("✅ Codex 的模型列表已更新（新开的 Codex 窗口 / 会话生效）", 4000); ccRender(); const m = $("#ccMsg-" + cl); if (m) m.textContent = `能用 ${r.models.length} 个模型（启用后在 ${CC_NAME[cl]} 的 /model 里都能选）`; }
-  else { ccRender(); const m = $("#ccMsg-" + cl); if (m) m.innerHTML = quiet ? "" : `<span class="err">${esc(r.reason || "列不出模型：可以直接手填模型名")}</span>`; }
-}
-async function ccEnable(cl, dr){
-  const msg = $("#ccMsg-" + cl);
-  const v = CC.d[cl];
-  if (!dr.secret && !(v.keys || {})[dr.kind]) return msg.innerHTML = '<span class="err">先粘贴 Key</span>';
-  if (!dr.model) return msg.innerHTML = '<span class="err">先选默认模型（列不出来就手填模型名）</span>';
-  msg.textContent = "启用中…";
+// 接入 / 换模型 / 改设置：都是「保存并（重新）启用」；服务商的地址、地区、模型列表从「服务商」那边带上
+async function agApply(cl, patch, okMsg){
+  const v = CC.d[cl], kind = patch.kind || v.kind, p = pvById(kind) || {}, same = kind === v.kind;
+  const b = Object.assign({client: cl, kind, model: v.model, effort: same ? v.effort : "", small_model: same ? v.small_model : "", sonnet_model: same ? v.sonnet_model : "",
+    profile_only: v.profile_only, region: p.region || "", base_url: p.base_url || "", models: (p.models || []).length ? p.models : undefined, ctx: p.ctx || undefined}, patch);
+  if (kind === "custom") b.protocol = p.protocol || "auto";
+  if (!same && !patch.small_model && cl === "claude") b.small_model = "";
+  agBusy(cl, true);
   try {
-    const r = await rtApi("card-enable", Object.assign({client: cl, models: CC.models[cl + ":" + dr.kind] || undefined, ctx: CC.ctx[cl + ":" + dr.kind] || undefined}, dr));
-    CC.draft[cl] = null; CC.out[cl] = "";
-    if (doneOrQueued(r, r.deferred ? "" : `${CC_NAME[cl]} 已改用「${ccKindName(dr.kind)}」${cl === "codex" ? (dr.profile_only ? "（codex --profile cc-route）" : "：重开 Codex 桌面端 / 新开 codex，模型选择器里就是这家的模型") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
-  } catch(e){ msg.innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
+    const r = await rtApi("card-enable", b);
+    CC.out[cl] = "";
+    const nm = mLabel(p, b.model);
+    if (doneOrQueued(r, r.deferred ? "" : okMsg ? `${CC_NAME[cl]} · ${okMsg}` : `${CC_NAME[cl]} 已改用 ${p.name || kind} · ${nm}${cl === "codex" ? (b.profile_only ? "（codex --profile cc-route）" : "：完全退出再打开 Codex 桌面端 / 新开 codex，选择器里就是这家的模型") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
+  } catch(e){ toast("❌ " + e.message, 6000); }
+  agBusy(cl, false); ccLoad();
+}
+function agBusy(cl, on){ const r = $(`#ccBox [data-ag="${cl}"]`); if (r) r.classList.toggle("busy", on); }
+// ---- 模型选择器：搜索、按服务商分组、↑↓ 回车 Esc ----
+function agPickItems(){
+  const {cl, q} = PV.pk, v = CC.d[cl], lq = q.trim().toLowerCase(), out = [];
+  const own = cl === "codex" ? "Codex 自己的登录（ChatGPT）" : "Claude Code 自己的登录（claude.ai）";
+  if (!lq || own.toLowerCase().includes(lq) || "默认 登录".includes(lq)) out.push({grp: "default", kind: "default", label: own, sub: "不经过 CC Session Sync", cur: !v.enabled});
+  for (const p of pvReady()) {
+    const ms = p.models || [];
+    const hit = ms.filter(m => !lq || m.toLowerCase().includes(lq) || mLabel(p, m).toLowerCase().includes(lq) || p.name.toLowerCase().includes(lq));
+    const cur = v.enabled && v.kind === p.id ? v.model : "";
+    if (cur && !ms.includes(cur) && (!lq || cur.toLowerCase().includes(lq))) hit.unshift(cur);
+    for (const m of hit) out.push({grp: p.id, kind: p.id, model: m, label: mLabel(p, m), sub: mLabel(p, m) !== m ? m : "", cur: m === cur, def: m === p.default});
+    const t = q.trim();
+    if (t && /^[A-Za-z0-9][A-Za-z0-9._:\/@\[\]-]{0,127}$/.test(t) && !ms.includes(t)) out.push({grp: p.id, kind: p.id, model: t, label: `用「${t}」`, sub: "手填模型名（列表里没有）", manual: true});
+    if (!ms.length && !lq) out.push({grp: p.id, kind: p.id, refresh: true, label: "还没列出模型 · 去服务商里刷新", sub: ""});
+  }
+  return out;
+}
+function agPickDraw(keepInput){
+  const pop = $("#agPop"); if (!pop) return;
+  const items = PV.pk.items = agPickItems();
+  if (PV.pk.i >= items.length) PV.pk.i = items.length - 1;
+  if (PV.pk.i < 0) PV.pk.i = Math.max(0, items.findIndex(x => x.cur));
+  let g = null, h = "";
+  items.forEach((x, j) => {
+    if (x.grp !== g) { g = x.grp; const p = pvById(g);
+      h += g === "default" ? "" : `<div class="pkg">${plogo(g)}<b>${esc(p.name)}</b><span class="pkh">${esc(p.host || "")}</span></div>`; }
+    h += `<div class="pki${j === PV.pk.i ? " sel" : ""}${x.cur ? " cur" : ""}${x.refresh ? " ref" : ""}" role="option" aria-selected="${!!x.cur}" data-pki="${j}">${x.kind === "default" ? plogo("default") : ""}<span class="pkl"><span>${esc(x.label)}${x.def ? ' <em class="pkd">推荐</em>' : ""}</span>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</span>${x.cur ? `<span class="pkc">✓</span>` : ""}</div>`;
+  });
+  const list = `<div class="pkls" role="listbox">${h || `<div class="pke">没有匹配的模型${pvReady().length ? "" : "：先添加一个服务商"}</div>`}</div>`;
+  if (keepInput) { pop.querySelector(".pkls").outerHTML = list; }
+  else pop.innerHTML = `<div class="pkq">${ic("search")}<input id="agPq" placeholder="搜模型或服务商…（回车选中）" value="${esc(PV.pk.q)}" autocomplete="off" spellcheck="false"></div>${list}
+    <div class="pkf"><button class="ghost" data-pkadd>${ic("plus")} 添加 / 管理服务商</button><span class="dim">↑↓ 选择 · 回车确定 · Esc 关闭</span></div>`;
+  $$("#agPop [data-pki]").forEach(r => { r.onmousedown = e => e.preventDefault(); r.onclick = () => agPickChoose(items[+r.dataset.pki]); r.onmousemove = () => { if (PV.pk.i !== +r.dataset.pki) { PV.pk.i = +r.dataset.pki; $$("#agPop .pki").forEach(z => z.classList.toggle("sel", z === r)); } }; });
+  const s = $("#agPop .pki.sel"); if (s) s.scrollIntoView({block: "nearest"});
+  if (!keepInput) {
+    pop.querySelector("[data-pkadd]").onclick = () => { agPickClose(); mcSetTab("prov"); };
+    const inp = $("#agPq"); inp.focus();
+    inp.oninput = () => { PV.pk.q = inp.value; PV.pk.i = inp.value.trim() ? 0 : -1; agPickDraw(true); };
+    inp.onkeydown = e => {
+      const n = PV.pk.items.length;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (n) { PV.pk.i = (PV.pk.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n; agPickDraw(true); } }
+      else if (e.key === "Enter") { e.preventDefault(); const x = PV.pk.items[PV.pk.i]; if (x) agPickChoose(x); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); const b = PV.pk.btn; agPickClose(); if (b) b.focus(); }
+    };
+  }
+}
+function agPickOpen(cl, btn){
+  const again = PV.pk && PV.pk.cl === cl; agPickClose(); if (again) return;
+  const pop = document.createElement("div"); pop.className = "agpop"; pop.id = "agPop"; document.body.appendChild(pop);
+  PV.pk = {cl, btn, q: "", i: -1, items: []};
+  agPickDraw();
+  const r = btn.getBoundingClientRect(), z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+  const w = Math.min(380, innerWidth / z - 24), left = Math.max(12, Math.min(r.right / z - w, innerWidth / z - w - 12));
+  pop.style.width = w + "px"; pop.style.left = left + "px";
+  const below = innerHeight / z - r.bottom / z;
+  if (below > 320 || below > r.top / z) { pop.style.top = (r.bottom / z + 6) + "px"; pop.style.maxHeight = (below - 18) + "px"; }
+  else { pop.style.bottom = (innerHeight / z - r.top / z + 6) + "px"; pop.style.maxHeight = (r.top / z - 18) + "px"; }
+  setTimeout(() => document.addEventListener("mousedown", agPickOut), 0);
+}
+function agPickOut(e){ if (!e.target.closest("#agPop") && !e.target.closest("[data-agpick]")) agPickClose(); }
+function agPickClose(){ const p = $("#agPop"); if (p) p.remove(); PV.pk = null; document.removeEventListener("mousedown", agPickOut); }
+function agPickChoose(x){
+  const cl = PV.pk.cl; agPickClose();
+  if (x.refresh) { mcSetTab("prov"); return pvSheet(x.kind); }
+  if (x.kind === "default") return CC.d[cl].enabled ? ccDisable(cl) : toast(`${CC_NAME[cl]} 本来就在用自己的登录`);
+  if (x.cur) return toast(`${CC_NAME[cl]} 已经在用 ${x.label}`);
+  agApply(cl, {kind: x.kind, model: x.model});
+}
+// ---- 服务商格子 ----
+function pgRender(){
+  const el = $("#pvGrid"); if (!el) return;
+  if (!PV.list) { el.innerHTML = `<div class="dim">${PV.err ? "读不到：" + esc(PV.err) : "读取中…"}</div>`; return; }
+  const q = PV.q.trim().toLowerCase(), m = p => !q || (p.name + " " + p.vendor + " " + p.host + " " + p.id).toLowerCase().includes(q);
+  const mine = PV.list.filter(p => p.key && m(p)), rest = PV.list.filter(p => !p.key && m(p));
+  const tile = p => `<button class="pvtile${p.key ? " have" : ""}${p.id === "custom" && !p.key ? " add" : ""}" data-pvt="${p.id}">${plogo(p.id)}<span class="pvtt"><b>${esc(p.name)}</b>
+    <span>${p.key ? esc(p.key + " · " + (p.models.length ? p.models.length + " 个模型" : "还没列出模型")) : esc(p.id === "custom" ? "任意兼容地址（Anthropic / OpenAI）" : p.host)}</span></span>
+    ${p.used_by.length ? `<span class="pvu2" title="${esc(p.used_by.map(c => CC_NAME[c]).join("、"))} 正在用">${p.used_by.map(c => logo(c)).join("")}</span>` : p.key ? '<span class="pvok">✓</span>' : ""}</button>`;
+  el.innerHTML = `<div class="pgtop"><label class="gsearch pgq">${ic("search")}<input type="search" id="pgQ" placeholder="找服务商…" value="${esc(PV.q)}"></label></div>
+    ${mine.length ? `<div class="pgh">已添加 <span class="dim">· 点开换 key、地区、刷新模型</span></div><div class="pgg">${mine.map(tile).join("")}</div>` : ""}
+    <div class="pgh">${mine.length ? "还可以添加" : "选一个服务商，贴 key 就能用"}</div><div class="pgg">${rest.map(tile).join("") || '<div class="dim">没有匹配的服务商</div>'}</div>`;
+  const qi = $("#pgQ"); qi.oninput = () => { PV.q = qi.value; const at = qi.selectionStart; pgRender(); const n = $("#pgQ"); n.focus(); n.setSelectionRange(at, at); };
+  $$("#pvGrid [data-pvt]").forEach(b => b.onclick = () => pvSheet(b.dataset.pvt));
+}
+function pvSheet(id){
+  const p = pvById(id); if (!p) return;
+  PV.sh = {id, secret: "", region: p.region || ((p.regions || [])[0] || {}).id || "", base_url: p.base_url, protocol: p.protocol || "auto", models: p.models.slice(), ctx: Object.assign({}, p.ctx), labels: Object.assign({}, p.labels),
+    st: p.key ? (p.models.length ? `<span class="ok">✓ 已保存 · ${p.models.length} 个模型</span>` : "") : "", more: !!(p.base_url && id !== "custom"), seq: 0};
+  openDlg(p.name, `<div id="shBody"></div>`, `${p.key ? '<button class="ghost danger" id="shDel">删除</button>' : ""}<span style="flex:1"></span><button onclick="closeDlg()">取消</button><button class="primary" id="shSave">保存</button>`);
+  $("#dlgTitle").innerHTML = `${plogo(id)}${esc(p.name)}${p.vendor && p.vendor !== p.name ? `<span class="dim" style="font-weight:400;font-size:.9em">${esc(p.vendor)}</span>` : ""}`;
+  pvSheetDraw();
+  $("#shSave").onclick = pvSheetSave;
+  const del = $("#shDel"); if (del) del.onclick = () => confirmDlg(`删除「${esc(p.name)}」`, `删掉保存的 key 和这个服务商的设置。${p.used_by.length ? "<b>" + p.used_by.map(c => CC_NAME[c]).join("、") + " 正在用它，要先停用。</b>" : ""}`, "删除", async () => {
+    await rtApi("prov-delete", {kind: id}); closeDlg(); toast(`已删除「${p.name}」`); ccLoad(); }, true);
+  if (p.key && !p.models.length) pvSheetCheck();
+}
+function pvSheetDraw(){
+  const s = PV.sh, p = pvById(s.id), regs = p.regions || [];
+  const chips = s.models.length ? s.models.slice(0, 18).map(m => `<span class="mchip" title="${esc(m)}">${esc(s.labels[m] || m)}</span>`).join("") + (s.models.length > 18 ? `<span class="dim">还有 ${s.models.length - 18} 个</span>` : "") : '<span class="dim">贴好 key 会自动列出</span>';
+  $("#shBody").innerHTML = `<div class="shf">
+    <label>Key</label><div><input type="password" id="shKey" autocomplete="off" spellcheck="false" placeholder="${p.key ? "已保存 " + esc(p.key) + "（要换就粘贴新的）" : "粘贴 " + esc(p.key_hint === "…" ? "API Key" : p.key_hint)}" value="${esc(s.secret)}"><div class="shst" id="shSt">${s.st}</div></div>
+    ${regs.length > 1 ? `<label>地区</label><div><span class="seg" id="shReg">${regs.map(r => `<button data-reg="${esc(r.id)}" class="${s.region === r.id ? "on" : ""}">${esc(r.label)}</button>`).join("")}</span></div>` : ""}
+    ${s.id === "custom" ? `<label>地址</label><div><input id="shUrl" value="${esc(s.base_url)}" placeholder="服务商给的地址，例如 https://…/v1"></div>
+      <label>接口类型</label><div><select id="shProto">${[["auto", "自动（看地址）"], ["anthropic", "Anthropic Messages"], ["responses", "OpenAI Responses"], ["chat", "OpenAI Chat Completions（Gemini 也选这个）"]].map(([k, t]) => `<option value="${k}" ${s.protocol === k ? "selected" : ""}>${t}</option>`).join("")}</select></div>`
+      : s.more ? `<label>中转地址</label><div><input id="shUrl" value="${esc(s.base_url)}" placeholder="（可选）留空 = 官方地址 ${esc(p.host)}"></div>` : ""}
+    <label>模型</label><div class="mchips">${chips}</div></div>
+    ${s.id !== "custom" && !s.more ? `<div class="shmore"><a href="#" id="shMore">用中转地址 ▾</a></div>` : ""}
+    ${p.used_by.length ? `<div class="dim" style="margin-top:8px">${p.used_by.map(c => CC_NAME[c]).join("、")} 正在用它：保存后自动重新接入。</div>` : ""}
+    ${p.src ? `<div class="dim" style="margin-top:4px;font-size:calc(12.5px*var(--fk))">地址和协议照官方文档：${p.src.split(" · ").map(u => `<a href="${esc(u)}" target="_blank" rel="noreferrer">${esc(u.replace(/^https?:\/\//, "").split("/")[0])}</a>`).join(" · ")}</div>` : ""}`;
+  const k = $("#shKey"); let t;
+  k.oninput = () => { s.secret = k.value.trim(); clearTimeout(t); if (s.secret.length >= 8) t = setTimeout(pvSheetCheck, 600); else { s.st = ""; $("#shSt").innerHTML = ""; } };
+  k.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); pvSheetSave(); } };
+  $$("#shReg [data-reg]").forEach(b => b.onclick = () => { s.region = b.dataset.reg; $$("#shReg button").forEach(x => x.classList.toggle("on", x === b)); pvSheetCheck(); });
+  const u = $("#shUrl"); if (u) u.onchange = () => { s.base_url = u.value.trim(); pvSheetCheck(); };
+  const pr = $("#shProto"); if (pr) pr.onchange = () => { s.protocol = pr.value; pvSheetCheck(); };
+  const mo = $("#shMore"); if (mo) mo.onclick = e => { e.preventDefault(); s.more = true; pvSheetDraw(); $("#shUrl").focus(); };
+  if (!p.key && !s.secret) k.focus();
+}
+async function pvSheetCheck(){
+  const s = PV.sh, p = pvById(s.id), seq = ++s.seq;
+  if (!s.secret && !p.key) return;
+  if (s.id === "custom" && !s.base_url) { s.st = '<span class="dim">先填地址</span>'; $("#shSt").innerHTML = s.st; return; }
+  $("#shSt").innerHTML = '<span class="dim"><i class="spin"></i>检查 key、列出模型…</span>';
+  const r = await rtApi("prov-models", {kind: s.id, secret: s.secret, region: s.region, base_url: s.base_url, protocol: s.protocol === "auto" ? "" : s.protocol}).catch(e => ({ok: false, reason: e.message}));
+  if (!PV.sh || seq !== s.seq) return;
+  if (r.ok) { s.models = r.models; s.ctx = r.ctx || {}; s.labels = r.labels || {}; s.st = `<span class="ok">✓ key 可用 · 列出 ${r.models.length} 个模型</span>`; }
+  else s.st = `<span class="err">✗ ${esc(r.reason || "不通")}${s.secret ? "" : "（已保存的 key）"}</span><span class="dim"> · 仍可保存，模型名可以在选择器里手填</span>`;
+  const keep = s.secret; pvSheetDraw(); const k = $("#shKey"); if (k && keep) { k.value = keep; }
+}
+async function pvSheetSave(){
+  const s = PV.sh, p = pvById(s.id), b = $("#shSave");
+  const u = $("#shUrl"); if (u) s.base_url = u.value.trim();
+  if (!s.secret && !p.key) { $("#shSt").innerHTML = '<span class="err">先粘贴 key</span>'; $("#shKey").focus(); return; }
+  b.disabled = true;
+  try {
+    await rtApi("prov-save", {kind: s.id, secret: s.secret, region: s.region, base_url: s.base_url, protocol: s.protocol === "auto" ? "" : s.protocol, models: s.models, ctx: s.ctx});
+    const first = !pvReady().length;
+    closeDlg(); await pvLoad();
+    for (const cl of p.used_by) await agApply(cl, {}, `已按新的「${p.name}」设置重新接入`);
+    if (!p.used_by.length) toast(`✅ 已保存「${p.name}」${first ? "：在 Agent 里给 Codex / Claude Code 选它的模型" : ""}`, 4000);
+    if (first) mcSetTab("agent");
+  } catch(e){ const st = $("#shSt"); if (st) st.innerHTML = `<span class="err">${esc(e.message)}</span>`; b.disabled = false; return; }
   ccLoad();
 }
 function ccDisable(cl){
@@ -1945,8 +2175,9 @@ function ccDisable(cl){
     ccLoad(); });
 }
 async function ccLoad(){
-  try { const r = await api("/api/route"); RT.d = r; CC.d = r.cards; } catch(e){ const el = $("#ccBox"); if (el && !CC.d) el.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
-  const f = document.activeElement; if (f && f.closest && f.closest("#ccBox") && f.tagName === "INPUT") return;   // 正在输入就不重画
+  try { const [r] = await Promise.all([api("/api/route"), pvLoad()]); RT.d = r; CC.d = r.cards; } catch(e){ const el = $("#ccBox"); if (el && !CC.d) el.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
+  const f = document.activeElement; if (f && f.closest && f.closest("#ccBox, #pvGrid") && f.tagName === "INPUT" && f.type !== "range" && f.type !== "checkbox") return;   // 正在输入就不重画
+  if (PV.pk) return;                                                                  // 选择器开着也不重画
   ccRender(); rtSumUpdate();
 }
 function rtSumUpdate(){
@@ -1956,7 +2187,6 @@ function rtSumUpdate(){
 function mcList(){
   const P = MC.p;
   let h = "";
-  const advOpen = localStorage.getItem("ccss.mcadv") === "1";
   for (const tool of ["claude", "codex"]) {
     h += `<div class="pvsec"><div class="pvhd"><b>${PV_TOOL[tool]}</b>${pvHint(tool, "global")}</div><div class="pvl" role="radiogroup" aria-label="${PV_TOOL[tool]} 供应商">` +
       P[tool].map(p => `<div class="pvrow${p.live ? " on" : ""}" data-pvsw="${esc(p.id)}" data-t="${tool}" role="radio" aria-checked="${p.live ? "true" : "false"}" tabindex="0" title="${p.live ? "当前在用" : "点一下切换到它"}">
@@ -1968,9 +2198,16 @@ function mcList(){
       `<div class="pvadd"><button class="ghost pvaddb" data-pvadd="${tool}" data-pre="custom">＋ 添加供应商</button><span class="dim">预设：</span>${pvPresets(tool).map(([k, t]) => `<button class="pvmini ghost" data-pvadd="${tool}" data-pre="${k}">${t}</button>`).join("")}</div></div></div>`;
   }
   h += `<div class="pvsec rtsum" data-mcgo="route" role="button" tabindex="0"><div class="pvhd"><b>模型路由</b><span class="pvh">多个供应商 / 多 key 轮换 / 别名池 / CLIProxyAPI 导入（卡片背后用的就是它）</span><span style="flex:1"></span><span id="rtSumSt" class="dim"></span><button class="pvmini">打开 ›</button></div></div>`;
-  $("#mcTab").innerHTML = `<div id="ccBox" class="ccbox">${CC.d ? "" : '<div class="dim">读取中…</div>'}</div>
-    <details class="mcadv" id="mcAdv"${advOpen ? " open" : ""}><summary>高级 <span class="dim">供应商列表（v0.2 切换方式）· 模型路由（多供应商 / 多 key）</span></summary>${h}</details>`;
-  $("#mcAdv").ontoggle = () => localStorage.setItem("ccss.mcadv", $("#mcAdv").open ? "1" : "0");
+  if (!["agent", "prov", "adv"].includes(PV.tab)) PV.tab = "agent";
+  $("#mcTab").innerHTML = `${mcTabs()}<div id="ccBox" class="ccbox"${PV.tab === "agent" ? "" : " hidden"}>${CC.d ? "" : '<div class="dim">读取中…</div>'}</div>
+    <div id="pvGrid"${PV.tab === "prov" ? "" : " hidden"}></div><div id="mcAdvBox" class="mcadv"${PV.tab === "adv" ? "" : " hidden"}>${h}</div>`;
+  $$("#mcTab [data-mtab]").forEach(b => b.onclick = () => mcSetTab(b.dataset.mtab));
+  $("#mcTab .mseg").onkeydown = e => { if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return; const ks = ["agent", "prov", "adv"], i = ks.indexOf(PV.tab);
+    mcSetTab(ks[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3]); $(`#mcTab [data-mtab="${PV.tab}"]`).focus(); };
+  // 列表页没有外框：「⋯」菜单和提示行并进分段按钮那一行
+  const top = $("#mcBox .mctop"), tb = $("#mcTab .mtabs"), bx = $("#mcBx");
+  if (top && tb) { $("#mcBox").closest(".card").classList.add("plain"); top.classList.add("intabs"); tb.appendChild(top); if (bx) tb.after(bx); }
+  if (PV.tab === "prov") pgRender();
   $("#mcTab .rtsum").onclick = () => mcGo("route");
   if (CC.d) { ccRender(); rtSumUpdate(); }
   ccLoad();
