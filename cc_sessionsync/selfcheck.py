@@ -189,6 +189,48 @@ def check_autostart() -> dict | None:
     return _item("autostart", "开机自启", "warn", f"开着，但指向的程序不在：{exe}", "在设置里把「开机自启」关掉再打开")
 
 
+def check_route() -> list[dict]:
+    """模型路由（v0.3.0）：代理在不在跑、端口、key 在不在凭据管理器、最近的错误。没配过就不出现。"""
+    from . import keystore, router
+    d = router.load()
+    if not d["providers"] and not d.get("applied"):
+        return []
+    out = []
+    port = d.get("port")
+    alive = False
+    if port:
+        try:
+            op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+            with op.open(f"http://127.0.0.1:{port}/health", timeout=3) as r:
+                alive = b"cc-sessionsync-route" in r.read(200)
+        except Exception:
+            alive = False
+    applied = [k for k in ("codex", "claude") if (d.get("applied") or {}).get(k)]
+    who = "、".join({"codex": "Codex", "claude": "Claude Code"}[k] for k in applied)
+    if alive:
+        out.append(_item("route", "模型路由代理", "pass", f"在跑：127.0.0.1:{port}" + (f"；{who} 已指向它" if who else "")))
+    elif applied:
+        out.append(_item("route", "模型路由代理", "fail", f"{who} 已指向 127.0.0.1:{port}，但代理没在跑（请求会连不上）",
+                         "打开 CC Session Sync（代理随程序启动），或在「供应商 → 模型路由」点「启动」；不用了就点「撤销」"))
+    else:
+        out.append(_item("route", "模型路由代理", "warn", f"没在跑（端口 {port or '未分配'}）", "要用的话在「供应商 → 模型路由」点「启动」"))
+    if router.STATE.get("error"):
+        out[-1]["detail"] += "；" + router.STATE["error"]
+    miss = [f"{p['name']}·{k.get('label') or k['id']}" for p in d["providers"] for k in p["keys"] if not k.get("disabled") and not keystore.get(k["name"])]
+    nokey = [p["name"] for p in d["providers"] if not p.get("disabled") and not any(not k.get("disabled") for k in p["keys"])]
+    if miss or nokey:
+        out.append(_item("route-keys", "模型路由的 key", "fail", ("凭据管理器里找不到：" + "、".join(miss[:5]) if miss else "")
+                         + ("；没有 key 的供应商：" + "、".join(nokey[:5]) if nokey else ""), "在「供应商 → 模型路由」里把 key 重新填一次"))
+    else:
+        out.append(_item("route-keys", "模型路由的 key", "pass", f"{sum(len(p['keys']) for p in d['providers'])} 个 key 都在凭据管理器里"))
+    errs = router.status()["errors_recent"][:3]
+    if errs:
+        out.append(_item("route-errors", "模型路由最近的错误", "warn",
+                         "；".join(f"{e.get('provider') or ''} {e.get('status') or ''} {e.get('message') or ''}".strip() for e in errs)[:400],
+                         "看「供应商 → 模型路由」里的请求记录；401 / 403 多半是 key 不对，429 是限流（会自动换 key / 冷却）"))
+    return out
+
+
 def run(net: bool = True) -> dict:
     t0 = time.time()
     items = [check_install(), check_home(), check_keystore()]
@@ -204,6 +246,10 @@ def run(net: bool = True) -> dict:
     except Exception as e:
         items.append(_item("agents", "找 Claude / Codex", "warn", f"{type(e).__name__}: {e}"))
     items += check_dirs()
+    try:
+        items += check_route()
+    except Exception as e:
+        items.append(_item("route", "模型路由代理", "warn", f"{type(e).__name__}: {e}"))
     if net:
         items.append(check_update())
     n = {s: sum(1 for x in items if x["status"] == s) for s in ("pass", "warn", "fail")}

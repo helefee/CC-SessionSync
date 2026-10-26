@@ -58,7 +58,7 @@ try {
         "--copyright=MIT" "--windows-icon-from-ico=cc_sessionsync\icon.ico" @cc `
         "--output-dir=build\nuitka-app" "--output-filename=CCSessionSync.exe" `
         "--windows-console-mode=attach" "--file-description=CC Session Sync" `
-        "--include-package=cc_sessionsync" "--include-package-data=cc_sessionsync" "--include-package=zstandard" `
+        "--include-package=cc_sessionsync" "--include-package-data=cc_sessionsync" "--include-package=zstandard" "--include-package=yaml" `
         "--nofollow-import-to=unittest,pydoc,test" `
         "tools\nuitka\CCSessionSync.py"
     Check "nuitka"

@@ -430,6 +430,9 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/providers":
             from . import providers
             return providers.overview(None)
+        if p == "/api/route":
+            from . import router
+            return router.overview()
         if p.startswith("/api/usage/"):
             from . import usage
             f = {k: q.get(k) for k in ("app", "provider", "model", "from", "to")}
@@ -664,6 +667,8 @@ class H(BaseHTTPRequestHandler):
                     return providers.models(tool, b.get("id") or None, b.get("base_url"), b.get("secret") or None, bool(b.get("cached_only")))
             except providers.PlaintextError as e:
                 return {"error": str(e), "plaintext": e.items}, 409
+        if p.startswith("/api/route/"):
+            return _route(p.rsplit("/", 1)[1], b)
         if p.startswith("/api/usage/"):
             from . import usage
             if p == "/api/usage/sync":
@@ -783,6 +788,46 @@ def _reveal(path: str) -> dict:
     return {"ok": True, "path": str(target)}
 
 
+def _route(act: str, b: dict):
+    """模型路由（v0.3.0）。key 明文只在 save 的 new_keys / models 的 secret 里进来，回去的都是打码的。"""
+    from . import router
+    if act == "save":
+        return router.upsert_provider(b.get("provider") or {}, b.get("new_keys") or [])
+    if act == "delete":
+        return router.delete_provider(str(b["id"]))
+    if act == "clients":
+        return router.set_clients(b)
+    if act == "start":
+        return router.start()
+    if act == "stop":
+        return router.stop()
+    if act == "restart":
+        router.stop()
+        return router.start()
+    if act == "test":
+        return router.test_provider(str(b["id"]), b.get("model") or None)
+    if act == "models":
+        return router.list_models(b.get("id") or None, b.get("draft"))
+    if act == "apply-codex":
+        return router.apply_codex(bool(b.get("default")))
+    if act == "revert-codex":
+        return router.revert_codex()
+    if act == "apply-claude":
+        return router.apply_claude("session" if b.get("mode") == "session" else "global")
+    if act == "revert-claude":
+        return router.revert_claude()
+    if act == "cpa-preview":
+        return router.cpa_preview(str(b.get("text") or ""))
+    if act == "cpa-import":
+        return router.cpa_import(str(b.get("text") or ""), b.get("picks"))
+    if act == "rotate-token":
+        return router.rotate_token()
+    if act == "reset-cooldown":
+        router._COOL.clear()
+        return {"ok": True}
+    return None
+
+
 # ---------- 后台 ----------
 
 _bg_started = False
@@ -818,6 +863,14 @@ def start_background(auto_sync: bool | None = None) -> None:
     if not os.environ.get("CC_SESSIONSYNC_NO_USAGE"):
         usage.start_background()
     sessions.start_auto(backup_settings)
+    if not os.environ.get("CC_SESSIONSYNC_NO_ROUTE"):
+        def route_up():
+            try:
+                from . import router
+                router.autostart()
+            except Exception:
+                pass
+        threading.Thread(target=route_up, daemon=True, name="ccss-route-start").start()
     update.auto_check_later(lambda: settings.get("update_auto", True))
     if MODE["desktop"] and not settings.get("selfcheck_done") and not os.environ.get("CC_SESSIONSYNC_NO_SELFCHECK"):
         def first():

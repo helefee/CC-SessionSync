@@ -125,7 +125,7 @@ def claude_state(scope: str = "user", root: str | None = None) -> dict:
     env = s.get("env") if isinstance(s.get("env"), dict) else {}
     helper = s.get("apiKeyHelper")
     hname = _helper_name(helper)
-    secrets = {k: mask(env.get(k)) for k in CLAUDE_SECRET_ENV if env.get(k)}
+    secrets = {k: mask(env.get(k)) for k in CLAUDE_SECRET_ENV if env.get(k) and not str(env.get(k)).startswith("ccss-local-")}  # ccss-local-：模型路由的本机口令，不是真 key
     cj = _read_json(paths.CLAUDE_HOME.parent / ".claude.json") if not os.environ.get("CLAUDE_CONFIG_DIR") else _read_json(paths.CLAUDE_HOME / ".claude.json")
     oauth = cj.get("oauthAccount") or {}
     return {"file": str(p), "exists": p.exists(), "error": err, "scope": scope,
@@ -136,7 +136,7 @@ def claude_state(scope: str = "user", root: str | None = None) -> dict:
             "plaintext": secrets, "login": {"oauth": bool(oauth), "billing": oauth.get("billingType"),
                                             "email": _mask_email(oauth.get("emailAddress"))},
             "other_env": sorted(k for k in env if k not in CLAUDE_ENV_OWNED and k not in CLAUDE_SECRET_ENV),
-            "symlink": p.is_symlink()}
+            "symlink": p.is_symlink(), "route": str(env.get("ANTHROPIC_AUTH_TOKEN") or "").startswith("ccss-local-")}
 
 
 def _mask_email(e):

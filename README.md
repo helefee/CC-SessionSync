@@ -20,7 +20,9 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    能导成 Claude Code 会话接着聊；反方向导出一份给 Cursor 的上下文文件（不写 Cursor 的数据库，原因见下）。界面字号和缩放可调（0.2.6）。
 8. **会话转换（0.2.7）**：Claude Code、Codex、DeepSeek Harness、Cursor、**OpenCode**、**ZCode** 任意两个之间转会话；能安全原生写的写成目标的新会话，
    写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
-9. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
+9. **模型路由（0.3.0）**：本机协议转换代理，让 **Codex 用 Claude 模型**、**Claude Code 用 OpenAI / Gemini / 中转站的模型**；只用 API key（官方或兼容地址，
+   多 key 轮换 / 失败换 key / 别名池，参考 CLIProxyAPI），**不支持订阅登录**；一键应用 / 撤销（按字节还原）。见下文。
+10. **用量**、**供应商**（Claude Code / Codex 供应商切换，key 存 Windows 凭据管理器）、**诊断 / 自检**、**检查更新**、托盘和系统通知。
 
 > 最早是 [CC Msg](https://github.com/helefee/CCMessage) 里的功能，这里单独拿出来，不需要装 CC Msg；两个程序的数据和设置互不影响
 > （本程序的数据都在 `~/.cc-sessionsync`）。
@@ -353,6 +355,60 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
+### 模型路由：Codex 用 Claude 模型、Claude Code 用 OpenAI 等模型（0.3.0）
+
+「供应商 → 模型路由」。程序里带一个**本机协议转换代理**（只听 `127.0.0.1`，每个请求都要带本机口令 `ccss-local-…`，口令存凭据管理器），
+CC Session Sync 开着（含托盘）它就在：
+
+- **Codex → Claude**：Codex 发 OpenAI Responses（或 Chat Completions）→ 代理转成 Anthropic Messages → Anthropic 官方 / 中转站 → 再转回来。
+- **Claude Code → OpenAI / Gemini / 中转站**：Claude Code 发 Anthropic Messages → 代理转成 OpenAI Responses 或 Chat Completions → 转回来。
+- **同协议直通**（比如 Claude Code → Anthropic 中转）：只换模型名、做 key 轮换，内容原样转。
+- 转换覆盖：流式（SSE）双向、工具调用（含并行调用、Codex 的 namespace / 自定义工具 apply_patch）、tool_result、思考 / 推理（签名和
+  encrypted_content 原样带回下一轮）、图片、system / developer、停止原因、用量（含缓存读写）、`count_tokens`、错误和限流（状态码、retry-after；
+  上下文超长会翻成对方客户端认的说法，Claude Code / Codex 能自动压缩）。
+
+**只用 API key**：Anthropic / OpenAI 官方 key，或者任何 Anthropic / OpenAI 兼容的地址（中转站、自建网关、Gemini 的 OpenAI 兼容接口等）。
+**不支持**把 Claude / ChatGPT **订阅登录**（OAuth）拿到别的工具里用——违反服务条款，有封号风险，明确不做。应用模型路由不会动你原来的登录，撤销后照常用。
+
+**供应商**（参考 [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)，MIT，按它的概念重新实现，没有拷代码）：名字、Base URL（官方的预填好）、
+上游协议（Anthropic Messages / OpenAI Responses / OpenAI Chat Completions）、**多个 key**（存凭据管理器，只显示打码的；权重；每个 key 可单独设代理）、
+**模型 + 别名**（同一个别名挂在多个模型 / 供应商上 = 一个池子，轮流用、失败自动换）、能拉 `/v1/models` 的就点「拉取模型列表」、
+**排除的模型**（通配符）、**前缀**（`前缀/模型名` 只走这家）、**额外请求头**（`$x-foo` = 照抄客户端的头）、**上游代理**（全局 / 供应商 / key 三级；
+`direct` = 直连）、每个模型的**价格**（按价格表 / 自定义 / 不计费「—」）。**轮换策略** round-robin（按权重）或 fill-first；
+401 / 403 / 408 / 429 / 5xx / 连不上 → 换下一个 key，出错的 key 冷却（401/403 五分钟、429 按 retry-after）；全都失败再试几轮（可调）。
+只在还没给客户端回任何内容时换 key，回到一半断了就给客户端一个对应格式的错误。还能**从 CLIProxyAPI 的 config.yaml 导入**（只导 API key 供应商）。
+
+**一键应用 / 撤销**（先备份；撤销时文件没被改过就**按字节还原**，改过就只拿掉我们加的）：
+
+- **Codex**：缺省写一个单独的 profile `~/.codex/cc-route.config.toml`（`model_provider = "cc-route"`，口令用取 key 命令从凭据管理器拿，文件里没有口令），
+  **config.toml 和 ChatGPT 登录都不动**；用 `codex --profile cc-route` 启动。「应用并设为默认」才改 config.toml（指向 cc-route）。
+- **Claude Code**：在 `~/.claude/settings.json` 的 env 里设 `ANTHROPIC_BASE_URL=http://127.0.0.1:<端口>` 和 `ANTHROPIC_AUTH_TOKEN=<本机口令>`；
+  claude.ai 登录不删。或者「只给命令行」：不改全局，`claude --settings "~/.cc-sessionsync/route/claude-settings.json"`。
+  Claude Code 请求的模型按名字里的 opus / sonnet / haiku 换成你选的别名。
+- **Claude 桌面版**不走这里：它要用第三方模型请用桌面版自己的「API 模式（3P）」。
+- Codex / Claude 开着时也能应用（只是写配置文件）；已经开着的会话要重开才生效，确认框里会提示。
+
+**用量**：经过代理的请求按**真实上游模型**记进「用量」（供应商显示「模型路由 · 名字」，按你给的价格算），会话日志里同一次请求不会再算一遍。
+**诊断 / 自检**：代理在不在跑、端口、key 在不在凭据管理器、最近的错误。页面下方有最近的请求（不记内容、key 打码）。
+
+**设置步骤**：① 「供应商 → 模型路由」→「添加供应商」（选预设或自定义，填 key，模型 + 别名）→「测试」；② Claude Code：选 Opus / Sonnet / Haiku 用哪个别名 →
+「应用（全局）」，新开一个 `claude`；Codex：选模型别名和思考强度 →「应用（profile）」，用 `codex --profile cc-route`；③ 不用了点「撤销」。
+
+**限制**：
+
+- Anthropic 的**服务端工具**（web_search / web_fetch / code_execution 等服务器跑的工具）转到 OpenAI 时会去掉；OpenAI 的**内置工具**（web_search、
+  tool_search、file_search 等）转到 Anthropic 时会去掉。普通函数工具都正常。
+- **思考 / 推理**：跨厂商时只是近似——Claude 的 thinking 签名、OpenAI 的 encrypted reasoning 只能带回给原厂；思考强度按 low / medium / high 对应，
+  预算类参数是估算的；Codex 显示的推理摘要来自 Claude 的 thinking 文本。
+- **提示缓存**不一样：转到 Anthropic 时自动在 system / 工具 / 最后一条用户消息上打 cache_control；OpenAI 是自动缓存（用 prompt_cache_key）；
+  缓存命中率和价格按各家自己的规则。
+- 非 Anthropic 上游的 `count_tokens` 是估算的。Codex 不认识别名的模型元数据，会用兜底设置（上下文窗口可在页面里填）。
+- Gemini 走它的 OpenAI 兼容接口（Chat Completions），没有做 Gemini 原生协议。
+
+| 模型路由 | 编辑供应商 | 从 CLIProxyAPI 导入 |
+|---|---|---|
+| ![](docs/screenshots/v030-01-route-light.png) | ![](docs/screenshots/v030-02-route-provider-light.png) | ![](docs/screenshots/v030-03-route-cpa-light.png) |
+
 ### 字号与界面缩放（0.2.6）
 
 - 缺省字号调大了一号（正文 15px，最小的标签 12px）。
@@ -468,6 +524,18 @@ cc-sessionsync sessions export claude <会话号> --fmt md
 cc-sessionsync sessions trash             # 回收站
 cc-sessionsync sessions ops               # 操作记录
 cc-sessionsync usage [--full]             # 用量汇总
+
+# 模型路由（0.3.0；桌面端开着时代理自己会跑）
+cc-sessionsync route status                               # 代理状态
+cc-sessionsync route list                                 # 供应商（key 打码）
+ANTHROPIC_KEY=… cc-sessionsync route add --name "Anthropic 官方" --protocol anthropic \
+    --model claude-sonnet-5-5=sonnet --key-env ANTHROPIC_KEY  # key 只从环境变量读
+cc-sessionsync route clients '{"claude":{"slots":{"opus":"gpt","sonnet":"gpt","haiku":"gpt-mini"}},"codex":{"model":"sonnet"}}'
+cc-sessionsync route apply codex [--default]              # 写 cc-route profile（--default 才改 config.toml）
+cc-sessionsync route apply claude [--session]             # settings.json env（--session：只写 claude --settings 用的文件）
+cc-sessionsync route revert codex|claude
+cc-sessionsync route test <供应商 id> [模型]
+cc-sessionsync route serve [--port N]                     # 前台跑代理（不开桌面端时）
 ```
 
 导入后命令行会打印每个会话的打开方式，例如：
@@ -626,6 +694,29 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Model routing (0.3.0):** 供应商 → 模型路由. A built-in **local protocol-conversion proxy** (127.0.0.1 only, every request needs a local
+  token `ccss-local-…` kept in the credential store; runs while the app/tray runs, optional autostart) lets **Codex use Claude models** and
+  **Claude Code use OpenAI / Gemini / relay models**: Anthropic Messages ⇄ OpenAI Responses / Chat Completions, both directions, plus
+  same-protocol passthrough. Covers SSE streaming both ways, tool calls (parallel, Codex namespaced / custom tools such as apply_patch),
+  tool results, thinking/reasoning (signatures and encrypted_content round-trip on the next turn), images, system/developer, stop reasons,
+  usage incl. cache tokens, `count_tokens`, errors and rate limits (status + retry-after; context-length errors are translated so the
+  client auto-compacts). **Official API keys or any Anthropic/OpenAI-compatible endpoint only; reusing Claude/ChatGPT subscription (OAuth)
+  logins across tools is explicitly not supported** (ToS / ban risk). Providers are modeled on
+  [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) (MIT; concepts re-implemented, no code copied): base URL (official ones
+  prefilled), upstream protocol, multiple keys with weights and per-key proxy, model + alias (same alias on several models/providers = a
+  pool), `/v1/models` fetch, excluded models (wildcards), prefix routing, custom headers (`$x-foo` copies a client header), HTTP proxy
+  (global / provider / key; `direct`), per-model price or "—"; round-robin (weighted) or fill-first, failover on 401/403/408/429/5xx/connection
+  errors with key cooldown and retry rounds (only before any byte reached the client); import from a CLIProxyAPI `config.yaml` (API-key
+  providers only). **One-click apply / revert** (backed up; revert is byte-identical when the file wasn't touched since, otherwise surgical):
+  Codex gets a separate profile `~/.codex/cc-route.config.toml` (`codex --profile cc-route`; config.toml and the ChatGPT login untouched;
+  "set as default" optional), Claude Code gets `ANTHROPIC_BASE_URL` / `ANTHROPIC_AUTH_TOKEN` in `~/.claude/settings.json` env (or a
+  session-only file for `claude --settings`); Claude Desktop should use its own API mode (3P). Proxied requests are recorded in Usage with the
+  real upstream model and provider price (log scanning skips them, no double counting); Diagnostics shows proxy status, port, keys and recent
+  errors. **Limitations:** Anthropic server tools and OpenAI built-in tools (web_search, tool_search, file_search…) are dropped when
+  crossing; reasoning fidelity across vendors is approximate (signatures only replay to their own vendor, effort mapped by level); prompt
+  caching differs (cache_control breakpoints added for Anthropic, prompt_cache_key for OpenAI); `count_tokens` is estimated for non-Anthropic
+  upstreams; Codex uses fallback model metadata for aliases; Gemini via its OpenAI-compatible endpoint (no native Gemini protocol).
+  Verified in CI with real `codex exec` and `claude -p` against local mock upstreams (tool round-trips), no real keys.
 - **Timeline & backups (0.2.9):** the Timeline and Backups pages are merged into one top-bar page "时间线与备份" with sub-tabs
   时间线 (timeline: segment bars, point-in-time picking, preview, restore to Claude, account/project grouping, growth curve) | 备份 (session
   backup DB: schedule, back up now, retention, location/size, recent versions; recycle bin; export/import .md/.html) | 撤销记录 (queued changes,

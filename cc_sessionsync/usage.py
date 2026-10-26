@@ -42,7 +42,7 @@ SCHEMA = 2
 _lock = threading.RLock()
 STATE = {"scanning": False, "last": 0.0, "last_ms": 0, "files": 0, "added": 0, "error": "", "first_done": False, "migrated": None}
 _NEWCOLS = (("stop", "INT"), ("prompt", "INT"), ("tier", "TEXT"), ("geo", "TEXT"), ("proj", "TEXT"), ("ver", "INT"),
-            ("c_in", "REAL"), ("c_cr", "REAL"), ("c_cw5", "REAL"), ("c_cw1h", "REAL"), ("c_out", "REAL"), ("priced", "INT"), ("est", "INT"))
+            ("c_in", "REAL"), ("c_cr", "REAL"), ("c_cw5", "REAL"), ("c_cw1h", "REAL"), ("c_out", "REAL"), ("priced", "INT"), ("est", "INT"), ("pfix", "INT"))
 
 
 def _conn() -> sqlite3.Connection:
@@ -222,7 +222,7 @@ def _claude_lines(lines, st: dict, fid: str, ctx: dict, agent: int, hours: set, 
         m = d.get("message") or {}
         u = m.get("usage") or {}
         mid, model = m.get("id"), m.get("model") or ""
-        if not mid or not u or model in ("<synthetic>", "codex-import"):     # codex-import：本程序从 Codex 导进来的对话（0 token）
+        if not mid or not u or model in ("<synthetic>", "codex-import") or mid.startswith("msg_ccss"):   # msg_ccss：走模型路由的，代理那边记过了     # codex-import：本程序从 Codex 导进来的对话（0 token）
             continue
         rid = d.get("requestId") or rids.get(mid) or ""
         if rid:
@@ -299,6 +299,8 @@ def _codex_lines(lines, st: dict, fid: str, ctx: dict, hours: set, rows: list, p
                 st["tier"] = _cx_tier(p.get("service_tier"))
             continue
         ts = _ts(d.get("timestamp"))
+        if st.get("prov") == "cc-route":
+            continue                                      # 走 CC Session Sync 模型路由的会话：用量由代理按真实上游模型记
         prov, sub = _codex_provider(st.get("prov"), ctx)
         thread = st.get("thread") or fid
         tier = _cx_tier(p.get("service_tier")) if p.get("service_tier") else st.get("tier", "")
@@ -500,8 +502,9 @@ def _recost(c: sqlite3.Connection, only_old: bool = False) -> int:
     """按现在的价格表把（全部 / 老口径的）记录的费用拆分重算一遍（改价格、改倍率、从 models.dev 更新后调）。"""
     pt, mults = price_table(c), _mults(c)
     q = "SELECT id, model, provider, inp, cr, cw5, cw1h, out, prompt, tier, geo FROM calls"
+    q += " WHERE coalesce(pfix,0)=0"                       # 模型路由里给模型单独定的价：不跟价格表走
     if only_old:
-        q += f" WHERE coalesce(ver,0) < {SCHEMA}"
+        q += f" AND coalesce(ver,0) < {SCHEMA}"
     up = []
     for i, model, prov, *t, prompt, tier, geo in c.execute(q).fetchall():
         t = [v or 0 for v in t]
@@ -511,6 +514,42 @@ def _recost(c: sqlite3.Connection, only_old: bool = False) -> int:
     c.executemany("UPDATE calls SET c_in=?, c_cr=?, c_cw5=?, c_cw1h=?, c_out=?, priced=?, est=?, prompt=?, ver=? WHERE id=?", up)
     c.commit()
     return len(up)
+
+
+def record_proxy(app: str, provider: str, model: str, u: dict, price=None, ts: float | None = None, sid: str = "") -> str:
+    """模型路由代理转发的一次请求 → calls 表一行（src=route）。
+    price：None = 按价格表；"none" = 不计费（显示 —）；{inp, out, cr?, cw?}（美元 / 百万 token）= 这个供应商这个模型自己的价。"""
+    import secrets as _s
+    ts = ts or time.time()
+    t = (_n(u.get("input")), _n(u.get("cache_read")), _n(u.get("cache_write")), 0, _n(u.get("output")))
+    if not sum(t):
+        return ""
+    rid = f"rt:{int(ts * 1000)}:{_s.token_hex(4)}"
+    with _lock:
+        c = _conn()
+        try:
+            pt = price_table(c)
+            row = list(mkrow(rid, app, "route", ts, sid, provider, 0, model, t, _n(u.get("reasoning")), 0, "route", stop=1, pt=pt, mults=_mults(c)))
+            fix = 0
+            if price == "none" or isinstance(price, dict):
+                fix = 1
+                pp = None
+                if isinstance(price, dict):
+                    pp = {"inp": price["inp"], "out": price["out"], "cr": price.get("cr", price["inp"]),
+                          "cw5": price.get("cw", price["inp"]), "cw1h": price.get("cw", price["inp"])}
+                cp = cost_parts(dict(zip(TOK, t)), pp, _mults(c).get(provider, 1.0), t[0] + t[1] + t[2] + t[3])
+                i = COLS.index("c_in")
+                row[i:i + 5] = list(cp[:5]) if cp else [None] * 5
+                row[COLS.index("priced")] = 1 if cp else 0
+                row[COLS.index("est")] = 0
+            c.execute(UPSERT, row)
+            if fix:
+                c.execute("UPDATE calls SET pfix=1 WHERE id=?", (rid,))
+            c.commit()
+            _rollup(c, {int(ts // 3600)})
+        finally:
+            c.close()
+    return rid
 
 
 def recost() -> int:

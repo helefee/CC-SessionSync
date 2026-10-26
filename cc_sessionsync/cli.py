@@ -534,6 +534,7 @@ def build_parser() -> argparse.ArgumentParser:
     ui.add_argument("--no-browser", action="store_true")
     ui.add_argument("--auto", action="store_true", help="界面开着时顺便自动同步（桌面端没开时补齐）")
     ui.set_defaults(fn=cmd_ui)
+    sub.add_parser("route", help="模型路由（本机协议转换代理）：route serve | status | list | add | clients | apply | revert | test，见 route --help")
     sub.add_parser("desktop", help="打开桌面窗口（缺省；--port / --minimized / --quit，见 desktop --help）")
     sc = sub.add_parser("selfcheck", help="自检：程序文件、数据目录、凭据管理器、Claude / Codex、更新地址")
     sc.add_argument("--offline", action="store_true", help="不查更新地址")
@@ -576,6 +577,9 @@ def main(argv: list[str] | None = None) -> int:
     if argv[0] == "desktop":
         from . import desktop
         return desktop.main(argv[1:])
+    if argv[0] == "route":                       # 模型路由：route serve / status / add / clients / apply / revert / test
+        from . import router
+        return router.main(argv[1:])
     if argv[0] == "key":                         # Claude 的 apiKeyHelper / Codex 的 auth 命令：只把 key 打到 stdout
         from . import keystore
         return keystore.main(argv[1:])
