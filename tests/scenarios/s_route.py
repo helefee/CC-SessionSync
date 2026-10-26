@@ -288,9 +288,12 @@ blob = json.dumps(st, ensure_ascii=False) + json.dumps(router.overview(), ensure
 ok(st["requests"] > 10 and st["errors"] >= 3 and not any(s in blob for s in ("good-a", "good-b", "bad-key-1", "dead-y", TOK)), "status / log / config contain no keys or the local token")
 
 # 用量
-time.sleep(0.3)
 c = usage._conn()
-rows = c.execute("SELECT app, provider, model, inp, cr, out, priced, c_in, c_out, pfix FROM calls WHERE src='route'").fetchall()
+for _ in range(50):                                   # 用量是请求结束后异步写的：等它写完（CI 慢的时候 0.3 秒不够）
+    rows = c.execute("SELECT app, provider, model, inp, cr, out, priced, c_in, c_out, pfix FROM calls WHERE src='route'").fetchall()
+    if len(rows) >= 10:
+        break
+    time.sleep(0.2)
 ok(len(rows) >= 10, f"proxied requests recorded in usage ({len(rows)})")
 g = [r for r in rows if r[1] == "模型路由 · Mock OpenAI" and r[2] == "gpt-mock"]
 ok(g and g[0][0] == "claude-code" and g[0][6] == 1 and abs(g[0][7] - g[0][3] * 2 / 1e6) < 1e-12 and g[0][9] == 1, "custom per-model price applied (input $2/M)")
