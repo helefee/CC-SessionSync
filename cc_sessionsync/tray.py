@@ -2,7 +2,7 @@
 """Windows 托盘图标 + 右键菜单 + 通知（Shell_NotifyIcon，纯 ctypes，不加依赖）。从 CC Msg 的 tray.py 移植。
 
 - 左键：窗口在前面 → 藏起来；否则显示并拉到前面。双击：打开窗口。
-- 右键菜单：显示 / 隐藏窗口、立即同步、自动同步（勾选）、会话管理…、用量…、供应商…、
+- 右键菜单：显示 / 隐藏窗口、立即同步、自动同步（勾选）、会话管理…、用量…、
   开机自启 / 关窗口藏到托盘 / 启动时最小化 / 通知、检查更新（有新版本时带红点「●」）、退出。
 - 图标：平时是程序图标；有排队等桌面端退出的活加橙点，有新版本 / 账号切换没处理加红点。
 - 通知（托盘气泡，Win10 / 11 上显示成系统通知；15 秒最多一条，多的合并）：自动同步补了会话、排队的活做完、
@@ -428,7 +428,7 @@ class Tray:
                  (7, "会话转换（Codex → Claude Code）…", {}),
                  (8, "会话管理…", {}),
                  (14, "时间线与备份…", {}),
-                 (3, "用量…", {}), (4, "供应商…", {})]
+                 (3, "用量…", {})]
         if d.get("jobs"):
             items.append((9, f"{d['jobs']} 个活在等桌面端退出…", {}))
         items += [("-",),
@@ -494,10 +494,10 @@ class Tray:
             elif cmd == 6:
                 settings.update(auto_sync=not settings.get("auto_sync", False))
                 self.refresh()
-            elif cmd in (3, 4, 7, 8, 9, 14, 22):
+            elif cmd in (3, 7, 8, 9, 14, 22):
                 self.app.open({"page": "convert", "src": "codex", "dst": "claude"} if cmd == 7 else
                               {"page": "timeline", "tab": "tl"} if cmd == 14 else
-                              {"page": {3: "usage", 4: "models", 8: "sessions", 9: "jobs", 22: "selfcheck"}[cmd]})
+                              {"page": {3: "usage", 8: "sessions", 9: "jobs", 22: "selfcheck"}[cmd]})
             elif cmd == 10:
                 autostart_set(not autostart_get(), self.app.port)
             elif cmd in (11, 12, 13):

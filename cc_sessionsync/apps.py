@@ -115,7 +115,7 @@ def relaunch(info: dict | None) -> bool:
 VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "codex-import": "导入", "codex-undo": "撤回导入",
          "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
          "timeline-replace": "恢复", "convert-run": "转换", "convert-undo": "撤回转换",
-         "route-card-enable": "启用", "route-card-disable": "停用"}
+         "route-card-enable": "恢复", "route-card-disable": "恢复", "legacy-codex": "恢复"}
 
 
 def verb(op: str, args: dict | None = None) -> str:
@@ -177,9 +177,11 @@ def _dsh():
     return dsh
 
 
-def _cards():
-    from . import cards
-    return cards
+def _legacy_route_job(**a) -> dict:
+    """0.3.4 以前排队的「供应商卡片 启用/停用」：功能已经拿掉，改成跑一遍收尾（还原配置），不再报错。"""
+    from . import legacy
+    r = legacy.migrate(force=True, codex_now=True)          # 队列只在 Codex 桌面端退出后才执行
+    return {"ok": not r.get("errors"), "skipped": True, "note": "供应商功能已移除：改为把配置恢复原样", "done": r.get("done") or []}
 
 
 def _convert():
@@ -207,8 +209,9 @@ def _ops():
         "sessions-undo": lambda **a: _sessions().undo(a["op"]),
         "desktop-register": lambda **a: _timeline().register_desktop(a["op"], a["regs"]),
         "timeline-replace": lambda **a: _timeline().replace(a["snaps"]),
-        "route-card-enable": lambda **a: _cards().enable(a["client"]),
-        "route-card-disable": lambda **a: _cards().disable(a["client"]),
+        "route-card-enable": _legacy_route_job,          # 0.3.5：供应商功能已移除，旧队列里的任务不再报错
+        "route-card-disable": _legacy_route_job,
+        "legacy-codex": _legacy_route_job,
     }
     for p in EXTRA_OPS:
         try:

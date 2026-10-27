@@ -16,7 +16,6 @@
 @font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
 @font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-medium.woff2) format("woff2");font-weight:450 649;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
 @font-face{font-family:"SS Mono";src:url(/fonts/jetbrainsmono-bold.woff2) format("woff2");font-weight:650 900;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215,U+2500-25FF}
-
 :root{
   --fk:1;--z:1;--vh:calc(1vh / var(--z));--vw:calc(1vw / var(--z));
   --bg:#faf9f5;--panel:#ffffff;--panel2:#f5f4ed;--side:#f3f1ea;--hover:#ebe8de;--hover2:#e2ded1;--bubble:#efece3;
@@ -60,13 +59,12 @@ code{font-family:var(--mono);font-size:calc(13px*var(--fk));background:var(--hov
 a{color:var(--accent)}
 .ic{width:1.1em;height:1.1em;vertical-align:-.18em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ic.logo{width:1.05em;height:1.05em;fill:currentColor;stroke:none}
-.dim{color:var(--faint)}.muted{color:var(--muted)}
+.dim{color:var(--faint)}
 .app{display:flex;flex-direction:column;height:calc(100*var(--vh))}
 .top{display:flex;align-items:center;gap:12px;padding:8px 16px;border-bottom:1px solid var(--line2);background:var(--bg);flex:none}
 .brand{display:flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap}
 .brand img{width:20px;height:20px;border-radius:5px}
 .brand .ver{font-weight:400;font-size:calc(12.5px*var(--fk));color:var(--faint)}
-.tabs{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
 .tab{font-size:calc(13.5px*var(--fk));padding:3px 11px;border-radius:999px;background:var(--hover);color:var(--text);display:inline-flex;align-items:center;gap:6px}
 .tab .ic{width:14px;height:14px;color:var(--muted)}
 .tab.on{background:var(--ink);color:var(--ink-on)}.tab.on .ic{color:var(--ink-on)}
@@ -245,90 +243,16 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .us .tag.claude{color:var(--claude);border-color:currentColor}.us .tag.codex{color:var(--cxn,var(--codex));border-color:currentColor}
 .us .dim{color:var(--faint)}
 .us .miss{background:var(--warn-weak);border:1px solid var(--warn);border-radius:8px;padding:6px 10px;font-size:calc(13.5px*var(--fk))}
-#mcBox code{overflow-wrap:anywhere;word-break:break-all}
-.pvsec{margin-bottom:10px}
-.pvt{margin-top:6px;display:block;overflow-x:auto}.pvt tr.on td{background:var(--ok-weak)}
-.pvr{display:inline-flex;gap:4px;font-size:calc(12.5px*var(--fk))}.pvr span{border:1px solid var(--line);border-radius:6px;padding:0 5px}.pvr .y{color:var(--ok);border-color:var(--ok)}.pvr .n{color:var(--faint)}
-.pvm{display:inline-block;font-size:calc(12.5px*var(--fk));border:1px solid var(--line);border-radius:6px;padding:0 5px;margin:1px 3px 1px 0}
 .tag.ok{color:var(--ok);border-color:var(--ok)}
-.pfold>summary .pfmore{display:none;flex:none;border:0;background:transparent;padding:0 2px;height:18px;color:var(--muted);cursor:pointer;border-radius:5px}
-.pfold>summary:hover .pfmore,.pfold>summary .pfmore:focus-visible{display:inline-flex;align-items:center}
-.pfold>summary .pfmore:hover{background:var(--hover2,var(--line2));color:var(--text)}
-.pjctx{position:fixed;z-index:200;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:5px;min-width:200px}
-.pjctx .pjh{font-size:calc(12.5px*var(--fk));color:var(--faint);padding:3px 9px 5px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pjctx button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;background:transparent;border-radius:7px;padding:6px 9px;font-size:calc(14px*var(--fk))}
-.pjctx button:hover{background:var(--line2)}.pjctx button .ic{width:15px;height:15px;color:var(--muted)}
-.mctop{display:flex;align-items:center;gap:8px;min-height:30px;margin:0 0 6px}
-.mctop .mcvt{font-size:calc(14px*var(--fk))}
-.mcback{padding:3px 8px;font-size:calc(13.5px*var(--fk))}
-.mcban{min-width:0;flex:0 1 auto}
-.mcbl{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:2px 4px;color:var(--muted);font-size:calc(13px*var(--fk));max-width:100%;cursor:pointer;border-radius:6px}
-.mcbl:hover,.mcbl.on{color:var(--text);background:var(--line2)}
-.mcbl .ic{width:14px;height:14px;flex:none;color:var(--warn)}
-.mcbl span:not(.mcchev){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mcbx{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:calc(13.5px*var(--fk));margin:0 0 10px}
-.mcbx>div{padding:4px 0}.mcbx>div+div{border-top:1px solid var(--line2)}
-.mcm .list{min-width:220px}.mcm .list button{padding:6px 10px;font-size:calc(14px*var(--fk))}
-.mcmb{padding:3px 7px}
-.mcnb{margin-left:auto;font-size:calc(12px*var(--fk));border-radius:9px;padding:0 6px;background:var(--bad-weak);color:var(--bad)}
 .pvhd{display:flex;align-items:baseline;gap:10px;margin:4px 2px 4px}
-.pvh{font-size:calc(12.5px*var(--fk));color:var(--faint);font-weight:400;margin-left:6px}
-.pvl{border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.pvrow{display:grid;grid-template-columns:18px minmax(120px,1.1fr) minmax(0,1.6fr) 56px auto;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:calc(14px*var(--fk))}
-.pvrow:hover{background:var(--hover)}.pvrow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.pvrow.on{background:var(--accent-weak)}
-.pvrad{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--faint);box-sizing:border-box;display:inline-block}
-.pvrow.on .pvrad{border:4.5px solid var(--accent)}
-.pvn{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pvu{color:var(--muted);font-size:calc(13.5px*var(--fk));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mono,ui-monospace,monospace)}
-.pvkey{font-size:calc(13px*var(--fk));color:var(--muted);font-variant-numeric:tabular-nums;font-family:var(--mono,ui-monospace,monospace)}
-.pvb{display:flex;gap:4px;justify-content:flex-end}
-.pvmini{padding:1px 8px;font-size:calc(13px*var(--fk));border-radius:6px}
-.pvo:empty{display:none}.pvo{padding:4px 10px;border-bottom:1px solid var(--line2)}
-.pvadd{display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:calc(13px*var(--fk));flex-wrap:wrap}
-.pvaddb{font-weight:600;padding:2px 8px;font-size:calc(13.5px*var(--fk));color:var(--accent)}
-.pve .pvpre{margin-bottom:8px;gap:6px}
-.pvadv{margin-top:8px;border:1px solid var(--line);border-radius:10px;padding:0 10px}
-.pvadv>summary{cursor:pointer;padding:8px 0;font-weight:600;font-size:calc(14px*var(--fk));color:var(--muted)}
-.pvadv[open]>summary{color:var(--text)}
-.pvfh{margin-top:10px;font-size:calc(13px*var(--fk));color:var(--faint)}
-.pvdd{position:fixed;z-index:1000;display:none;max-height:260px;overflow:auto;background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:4px;font-family:var(--mono);font-size:calc(13.5px*var(--fk))}
-.pvddi{padding:5px 8px;border-radius:5px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}.pvddi:hover,.pvddi.on{background:var(--hover2,var(--hover))}
-.pvddi .dim{font-family:var(--sans);font-size:calc(12px*var(--fk))}.pvddh{padding:4px 8px;font-size:calc(12px*var(--fk));color:var(--faint);font-family:var(--sans)}
-.pvmf{display:flex;gap:6px;align-items:center}
-.pvsub{padding:10px 0 8px;border-top:1px solid var(--line2)}
-.pvsubh{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;font-size:calc(14px*var(--fk));margin-bottom:6px}.pvsubh .pvh{flex-basis:100%;margin:2px 0 0}
-.pvtag{font:calc(12px*var(--fk)) var(--mono);padding:0 6px;border-radius:5px;background:var(--hover);color:var(--muted)}.pvtag.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn);font-family:var(--sans)}
-.pvnote{font-size:calc(13px*var(--fk));color:var(--muted);line-height:1.6;margin:0 0 8px}.pvnote code{font-size:calc(12.5px*var(--fk))}
-.pvtbl{display:flex;flex-direction:column;gap:5px}
-.pvtr{display:grid;grid-template-columns:1fr 1fr 28px;gap:6px;align-items:center}
-.pvtr[data-ov]{grid-template-columns:1fr 16px 1fr 28px}.pvarr{color:var(--faint);text-align:center}
-.pvcat .pvtr,.pvcat .pvth{grid-template-columns:1.4fr 1fr 110px 110px 28px}
-.pvth{display:grid;gap:6px;font-size:calc(12px*var(--fk));color:var(--faint);padding:0 2px}.pvth:only-child{display:none}
-.pvtr input,.pvtr select{width:100%;min-width:0;box-sizing:border-box}.pvtr .pvmi{font-family:var(--mono);font-size:calc(13.5px*var(--fk))}
-.pvrx{padding:2px 0!important;color:var(--faint)}.pvrx:hover{color:var(--err,#d33)}
-.pvtadd{display:flex;gap:8px;align-items:center;margin-top:6px}.pvchk{font-size:calc(13px*var(--fk));color:var(--muted);display:flex;gap:4px;align-items:center}.pvmf input{width:220px!important}
-.pvmst{padding:0 0 4px;font-size:calc(13px*var(--fk))}.pvmst:empty{display:none}.pvmst .miss{margin:4px 0}
-.pvmap{margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:2px 10px 4px}
-.pvmh{display:flex;align-items:baseline;gap:4px;padding:8px 0 2px;font-size:calc(14px*var(--fk))}
-#mcBox .miss{margin-bottom:6px}
 .us input.pr{width:70px;padding:2px 5px;text-align:right}
 .us .more{display:flex;justify-content:center;padding:8px}
 @media (max-width:760px){.us .ucards{grid-template-columns:repeat(2,1fr)}.us .ucard .v{font-size:calc(19px*var(--fk))}}
-
 /* ---- v0.2.1：左侧面板布局 ---- */
 .body{flex:1;display:flex;min-height:0}
 .side{width:var(--sw,236px);flex:none;background:var(--side);border-right:1px solid var(--line2);display:flex;flex-direction:column;min-height:0;overflow:hidden}
 .app.noside .side,.app.noside #sideGrip{display:none}
 .nav{padding:8px 8px 8px;display:flex;flex-direction:column;gap:1px;border-bottom:1px solid var(--line2);flex:none}
-.nv{display:flex;align-items:center;gap:10px;background:transparent;padding:6px 10px;border-radius:8px;font-size:calc(14px*var(--fk));color:var(--text);text-align:left;width:100%}
-.nv .ic{width:16px;height:16px;color:var(--muted)}
-.nv:hover{background:var(--hover)}
-.nv.on{background:var(--panel);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}.nv.on .ic{color:var(--accent)}
-.nv>span{flex:1;overflow:hidden;text-overflow:ellipsis}
-.nv em{font-style:normal;font-size:calc(12px*var(--fk));color:var(--faint);font-weight:400}
-.nv .cnt{font-size:calc(12px*var(--fk));background:var(--accent);color:#fff;border-radius:9px;padding:0 5px;line-height:calc(15px*var(--fk));flex:none}
-.nv .ext{width:12px;height:12px;color:var(--faint)}
 .trh{display:flex;align-items:center;gap:6px;padding:10px 12px 6px;font-size:calc(12.5px*var(--fk));color:var(--muted);font-weight:600;flex:none}
 .trh .sp{flex:1}
 .trh .seg button{font-size:calc(12.5px*var(--fk));padding:1px 9px}
@@ -382,7 +306,6 @@ button.eye .ic{width:14px;height:14px}
 .diff .dl b{font-size:calc(12.5px*var(--fk));color:var(--muted);font-weight:600}
 .diff .ln{font-size:calc(13px*var(--fk));border-radius:6px;padding:2px 6px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .diff .ln.old{background:var(--bad-weak)}.diff .ln.new{background:var(--ok-weak)}
-.acts2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
 button.big{padding:8px 16px;font-size:calc(14.5px*var(--fk));font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .cmdl{display:flex;gap:6px;align-items:center;margin-top:6px}
 .cmdl code{flex:1;padding:4px 8px;font-size:calc(12.5px*var(--fk))}
@@ -466,7 +389,6 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .pgv>.card{padding:14px 16px}
 .pvhd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .pvft{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:10px}
-
 /* v0.2.3：关闭桌面端并执行 */
 .cr{display:flex;flex-direction:column;gap:10px;font-size:calc(14px*var(--fk))}
 .cr .crq{display:flex;align-items:center;gap:8px;margin:0;font-size:calc(15.5px*var(--fk))}.cr .crq .ic{color:var(--warn);width:18px;height:18px}
@@ -485,101 +407,15 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .crj{list-style:none;padding:0 !important}.crj li{display:flex;gap:6px;align-items:baseline}
 td.nw{white-space:nowrap}
 #mdCr{margin-left:6px;padding:1px 8px;font-size:calc(13px*var(--fk))}
-.rtnote{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--accent);background:var(--accent-weak);border-radius:10px;padding:8px 10px;margin:4px 0 10px;font-size:calc(13px*var(--fk))}.rtnote .ic{flex:none;margin-top:2px;color:var(--accent)}
-.rth{margin:14px 0 6px;font-size:calc(14px*var(--fk));display:flex;align-items:center;gap:6px;flex-wrap:wrap}.rth .dim{font-weight:400;font-size:calc(12px*var(--fk))}
-.rtp{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0}.rtp.off{opacity:.6}.rtph{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.rtph .pvu{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:calc(12px*var(--fk))}
-.rtpk,.rtpm{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}.rtk{display:inline-flex;gap:4px;align-items:center;border:1px dashed var(--line);border-radius:6px;padding:1px 6px;font-size:calc(12px*var(--fk))}
-.rtslots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin:4px 0 6px}.rtslots label{display:flex;flex-direction:column;gap:3px;font-size:calc(12px*var(--fk));color:var(--muted)}.rtslots select,.rtslots input{width:100%}
-.rtadv{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}.rtadv summary{cursor:pointer;color:var(--muted)}
-.rtl{width:100%;font-size:calc(12px*var(--fk))}.rtl td{text-align:left}.rtl td.n{text-align:right}.rtl th{text-align:left}.rtl td.ell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rtt{font-size:calc(12px*var(--fk));padding:6px 0;display:flex;flex-direction:column;gap:3px}.rtcmd{background:var(--hover);padding:6px 8px;border-radius:6px;user-select:all;white-space:pre-wrap}
-.rtmr,.rtkr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}.rtmr input[data-m=name],.rtmr input[data-m=alias]{width:210px}.rtpr input{width:72px}.rtkr input[data-k=label]{width:110px}.rtkr input[data-k=weight]{width:52px}.rtkr input[data-k=proxy_url]{width:180px}
-.ccbox{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px}
-.cc{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel)}.cc.on{border-color:var(--accent)}
-.cchd{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:calc(15px*var(--fk))}.cchd .logo{width:20px;height:20px}
-.ccseg{flex-wrap:wrap;margin-bottom:10px}.ccdesc{margin:8px 0;font-size:calc(12.5px*var(--fk))}
-.ccf{display:grid;grid-template-columns:calc(96px*var(--fk)) 1fr;gap:8px 10px;align-items:center}.ccl{color:var(--muted);font-size:calc(13px*var(--fk))}.ccv .sd{color:var(--muted);font-size:calc(12px*var(--fk));margin-top:2px}
-.ccrow{display:flex;gap:6px}.ccchk{display:flex;gap:6px;align-items:flex-start;font-size:calc(13px*var(--fk))}.ccchk code{white-space:nowrap}.ccchk input{margin-top:3px}
-.ccbtn{display:flex;align-items:center;gap:10px}.ccmsg{font-size:calc(12.5px*var(--fk));color:var(--muted)}.ccmsg .err{color:var(--err,#c33)}
-.cchow{margin:10px 0 4px;font-size:calc(13.5px*var(--fk))}.ccmore{font-size:calc(12.5px*var(--fk));margin:2px 0 6px}.ccmore a{color:var(--muted)}
-.ccadv{margin:4px 0 8px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px}.ccnote{color:var(--faint,var(--muted));font-size:calc(12px*var(--fk));margin:6px 0 8px}
-.ccwarn{margin-top:10px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--warn,#b7791f) 10%,transparent);font-size:calc(12.5px*var(--fk))}.ccwarn>div{margin-top:2px}.ccwbtn{display:flex;gap:8px;align-items:center;margin-top:6px}
-.ccst{display:flex;align-items:center;gap:6px;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:calc(13px*var(--fk))}.ccout{margin-top:4px}
-.mcadv{margin-top:6px}.mcadv>summary{cursor:pointer;padding:6px 2px;font-weight:600}.mcadv>summary .dim{font-weight:400;margin-left:6px}
-.rtfm{display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow:auto;margin-top:4px}.rtfm .on{opacity:.5}.rtsum{cursor:pointer}.rtsum:hover{background:var(--hover)}
-
-/* ---- 0.3.4 供应商页（Agent 行 / 服务商格子 / 模型选择器；思路借鉴 magpie，自己实现） ---- */
-.mtabs{display:flex;align-items:center;gap:12px;margin:2px 0 12px;flex-wrap:wrap}
-.mseg{padding:3px;background:var(--hover)}.mseg button{padding:4px 16px;font-size:calc(13.5px*var(--fk));display:inline-flex;align-items:center;gap:6px}
-.mseg button.on{font-weight:600}.mseg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.mcnt{font-size:calc(11.5px*var(--fk));background:var(--line);color:var(--muted);border-radius:9px;padding:0 6px;line-height:calc(16px*var(--fk));font-weight:500}
-.mhint{color:var(--muted);font-size:calc(13px*var(--fk))}
-.agl{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel);overflow:hidden}
 .ag+.ag{border-top:1px solid var(--line2)}
-.agm{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:calc(56px*var(--fk))}
-.agi{width:calc(30px*var(--fk));height:calc(30px*var(--fk));border-radius:9px;background:var(--panel2);display:grid;place-items:center;flex:none;font-size:calc(17px*var(--fk))}
-.ag[data-ag=claude] .agi{color:var(--claude)}.ag[data-ag=codex] .agi{color:var(--text)}
-.agt{flex:1;min-width:0}.agt b{font-size:calc(14.5px*var(--fk));font-weight:600}
-.ags{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:calc(12.5px*var(--fk));margin-top:2px;min-width:0}
-.ags span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--faint)}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
-.agx{display:inline-flex;align-items:center;gap:4px;font-size:calc(13px*var(--fk));padding:4px 8px}
-.agx .chev{display:inline-block;transition:transform .15s;font-size:1.1em}.ag.open .agx .chev{transform:rotate(90deg)}
-.agpick{display:inline-flex;align-items:center;gap:8px;min-width:calc(210px*var(--fk));max-width:calc(300px*var(--fk));background:var(--hover);border-radius:9px;padding:6px 10px;font-size:calc(13.5px*var(--fk));text-align:left}
-.agpick:hover{background:var(--hover2)}.agpick:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.agmn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:500}.agmn.ph{color:var(--muted);font-weight:400}
-.caret{color:var(--faint);font-size:.8em}
-.plg{display:inline-grid;place-items:center;width:calc(18px*var(--fk));height:calc(18px*var(--fk));flex:none}
-.plg .pl{width:100%;height:100%;fill:currentColor}.plg .ic{width:100%;height:100%}
-.ag.busy{opacity:.6;pointer-events:none}.ag.busy .agpick:after{content:"";width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:crspin .8s linear infinite}
-.agd{padding:4px 16px 14px calc(56px*var(--fk));animation:agin .16s ease-out}
+.ag.busy{opacity:.6;pointer-events:none}
 @keyframes agin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
-.agf{display:grid;grid-template-columns:calc(104px*var(--fk)) 1fr;gap:10px 12px;align-items:start;font-size:calc(13.5px*var(--fk))}
-.agf>label{color:var(--muted);padding-top:4px}.agf select{min-width:calc(260px*var(--fk))}
-.agn{display:flex;gap:8px;padding:9px 12px;border-radius:10px;margin:2px 0 12px;font-size:calc(13px*var(--fk))}
-.agn.warn{background:var(--warn-weak)}.agn.warn>.ic{color:var(--warn);margin-top:2px}.agn>div>div{margin-top:2px}
-.agnb{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
-.eff{max-width:calc(420px*var(--fk))}.eff input[type=range]{width:100%;accent-color:var(--accent);margin:4px 0 0}
-.effl{position:relative;height:1.6em;font-size:calc(12px*var(--fk));color:var(--faint);margin:0 8px}.effl span{position:absolute;transform:translateX(-50%);cursor:pointer;padding:0 2px;white-space:nowrap}.effl span.on{color:var(--accent);font-weight:600}
-.agempty{display:flex;align-items:center;gap:12px;border:1px dashed var(--line);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px;background:var(--panel2)}
-.agempty>.ic{width:22px;height:22px;color:var(--accent)}.agempty>div{flex:1}
-.agpop{position:fixed;z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:agin .12s ease-out}
-.pkq{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line2)}.pkq .ic{color:var(--faint)}
-.pkq input{border:0;background:transparent;padding:4px 0;flex:1;min-width:0}.pkq input:focus{border:0}
-.pkls{overflow:auto;padding:4px 6px;flex:1;min-height:0}
-.pkg{display:flex;align-items:center;gap:6px;padding:8px 8px 4px;font-size:calc(12px*var(--fk));color:var(--muted)}.pkg b{color:var(--text);font-weight:600}.pkg>.pkh{color:var(--faint);margin-left:auto}
-.pki{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer;font-size:calc(13.5px*var(--fk))}
-.pki.sel{background:var(--hover)}.pki.cur .pkl>span{font-weight:600}.pki.ref{color:var(--muted)}
-.pkl{flex:1;min-width:0;display:flex;flex-direction:column}.pkl small{color:var(--faint);font-size:calc(11.5px*var(--fk));font-family:var(--mono)}
-.pkd{font-style:normal;font-size:calc(11px*var(--fk));color:var(--accent);background:var(--accent-weak);border-radius:5px;padding:0 5px;margin-left:4px}
-.pkc{color:var(--accent);font-weight:700}.pke{padding:16px;color:var(--muted);text-align:center}
-.pkf{display:flex;align-items:center;gap:8px;justify-content:space-between;padding:6px 8px;border-top:1px solid var(--line2);font-size:calc(12px*var(--fk))}.pkf button{font-size:calc(13px*var(--fk));display:inline-flex;gap:4px;align-items:center}
-.pgtop{display:flex;align-items:center;gap:12px;margin-bottom:6px}.pgq{max-width:320px;flex:1}
-.pgh{font-size:calc(12.5px*var(--fk));color:var(--muted);margin:12px 2px 6px;font-weight:600}.pgh .dim{font-weight:400}
-.pgg{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(210px*var(--fk)),1fr));gap:8px}
-.pvtile{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 12px;text-align:left;transition:border-color .15s,box-shadow .15s,transform .15s}
-.pvtile:hover{background:var(--panel);border-color:var(--faint);box-shadow:0 2px 10px rgba(0,0,0,.06)}.pvtile:active{transform:scale(.99)}
-.pvtile .plg{width:calc(24px*var(--fk));height:calc(24px*var(--fk))}
-.pvtile.add{border-style:dashed;background:transparent}
-.pvtt{flex:1;min-width:0;display:flex;flex-direction:column}.pvtt b{font-weight:600;font-size:calc(13.5px*var(--fk))}
-.pvtt span{color:var(--faint);font-size:calc(12px*var(--fk));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pvtile.have .pvtt span{color:var(--muted)}
-.pvok{color:var(--ok);font-weight:700}.pvu2{display:flex;gap:2px;color:var(--muted)}
-.shf{display:grid;grid-template-columns:calc(76px*var(--fk)) 1fr;gap:10px 12px;align-items:start}.shf>label{color:var(--muted);padding-top:6px;font-size:calc(13.5px*var(--fk))}
-.shf input,.shf select{width:100%}.shst{min-height:1.5em;font-size:calc(12.5px*var(--fk));margin-top:4px}.shst .ok{color:var(--ok)}.shst .err{color:var(--bad)}
-.shst .spin{display:inline-block;width:10px;height:10px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:crspin .8s linear infinite;margin-right:6px;vertical-align:-1px}
-.mchips{display:flex;flex-wrap:wrap;gap:4px;padding-top:4px}.mchip{font-size:calc(12px*var(--fk));background:var(--hover);border-radius:6px;padding:1px 7px}
-.shmore{margin-top:8px;font-size:calc(12.5px*var(--fk))}.shmore a{color:var(--muted)}
-#dlgTitle .plg{width:22px;height:22px}
 /* 顶部导航：一条分段轨道（和页面里的分段按钮同一套样式） */
 .pnav{background:var(--hover);border-radius:11px;padding:3px;gap:1px}
 .pb{border-radius:8px;padding:4px 10px}.pb:hover{background:var(--hover2)}
 .pb.on{background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.06)}
-/* 顶部提示条：多条时只展开第一条，其余收成一行 */
-.card.plain{background:transparent;border:0;padding:0}
-#mcTab [hidden]{display:none!important}
-.mctop.intabs{margin:0 0 0 auto;min-height:0;gap:4px}.mtabs .mhint{flex:0 1 auto}
-.us .mseg{border:0;border-radius:999px;overflow:visible}.us .mseg button{border-radius:999px;color:var(--muted)}.us .mseg button.on{background:var(--panel);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+#banLegacy .lglist{margin:4px 0 4px 18px;padding:0;font-size:calc(13px*var(--fk))}#banLegacy .lglist li{margin:1px 0}
 .banmore{display:flex;justify-content:center;margin:-6px auto 12px;max-width:1180px}
 .banmore button{font-size:calc(12.5px*var(--fk));padding:2px 12px;border-radius:999px;color:var(--muted);background:var(--hover)}
 </style>
@@ -594,7 +430,6 @@ td.nw{white-space:nowrap}
       <button class="pb" data-p="sync" title="账号同步"><i data-ic="users"></i><span>账号同步</span></button>
       <button class="pb" data-p="convert" title="会话转换：Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 任意互转"><i data-ic="shuffle"></i><span>会话转换</span></button>
       <button class="pb" data-p="usage" title="用量统计"><i data-ic="chart"></i><span>用量</span></button>
-      <button class="pb" data-p="models" title="供应商（模型与 API）"><i data-ic="key"></i><span>供应商</span></button>
       <button class="pb" data-p="diag" title="诊断与自检"><i data-ic="activity"></i><span>诊断自检</span><span class="cnt" id="diagCnt" hidden></span></button>
       <button class="pb" id="tbUpd" title="检查更新"><i data-ic="refresh"></i><span>检查更新</span><span class="rdot"></span></button>
     </nav>
@@ -629,7 +464,6 @@ td.nw{white-space:nowrap}
       <section class="page" id="pg-cursor"></section>
       <section class="page" id="pg-convert"></section>
       <section class="page full" id="pg-usage"></section>
-      <section class="page full" id="pg-models"></section>
       <section class="page" id="pg-settings"></section>
       <section class="page" id="pg-diag"></section>
     </main>
@@ -747,13 +581,11 @@ let cur = null, setOpen = false;          // cur：搬来的「模型与 API」�
 async function api(path, body){
   const h = {"x-token": TOKEN};
   const opt = body === undefined ? {headers: h} : {method: "POST", headers: Object.assign(h, {"Content-Type": "application/json"}), body: JSON.stringify(body)};
-  if (body !== undefined && /^\/api\/(modelcfg|providers)\//.test(path) && !/\/(test|models|ccs-preview)$/.test(path)) mcDirty();
   const r = await fetch(path, opt); let j = {};
   try { j = await r.json(); } catch(e){}
   if (!r.ok) { const e = new Error(j.error || ("HTTP " + r.status)); e.status = r.status; e.j = j; throw e; }
   return j;
 }
-function mcDirty(){ try { if (typeof MC !== "undefined") MC.c = null; localStorage.removeItem("ccss.mccache"); } catch(e){} }
 let toastT; function toast(t, ms=2800){ const el=$("#toast"); el.innerHTML=emoIcons(t); el.style.display="block"; clearTimeout(toastT); toastT=setTimeout(()=>el.style.display="none", ms); }
 function openDlg(title, html, footer){ $("#dlgTitle").innerHTML=emoIcons(title); $("#dlgBody").innerHTML=html; $("#dlgFt").innerHTML=footer||'<button onclick="closeDlg()">关闭</button>'; $("#dlg").classList.add("open"); }
 function closeDlg(){ $("#dlg").classList.remove("open", "wide"); setOpen = false; }
@@ -986,7 +818,7 @@ function goTo(p, o){
   go(p);
 }
 // 托盘菜单 / 通知点进来：window.ccOpen("codex") 或 ccOpen({page: "sync", account_switch: "claude-desktop"})
-// 用量、供应商、自检都是窗口里的页面（不弹窗）
+// 用量、自检都是窗口里的页面（不弹窗）
 window.ccOpen = target => {
   const t = typeof target === "string" ? {page: target} : (target || {});
   const p = {selfcheck: "diag"}[t.page] || t.page;
@@ -1092,6 +924,11 @@ function renderBans(){
   for (const a of ST.acct)
     out.push(`<div class="ban warn" data-ak="${esc(a.k)}">${ic("users")}<div class="tx"><b>${esc(a.title)}</b>：${a.old != null && a.new != null ? `${acm(a.old_rid, a.old)} → ${acm(a.new_rid, a.new)} ${eyeB()}` : esc(a.text)}</div>
       <div class="acts"><button class="primary" data-a="sync">立即同步</button><button data-a="open">打开</button><button class="ghost" data-a="x" title="知道了">${ic("x")}</button></div></div>`);
+  const lg = ST.legacy;                     // 0.3.5：供应商功能拿掉后，第一次启动把配置恢复原样 → 提示一次
+  if (lg) out.unshift(`<div class="ban acc" id="banLegacy">${ic("check")}<div class="tx"><b>供应商功能已移除，已把 Codex / Claude Code 配置恢复原样</b>
+      <ul class="lglist">${(lg.done || []).slice(0, 8).map(x => `<li>${esc(x)}</li>`).join("")}${(lg.done || []).length > 8 ? `<li class="dim">还有 ${lg.done.length - 8} 项…</li>` : ""}</ul>
+      <div class="dim">改之前的文件都备份在 <code>${esc(lg.home || "~/.cc-sessionsync")}/backups</code>${(lg.errors || []).length ? `；有 ${lg.errors.length} 项没做成：${esc(lg.errors.join("；").slice(0, 200))}` : ""}</div></div>
+      <div class="acts"><button class="primary" data-lg="ok">知道了</button></div></div>`);
   const cr = ST.cr;
   if (cr) out.push(`<div class="ban acc">${ic("power")}<div class="tx">正在关闭 ${esc(cr.app)} 并执行排队的改动，做完自动重新打开…</div><div class="acts"><button data-crv="${esc(cr.id)}">查看进度</button></div></div>`);
   else if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等${ST.jobKinds.map(k => APPN[k] || k).join(" / ")} 桌面端完全退出后自动做（会弹通知）</div><div class="acts">${ST.jobKinds.map(k => `<button class="primary" data-crk="${esc(k)}">${ic("power")} 关闭 ${APPN[k] || k} 并执行（完成后重启）</button>`).join("")}<button data-j="1">查看</button></div></div>`);
@@ -1114,6 +951,7 @@ function renderBans(){
     if (page === "codex" || (page === "convert" && a.open.src === "codex")) { goTo("convert", {src: "codex", dst: "claude"}); return; }     // Codex 换号：会话转换（Codex → Claude Code）按新账号重新看一遍
     go("sync"); syncSelected(true);
   });
+  $$("#bans [data-lg]").forEach(b => b.onclick = async () => { ST.legacy = null; renderBans(); try { await api("/api/legacy/seen", {}); } catch(e){} });
   $$("#bans [data-j]").forEach(b => b.onclick = () => ccOpen("jobs"));
   $$("#bans [data-crk]").forEach(b => b.onclick = () => crAsk({kind: b.dataset.crk, banner: true}));
   $$("#bans [data-crv]").forEach(b => b.onclick = () => crProg(b.dataset.crv));
@@ -1467,936 +1305,6 @@ async function usSources(){
     try { const r = await api("/api/usage/import_ccswitch", {}); toast(`已导入 ${r.imported} 条，跳过重复 ${r.skipped} 条`); usSources(); }
     catch(e){ toast("导入失败：" + e.message); b.disabled = false; b.textContent = "导入 CC Switch 历史"; } };
 }
-// ---------- 模型与 API（0.7.1 简化版：打开就是供应商列表；其余收进 ⋯ 菜单 / 高级；项目覆盖在项目的右键菜单里） ----------
-// 后端：cc_sessionsync/modelcfg.py + providers.py（从 CC Msg 搬来）；只在本机，key 只显示打码
-const MC = {view:"list", scope:"user", d:null, p:null, sel:new Set(), ban:false};
-const CL_FIELDS = [["model","主模型","仅命令行 / 新会话默认；Claude 桌面版用它自己的模型选择"],["ANTHROPIC_DEFAULT_OPUS_MODEL","Opus 映射","opus 别名用哪个模型"],
-  ["ANTHROPIC_DEFAULT_SONNET_MODEL","Sonnet 映射","sonnet 别名"],["ANTHROPIC_DEFAULT_HAIKU_MODEL","Haiku 映射","haiku 别名，也用于后台小任务（旧名 ANTHROPIC_SMALL_FAST_MODEL）"],
-  ["ANTHROPIC_DEFAULT_FABLE_MODEL","Fable 映射","fable 别名"],["CLAUDE_CODE_SUBAGENT_MODEL","子代理模型","没单独指定模型的子代理 / 队友默认用它"]];
-const CX_FIELDS = [["model","主模型",""],["review_model","审查模型","/review 用"],["default_subagent_model","子代理模型","[agents] default_subagent_model"]];
-const MODEL_SUGG = ["opus","sonnet","haiku","fable","claude-opus-5-5","claude-sonnet-5-5","claude-haiku-5-5","claude-fable-5-1","claude-opus-5","claude-sonnet-5","gpt-6-sol","gpt-6.1-sol","gpt-6-astra","gpt-6-luna","gpt-5.5","gpt-5.6-sol"];
-const MC_DL = `<datalist id="mcModels">${MODEL_SUGG.map(m => `<option value="${m}">`).join("")}</datalist>`;
-R.models = () => mcOpen();
-async function mcOpen(view){
-  if (typeof view === "string") MC.view = view;
-  if ($("#dlg").classList.contains("open")) closeDlg();
-  if (PAGE !== "models") return go("models");
-  MC.scope = "user";
-  const c = mcCacheGet();
-  $("#pg-models").innerHTML = `<div class="pgv"><h2>${ic("key")}供应商</h2><p class="sub">让 Codex / Claude Code 用你自己的服务商和模型：先在「服务商」贴 key，再在「Agent」里选模型。Key 只存在本机凭据管理器里。</p>
-    <div class="card"><div class="us mc" id="mcBox">${c ? "" : '<div class="dim">读取中…</div>'}</div></div></div>`;
-  if (c) { [MC.d, MC.p] = c; mcRender(); }          // 先用上次的（内存 / 本地缓存）立刻画出来，后台再刷新
-  await mcLoad(!!c);
-}
-// 上次读到的「模型与 API」状态：内存里一份，localStorage 里一份（只有打码后的 key），重开时先画它
-const MC_CK = "ccss.mccache";
-function mcCacheKey(){ return cur ? cur.root : ""; }
-function mcCacheGet(){
-  if (MC.c && MC.c.k === mcCacheKey()) return [MC.c.d, MC.c.p];
-  try { const j = JSON.parse(localStorage.getItem(MC_CK) || "null"); if (j && j.k === mcCacheKey() && j.d && j.p) { MC.c = j; return [j.d, j.p]; } } catch(e){}
-  return null;
-}
-function mcCachePut(){ MC.c = {k: mcCacheKey(), d: MC.d, p: MC.p, at: Date.now()}; try { localStorage.setItem(MC_CK, JSON.stringify(MC.c)); } catch(e){} }
-async function mcLoad(bg){
-  const qs = cur ? "?root=" + encodeURIComponent(cur.root) : "";
-  let d, p;
-  try { [d, p] = await Promise.all([api("/api/modelcfg" + qs), api("/api/providers" + qs)]); }
-  catch(e){ if (!bg && $("#mcBox")) $("#mcBox").innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; else if (bg) toast("刷新失败：" + e.message); return; }
-  MC.d = d; MC.p = p; mcCachePut();
-  if (!$("#mcBox")) return;                          // 已经进了编辑表单 / 关了：只更新数据，不打断
-  const keep = $("#main").scrollTop; mcRender(); $("#main").scrollTop = keep;
-  // 代理端口第一次是后台测的：稍后再拉一次，把「检测中」换成结果
-  if ((d.proxies || []).some(x => x.running == null) && !MC.pxRetry) { MC.pxRetry = true; setTimeout(() => { MC.pxRetry = false; if ($("#mcBox")) mcLoad(true); }, 2000); }
-}
-// 有事才显示的一行提示（CC Switch / 要重开会话 / 明文 key / 配置被别的工具改过），点开看详情
-function mcNotes(){
-  const d = MC.d, cs = d.ccswitch, run = d.running || {}, out = [];
-  if (cs.installed) out.push({s: "检测到 CC Switch", h: `检测到 <b>CC Switch</b>${cs.current && Object.keys(cs.current).length ? "（当前 " + Object.entries(cs.current).filter(([a]) => a === "claude" || a === "codex").map(([a, n]) => `${esc(a)} → <b>${esc(n)}</b>`).join("，") + "）" : ""}。CC Session Sync 自己就能管供应商，CC Switch 不是必须的；但<b>在 CC Switch 里切换会覆盖 CC Session Sync 设的值</b>（Codex 的整个 config.toml 都会被它换掉）。<a href="#" data-mcgo="ccs">把它的供应商导入过来…</a>`});
-  for (const t of ["claude", "codex"]) if (MC.p[t + "_drift"]) out.push({s: `${PV_TOOL[t]} 配置被改过`, h: `${PV_TOOL[t]} 的全局配置已经被别的工具改过${cs.installed ? "（多半是 CC Switch 切换了）" : ""}，和 CC Session Sync 记的不一致，所以列表里没有标「在用」。要用 CC Session Sync 的，点一下那个供应商。`});
-  const on = [run.claude && "Claude", run.codex && "Codex"].filter(Boolean);
-  if (on.length) out.push({s: `${on.join("、")} 在运行，改动要重开会话`, h: `${on.join("、")} 正在运行：改动只对<b>之后新开的会话</b>生效；已经开着的会话要重开，Claude 桌面版 / Codex 桌面版要退出后重开。`});
-  if (d.plaintext.length) out.push({s: `${d.plaintext.length} 个明文 key`, h: `配置文件里有 <b>${d.plaintext.length}</b> 个明文 key：${d.plaintext.map(p => `${esc(p.tool)} <code>${esc(p.field)}</code>（${esc(p.masked)}）`).join("，")}。<a href="#" data-mcgo="migrate">挪进凭据管理器…</a>（先备份，你点了才做）`});
-  return out;
-}
-function mcBanner(){
-  const n = mcNotes(); if (!n.length) return ["", ""];
-  return [`<div class="mcban"><button class="mcbl${MC.ban ? " on" : ""}" id="mcBan" title="点开看详情">${ic("info")}<span>${n.map(x => esc(x.s)).join(" · ")}</span><span class="mcchev">${MC.ban ? "▾" : "▸"}</span></button></div>`,
-    `<div class="mcbx" id="mcBx"${MC.ban ? "" : " hidden"}>${n.map(x => `<div>${x.h}</div>`).join("")}</div>`];
-}
-const MC_VIEWS = {route: ["模型路由（跨协议：Codex ⇄ Claude 模型）", () => rtView()], backups: ["备份 / 恢复", () => mcBackups()], proxy: ["代理（opencodex / magpie）", () => mcProxy()], migrate: ["迁移明文 key", () => mcMigrate()], keys: ["Key 列表", () => mcKeys()],
-  claude: ["Claude 配置文件（直接改）", () => mcClaude()], codex: ["Codex 配置文件（直接改）", () => mcCodex()], slot: ["Codex 对话列表 id", () => mcSlot()]};
-function mcMenuHtml(){
-  const d = MC.d, it = (k, t, extra = "") => `<button data-mcgo="${k}">${t}${extra}</button>`;
-  return `<div class="menu mcm" id="mcMenu"><button class="ghost mcmb" id="mcMenuBtn" title="更多：备份、代理、明文 key、导入、Key 列表…">${ic("more")}</button><div class="list">
-    ${it("route", "模型路由（跨协议）…")}${it("backups", "备份 / 恢复…")}${it("proxy", "代理（opencodex / magpie）…")}${it("migrate", "迁移明文 key…", d.plaintext.length ? ` <span class="mcnb">${d.plaintext.length}</span>` : "")}
-    ${d.ccswitch.installed ? it("ccs", "从 CC Switch 导入…") : ""}${it("keys", "Key 列表…")}
-    <hr style="border:0;border-top:1px solid var(--line);margin:4px 0">${it("claude", "Claude 配置文件（直接改）…")}${it("codex", "Codex 配置文件（直接改）…")}${it("slot", "Codex 对话列表 id…")}</div></div>`;
-}
-function mcGo(k){ if (k === "ccs") return pvCcs(); MC.view = k; MC.ban = false; mcRender(); }
-function mcRender(){
-  const sub = MC_VIEWS[MC.view];
-  const cd = $("#mcBox") && $("#mcBox").closest(".card"); if (cd) cd.classList.remove("plain");
-  if (!sub) MC.view = "list";
-  const [bl, bx] = sub ? ["", ""] : mcBanner();
-  $("#mcBox").innerHTML = `<div class="mctop">${sub ? `<button class="ghost mcback" data-mcgo="list">‹ 供应商</button><b class="mcvt">${sub[0]}</b>` : bl}<span style="flex:1"></span>${mcMenuHtml()}</div>${bx}<div id="mcTab"></div>${MC_DL}`;
-  $$("#mcBox [data-mcgo]").forEach(b => b.onclick = e => { e.preventDefault(); e.stopPropagation(); $("#mcMenu").classList.remove("open"); mcGo(b.dataset.mcgo); });
-  $("#mcMenuBtn").onclick = e => { e.stopPropagation(); const m = $("#mcMenu"), l = m.querySelector(".list"); m.classList.toggle("open");
-    if (m.classList.contains("open")) { const r = e.currentTarget.getBoundingClientRect();
-      l.style.position = "fixed"; l.style.top = (r.bottom + 4) + "px"; l.style.right = (innerWidth - r.right) + "px"; } };   // fixed：不被滚动区裁掉
-  $("#mcBox").onclick = e => { if (!e.target.closest("#mcMenu")) { const m = $("#mcMenu"); if (m) m.classList.remove("open"); } };
-  const bn = $("#mcBan"); if (bn) bn.onclick = () => { MC.ban = !MC.ban; bn.classList.toggle("on", MC.ban); bn.querySelector(".mcchev").textContent = MC.ban ? "▾" : "▸"; $("#mcBx").hidden = !MC.ban; };
-  (sub ? sub[1] : mcList)();
-}
-const mcScopeSeg = () => "";
-function mcWireScope(){}
-const mcRow = (k, label, hint, val, extra = "") => `<div class="setrow"><div class="sl"><div><b>${label}</b><div class="sd">${hint}</div></div></div><span style="display:flex;gap:6px;align-items:center">${extra}<input data-f="${k}" list="mcModels" value="${esc(val ?? "")}" placeholder="（不设）" style="width:260px"></span></div>`;
-const mcSel = (k, label, hint, val, opts) => `<div class="setrow"><div class="sl"><div><b>${label}</b><div class="sd">${hint}</div></div></div><select data-f="${k}" style="width:260px">${opts.map(o => `<option value="${o}" ${String(val ?? "")===o?"selected":""}>${o || "（不设，用默认）"}</option>`).join("")}</select></div>`;
-function mcKeyOpts(selected){ return `<option value="">（不用 CC Session Sync 的 key）</option>` + MC.d.keys.map(k => `<option value="${esc(k.name)}" ${k.name===selected?"selected":""}>${esc(k.name)}  ${esc(k.masked)}</option>`).join(""); }
-function mcCollect(box = "#mcTab"){ const o = {}; $$(box + " [data-f]").forEach(i => o[i.dataset.f] = i.value.trim()); return o; }
-// ctx：{scope, root, file, box, back}；默认是用户级、⋯ 里的「配置文件（直接改）」
-async function mcSave(tool, base, extra = {}, ctx = null){
-  ctx = ctx || {scope: "user", root: cur && cur.root, file: MC.d[tool].user.file, box: "#mcTab", back: () => mcOpen()};
-  const now = mcCollect(ctx.box), changes = {};
-  for (const [k, v] of Object.entries(now)) if (k !== "_key" && String(base[k] ?? "") !== v) changes[k] = v || null;
-  if (tool === "claude" && "_key" in now && (base._key || "") !== now._key) changes.apiKeyHelper = now._key || null;
-  if (!Object.keys(changes).length && !extra.provider_auth) return toast("没有改动");
-  const lines = Object.entries(changes).map(([k, v]) => `<li><code>${esc(k)}</code>：${esc(String(base[k === "apiKeyHelper" ? "_key" : k] ?? "（不设）"))} → <b>${esc(v ?? "（删掉）")}</b></li>`).join("");
-  const warn = [];
-  if (changes.apiKeyHelper) warn.push("设了 apiKeyHelper 后，Claude Code 会<b>改用这个 key 按 API 计费</b>，不再走 claude.ai 订阅额度；Claude 桌面版的会话也会受影响。");
-  if ("ANTHROPIC_BASE_URL" in changes && MC.d.ccswitch.installed) warn.push("CC Switch 还装着：它下次切换供应商时会覆盖这里的改动。");
-  if (changes.model && tool === "claude") warn.push("主模型只对命令行和新会话生效；Claude 桌面版按它自己的模型选择。");
-  openDlg("确认写入", `<div>将改 <code>${esc(ctx.file)}</code>（先备份，写完核对）：</div><ul>${lines || "<li>供应商的取 key 方式</li>"}</ul>${warn.map(w => `<div class="miss" style="margin-top:6px">${w}</div>`).join("")}`,
-    '<button id="pvNo">取消</button><button class="primary" id="mcGo">写入</button>');
-  $("#pvNo").onclick = () => ctx.back();
-  $("#mcGo").onclick = async () => {
-    try { const r = await api("/api/modelcfg/" + tool, {scope: ctx.scope, root: ctx.root, changes, ...extra});
-      toast(r.ok ? `已写入，备份 ${r.backup || "（原来没有这个文件）"}` : "写入后核对不一致，请到 ⋯ →「备份 / 恢复」还原"); }
-    catch(e){ toast("没写成：" + e.message); }
-    await ctx.back();
-  };
-}
-function mcClaude(){
-  const st = MC.d.claude.user, v = st.values, h = st.apiKeyHelper;
-  const base = {...v, _key: h.ours ? h.key : ""};
-  let html = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有，保存时新建）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
-  if (st.error) html += `<div class="miss">这个文件读不了：${esc(st.error)}（不会写）</div>`;
-  html += `<div class="setlist">` + CL_FIELDS.map(([k, l, hnt]) => mcRow(k, l, hnt, v[k])).join("") +
-    mcSel("effortLevel", "思考强度", "effortLevel；注意：用户级的这个键对 Opus 5.5 不生效（它按 /effort 记住的值），项目级对所有模型生效", v.effortLevel, ["", "low", "medium", "high", "xhigh"]);
-  html += `<div class="setrow"><div class="sl"><div><b>Base URL</b><div class="sd">ANTHROPIC_BASE_URL；空 = 官方。${MC.d.ccswitch.installed ? "CC Switch 切换时会覆盖" : ""}</div></div></div><input data-f="ANTHROPIC_BASE_URL" value="${esc(v.ANTHROPIC_BASE_URL ?? "")}" placeholder="https://api.anthropic.com" style="width:260px"></div>`;
-  html += `<div class="setrow"><div class="sl"><div><b>API Key</b><div class="sd">${h.other ? "apiKeyHelper 由别的工具设置（CC Session Sync 不动它）：<code>" + esc(h.other) + "</code>" : "通过 apiKeyHelper 从凭据管理器取；登录状态：" + (st.login.oauth ? "claude.ai 已登录（" + esc(st.login.billing || "") + "）" : "未用 claude.ai 登录")}</div></div></div>${h.other ? "" : `<select data-f="_key" style="width:260px">${mcKeyOpts(h.key)}</select>`}</div>`;
-  if (Object.keys(st.plaintext).length) html += `<div class="miss">settings.json 的 env 里有明文 ${Object.entries(st.plaintext).map(([k, m]) => `${k}（${esc(m)}）`).join("、")}，它们会优先于 OAuth 登录被使用。可以在 ⋯ →「迁移明文 key」挪走。</div>`;
-  html += `</div><div class="ufl" style="justify-content:flex-end;margin-top:8px"><button id="mcTest">测试连接</button><button class="primary" id="mcSave">保存</button></div><div id="mcTestOut"></div>`;
-  $("#mcTab").innerHTML = html;
-  $("#mcSave").onclick = () => mcSave("claude", base);
-  const tb = $("#mcTest"); tb.onclick = async () => { const f = mcCollect(); tb.disabled = true; $("#mcTestOut").innerHTML = '<div class="dim">测试中…</div>';
-    const r = await api("/api/modelcfg/test", {tool: "claude", base_url: f.ANTHROPIC_BASE_URL, key: f._key, model: f.ANTHROPIC_DEFAULT_HAIKU_MODEL || "claude-haiku-4-5", use_settings_key: !f._key}).catch(e => ({ok: false, error: e.message}));
-    tb.disabled = false; $("#mcTestOut").innerHTML = mcTestHtml(r); };
-}
-function mcTestHtml(r){
-  if (r.ok) return `<div class="miss" style="border-color:var(--ok);background:var(--ok-weak)">连通：HTTP ${r.status}，${r.ms} ms${r.note ? "；" + esc(r.note) : ""}<div class="dim" style="font-size:calc(12.5px*var(--fk))">${esc(r.url || "")}</div></div>`;
-  return `<div class="miss"><b>${r.status ? "HTTP " + r.status : "没连上"}</b>${r.reason ? " · " + esc(r.reason) : ""}${r.detail ? `<div style="font-size:calc(13px*var(--fk))">${esc(r.detail)}</div>` : ""}${r.hint ? `<div style="font-size:calc(13px*var(--fk))"><b>建议：</b>${esc(r.hint)}</div>` : ""}${r.url ? `<div class="dim" style="font-size:calc(12.5px*var(--fk))">${esc(r.url)}${r.ms != null ? "，" + r.ms + " ms" : ""}</div>` : ""}${!r.status && !r.reason && r.error ? esc(r.error) : ""}</div>`; }
-function mcCodex(){
-  const st = MC.d.codex.user, v = st.values;
-  const ef = ["", "minimal", "low", "medium", "high", "xhigh"];
-  let html = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">直接改用户级的 <code>${esc(st.file)}</code>${st.exists ? "" : "（还没有）"}。平时用供应商列表切换就够了；项目级的在项目右键菜单里。</div>`;
-  if (st.error) html += `<div class="miss">这个文件读不了：${esc(st.error)}（不会写）</div>`;
-  html += `<div class="setlist">` + CX_FIELDS.map(([k, l, hnt]) => mcRow(k, l, hnt, v[k])).join("") +
-    mcSel("model_reasoning_effort", "思考强度", "model_reasoning_effort", v.model_reasoning_effort, ef) +
-    mcSel("default_subagent_reasoning_effort", "子代理思考强度", "[agents] default_subagent_reasoning_effort", v.default_subagent_reasoning_effort, ef);
-  html += `<div class="setrow"><div class="sl"><div><b>当前供应商</b><div class="sd">model_provider${MC.d.ccswitch.installed ? "（CC Switch 切换时会覆盖）" : ""}；登录方式：${st.auth.mode === "chatgpt" || st.auth.chatgpt ? "ChatGPT 登录" : st.auth.api_key ? "API key（auth.json，" + esc(st.auth.api_key) + "）" : "未登录"}</div></div></div><code>${esc(v.model_provider || "openai")}</code></div>`;
-  html += `</div>`;
-  if (st.providers.length) html += `<h4 style="margin:12px 0 4px">config.toml 里的供应商怎么取 key</h4><table><tr><th class="l">供应商</th><th class="l">Base URL</th><th class="l">现在怎么取 key</th><th class="l">改成凭据管理器里的</th><th></th></tr>` +
-    st.providers.map(p => `<tr><td class="l"><b>${esc(p.name)}</b> <span class="dim">${esc(p.id)}</span></td><td class="l m" title="${esc(p.base_url || "")}">${esc(p.base_url || "")}</td>
-      <td class="l">${p.auth_ours ? "CC Session Sync：" + esc(p.key) + " " + esc(p.key_masked || "（凭据里没有！）") : p.plaintext ? '<span class="note">明文 ' + esc(p.plaintext) + "</span>" : p.env_key ? "环境变量 " + esc(p.env_key) + (p.env_key_set ? "" : "（没设）") : p.auth_other ? "别的命令" : "—"}</td>
-      <td class="l"><select data-pk="${esc(p.id)}">${mcKeyOpts(p.key)}</select></td><td><button data-pt="${esc(p.id)}">测试</button></td></tr>`).join("") + "</table>";
-  html += `<div class="ufl" style="justify-content:flex-end;margin-top:8px"><button class="primary" id="mcSave">保存</button></div><div id="mcTestOut"></div>`;
-  $("#mcTab").innerHTML = html;
-  $("#mcSave").onclick = () => mcSave("codex", v);
-  $$("#mcTab [data-pk]").forEach(s => s.onchange = () => { const p = st.providers.find(x => x.id === s.dataset.pk);
-    openDlg("确认", `把 Codex 供应商 <b>${esc(p.name)}</b> 改成用 ${s.value ? "凭据管理器里的 <b>" + esc(s.value) + "</b>（[model_providers." + esc(p.id) + ".auth] → CCSessionSync key get）" : "（去掉 CC Session Sync 的取 key 命令）"}？先备份。${p.plaintext && s.value ? "<div class='miss'>原来的明文 key 保留不动；要删掉它请用 ⋯ →「迁移明文 key」。</div>" : ""}`,
-      '<button onclick="mcOpen()">取消</button><button class="primary" id="mcGo">写入</button>');
-    $("#mcGo").onclick = async () => { try { const r = await api("/api/modelcfg/codex", {scope: "user", changes: {}, provider_auth: {id: p.id, key: s.value || null}}); toast("已写入，备份 " + (r.backup || "")); } catch(e){ toast("没写成：" + e.message); } await mcOpen("codex"); }; });
-  $$("#mcTab [data-pt]").forEach(b => b.onclick = async () => { const p = st.providers.find(x => x.id === b.dataset.pt), k = $(`#mcTab [data-pk="${CSS.escape(p.id)}"]`).value;
-    $("#mcTestOut").innerHTML = '<div class="dim">测试中…</div>'; const r = await api("/api/modelcfg/test", {tool: "codex", base_url: p.base_url, key: k}).catch(e => ({ok: false, error: e.message})); $("#mcTestOut").innerHTML = mcTestHtml(r); });
-}
-function mcProxy(){
-  if (MC.d.proxies.some(p => p.running == null) && !MC.pxWait) {     // 端口还没测过：当场测一次再重画（只这一页等）
-    MC.pxWait = true; api("/api/modelcfg/proxies").then(r => { MC.d.proxies = r; MC.pxWait = false; if ($("#mcTab") && MC.view === "proxy") mcProxy(); }).catch(() => { MC.pxWait = false; });
-  }
-  const ps = MC.d.proxies, ocxAg = MC.d.agents.filter(a => a.ocx);
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">opencodex / magpie 是本地模型网关：把一个模型名路由到真正的供应商和模型（含 Anthropic ↔ OpenAI 格式转换）。CC Session Sync 不内置代理，只检测它们、显示路由，并能一键把 Claude / Codex 指过去（先备份，你确认才写）。</div>` +
-    ps.map(p => `<div class="ucard" style="margin-bottom:8px"><div class="ufl"><b>${p.name}</b><span class="tag">${p.running ? "在运行" : p.running == null ? "检测中…" : p.configured ? "装了，没在运行" : "没检测到"}</span><span class="dim">端口 ${p.port}</span><span style="flex:1"></span>
-      <button data-px="${p.name}" data-t="claude">Claude 指向它</button><button data-px="${p.name}" data-t="codex">Codex 加为供应商</button></div>
-      ${p.providers.length ? `<div class="s">上游供应商：${p.providers.map(esc).join("、")}${p.default_provider ? "（默认 " + esc(p.default_provider) + "）" : ""}</div>` : ""}
-      ${p.subagent_models.length ? `<div class="s">子代理模型：${p.subagent_models.map(esc).join("、")}</div>` : ""}
-      ${p.name === "opencodex" && ocxAg.length ? `<table style="margin-top:6px"><tr><th class="l">Claude 子代理</th><th class="l">实际模型</th></tr>${ocxAg.map(a => `<tr><td class="l">${esc(a.name)}</td><td class="l"><b>${esc(a.real_model)}</b></td></tr>`).join("")}</table>` : ""}</div>`).join("");
-  $$("#mcTab [data-px]").forEach(b => b.onclick = () => { const p = ps.find(x => x.name === b.dataset.px), claude = b.dataset.t === "claude";
-    openDlg("确认", claude ? `把 Claude 的 <code>ANTHROPIC_BASE_URL</code> 设成 <b>${esc(p.anthropic_base)}</b>？之后 Claude Code 的请求都经过 ${p.name}。先备份；${MC.d.ccswitch.installed ? "CC Switch 下次切换供应商会覆盖它。" : ""}${p.running ? "" : "<div class='miss'>" + p.name + " 现在没在运行，指过去之后 Claude 会连不上。</div>"}`
-      : `在 Codex 的 config.toml 里加 <code>[model_providers.${p.name}]</code>（base_url = ${esc(p.openai_base)}）？<b>不会切换</b>当前供应商；要用时在 Codex 的 profile 里选它，或者在 CC Session Sync 里加一个指向它的供应商。先备份。`,
-      '<button onclick="mcOpen()">取消</button><button class="primary" id="mcGo">写入</button>');
-    $("#mcGo").onclick = async () => { try { const r = claude ? await api("/api/modelcfg/claude", {scope: "user", changes: {ANTHROPIC_BASE_URL: p.anthropic_base}})
-        : await api("/api/modelcfg/codex", {scope: "user", changes: {}, add_provider: {id: p.name, name: p.name, base_url: p.openai_base, wire_api: "responses"}}); toast("已写入，备份 " + (r.backup || "")); } catch(e){ toast("没写成：" + e.message); } await mcOpen("proxy"); }; });
-}
-function mcKeys(){
-  const d = MC.d;
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">${d.keystore === "wincred" ? "key 存在 <b>Windows 凭据管理器</b>（按当前 Windows 用户加密）。" : "<span class='note'>这台机器不是 Windows：key 存在 ~/.agent-bridge/keys.json（仅测试用）。</span>"} Claude 通过 apiKeyHelper、Codex 通过 [model_providers.x.auth] 运行 <code>${esc(d.helper_example)}</code> 取 key；配置文件里不留明文。这里只显示打码后的样子。</div>
-    <table><tr><th class="l">名字</th><th class="l">key</th><th class="l">备注</th><th></th></tr>${d.keys.map(k => `<tr><td class="l"><b>${esc(k.name)}</b></td><td class="l">${esc(k.masked)}</td><td class="l dim">${esc(k.comment)}</td><td><button class="ghost" data-kd="${esc(k.name)}">删除</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有</td></tr>'}</table>
-    <div class="ufl" style="margin-top:8px"><input id="mcKn" placeholder="名字，如 claude-main" style="width:160px"><input id="mcKs" type="password" autocomplete="new-password" placeholder="粘贴 key（只写不读）" style="width:280px"><input id="mcKc" placeholder="备注（可空）" style="width:160px"><button class="primary" id="mcKsave">存入</button></div>`;
-  $("#mcKsave").onclick = async () => { const n = $("#mcKn").value.trim(), s = $("#mcKs").value; if (!n || !s) return toast("名字和 key 都要填");
-    try { const r = await api("/api/modelcfg/key-set", {name: n, secret: s, comment: $("#mcKc").value.trim()}); $("#mcKs").value = ""; toast(`已存入 ${r.name}（${r.masked}）`); } catch(e){ toast("没存成：" + e.message); } MC.view = "keys"; await mcLoad(); };
-  $$("#mcTab [data-kd]").forEach(b => b.onclick = async () => { if (!confirm(`删除凭据 ${b.dataset.kd}？用它的 Claude / Codex 配置会取不到 key。`)) return; await api("/api/modelcfg/key-delete", {name: b.dataset.kd}); MC.view = "keys"; await mcLoad(); });
-}
-function mcMigrate(){
-  const d = MC.d;
-  $("#mcTab").innerHTML = d.plaintext.length ? `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">把配置文件里的明文 key 存进凭据管理器，再把配置改成取 key 的命令。先备份原文件；存进去读回来一致才改配置。只显示打码后的样子。</div>
-    <table><tr><th class="l">工具</th><th class="l">位置</th><th class="l">key</th><th class="l">存成</th><th></th></tr>${d.plaintext.map((p, i) => `<tr><td class="l">${esc(p.tool)}</td><td class="l"><code>${esc(p.field)}</code></td><td class="l">${esc(p.masked)}</td><td class="l"><input data-mn="${i}" value="${p.tool === "claude" ? "claude-main" : "codex-" + esc(p.provider || "")}" style="width:150px"></td><td><button data-mg="${i}">迁移…</button></td></tr>`).join("")}</table>`
-    : `<div class="dim" style="margin:10px 0">配置文件里没有明文 key。</div>`;
-  $$("#mcTab [data-mg]").forEach(b => b.onclick = () => { const p = d.plaintext[+b.dataset.mg], name = $(`#mcTab [data-mn="${b.dataset.mg}"]`).value.trim();
-    openDlg("确认迁移明文 key", `把 <code>${esc(p.where)}</code> 里的 <code>${esc(p.field)}</code>（${esc(p.masked)}）存进凭据管理器的 <b>${esc(name)}</b>，再把配置改成取 key 的命令、删掉明文。<ul><li>先备份原文件，可在 ⋯ →「备份 / 恢复」一键还原</li><li>存进去读回来一致才改配置</li>${p.tool === "claude" ? "<li>Claude 会改用 apiKeyHelper：它对 Claude 桌面版的会话同样生效；已开的会话要重开</li>" : ""}</ul>`,
-      '<button onclick="mcOpen()">取消</button><button class="primary" id="mcGo">迁移</button>');
-    $("#mcGo").onclick = async () => { try { const r = await api("/api/modelcfg/migrate", {tool: p.tool, field: p.field, key: name}); toast("已迁移，备份 " + r.backup); } catch(e){ toast("没迁移：" + e.message); } await mcOpen("migrate"); }; });
-}
-function mcBackups(){
-  const b = MC.d.backups;
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">每次写之前的原文件。还原时会先把现在的文件也备份一份。</div><table><tr><th class="l">时间</th><th class="l">操作</th><th class="l">文件</th><th></th></tr>${b.map(x => `<tr><td class="l">${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})}</td><td class="l">${esc(x.label)}</td><td class="l m" title="${esc(x.file)}">${esc(x.file)}</td><td><button data-rb="${esc(x.id)}">还原</button></td></tr>`).join("") || '<tr><td class="l dim" colspan="4">还没有备份</td></tr>'}</table>`;
-  $$("#mcTab [data-rb]").forEach(btn => btn.onclick = async () => { const x = b.find(y => y.id === btn.dataset.rb); if (!confirm(`把 ${x.file} 还原成 ${new Date(x.at*1000).toLocaleString("zh-CN", {hour12: false})} 的样子？`)) return;
-    try { await api("/api/modelcfg/restore", {id: x.id}); toast("已还原"); } catch(e){ toast("没还原：" + e.message); } MC.view = "backups"; await mcLoad(); });
-}
-function mcSlot(){
-  $("#mcTab").innerHTML = `<div class="dim" style="margin:6px 0;font-size:calc(13px*var(--fk))">在 CC Session Sync 里切换 Codex 全局供应商时，写进 <code>[model_providers.&lt;id&gt;]</code>。Codex 按这个 id 分对话列表：沿用原来的 id，老对话不会「消失」。一般不用改。</div>
-    <div class="ufl"><code>[model_providers.</code><input id="pvSlot" value="${esc(MC.p.codex_slot)}" style="width:120px"><code>]</code><button class="primary" id="pvSlotSave">改</button></div>`;
-  $("#pvSlotSave").onclick = async () => { try { await pvApi("slot", {slot: $("#pvSlot").value.trim()}); toast("已改"); } catch(e){ toast("没改：" + e.message); } mcOpen("slot"); };
-}
-// ---------- 模型路由（v0.3.0）：本机协议转换代理，Codex 用 Claude 模型 / Claude Code 用 OpenAI 等模型；只用 API key（官方或兼容的中转 / 自建），不碰订阅登录 ----------
-// 后端：cc_sessionsync/router.py（供应商 / 多 key 轮换 / 别名 / 代理）+ xproto.py（Anthropic Messages ⇄ OpenAI Responses / Chat 转换）
-const RT = {d: null, cpa: null};
-const RT_PROTO = {anthropic: "Anthropic Messages", responses: "OpenAI Responses", chat: "OpenAI Chat Completions"};
-const RT_PRE = [["anthropic", "Anthropic 官方"], ["openai", "OpenAI 官方"], ["gemini", "Gemini（OpenAI 兼容）"], ["custom", "自定义 / 中转"]];
-async function rtApi(act, body){ mcDirty(); return api("/api/route/" + act, body || {}); }
-async function rtLoad(){ try { RT.d = await api("/api/route"); } catch(e){ RT.d = null; RT.err = e.message; } return RT.d; }
-const rtAge = t => t ? when(t) : "—";
-function rtStat(s){
-  return s.running ? `<span class="tag ok">● 运行中</span> <code>127.0.0.1:${esc(s.port)}</code> <span class="dim">· 已转发 ${s.requests} 次${s.errors ? `，失败 ${s.errors} 次` : ""}${s.cooling ? `，${s.cooling} 个 key 冷却中` : ""}</span>`
-    : `<span class="tag ${s.error ? "bad" : "warn"}">● 没在运行</span> <span class="dim">${esc(s.error || "")}</span>`;
-}
-function rtKeyChip(k){
-  const st = k.cooling ? `<span class="tag warn" title="失败后暂停使用，到时自动恢复">冷却 ${k.cooling}s</span>` : k.disabled ? '<span class="tag">停用</span>' : "";
-  const n = (k.ok || k.fail) ? `<span class="dim" title="成功 / 失败（本次运行）">${k.ok || 0}/${k.fail || 0}</span>` : "";
-  return `<span class="rtk" title="${esc(k.label || k.id)}${k.weight > 1 ? " · 权重 " + k.weight : ""}${k.proxy_url ? " · 代理 " + esc(k.proxy_url) : ""}">${esc(k.label ? k.label + " " : "")}<code>${esc(k.masked || "（缺）")}</code>${k.weight > 1 ? `<span class="dim">×${k.weight}</span>` : ""}${st}${n}</span>`;
-}
-function rtPrice(m){ return m.price === "none" ? "—" : m.price ? `$${m.price.inp}/$${m.price.out}` : '<span class="dim">价格表</span>'; }
-function rtProvCard(p){
-  const ms = p.models.length ? p.models.map(m => `<span class="pvm" title="价格（美元 / 百万 token，输入/输出）：${m.price === "none" ? "不计费" : m.price ? m.price.inp + " / " + m.price.out : "按价格表"}">${m.alias ? `<b>${esc(m.alias)}</b> → ` : ""}${esc(m.name)} <span class="dim">${rtPrice(m)}</span></span>`).join("")
-    : '<span class="dim">（没列模型：客户端要什么模型名就原样转给它）</span>';
-  return `<div class="rtp${p.disabled ? " off" : ""}" data-rtp="${esc(p.id)}">
-    <div class="rtph"><b>${esc(p.name)}</b><span class="tag acc">${RT_PROTO[p.protocol]}</span>${p.prefix ? `<span class="tag" title="请求模型名写成 ${esc(p.prefix)}/模型 时只走这家">前缀 ${esc(p.prefix)}/</span>` : ""}${p.disabled ? '<span class="tag">已停用</span>' : ""}
-      <span class="pvu" title="${esc(p.base_url)}">${esc(p.base_url)}</span><span style="flex:1"></span>
-      <button class="pvmini" data-rtts="${esc(p.id)}" title="每个 key 拉一次模型列表（不花钱）；填了模型名就发 1 个 token 的请求">测试</button><button class="pvmini ghost" data-rted="${esc(p.id)}">编辑</button></div>
-    <div class="rtpk">${p.keys.length ? p.keys.map(rtKeyChip).join("") : '<span class="note">没有 key</span>'}</div>
-    <div class="rtpm">${ms}${p.excluded.length ? `<span class="dim" title="排除的模型（通配符）">排除：${p.excluded.map(esc).join("、")}</span>` : ""}</div>
-    <div class="pvo" data-rto="${esc(p.id)}"></div></div>`;
-}
-function rtAliasOpts(sel, none = "（不设）"){
-  const al = RT.d.aliases; const o = [`<option value="">${none}</option>`].concat(al.map(a => `<option ${a === sel ? "selected" : ""}>${esc(a)}</option>`));
-  if (sel && !al.includes(sel)) o.push(`<option selected>${esc(sel)}</option>`);
-  return o.join("");
-}
-function rtApplied(k){
-  const a = RT.d.applied[k]; if (!a) return '<span class="dim">没应用</span>';
-  const ch = a.files.some(f => f.changed);
-  return `<span class="tag ok">已应用</span> <span class="dim">${rtAge(a.at)}${a.default ? " · 设为默认" : ""}${ch ? " · 文件之后又被改过（撤销时只拿掉我们加的）" : ""}</span>`;
-}
-async function rtView(){
-  const box = $("#mcTab"); if (!box) return;
-  if (!RT.d) box.innerHTML = '<div class="dim">读取中…</div>';
-  const d = await rtLoad(); if (!$("#mcTab")) return;
-  if (!d) { box.innerHTML = `<div class="miss">读不到：${esc(RT.err)}</div>`; return; }
-  const s = d.status, cl = d.clients.claude.slots || {}, cx = d.clients.codex || {};
-  const run = d.running || {}, on = [run.claude && "Claude", run.codex && "Codex"].filter(Boolean);
-  box.innerHTML = `
-  <div class="rtnote">${ic("info")}<div>本机起一个协议转换代理（只听 127.0.0.1，带本机口令），让 <b>Codex 用 Claude 模型</b>、<b>Claude Code 用 OpenAI / Gemini / 中转站的模型</b>。只用 <b>API key</b>（官方或任何 Anthropic / OpenAI 兼容的地址）；<b>不支持把 Claude / ChatGPT 订阅登录拿到别的工具里用</b>（违反服务条款，有封号风险）。原来的登录不受影响，随时一键撤销。</div></div>
-  <div class="setrow"><div class="sl"><div><b>代理</b><div class="sd">${rtStat(s)}</div></div></div><span style="display:flex;gap:6px">${s.running ? '<button data-rtdo="restart">重启</button><button data-rtdo="stop">停止</button>' : '<button class="primary" data-rtdo="start">启动</button>'}</span></div>
-  <h4 class="rth">上游供应商 <span class="dim">（同一个别名挂在多个模型 / 供应商上 = 一个池子，轮流用、失败自动换）</span></h4>
-  <div id="rtProvs">${d.providers.map(rtProvCard).join("") || '<div class="dim" style="padding:8px 0">还没有。先加一个：</div>'}</div>
-  <div class="pvadd"><button class="ghost pvaddb" data-rtadd="custom">＋ 添加供应商</button><span class="dim">预设：</span>${RT_PRE.map(([k, t]) => `<button class="pvmini ghost" data-rtadd="${k}">${t}</button>`).join("")}<span style="flex:1"></span><button class="pvmini ghost" id="rtCpa" title="从 CLIProxyAPI 的 config.yaml 导入 API key 供应商（不导 OAuth 登录）">从 CLIProxyAPI 导入…</button></div>
-  <h4 class="rth">${logo("claude")} Claude Code 用哪个模型 <span class="dim">（Claude Code 请求的模型按名字里的 opus / sonnet / haiku 换成右边的别名）</span></h4>
-  <div class="rtslots">${[["opus", "Opus"], ["sonnet", "Sonnet"], ["haiku", "Haiku（后台小任务也用它）"], ["default", "其它"]].map(([k, t]) => `<label><span>${t}</span><select data-rts="${k}">${rtAliasOpts(cl[k], k === "default" ? "（不转）" : "（不设）")}</select></label>`).join("")}</div>
-  <div class="setrow"><div class="sl"><div><b>应用到 Claude Code</b><div class="sd">${rtApplied("claude")}。全局：在 <code>~/.claude/settings.json</code> 的 env 里设 ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN（先备份，撤销按字节还原）；只命令行：不改全局，用 <code>claude --settings "${esc(d.session_file)}"</code> 启动</div></div></div>
-    <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="primary" data-rtap="claude">应用（全局）</button><button data-rtap="claude-session">只给命令行</button>${d.applied.claude ? '<button data-rtrv="claude">撤销</button>' : ""}</span></div>
-  <h4 class="rth">${logo("codex")} Codex 用哪个模型</h4>
-  <div class="rtslots"><label><span>模型（别名）</span><select data-rtc="model">${rtAliasOpts(cx.model)}</select></label>
-    <label><span>思考强度</span><select data-rtc="effort">${["minimal", "low", "medium", "high", "xhigh"].map(e => `<option ${e === (cx.effort || "medium") ? "selected" : ""}>${e}</option>`).join("")}</select></label>
-    <label><span>Codex 发的格式</span><select data-rtc="wire"><option value="responses" ${cx.wire !== "chat" ? "selected" : ""}>Responses（推荐）</option><option value="chat" ${cx.wire === "chat" ? "selected" : ""}>Chat Completions（老版本 Codex）</option></select></label>
-    <label><span>上下文窗口</span><input data-rtc="context_window" type="number" min="0" placeholder="0 = Codex 默认" value="${cx.context_window || ""}"></label></div>
-  <div class="setrow"><div class="sl"><div><b>应用到 Codex</b><div class="sd">${rtApplied("codex")}。写一个单独的 profile（<code>cc-route.config.toml</code>），不动 config.toml 和 ChatGPT 登录；用 <code>${esc(d.codex_cmd)}</code> 启动。「设为默认」才会改 config.toml（先备份）</div></div></div>
-    <span style="display:flex;gap:6px;flex-wrap:wrap"><button class="primary" data-rtap="codex">应用（profile）</button><button data-rtap="codex-default">应用并设为默认</button>${d.applied.codex ? '<button data-rtrv="codex">撤销</button>' : ""}</span></div>
-  <details class="rtadv"><summary>高级：轮换策略、重试、端口、上游代理、本机口令</summary>
-    <div class="setrow"><div class="sl"><div><b>多个 key 怎么用</b><div class="sd">轮流（按权重）或者先用满第一个；失败（401 / 403 / 429 / 5xx / 连不上）自动换下一个，出错的 key 冷却一会儿</div></div></div><select data-rtg="strategy"><option value="round-robin" ${d.strategy !== "fill-first" ? "selected" : ""}>轮流（round-robin）</option><option value="fill-first" ${d.strategy === "fill-first" ? "selected" : ""}>先用第一个（fill-first）</option></select></div>
-    <div class="setrow"><div class="sl"><div><b>全部 key 都失败后再试几轮</b><div class="sd">只在还没给客户端回任何内容时重试；一轮最多等 20 秒（冷却）</div></div></div><input data-rtg="request_retry" type="number" min="0" max="5" value="${d.request_retry}" style="width:80px"></div>
-    <div class="setrow"><div class="sl"><div><b>端口</b><div class="sd">第一次随机选好后固定；改了要重新「应用」</div></div></div><input data-rtg="port" type="number" min="1024" max="65535" value="${d.port || ""}" style="width:110px"></div>
-    <div class="setrow"><div class="sl"><div><b>上游代理</b><div class="sd">留空 = 系统代理；direct = 直连；或 http://host:port（每个供应商 / key 还能单独设）</div></div></div><input data-rtg="proxy_url" value="${esc(d.proxy_url || "")}" placeholder="（系统代理）" style="width:220px"></div>
-    <div class="setrow"><div class="sl"><div><b>随程序启动</b><div class="sd">CC Session Sync 开着（含托盘）代理就在</div></div></div>${sw("rtAuto", d.autostart)}</div>
-    <div class="setrow"><div class="sl"><div><b>本机口令</b><div class="sd"><code>${esc(d.token_masked || "（还没生成）")}</code> · 存在${esc(d.keystore === "wincred" ? "Windows 凭据管理器" : "本机凭据文件")}；Codex 每次用取 key 命令拿，Claude 写在 settings.json（只在本机有用）</div></div></div><button data-rtdo="rotate-token">换一个</button></div>
-    <div style="text-align:right"><button class="primary" id="rtSaveAdv">保存</button></div></details>
-  <h4 class="rth">最近的请求 <span class="dim">（不记内容；本次运行）</span>${s.cooling ? ' <button class="pvmini ghost" data-rtdo="reset-cooldown">解除冷却</button>' : ""}</h4>
-  <div id="rtLog">${rtLog(s.log)}</div>
-  <div class="dim" style="margin-top:10px">Claude 桌面版：模型路由只管 Claude Code（命令行 / IDE）。桌面版要用第三方模型，请用它自带的「API 模式（3P）」配网关地址。${on.length ? `<div class="miss" style="margin-top:6px">${on.join("、")} 在运行：应用 / 撤销后，已开着的会话要重开才生效。</div>` : ""}</div>`;
-  rtWire();
-}
-function rtLog(L){
-  if (!L || !L.length) return '<div class="dim">还没有。</div>';
-  const cn = {anthropic: "Claude Code", responses: "Codex", chat: "Chat"};
-  return `<table class="rtl"><tr><th class="l">时间</th><th class="l">客户端</th><th class="l">供应商 · key</th><th class="l">上游模型</th><th>状态</th><th>耗时</th><th>tokens</th><th class="l">说明</th></tr>` +
-    L.map(x => `<tr><td>${hm(x.at)}</td><td>${esc(cn[x.client] || x.client || "")}</td><td>${esc(x.provider || "—")}${x.key ? ` <span class="dim">· ${esc(x.key)}</span>` : ""}</td><td><code>${esc(x.model || "")}</code></td>
-      <td><span class="tag ${x.ok ? "ok" : x.retry ? "warn" : "bad"}">${esc(x.status ?? "")}</span></td><td class="n">${x.ms != null ? x.ms + " ms" : ""}</td><td class="n">${x.tokens != null ? x.tokens.toLocaleString() : ""}</td>
-      <td class="ell" title="${esc(x.message || "")}">${x.retry ? "已换 key 重试 · " : ""}${esc(x.message || (x.stream ? "流式" : ""))}</td></tr>`).join("") + "</table>";
-}
-function rtClients(){
-  const slots = {}; $$("#mcTab [data-rts]").forEach(s => slots[s.dataset.rts] = s.value);
-  const codex = {}; $$("#mcTab [data-rtc]").forEach(s => codex[s.dataset.rtc] = s.value);
-  return {claude: {slots}, codex};
-}
-async function rtSaveClients(extra){ await rtApi("clients", Object.assign(rtClients(), extra || {})); }
-function rtWire(){
-  const box = $("#mcTab");
-  $$("#mcTab [data-rtdo]").forEach(b => b.onclick = async () => {
-    b.disabled = true;
-    try { const r = await rtApi(b.dataset.rtdo); if (r && r.note) toast(r.note, 6000); else toast("✅ 好了"); } catch(e){ toast("❌ " + e.message, 5000); }
-    rtView(); });
-  $$("#mcTab [data-rts], #mcTab [data-rtc]").forEach(s => s.onchange = async () => { try { await rtSaveClients(); toast("✅ 已保存（代理马上按新的映射转；Codex 的 profile 要重新「应用」）", 3500); } catch(e){ toast("❌ " + e.message, 5000); } });
-  $$("#mcTab [data-rtadd]").forEach(b => b.onclick = () => rtEdit(null, b.dataset.rtadd));
-  $$("#mcTab [data-rted]").forEach(b => b.onclick = () => rtEdit(RT.d.providers.find(p => p.id === b.dataset.rted)));
-  $$("#mcTab [data-rtts]").forEach(b => b.onclick = () => rtTest(b.dataset.rtts));
-  $$("#mcTab [data-rtap]").forEach(b => b.onclick = () => rtApply(b.dataset.rtap));
-  $$("#mcTab [data-rtrv]").forEach(b => b.onclick = () => rtRevert(b.dataset.rtrv));
-  $("#rtCpa").onclick = () => rtCpa();
-  $("#rtSaveAdv").onclick = async () => {
-    const g = {}; $$("#mcTab [data-rtg]").forEach(i => g[i.dataset.rtg] = i.value.trim());
-    try { await rtSaveClients(Object.assign(g, {autostart: $("#rtAuto").checked, request_retry: +g.request_retry || 0})); toast("✅ 已保存；端口改了的话点「重启」，再重新应用"); rtView(); } catch(e){ toast("❌ " + e.message, 5000); }
-  };
-}
-async function rtTest(id){
-  const o = $(`#mcTab [data-rto="${CSS.escape(id)}"]`); o.innerHTML = '<div class="dim">测试中…</div>';
-  try { const r = await rtApi("test", {id});
-    o.innerHTML = `<div class="rtt">${r.keys.map(k => `<div>${k.ok ? ic("ok") : ic("err")} <code>${esc(k.masked)}</code> ${esc(k.key)} · ${k.status ?? "—"} · ${k.ms != null ? k.ms + " ms" : ""} ${k.ok ? `<span class="dim">${esc(k.what || "")}</span>` : `<span class="note">${esc(k.reason || "")}</span>`}</div>`).join("") || '<div class="dim">没有 key</div>'}<div class="dim">${esc(r.url)}${r.model ? " · 模型 " + esc(r.model) : ""}（只看通不通，不显示回复内容）</div></div>`;
-  } catch(e){ o.innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
-}
-function rtApply(k){
-  const d = RT.d, run = d.running || {}, tool = k.startsWith("claude") ? "claude" : "codex", isOn = run[tool];
-  const what = {claude: `改 <code>~/.claude/settings.json</code>：env 里加 <code>ANTHROPIC_BASE_URL=http://127.0.0.1:${esc(d.port || "…")}</code> 和本机口令 <code>ANTHROPIC_AUTH_TOKEN</code>（先备份；撤销按字节还原）。claude.ai 登录不会被删，撤销后照常用。`,
-    "claude-session": `只写 <code>${esc(d.session_file)}</code>，全局配置不动。命令行这样开：<pre class="rtcmd">claude --settings "${esc(d.session_file)}"</pre>`,
-    codex: `写 <code>${esc("cc-route.config.toml")}</code>（Codex 的 profile，含 <code>[model_providers.cc-route]</code>，口令用取 key 命令拿），<b>不动</b> config.toml 和 ChatGPT 登录。这样开：<pre class="rtcmd">${esc(d.codex_cmd)}</pre>`,
-    "codex-default": `除了 profile，还会把 config.toml 的 <code>model_provider</code> / <code>model</code> 指向 cc-route（先备份；撤销按字节还原）。之后直接 <code>codex</code> 就走模型路由；ChatGPT 登录还在，撤销后照常用。`}[k];
-  const warn = [];
-  if (!d.providers.length) warn.push("还没有供应商。");
-  if (tool === "claude" && !Object.values(d.clients.claude.slots || {}).some(Boolean)) warn.push("Claude Code 的 Opus / Sonnet / Haiku 都没选别名：只有模型名正好等于某个别名时才转得动。");
-  if (tool === "codex" && !d.clients.codex.model) warn.push("Codex 的模型没选。");
-  if (isOn) warn.push(`${tool === "claude" ? "Claude" : "Codex"} 正在运行：写配置不影响它，但已开着的会话要重开才生效${tool === "claude" ? "（Claude 桌面版不受影响）" : ""}。`);
-  if (!d.status.running) warn.push("代理现在没在运行，应用时会顺便启动它。");
-  confirmDlg("应用模型路由", `<div>${what}</div>${warn.map(w => `<div class="miss" style="margin-top:6px">${esc(w)}</div>`).join("")}`, "应用", async () => {
-    await rtSaveClients();
-    const r = k === "claude" ? await rtApi("apply-claude", {mode: "global"}) : k === "claude-session" ? await rtApi("apply-claude", {mode: "session"})
-      : await rtApi("apply-codex", {default: k === "codex-default"});
-    closeDlg(); toast("✅ 已应用：" + (r.cmd || ""), 6000); rtView();
-  });
-}
-function rtRevert(tool){
-  confirmDlg("撤销", tool === "claude" ? "把 <code>~/.claude/settings.json</code> 还原成应用之前的样子（之后没被改过就按字节还原；改过的话只拿掉我们加的两个 env），并删掉命令行专用的 settings 文件。"
-    : "删掉 cc-route profile；如果设成过默认，把 config.toml 还原（之后没被改过就按字节还原；改过的话只拿掉我们加的）。", "撤销", async () => {
-    const r = await rtApi("revert-" + tool); closeDlg();
-    const res = (r.files || [r]).map(f => f.result).filter(Boolean);
-    toast("✅ 已撤销" + (res.includes("partial") ? "（文件之后被改过：只拿掉了我们加的）" : res.includes("restored") ? "（按字节还原）" : ""), 5000); rtView();
-  });
-}
-function rtModelRow(m){
-  const pm = m.price === "none" ? "none" : m.price ? "custom" : "auto", p = m.price && m.price !== "none" ? m.price : {};
-  return `<div class="rtmr"><input data-m="name" value="${esc(m.name || "")}" placeholder="上游模型名，如 claude-sonnet-5-5"><span class="pvarr">←</span><input data-m="alias" value="${esc(m.alias || "")}" placeholder="别名（客户端用的名字，可空）">
-    <select data-m="pm" title="这个模型怎么算钱"><option value="auto" ${pm === "auto" ? "selected" : ""}>按价格表</option><option value="custom" ${pm === "custom" ? "selected" : ""}>自定义价格</option><option value="none" ${pm === "none" ? "selected" : ""}>不计费（—）</option></select>
-    <span class="rtpr"${pm === "custom" ? "" : " hidden"}>${[["inp", "输入"], ["out", "输出"], ["cr", "缓存读"], ["cw", "缓存写"]].map(([k, t]) => `<input data-m="${k}" type="number" min="0" step="any" value="${p[k] ?? ""}" placeholder="${t}" title="${t}：美元 / 百万 token">`).join("")}</span>
-    <button class="pvmini ghost" data-mx title="删掉这行">✕</button></div>`;
-}
-function rtEdit(p, preset){
-  const isNew = !p, d = RT.d;
-  if (!p) { const pr = d.presets[preset] || d.presets.custom; p = {name: pr.name || "", protocol: pr.protocol || "chat", base_url: pr.base_url || "", preset, keys: [], models: (pr.models || []).map(m => ({name: m.name, alias: m.alias || ""})), excluded: [], headers: {}, prefix: "", proxy_url: "", max_tokens: 32000, thinking: "adaptive", reasoning: "auto", effort: "", cache: true, system_role: ""}; }
-  const keyRow = k => `<div class="rtkr" data-kn="${esc(k.name)}"><code>${esc(k.masked || "（缺）")}</code><input data-k="label" value="${esc(k.label || "")}" placeholder="备注"><label title="权重：轮流时按比例分">×<input data-k="weight" type="number" min="1" max="100" value="${k.weight || 1}"></label><input data-k="proxy_url" value="${esc(k.proxy_url || "")}" placeholder="这个 key 的代理（可空）"><label><input type="checkbox" data-k="disabled" ${k.disabled ? "checked" : ""}> 停用</label><button class="pvmini ghost" data-kx title="删掉这个 key（同时从凭据管理器删）">✕</button></div>`;
-  const hd = Object.entries(p.headers || {}).map(([k, v]) => k + ": " + v).join("\n");
-  pvPage((isNew ? "添加" : "编辑") + "模型路由供应商", `<div class="us mc pve rte">
-    <div class="setrow"><div class="sl"><div><b>名字</b></div></div><input id="reName" value="${esc(p.name)}" style="width:280px"></div>
-    <div class="setrow"><div class="sl"><div><b>上游协议</b><div class="sd">这家的接口说的是哪种格式（中转站一般是 OpenAI Chat Completions；有的也给 Anthropic Messages）</div></div></div><select id="reProto">${Object.entries(RT_PROTO).map(([k, t]) => `<option value="${k}" ${k === p.protocol ? "selected" : ""}>${t}</option>`).join("")}</select></div>
-    <div class="setrow"><div class="sl"><div><b>Base URL</b><div class="sd">Anthropic：https://api.anthropic.com；OpenAI：https://api.openai.com/v1；中转站填它给的（一般以 /v1 结尾）</div></div></div><input id="reUrl" value="${esc(p.base_url)}" style="width:340px" placeholder="https://…"></div>
-    <h4 class="rth">Key <span class="dim">（存${d.keystore === "wincred" ? " Windows 凭据管理器" : "本机凭据文件"}，界面只显示打码的；多个 key 自动轮换 / 失败换下一个）</span></h4>
-    <div id="reKeys">${p.keys.map(keyRow).join("")}</div>
-    <textarea id="reNew" rows="2" placeholder="新加的 key，一行一个（保存后就看不到明文了）" style="width:100%;margin-top:4px" autocomplete="off" spellcheck="false"></textarea>
-    <h4 class="rth">模型 <span class="dim">（别名 = Codex / Claude Code 里用的名字；没列模型 = 什么名字都原样转）</span> <button class="pvmini" id="reFetch">拉取模型列表</button></h4>
-    <div id="reModels">${p.models.map(rtModelRow).join("")}</div><button class="pvmini ghost" id="reAddM">＋ 加一行</button><div id="reFetched"></div>
-    <details class="rtadv"><summary>更多：排除、前缀、请求头、代理、思考 / 推理、缓存</summary>
-      <div class="setrow"><div class="sl"><div><b>排除的模型</b><div class="sd">逗号分隔，支持通配符，如 *-preview, gpt-4*</div></div></div><input id="reExcl" value="${esc(p.excluded.join(", "))}" style="width:280px"></div>
-      <div class="setrow"><div class="sl"><div><b>前缀</b><div class="sd">设了以后，客户端写「前缀/模型名」就只走这家（比如 relay/claude-sonnet-5-5）</div></div></div><input id="rePrefix" value="${esc(p.prefix)}" style="width:140px"></div>
-      <div class="setrow"><div class="sl"><div><b>额外请求头</b><div class="sd">一行一个「名字: 值」；值写 $x-foo 表示照抄客户端发来的 x-foo 头。认证头由程序自己设</div></div></div><textarea id="reHdr" rows="2" style="width:280px">${esc(hd)}</textarea></div>
-      <div class="setrow"><div class="sl"><div><b>代理</b><div class="sd">留空 = 用全局设置；direct = 直连；http://host:port</div></div></div><input id="reProxy" value="${esc(p.proxy_url)}" style="width:220px"></div>
-      <div class="setrow"><div class="sl"><div><b>转成 Anthropic 时：思考</b><div class="sd">adaptive（Claude 4.6+ 推荐）/ budget（老模型）/ off；max_tokens 缺省</div></div></div><span style="display:flex;gap:6px"><select id="reThink">${["adaptive", "budget", "off"].map(x => `<option ${x === p.thinking ? "selected" : ""}>${x}</option>`).join("")}</select><input id="reMax" type="number" value="${p.max_tokens}" style="width:100px"></span></div>
-      <div class="setrow"><div class="sl"><div><b>转成 OpenAI 时：推理模型</b><div class="sd">auto = 按模型名猜（o 系列 / gpt-5+ / codex）；系统提示用 system 还是 developer</div></div></div><span style="display:flex;gap:6px"><select id="reReason">${["auto", "on", "off"].map(x => `<option ${x === p.reasoning ? "selected" : ""}>${x}</option>`).join("")}</select><select id="reSys"><option value="" ${!p.system_role ? "selected" : ""}>自动</option><option ${p.system_role === "system" ? "selected" : ""}>system</option><option ${p.system_role === "developer" ? "selected" : ""}>developer</option></select></span></div>
-      <div class="setrow"><div class="sl"><div><b>固定思考强度</b><div class="sd">留空 = 跟着客户端</div></div></div><select id="reEffort">${["", "minimal", "low", "medium", "high", "xhigh"].map(x => `<option value="${x}" ${x === p.effort ? "selected" : ""}>${x || "（跟客户端）"}</option>`).join("")}</select></div>
-      <div class="setrow"><div class="sl"><div><b>提示缓存标记</b><div class="sd">发给 Anthropic 时自动加 cache_control（省钱）</div></div></div>${sw("reCache", p.cache !== false)}</div>
-      <div class="setrow"><div class="sl"><div><b>停用这个供应商</b></div></div>${sw("reOff", p.disabled)}</div>
-    </details></div>`,
-    `${isNew ? "" : '<button class="danger" id="reDel">删除</button>'}<span style="flex:1"></span><button id="reCancel">取消</button><button class="primary" id="reSave">保存</button>`);
-  $("#pvBack").onclick = $("#reCancel").onclick = () => mcOpen("route");
-  const wireRows = () => { $$("#reModels .rtmr").forEach(r => { r.querySelector("[data-mx]").onclick = () => r.remove(); r.querySelector('[data-m="pm"]').onchange = e => r.querySelector(".rtpr").hidden = e.target.value !== "custom"; });
-    $$("#reKeys [data-kx]").forEach(b => b.onclick = () => b.closest(".rtkr").remove()); };
-  wireRows();
-  $("#reAddM").onclick = () => { $("#reModels").insertAdjacentHTML("beforeend", rtModelRow({})); wireRows(); };
-  $("#reFetch").onclick = async () => {
-    const f = $("#reFetched"); f.innerHTML = '<div class="dim">拉取中…</div>';
-    const sec = $("#reNew").value.split(/\n/).map(s => s.trim()).find(Boolean);
-    try { const r = await rtApi("models", sec || isNew ? {draft: {protocol: $("#reProto").value, base_url: $("#reUrl").value, secret: sec, proxy_url: $("#reProxy").value}} : {id: p.id});
-      if (!r.ok) { f.innerHTML = `<div class="miss">${esc(r.reason)}</div>`; return; }
-      const have = new Set($$('#reModels [data-m="name"]').map(i => i.value));
-      f.innerHTML = `<div class="dim">${r.models.length} 个（${r.ms} ms），点一下加进上面：</div><div class="rtfm">${r.models.map(m => `<button class="pvmini ghost${have.has(m) ? " on" : ""}" data-fm="${esc(m)}">${esc(m)}</button>`).join("")}</div>`;
-      $$("#reFetched [data-fm]").forEach(b => b.onclick = () => { $("#reModels").insertAdjacentHTML("beforeend", rtModelRow({name: b.dataset.fm})); b.classList.add("on"); wireRows(); });
-    } catch(e){ f.innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
-  };
-  if (!isNew) $("#reDel").onclick = () => confirmDlg("删除供应商", `删除 <b>${esc(p.name)}</b>？它的 ${p.keys.length} 个 key 也会从凭据管理器删掉。`, "删除", async () => { await rtApi("delete", {id: p.id}); closeDlg(); toast("✅ 已删除"); mcOpen("route"); }, true);
-  $("#reSave").onclick = async () => {
-    const hdr = {}; $("#reHdr").value.split(/\n/).forEach(l => { const i = l.indexOf(":"); if (i > 0) hdr[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
-    const models = $$("#reModels .rtmr").map(r => { const g = k => r.querySelector(`[data-m="${k}"]`).value.trim(), pm = g("pm");
-      const price = pm === "none" ? "none" : pm === "custom" ? Object.fromEntries(["inp", "out", "cr", "cw"].filter(k => g(k) !== "").map(k => [k, +g(k)])) : null;
-      return {name: g("name"), alias: g("alias"), price}; }).filter(m => m.name);
-    const keys = $$("#reKeys .rtkr").map(r => ({name: r.dataset.kn, id: (p.keys.find(k => k.name === r.dataset.kn) || {}).id, label: r.querySelector('[data-k="label"]').value, weight: +r.querySelector('[data-k="weight"]').value || 1,
-      proxy_url: r.querySelector('[data-k="proxy_url"]').value.trim(), disabled: r.querySelector('[data-k="disabled"]').checked}));
-    const nk = $("#reNew").value.split(/\n/).map(s => s.trim()).filter(Boolean).map(secret => ({secret}));
-    const body = {provider: {id: isNew ? undefined : p.id, name: $("#reName").value.trim(), protocol: $("#reProto").value, preset: p.preset, base_url: $("#reUrl").value.trim(), keys, models,
-      excluded: $("#reExcl").value.split(",").map(s => s.trim()).filter(Boolean), prefix: $("#rePrefix").value.trim(), headers: hdr, proxy_url: $("#reProxy").value.trim(),
-      thinking: $("#reThink").value, max_tokens: +$("#reMax").value || 32000, reasoning: $("#reReason").value, system_role: $("#reSys").value, effort: $("#reEffort").value,
-      cache: $("#reCache").checked, disabled: $("#reOff").checked}, new_keys: nk};
-    try { await rtApi("save", body); $("#reNew").value = ""; toast("✅ 已保存（key 进了凭据管理器）"); mcOpen("route"); } catch(e){ toast("❌ " + e.message, 6000); }
-  };
-}
-function rtCpa(){
-  pvPage("从 CLIProxyAPI 导入", `<div class="dim" style="margin-bottom:8px">把 CLIProxyAPI 的 <code>config.yaml</code> 贴进来（或选文件）。只导 API key 供应商（claude / codex / gemini / openai-compatibility / xai 这几组，含 base-url、headers、prefix、models 别名、excluded-models、proxy-url、多个 key）；<b>OAuth 订阅登录那部分不导</b>。key 进凭据管理器，预览里只显示打码的。</div>
-    <input type="file" id="cpaFile" accept=".yaml,.yml,.txt"><textarea id="cpaText" rows="10" style="width:100%;margin-top:6px" spellcheck="false" placeholder="api-keys:&#10;  claude:&#10;    - api-key: …"></textarea>
-    <div id="cpaPrev" style="margin-top:8px"></div>`, '<span style="flex:1"></span><button id="cpaCancel">取消</button><button id="cpaGo">预览</button><button class="primary" id="cpaImp" disabled>导入选中的</button>');
-  $("#pvBack").onclick = $("#cpaCancel").onclick = () => mcOpen("route");
-  $("#cpaFile").onchange = async e => { const f = e.target.files[0]; if (f) $("#cpaText").value = await f.text(); };
-  $("#cpaGo").onclick = async () => {
-    try { const r = await rtApi("cpa-preview", {text: $("#cpaText").value});
-      $("#cpaPrev").innerHTML = (r.providers.length ? `<table><tr><th></th><th class="l">名字</th><th class="l">协议</th><th class="l">Base URL</th><th class="l">key</th><th class="l">模型</th></tr>${r.providers.map((p, i) => `<tr><td><input type="checkbox" data-ci="${i}" checked></td><td>${esc(p.name)}</td><td>${RT_PROTO[p.protocol]}</td><td><code>${esc(p.base_url)}</code>${p.prefix ? ` <span class="tag">${esc(p.prefix)}/</span>` : ""}</td><td>${p.keys.map(k => `<code>${esc(k.masked)}</code>`).join(" ")}</td><td>${p.models.map(m => esc(m.name + (m.alias ? "=" + m.alias : ""))).join("、") || '<span class="dim">任意</span>'}${p.note ? `<div class="note">${esc(p.note)}</div>` : ""}</td></tr>`).join("")}</table>` : '<div class="dim">没找到 API key 供应商。</div>')
-        + (r.skipped.length ? `<div class="dim" style="margin-top:6px">跳过：${r.skipped.map(esc).join("；")}</div>` : "");
-      $("#cpaImp").disabled = !r.providers.length;
-    } catch(e){ $("#cpaPrev").innerHTML = `<div class="miss">${esc(e.message)}</div>`; }
-  };
-  $("#cpaImp").onclick = async () => {
-    const picks = $$("#cpaPrev [data-ci]").filter(c => c.checked).map(c => +c.dataset.ci);
-    try { const r = await rtApi("cpa-import", {text: $("#cpaText").value, picks}); $("#cpaText").value = ""; toast(`✅ 导入了 ${r.imported.length} 个供应商`, 4000); mcOpen("route"); } catch(e){ toast("❌ " + e.message, 6000); }
-  };
-}
-// ---------- 供应商（CC Session Sync 自己管；CC Switch 可选） ----------
-async function pvApi(act, body){
-  if (!["test", "models", "ccs-preview"].includes(act)) mcDirty();
-  const r = await fetch("/api/providers/" + act, {method:"POST", headers:{"Content-Type":"application/json","x-token":TOKEN}, body:JSON.stringify(body)});
-  const j = await r.json().catch(() => ({})); if (!r.ok) { const e = new Error(j.error || r.status); e.status = r.status; e.j = j; throw e; } return j;
-}
-const PV_TOOL = {claude: "Claude Code", codex: "Codex"};
-// 生效范围：淡淡的一句提示（鼠标放上去看原因）
-function pvHint(tool, lvl, P = MC.p){ const r = P.reach[tool][lvl]; const t = r.cli && r.desktop ? "命令行和桌面版都生效" : r.cli ? "仅命令行（桌面版不认）" : r.desktop ? "仅桌面版" : "不生效";
-  return `<span class="pvh" title="${esc(r.note)}">${t}</span>`; }
-const pvModels = (tool, p) => { const m = p.models || {}, ks = Object.keys(m); if (!ks.length && !p.effort) return '<span class="dim">（模型不改）</span>';
-  const lab = {model:"主", opus:"Opus", sonnet:"Sonnet", haiku:"Haiku", fable:"Fable", subagent:"子代理", review_model:"审查"};
-  return ks.map(k => `<span class="pvm">${lab[k]||k} <b>${esc(m[k])}</b></span>`).join("") + (p.effort ? `<span class="pvm">思考 <b>${esc(p.effort)}</b></span>` : ""); };
-const pvPresets = tool => [[tool === "claude" ? "login" : "chatgpt", tool === "claude" ? "官方登录" : "ChatGPT 登录"], ["official", "官方 API Key"], ["openkey", "OpenKey"], ["custom", "自定义"]];
-const pvLast4 = p => p.mode !== "key" ? "" : p.key_missing ? '<span class="note">缺 key</span>' : `<span class="pvkm" title="${esc(p.key_masked || "")}">…${esc((p.key_masked || "").slice(-4))}</span>`;
-// ---------- 0.3.2：两张卡片「Codex 使用… / Claude Code 使用…」——选账号、贴 key、选默认模型、启用。模型和推理等级在 Codex / Claude Code 里随时切换 ----------
-const CC = {d: null, draft: {}, models: {}, ctx: {}, busy: {}, out: {}, more: {}};
-const CC_NAME = {codex: "Codex", claude: "Claude Code"};
-const CC_FILE = {codex: "会改 ~/.codex/config.toml（改前备份，停用时还原；ChatGPT 登录保留）", claude: "会改 ~/.claude/settings.json（改前备份，停用时还原）"};
-const ccPre = id => ((CC.d || {}).presets || []).find(p => p.id === id);
-const ccKindName = k => k === "default" ? "默认" : k === "custom" ? "自定义" : (ccPre(k) || {}).name || k;
-// 服务商图标：lobehub/lobe-icons（MIT，Copyright (c) 2023 LobeHub），见 THIRD_PARTY_NOTICES.md
-const PLOGO = {"anthropic": "<svg class=\"pl\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z\" fill=\"#D97757\" fill-rule=\"nonzero\"></path></svg>", "openai": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z\"></path></svg>", "gemini": "<img class=\"pl\" alt=\"\" src=\"data:image/svg+xml,%3Csvg width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22%233186FF%22%3E%3C/path%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22url%28%23lobe-icons-gemini-0-_R_0_%29%22%3E%3C/path%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22url%28%23lobe-icons-gemini-1-_R_0_%29%22%3E%3C/path%3E%3Cpath d=%22M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z%22 fill=%22url%28%23lobe-icons-gemini-2-_R_0_%29%22%3E%3C/path%3E%3Cdefs%3E%3ClinearGradient gradientUnits=%22userSpaceOnUse%22 id=%22lobe-icons-gemini-0-_R_0_%22 x1=%227%22 x2=%2211%22 y1=%2215.5%22 y2=%2212%22%3E%3Cstop stop-color=%22%2308B962%22%3E%3C/stop%3E%3Cstop offset=%221%22 stop-color=%22%2308B962%22 stop-opacity=%220%22%3E%3C/stop%3E%3C/linearGradient%3E%3ClinearGradient gradientUnits=%22userSpaceOnUse%22 id=%22lobe-icons-gemini-1-_R_0_%22 x1=%228%22 x2=%2211.5%22 y1=%225.5%22 y2=%2211%22%3E%3Cstop stop-color=%22%23F94543%22%3E%3C/stop%3E%3Cstop offset=%221%22 stop-color=%22%23F94543%22 stop-opacity=%220%22%3E%3C/stop%3E%3C/linearGradient%3E%3ClinearGradient gradientUnits=%22userSpaceOnUse%22 id=%22lobe-icons-gemini-2-_R_0_%22 x1=%223.5%22 x2=%2217.5%22 y1=%2213.5%22 y2=%2212%22%3E%3Cstop stop-color=%22%23FABC12%22%3E%3C/stop%3E%3Cstop offset=%22.46%22 stop-color=%22%23FABC12%22 stop-opacity=%220%22%3E%3C/stop%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E\">", "deepseek": "<svg class=\"pl\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M23.748 4.482c-.254-.124-.364.113-.512.234-.051.039-.094.09-.137.136-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.156-.708-.311-.955-.65-.172-.241-.219-.51-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.093.172.187.129.323-.082.28-.18.552-.266.833-.055.179-.137.217-.329.14a5.526 5.526 0 01-1.736-1.18c-.857-.828-1.631-1.742-2.597-2.458a11.365 11.365 0 00-.689-.471c-.985-.957.13-1.743.388-1.836.27-.098.093-.432-.779-.428-.872.004-1.67.295-2.687.684a3.055 3.055 0 01-.465.137 9.597 9.597 0 00-2.883-.102c-1.885.21-3.39 1.102-4.497 2.623C.082 8.606-.231 10.684.152 12.85c.403 2.284 1.569 4.175 3.36 5.653 1.858 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.133-.284 4.994-1.86.47.234.962.327 1.78.397.63.059 1.236-.03 1.705-.128.735-.156.684-.837.419-.961-2.155-1.004-1.682-.595-2.113-.926 1.096-1.296 2.746-2.642 3.392-7.003.05-.347.007-.565 0-.845-.004-.17.035-.237.23-.256a4.173 4.173 0 001.545-.475c1.396-.763 1.96-2.015 2.093-3.517.02-.23-.004-.467-.247-.588zM11.581 18c-2.089-1.642-3.102-2.183-3.52-2.16-.392.024-.321.471-.235.763.09.288.207.486.371.739.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.167-1.361-.802-2.5-1.86-3.301-3.307-.774-1.393-1.224-2.887-1.298-4.482-.02-.386.093-.522.477-.592a4.696 4.696 0 011.529-.039c2.132.312 3.946 1.265 5.468 2.774.868.86 1.525 1.887 2.202 2.891.72 1.066 1.494 2.082 2.48 2.914.348.292.625.514.891.677-.802.09-2.14.11-3.054-.614zm1-6.44a.306.306 0 01.415-.287.302.302 0 01.2.288.306.306 0 01-.31.307.303.303 0 01-.304-.308zm3.11 1.596c-.2.081-.399.151-.59.16a1.245 1.245 0 01-.798-.254c-.274-.23-.47-.358-.552-.758a1.73 1.73 0 01.016-.588c.07-.327-.008-.537-.239-.727-.187-.156-.426-.199-.688-.199a.559.559 0 01-.254-.078c-.11-.054-.2-.19-.114-.358.028-.054.16-.186.192-.21.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.391.451.462.576.685.914.176.265.336.537.445.848.067.195-.019.354-.25.452z\" fill=\"#4D6BFE\"></path></svg>", "glm": "<svg class=\"pl\" aria-hidden=\"true\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M11.991 23.503a.24.24 0 00-.244.248.24.24 0 00.244.249.24.24 0 00.245-.249.24.24 0 00-.22-.247l-.025-.001zM9.671 5.365a1.697 1.697 0 011.099 2.132l-.071.172-.016.04-.018.054c-.07.16-.104.32-.104.498-.035.71.47 1.279 1.186 1.314h.366c1.309.053 2.338 1.173 2.286 2.523-.052 1.332-1.152 2.38-2.478 2.327h-.174c-.715.018-1.274.64-1.239 1.368 0 .124.018.23.053.337.209.373.54.658.96.8.75.23 1.517-.125 1.9-.782l.018-.035c.402-.64 1.17-.96 1.92-.711.854.284 1.378 1.226 1.099 2.167a1.661 1.661 0 01-2.077 1.102 1.711 1.711 0 01-.907-.711l-.017-.035c-.2-.323-.463-.58-.851-.711l-.056-.018a1.646 1.646 0 00-1.954.746 1.66 1.66 0 01-1.065.764 1.677 1.677 0 01-1.989-1.279c-.209-.906.332-1.83 1.257-2.043a1.51 1.51 0 01.296-.035h.018c.68-.071 1.151-.622 1.116-1.333a1.307 1.307 0 00-.227-.693 2.515 2.515 0 01-.366-1.403 2.39 2.39 0 01.366-1.208c.14-.195.21-.444.227-.693.018-.71-.506-1.261-1.186-1.332l-.07-.018a1.43 1.43 0 01-.299-.07l-.05-.019a1.7 1.7 0 01-1.047-2.114 1.68 1.68 0 012.094-1.101zm-5.575 10.11c.26-.264.639-.367.994-.27.355.096.633.379.728.74.095.362-.007.748-.267 1.013-.402.41-1.053.41-1.455 0a1.062 1.062 0 010-1.482zm14.845-.294c.359-.09.738.024.992.297.254.274.344.665.237 1.025-.107.36-.396.634-.756.718-.551.128-1.1-.22-1.23-.781a1.05 1.05 0 01.757-1.26zm-.064-4.39c.314.32.49.753.49 1.206 0 .452-.176.886-.49 1.206-.315.32-.74.5-1.185.5-.444 0-.87-.18-1.184-.5a1.727 1.727 0 010-2.412 1.654 1.654 0 012.369 0zm-11.243.163c.364.484.447 1.128.218 1.691a1.665 1.665 0 01-2.188.923c-.855-.36-1.26-1.358-.907-2.228a1.68 1.68 0 011.33-1.038c.593-.08 1.183.169 1.547.652zm11.545-4.221c.368 0 .708.2.892.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.892.524c-.568 0-1.03-.47-1.03-1.048 0-.579.462-1.048 1.03-1.048zm-14.358 0c.368 0 .707.2.891.524.184.324.184.724 0 1.048a1.026 1.026 0 01-.891.524c-.569 0-1.03-.47-1.03-1.048 0-.579.461-1.048 1.03-1.048zm10.031-1.475c.925 0 1.675.764 1.675 1.706s-.75 1.705-1.675 1.705-1.674-.763-1.674-1.705c0-.942.75-1.706 1.674-1.706zm-2.626-.684c.362-.082.653-.356.761-.718a1.062 1.062 0 00-.238-1.028 1.017 1.017 0 00-.996-.294c-.547.14-.881.7-.752 1.257.13.558.675.907 1.225.783zm0 16.876c.359-.087.644-.36.75-.72a1.062 1.062 0 00-.237-1.019 1.018 1.018 0 00-.985-.301 1.037 1.037 0 00-.762.717c-.108.361-.017.754.239 1.028.245.263.606.377.953.305l.043-.01zM17.19 3.5a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64a.631.631 0 00-.628.64c0 .355.28.64.628.64zm-10.38 0a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64a.631.631 0 00-.628.64c0 .355.279.64.628.64zm-5.182 7.852a.631.631 0 00-.628.64c0 .354.28.639.628.639a.63.63 0 00.627-.606l.001-.034a.62.62 0 00-.628-.64zm5.182 9.13a.631.631 0 00-.628.64c0 .355.279.64.628.64a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm10.38.018a.631.631 0 00-.628.64c0 .355.28.64.628.64a.631.631 0 00.628-.64c0-.355-.279-.64-.628-.64zm5.182-9.148a.631.631 0 00-.628.64c0 .354.279.639.628.639a.631.631 0 00.628-.64c0-.355-.28-.64-.628-.64zm-.384-4.992a.24.24 0 00.244-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249c0 .142.122.249.244.249zM11.991.497a.24.24 0 00.245-.248A.24.24 0 0011.99 0a.24.24 0 00-.244.249c0 .133.108.236.223.247l.021.001zM2.011 6.36a.24.24 0 00.245-.249.24.24 0 00-.244-.249.24.24 0 00-.244.249.24.24 0 00.244.249zm0 11.263a.24.24 0 00-.243.248.24.24 0 00.244.249.24.24 0 00.244-.249.252.252 0 00-.244-.248zm19.995-.018a.24.24 0 00-.245.248.24.24 0 00.245.25.24.24 0 00.244-.25.252.252 0 00-.244-.248z\" fill=\"#3859FF\" fill-rule=\"nonzero\"></path></svg>", "kimi": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M21.846 0a1.923 1.923 0 110 3.846H20.15a.226.226 0 01-.227-.226V1.923C19.923.861 20.784 0 21.846 0z\"></path><path d=\"M11.065 11.199l7.257-7.2c.137-.136.06-.41-.116-.41H14.3a.164.164 0 00-.117.051l-7.82 7.756c-.122.12-.302.013-.302-.179V3.82c0-.127-.083-.23-.185-.23H3.186c-.103 0-.186.103-.186.23V19.77c0 .128.083.23.186.23h2.69c.103 0 .186-.102.186-.23v-3.25c0-.069.025-.135.069-.178l2.424-2.406a.158.158 0 01.205-.023l6.484 4.772a7.677 7.677 0 003.453 1.283c.108.012.2-.095.2-.23v-3.06c0-.117-.07-.212-.164-.227a5.028 5.028 0 01-2.027-.807l-5.613-4.064c-.117-.078-.132-.279-.028-.381z\"></path></svg>", "qwen": "<img class=\"pl\" alt=\"\" src=\"data:image/svg+xml,%3Csvg width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cpath d=%22M12.604 1.34c.393.69.784 1.382 1.174 2.075a.18.18 0 00.157.091h5.552c.174 0 .322.11.446.327l1.454 2.57c.19.337.24.478.024.837-.26.43-.513.864-.76 1.3l-.367.658c-.106.196-.223.28-.04.512l2.652 4.637c.172.301.111.494-.043.77-.437.785-.882 1.564-1.335 2.34-.159.272-.352.375-.68.37-.777-.016-1.552-.01-2.327.016a.099.099 0 00-.081.05 575.097 575.097 0 01-2.705 4.74c-.169.293-.38.363-.725.364-.997.003-2.002.004-3.017.002a.537.537 0 01-.465-.271l-1.335-2.323a.09.09 0 00-.083-.049H4.982c-.285.03-.553-.001-.805-.092l-1.603-2.77a.543.543 0 01-.002-.54l1.207-2.12a.198.198 0 000-.197 550.951 550.951 0 01-1.875-3.272l-.79-1.395c-.16-.31-.173-.496.095-.965.465-.813.927-1.625 1.387-2.436.132-.234.304-.334.584-.335a338.3 338.3 0 012.589-.001.124.124 0 00.107-.063l2.806-4.895a.488.488 0 01.422-.246c.524-.001 1.053 0 1.583-.006L11.704 1c.341-.003.724.032.9.34zm-3.432.403a.06.06 0 00-.052.03L6.254 6.788a.157.157 0 01-.135.078H3.253c-.056 0-.07.025-.041.074l5.81 10.156c.025.042.013.062-.034.063l-2.795.015a.218.218 0 00-.2.116l-1.32 2.31c-.044.078-.021.118.068.118l5.716.008c.046 0 .08.02.104.061l1.403 2.454c.046.081.092.082.139 0l5.006-8.76.783-1.382a.055.055 0 01.096 0l1.424 2.53a.122.122 0 00.107.062l2.763-.02a.04.04 0 00.035-.02.041.041 0 000-.04l-2.9-5.086a.108.108 0 010-.113l.293-.507 1.12-1.977c.024-.041.012-.062-.035-.062H9.2c-.059 0-.073-.026-.043-.077l1.434-2.505a.107.107 0 000-.114L9.225 1.774a.06.06 0 00-.053-.031zm6.29 8.02c.046 0 .058.02.034.06l-.832 1.465-2.613 4.585a.056.056 0 01-.05.029.058.058 0 01-.05-.029L8.498 9.841c-.02-.034-.01-.052.028-.054l.216-.012 6.722-.012z%22 fill=%22url%28%23lobe-icons-qwen-_R_0_%29%22 fill-rule=%22nonzero%22%3E%3C/path%3E%3Cdefs%3E%3ClinearGradient id=%22lobe-icons-qwen-_R_0_%22 x1=%220%25%22 x2=%22100%25%22 y1=%220%25%22 y2=%220%25%22%3E%3Cstop offset=%220%25%22 stop-color=%22%236336E7%22 stop-opacity=%22.84%22%3E%3C/stop%3E%3Cstop offset=%22100%25%22 stop-color=%22%236F69F7%22 stop-opacity=%22.84%22%3E%3C/stop%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E\">", "xai": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M9.27 15.29l7.978-5.897c.391-.29.95-.177 1.137.272.98 2.369.542 5.215-1.41 7.169-1.951 1.954-4.667 2.382-7.149 1.406l-2.711 1.257c3.889 2.661 8.611 2.003 11.562-.953 2.341-2.344 3.066-5.539 2.388-8.42l.006.007c-.983-4.232.242-5.924 2.75-9.383.06-.082.12-.164.179-.248l-3.301 3.305v-.01L9.267 15.292M7.623 16.723c-2.792-2.67-2.31-6.801.071-9.184 1.761-1.763 4.647-2.483 7.166-1.425l2.705-1.25a7.808 7.808 0 00-1.829-1A8.975 8.975 0 005.984 5.83c-2.533 2.536-3.33 6.436-1.962 9.764 1.022 2.487-.653 4.246-2.34 6.022-.599.63-1.199 1.259-1.682 1.925l7.62-6.815\"></path></svg>", "openrouter": "<svg class=\"pl\" aria-hidden=\"true\" fill=\"currentColor\" fill-rule=\"evenodd\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M18.654 3.87a5.087 5.087 0 110 10.174L23.7 19.09c.64.641.187 1.737-.72 1.737H8.48a8.479 8.479 0 010-16.958h10.175zM8.479 7.26a5.087 5.087 0 100 10.176 5.087 5.087 0 000-10.175z\"></path></svg>"};
-// ---------- 0.3.4 供应商页：Agent | 服务商 | 高级 ----------
-// 布局和交互的思路借鉴 magpie（MIT，github.com/yetone/magpie）：每个 Agent 一行（状态点 + 一句话 + 模型选择 + 开关）、
-// 服务商用带图标的格子挑、模型选择器可搜索 / 按服务商分组 / 键盘操作、推理等级用滑块。代码是自己写的，没有拷贝。
-const PV = {list: null, tab: localStorage.getItem("ccss.mctab") || "agent", open: {}, q: "", pk: null, sh: null};
-const EFF_NAME = {"": "默认", none: "关", minimal: "最低", low: "低", medium: "中", high: "高", xhigh: "超高", max: "最高"};
-const PROTO_NAME = {anthropic: "Anthropic Messages", responses: "OpenAI Responses", chat: "OpenAI Chat Completions"};
-const plogo = id => `<span class="plg">${PLOGO[id] || ic(id === "default" ? "user" : "plus")}</span>`;
-const pvById = id => (PV.list || []).find(p => p.id === id);
-const pvReady = () => (PV.list || []).filter(p => p.key);
-const mLabel = (p, m) => (p && p.labels && p.labels[m]) || m;
-async function pvLoad(){ try { PV.list = (await api("/api/route/prov-list", {})).providers; PV.err = ""; } catch(e){ PV.err = e.message; } }
-function mcTabs(){
-  const n = pvReady().length;
-  const tabs = [["agent", "Agent", "给 Codex / Claude Code 各选一个模型，新开会话就用上"], ["prov", "服务商", "贴一次 key，两个 Agent 都能用；key 只存在本机凭据管理器"],
-    ["adv", "高级", "v0.2 的供应商列表、多 key 轮换 / 跨协议路由"]];
-  return `<div class="mtabs"><div class="seg mseg" role="tablist">${tabs.map(([k, t]) => `<button role="tab" data-mtab="${k}" class="${PV.tab === k ? "on" : ""}" aria-selected="${PV.tab === k}">${t}${k === "prov" && n ? `<span class="mcnt">${n}</span>` : ""}</button>`).join("")}</div>
-    <span class="mhint">${esc((tabs.find(t => t[0] === PV.tab) || tabs[0])[2])}</span></div>`;
-}
-function mcSetTab(k){
-  PV.tab = k; localStorage.setItem("ccss.mctab", k);
-  $$("#mcTab [data-mtab]").forEach(b => { b.classList.toggle("on", b.dataset.mtab === k); b.setAttribute("aria-selected", b.dataset.mtab === k); });
-  $("#ccBox").hidden = k !== "agent"; $("#pvGrid").hidden = k !== "prov"; $("#mcAdvBox").hidden = k !== "adv";
-  const h = $("#mcTab .mhint"); if (h) h.outerHTML = mcTabs().match(/<span class="mhint">[\s\S]*?<\/span>/)[0];
-  if (k === "prov") pgRender();
-}
-// ---- Agent 行 ----
-function agState(cl){
-  const v = CC.d[cl], px = CC.d.proxy || {};
-  if (!v.enabled) return ["off", cl === "codex" ? "没接入 · 用 Codex 自己的 ChatGPT 登录" : "没接入 · 用 Claude Code 自己的 claude.ai 登录"];
-  if (v.drift) return ["warn", "已接入 · 配置被别的工具改过，展开看看"];
-  if ((v.warnings || []).length) return ["warn", `已接入 · ${v.warnings.length} 项设置还指着别家的模型，展开一键改`];
-  if (v.needs_proxy && !px.running) return ["ok", `已接入 · 后台服务待命（打开 ${CC_NAME[cl]} 时自动拉起）`];
-  const n = (v.models || []).length || 1;
-  return ["ok", "已接入 · " + (cl === "codex" ? (v.profile_only ? "只在 codex --profile cc-route 时用" : `Codex 的 /model 和桌面端选择器里有 ${n} 个模型`) : "在 /model 里切换 opus · sonnet · haiku 档位，或直接 /model 模型名")];
-}
-function agRow(cl){
-  const v = CC.d[cl], on = v.enabled, [st, txt] = agState(cl), p = pvById(v.kind), open = on && !!PV.open[cl];
-  const pick = on ? `${plogo(v.kind)}<span class="agmn">${esc(mLabel(p, v.model))}</span>` : `<span class="agmn ph">${pvReady().length ? "选一个模型…" : "先添加服务商"}</span>`;
-  return `<div class="ag${on ? " on" : ""}${open ? " open" : ""}" data-ag="${cl}">
-    <div class="agm"><span class="agi">${logo(cl)}</span>
-      <div class="agt"><b>${CC_NAME[cl]}</b><div class="ags"><i class="dot ${st}"></i><span>${esc(txt)}</span></div></div>
-      ${on ? `<button class="ghost agx" data-agx="${cl}" aria-expanded="${open}" title="推理等级、档位、测试连接">${v.effort ? "推理 " + esc(EFF_NAME[v.effort] || v.effort) + " · " : ""}设置<span class="chev">›</span></button>` : ""}
-      <button class="agpick" data-agpick="${cl}" aria-haspopup="listbox" title="${on ? esc(p ? p.name + " · " + v.model : v.model) : "选模型就接入"}">${pick}<span class="caret">▾</span></button>
-      <label class="switch" title="${on ? "停用：回到自己的登录（改过的文件按字节还原）" : "接入"}"><input type="checkbox" data-agsw="${cl}" ${on ? "checked" : ""}><i></i></label></div>
-    ${open ? `<div class="agd">${agDetail(cl)}</div>` : ""}</div>`;
-}
-function agDetail(cl){
-  const v = CC.d[cl], p = pvById(v.kind) || {}, lv = [""].concat(((p.levels || {})[v.model]) || ["low", "medium", "high", "xhigh", "max"]);
-  if (v.effort && !lv.includes(v.effort)) lv.push(v.effort);
-  const i = Math.max(0, lv.indexOf(v.effort || ""));
-  const ms = (p.models && p.models.length ? p.models : v.models) || [];
-  const sel = (f, cur, ph) => `<select data-agf="${cl}:${f}"><option value="">${ph}</option>${(cur && !ms.includes(cur) ? [cur] : []).concat(ms).map(m => `<option value="${esc(m)}" ${m === cur ? "selected" : ""}>${esc(mLabel(p, m))}</option>`).join("")}</select>`;
-  const ws = (v.warnings || []).length ? `<div class="agn warn">${ic("warn")}<div><b>这些设置还指着「${esc(p.name || v.kind_name)}」没有的模型</b>${v.warnings.map(w => `<div>${esc(w.label)}：<code>${esc(String(w.value))}</code></div>`).join("")}
-      <div class="agnb"><button class="pvmini" data-ccfix="${cl}">一键改成 ${esc(mLabel(p, v.model))}${v.warnings.some(w => w.fix === "absent") ? "（上下文长度改回自动）" : ""}</button><span class="dim">先备份，停用时放回原样</span></div></div></div>` : "";
-  const dr = v.drift ? `<div class="agn warn">${ic("warn")}<div>启用后被别的工具改掉了：${(v.drift_keys || []).map(k => `<code>${esc(k)}</code>`).join(" ")}<div class="agnb"><button class="pvmini" data-agre="${cl}">写回去</button><span class="dim">停用时只拿掉我们写的那几项</span></div></div></div>` : "";
-  return `${ws}${dr}<div class="agf">
-    <label>默认推理等级</label><div><div class="eff"><input type="range" min="0" max="${lv.length - 1}" step="1" value="${i}" data-agef="${cl}" aria-label="默认推理等级" style="--n:${lv.length - 1}"><div class="effl">${lv.map((x, j) => `<span class="${j === i ? "on" : ""}" data-effi="${cl}:${j}" style="left:${lv.length > 1 ? (100 * j / (lv.length - 1)).toFixed(2) : 0}%">${EFF_NAME[x] || x}</span>`).join("")}</div></div>
-      <div class="sd">打开时的默认值；在 ${CC_NAME[cl]} 里${cl === "codex" ? "用 /model" : "用 /effort"} 随时改。列出来的是 ${esc(mLabel(p, v.model))} 支持的等级。</div></div>
-    ${cl === "claude" ? `<label>Sonnet 档用</label><div>${sel("sonnet_model", v.sonnet_model, "同上（" + esc(mLabel(p, v.model)) + "）")}</div>
-      <label>Haiku 档用</label><div>${sel("small_model", v.small_model, "同上（" + esc(mLabel(p, v.model)) + "）")}<div class="sd">Claude Code 的 /model 里选 Sonnet / Haiku 时实际用的模型</div></div>` : ""}
-    ${cl === "codex" ? `<label>范围</label><div><label class="ccchk"><input type="checkbox" data-agf="${cl}:profile_only" ${v.profile_only ? "checked" : ""}><span>只在 <code>codex --profile cc-route</code> 时用<div class="sd">勾上就不改默认：普通 codex 和 Codex 桌面端照旧用 ChatGPT 登录</div></span></label></div>` : ""}
-    <label>连接</label><div class="sd"><code>${esc(v.upstream || "")}</code> · ${esc(PROTO_NAME[v.protocol_used] || "")} · ${v.needs_proxy ? "经本机后台服务转换" : "直连"}<br>${CC_FILE[cl]}</div>
-    <label></label><div class="agnb"><button class="pvmini" data-cct="${cl}">测试连接</button><span class="ccout" id="ccOut-${cl}">${CC.out[cl] || ""}</span></div></div>`;
-}
-function agEmpty(){
-  return pvReady().length ? "" : `<div class="agempty">${ic("key")}<div><b>先添加一个服务商</b><div class="sd">贴一次 key（DeepSeek、Kimi、GLM、Qwen、Gemini、Grok、OpenRouter、Claude / OpenAI API Key 或任意兼容地址），然后回来给 Agent 选模型。</div></div><button class="primary" data-mtabgo="prov">添加服务商</button></div>`;
-}
-function ccRender(){
-  const el = $("#ccBox"); if (!el || !CC.d) return;
-  if (!PV.list) { el.innerHTML = '<div class="dim">读取中…</div>'; return; }
-  el.innerHTML = agEmpty() + `<div class="agl">${agRow("codex")}${agRow("claude")}</div>`;
-  $$("#ccBox [data-mtabgo]").forEach(b => b.onclick = () => mcSetTab(b.dataset.mtabgo));
-  $$("#ccBox [data-agx]").forEach(b => b.onclick = () => { PV.open[b.dataset.agx] = !PV.open[b.dataset.agx]; ccRender(); });
-  $$("#ccBox [data-agpick]").forEach(b => b.onclick = e => { e.stopPropagation(); agPickOpen(b.dataset.agpick, b); });
-  $$("#ccBox [data-agsw]").forEach(s => s.onchange = () => { const cl = s.dataset.agsw, v = CC.d[cl];
-    if (!s.checked) { s.checked = true; return ccDisable(cl); }
-    s.checked = false;
-    const p = pvById(v.kind);
-    if (v.kind !== "default" && v.model && p && p.key) agApply(cl, {}); else agPickOpen(cl, $(`#ccBox [data-agpick="${cl}"]`)); });
-  $$("#ccBox [data-agef]").forEach(r => { const cl = r.dataset.agef, v = CC.d[cl], p = pvById(v.kind) || {};
-    const lv = [""].concat(((p.levels || {})[v.model]) || ["low", "medium", "high", "xhigh", "max"]); if (v.effort && !lv.includes(v.effort)) lv.push(v.effort);
-    r.oninput = () => $$(`#ccBox [data-effi^="${cl}:"]`).forEach((s, j) => s.classList.toggle("on", j === +r.value));
-    r.onchange = () => agApply(cl, {effort: lv[+r.value] || ""}, `默认推理等级：${EFF_NAME[lv[+r.value] || ""]}`);
-    $$(`#ccBox [data-effi^="${cl}:"]`).forEach((s, j) => s.onclick = () => { r.value = j; r.oninput(); r.onchange(); }); });
-  $$("#ccBox [data-agf]").forEach(i => i.onchange = () => { const [cl, f] = i.dataset.agf.split(":"); agApply(cl, {[f]: i.type === "checkbox" ? i.checked : i.value}); });
-  $$("#ccBox [data-agre]").forEach(b => b.onclick = () => agApply(b.dataset.agre, {}, "已写回去"));
-  $$("#ccBox [data-ccfix]").forEach(b => b.onclick = async () => { const cl = b.dataset.ccfix; b.disabled = true;
-    try { const r = await rtApi("card-fixrefs", {client: cl}); doneOrQueued(r, `已改好 ${r.fixed || 0} 项（停用时放回原样）`); } catch(e){ toast("❌ " + e.message, 6000); } ccLoad(); });
-  $$("#ccBox [data-cct]").forEach(b => b.onclick = async () => { const o = $("#ccOut-" + b.dataset.cct); o.innerHTML = '<span class="dim">测试中…</span>';
-    const r = await rtApi("card-test", {client: b.dataset.cct}).catch(e => ({ok: false, reason: e.message}));
-    const row = r.keys ? r.keys[0] || r : r;
-    o.innerHTML = CC.out[b.dataset.cct] = r.ok ? `<span class="tag ok">✓ 通了</span> <span class="dim">${row.ms != null ? `${row.ms} ms` : ""}${r.note ? " · " + esc(r.note) : ""}</span>`
-      : `<span class="tag bad">✗ ${row.status ? "HTTP " + row.status + "：" : ""}${esc(row.reason || r.reason || "不通")}</span>`; });
-  if (PV.tab === "prov") pgRender();
-}
-// 接入 / 换模型 / 改设置：都是「保存并（重新）启用」；服务商的地址、地区、模型列表从「服务商」那边带上
-async function agApply(cl, patch, okMsg){
-  const v = CC.d[cl], kind = patch.kind || v.kind, p = pvById(kind) || {}, same = kind === v.kind;
-  const b = Object.assign({client: cl, kind, model: v.model, effort: same ? v.effort : "", small_model: same ? v.small_model : "", sonnet_model: same ? v.sonnet_model : "",
-    profile_only: v.profile_only, region: p.region || "", base_url: p.base_url || "", models: (p.models || []).length ? p.models : undefined, ctx: p.ctx || undefined}, patch);
-  if (kind === "custom") b.protocol = p.protocol || "auto";
-  if (!same && !patch.small_model && cl === "claude") b.small_model = "";
-  agBusy(cl, true);
-  try {
-    const r = await rtApi("card-enable", b);
-    CC.out[cl] = "";
-    const nm = mLabel(p, b.model);
-    if (doneOrQueued(r, r.deferred ? "" : okMsg ? `${CC_NAME[cl]} · ${okMsg}` : `${CC_NAME[cl]} 已改用 ${p.name || kind} · ${nm}${cl === "codex" ? (b.profile_only ? "（codex --profile cc-route）" : "：完全退出再打开 Codex 桌面端 / 新开 codex，选择器里就是这家的模型") : "：新开的 Claude Code 会话就用它"}`) && r.proxy && !r.proxy_ok) toast("⚠ 后台转换没起来：看「诊断自检」", 5000);
-  } catch(e){ toast("❌ " + e.message, 6000); }
-  agBusy(cl, false); ccLoad();
-}
-function agBusy(cl, on){ const r = $(`#ccBox [data-ag="${cl}"]`); if (r) r.classList.toggle("busy", on); }
-// ---- 模型选择器：搜索、按服务商分组、↑↓ 回车 Esc ----
-function agPickItems(){
-  const {cl, q} = PV.pk, v = CC.d[cl], lq = q.trim().toLowerCase(), out = [];
-  const own = cl === "codex" ? "Codex 自己的登录（ChatGPT）" : "Claude Code 自己的登录（claude.ai）";
-  if (!lq || own.toLowerCase().includes(lq) || "默认 登录".includes(lq)) out.push({grp: "default", kind: "default", label: own, sub: "不经过 CC Session Sync", cur: !v.enabled});
-  for (const p of pvReady()) {
-    const ms = p.models || [];
-    const hit = ms.filter(m => !lq || m.toLowerCase().includes(lq) || mLabel(p, m).toLowerCase().includes(lq) || p.name.toLowerCase().includes(lq));
-    const cur = v.enabled && v.kind === p.id ? v.model : "";
-    if (cur && !ms.includes(cur) && (!lq || cur.toLowerCase().includes(lq))) hit.unshift(cur);
-    for (const m of hit) out.push({grp: p.id, kind: p.id, model: m, label: mLabel(p, m), sub: mLabel(p, m) !== m ? m : "", cur: m === cur, def: m === p.default});
-    const t = q.trim();
-    if (t && /^[A-Za-z0-9][A-Za-z0-9._:\/@\[\]-]{0,127}$/.test(t) && !ms.includes(t)) out.push({grp: p.id, kind: p.id, model: t, label: `用「${t}」`, sub: "手填模型名（列表里没有）", manual: true});
-    if (!ms.length && !lq) out.push({grp: p.id, kind: p.id, refresh: true, label: "还没列出模型 · 去服务商里刷新", sub: ""});
-  }
-  return out;
-}
-function agPickDraw(keepInput){
-  const pop = $("#agPop"); if (!pop) return;
-  const items = PV.pk.items = agPickItems();
-  if (PV.pk.i >= items.length) PV.pk.i = items.length - 1;
-  if (PV.pk.i < 0) PV.pk.i = Math.max(0, items.findIndex(x => x.cur));
-  let g = null, h = "";
-  items.forEach((x, j) => {
-    if (x.grp !== g) { g = x.grp; const p = pvById(g);
-      h += g === "default" ? "" : `<div class="pkg">${plogo(g)}<b>${esc(p.name)}</b><span class="pkh">${esc(p.host || "")}</span></div>`; }
-    h += `<div class="pki${j === PV.pk.i ? " sel" : ""}${x.cur ? " cur" : ""}${x.refresh ? " ref" : ""}" role="option" aria-selected="${!!x.cur}" data-pki="${j}">${x.kind === "default" ? plogo("default") : ""}<span class="pkl"><span>${esc(x.label)}${x.def ? ' <em class="pkd">推荐</em>' : ""}</span>${x.sub ? `<small>${esc(x.sub)}</small>` : ""}</span>${x.cur ? `<span class="pkc">✓</span>` : ""}</div>`;
-  });
-  const list = `<div class="pkls" role="listbox">${h || `<div class="pke">没有匹配的模型${pvReady().length ? "" : "：先添加一个服务商"}</div>`}</div>`;
-  if (keepInput) { pop.querySelector(".pkls").outerHTML = list; }
-  else pop.innerHTML = `<div class="pkq">${ic("search")}<input id="agPq" placeholder="搜模型或服务商…（回车选中）" value="${esc(PV.pk.q)}" autocomplete="off" spellcheck="false"></div>${list}
-    <div class="pkf"><button class="ghost" data-pkadd>${ic("plus")} 添加 / 管理服务商</button><span class="dim">↑↓ 选择 · 回车确定 · Esc 关闭</span></div>`;
-  $$("#agPop [data-pki]").forEach(r => { r.onmousedown = e => e.preventDefault(); r.onclick = () => agPickChoose(items[+r.dataset.pki]); r.onmousemove = () => { if (PV.pk.i !== +r.dataset.pki) { PV.pk.i = +r.dataset.pki; $$("#agPop .pki").forEach(z => z.classList.toggle("sel", z === r)); } }; });
-  const s = $("#agPop .pki.sel"); if (s) s.scrollIntoView({block: "nearest"});
-  if (!keepInput) {
-    pop.querySelector("[data-pkadd]").onclick = () => { agPickClose(); mcSetTab("prov"); };
-    const inp = $("#agPq"); inp.focus();
-    inp.oninput = () => { PV.pk.q = inp.value; PV.pk.i = inp.value.trim() ? 0 : -1; agPickDraw(true); };
-    inp.onkeydown = e => {
-      const n = PV.pk.items.length;
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (n) { PV.pk.i = (PV.pk.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n; agPickDraw(true); } }
-      else if (e.key === "Enter") { e.preventDefault(); const x = PV.pk.items[PV.pk.i]; if (x) agPickChoose(x); }
-      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); const b = PV.pk.btn; agPickClose(); if (b) b.focus(); }
-    };
-  }
-}
-function agPickOpen(cl, btn){
-  const again = PV.pk && PV.pk.cl === cl; agPickClose(); if (again) return;
-  const pop = document.createElement("div"); pop.className = "agpop"; pop.id = "agPop"; document.body.appendChild(pop);
-  PV.pk = {cl, btn, q: "", i: -1, items: []};
-  agPickDraw();
-  const r = btn.getBoundingClientRect(), z = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-  const w = Math.min(380, innerWidth / z - 24), left = Math.max(12, Math.min(r.right / z - w, innerWidth / z - w - 12));
-  pop.style.width = w + "px"; pop.style.left = left + "px";
-  const below = innerHeight / z - r.bottom / z;
-  if (below > 320 || below > r.top / z) { pop.style.top = (r.bottom / z + 6) + "px"; pop.style.maxHeight = (below - 18) + "px"; }
-  else { pop.style.bottom = (innerHeight / z - r.top / z + 6) + "px"; pop.style.maxHeight = (r.top / z - 18) + "px"; }
-  setTimeout(() => document.addEventListener("mousedown", agPickOut), 0);
-}
-function agPickOut(e){ if (!e.target.closest("#agPop") && !e.target.closest("[data-agpick]")) agPickClose(); }
-function agPickClose(){ const p = $("#agPop"); if (p) p.remove(); PV.pk = null; document.removeEventListener("mousedown", agPickOut); }
-function agPickChoose(x){
-  const cl = PV.pk.cl; agPickClose();
-  if (x.refresh) { mcSetTab("prov"); return pvSheet(x.kind); }
-  if (x.kind === "default") return CC.d[cl].enabled ? ccDisable(cl) : toast(`${CC_NAME[cl]} 本来就在用自己的登录`);
-  if (x.cur) return toast(`${CC_NAME[cl]} 已经在用 ${x.label}`);
-  agApply(cl, {kind: x.kind, model: x.model});
-}
-// ---- 服务商格子 ----
-function pgRender(){
-  const el = $("#pvGrid"); if (!el) return;
-  if (!PV.list) { el.innerHTML = `<div class="dim">${PV.err ? "读不到：" + esc(PV.err) : "读取中…"}</div>`; return; }
-  const q = PV.q.trim().toLowerCase(), m = p => !q || (p.name + " " + p.vendor + " " + p.host + " " + p.id).toLowerCase().includes(q);
-  const mine = PV.list.filter(p => p.key && m(p)), rest = PV.list.filter(p => !p.key && m(p));
-  const tile = p => `<button class="pvtile${p.key ? " have" : ""}${p.id === "custom" && !p.key ? " add" : ""}" data-pvt="${p.id}">${plogo(p.id)}<span class="pvtt"><b>${esc(p.name)}</b>
-    <span>${p.key ? esc(p.key + " · " + (p.models.length ? p.models.length + " 个模型" : "还没列出模型")) : esc(p.id === "custom" ? "任意兼容地址（Anthropic / OpenAI）" : p.host)}</span></span>
-    ${p.used_by.length ? `<span class="pvu2" title="${esc(p.used_by.map(c => CC_NAME[c]).join("、"))} 正在用">${p.used_by.map(c => logo(c)).join("")}</span>` : p.key ? '<span class="pvok">✓</span>' : ""}</button>`;
-  el.innerHTML = `<div class="pgtop"><label class="gsearch pgq">${ic("search")}<input type="search" id="pgQ" placeholder="找服务商…" value="${esc(PV.q)}"></label></div>
-    ${mine.length ? `<div class="pgh">已添加 <span class="dim">· 点开换 key、地区、刷新模型</span></div><div class="pgg">${mine.map(tile).join("")}</div>` : ""}
-    <div class="pgh">${mine.length ? "还可以添加" : "选一个服务商，贴 key 就能用"}</div><div class="pgg">${rest.map(tile).join("") || '<div class="dim">没有匹配的服务商</div>'}</div>`;
-  const qi = $("#pgQ"); qi.oninput = () => { PV.q = qi.value; const at = qi.selectionStart; pgRender(); const n = $("#pgQ"); n.focus(); n.setSelectionRange(at, at); };
-  $$("#pvGrid [data-pvt]").forEach(b => b.onclick = () => pvSheet(b.dataset.pvt));
-}
-function pvSheet(id){
-  const p = pvById(id); if (!p) return;
-  PV.sh = {id, secret: "", region: p.region || ((p.regions || [])[0] || {}).id || "", base_url: p.base_url, protocol: p.protocol || "auto", models: p.models.slice(), ctx: Object.assign({}, p.ctx), labels: Object.assign({}, p.labels),
-    st: p.key ? (p.models.length ? `<span class="ok">✓ 已保存 · ${p.models.length} 个模型</span>` : "") : "", more: !!(p.base_url && id !== "custom"), seq: 0};
-  openDlg(p.name, `<div id="shBody"></div>`, `${p.key ? '<button class="ghost danger" id="shDel">删除</button>' : ""}<span style="flex:1"></span><button onclick="closeDlg()">取消</button><button class="primary" id="shSave">保存</button>`);
-  $("#dlgTitle").innerHTML = `${plogo(id)}${esc(p.name)}${p.vendor && p.vendor !== p.name ? `<span class="dim" style="font-weight:400;font-size:.9em">${esc(p.vendor)}</span>` : ""}`;
-  pvSheetDraw();
-  $("#shSave").onclick = pvSheetSave;
-  const del = $("#shDel"); if (del) del.onclick = () => confirmDlg(`删除「${esc(p.name)}」`, `删掉保存的 key 和这个服务商的设置。${p.used_by.length ? "<b>" + p.used_by.map(c => CC_NAME[c]).join("、") + " 正在用它，要先停用。</b>" : ""}`, "删除", async () => {
-    await rtApi("prov-delete", {kind: id}); closeDlg(); toast(`已删除「${p.name}」`); ccLoad(); }, true);
-  if (p.key && !p.models.length) pvSheetCheck();
-}
-function pvSheetDraw(){
-  const s = PV.sh, p = pvById(s.id), regs = p.regions || [];
-  const chips = s.models.length ? s.models.slice(0, 18).map(m => `<span class="mchip" title="${esc(m)}">${esc(s.labels[m] || m)}</span>`).join("") + (s.models.length > 18 ? `<span class="dim">还有 ${s.models.length - 18} 个</span>` : "") : '<span class="dim">贴好 key 会自动列出</span>';
-  $("#shBody").innerHTML = `<div class="shf">
-    <label>Key</label><div><input type="password" id="shKey" autocomplete="off" spellcheck="false" placeholder="${p.key ? "已保存 " + esc(p.key) + "（要换就粘贴新的）" : "粘贴 " + esc(p.key_hint === "…" ? "API Key" : p.key_hint)}" value="${esc(s.secret)}"><div class="shst" id="shSt">${s.st}</div></div>
-    ${regs.length > 1 ? `<label>地区</label><div><span class="seg" id="shReg">${regs.map(r => `<button data-reg="${esc(r.id)}" class="${s.region === r.id ? "on" : ""}">${esc(r.label)}</button>`).join("")}</span></div>` : ""}
-    ${s.id === "custom" ? `<label>地址</label><div><input id="shUrl" value="${esc(s.base_url)}" placeholder="服务商给的地址，例如 https://…/v1"></div>
-      <label>接口类型</label><div><select id="shProto">${[["auto", "自动（看地址）"], ["anthropic", "Anthropic Messages"], ["responses", "OpenAI Responses"], ["chat", "OpenAI Chat Completions（Gemini 也选这个）"]].map(([k, t]) => `<option value="${k}" ${s.protocol === k ? "selected" : ""}>${t}</option>`).join("")}</select></div>`
-      : s.more ? `<label>中转地址</label><div><input id="shUrl" value="${esc(s.base_url)}" placeholder="（可选）留空 = 官方地址 ${esc(p.host)}"></div>` : ""}
-    <label>模型</label><div class="mchips">${chips}</div></div>
-    ${s.id !== "custom" && !s.more ? `<div class="shmore"><a href="#" id="shMore">用中转地址 ▾</a></div>` : ""}
-    ${p.used_by.length ? `<div class="dim" style="margin-top:8px">${p.used_by.map(c => CC_NAME[c]).join("、")} 正在用它：保存后自动重新接入。</div>` : ""}
-    ${p.src ? `<div class="dim" style="margin-top:4px;font-size:calc(12.5px*var(--fk))">地址和协议照官方文档：${p.src.split(" · ").map(u => `<a href="${esc(u)}" target="_blank" rel="noreferrer">${esc(u.replace(/^https?:\/\//, "").split("/")[0])}</a>`).join(" · ")}</div>` : ""}`;
-  const k = $("#shKey"); let t;
-  k.oninput = () => { s.secret = k.value.trim(); clearTimeout(t); if (s.secret.length >= 8) t = setTimeout(pvSheetCheck, 600); else { s.st = ""; $("#shSt").innerHTML = ""; } };
-  k.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); pvSheetSave(); } };
-  $$("#shReg [data-reg]").forEach(b => b.onclick = () => { s.region = b.dataset.reg; $$("#shReg button").forEach(x => x.classList.toggle("on", x === b)); pvSheetCheck(); });
-  const u = $("#shUrl"); if (u) u.onchange = () => { s.base_url = u.value.trim(); pvSheetCheck(); };
-  const pr = $("#shProto"); if (pr) pr.onchange = () => { s.protocol = pr.value; pvSheetCheck(); };
-  const mo = $("#shMore"); if (mo) mo.onclick = e => { e.preventDefault(); s.more = true; pvSheetDraw(); $("#shUrl").focus(); };
-  if (!p.key && !s.secret) k.focus();
-}
-async function pvSheetCheck(){
-  const s = PV.sh, p = pvById(s.id), seq = ++s.seq;
-  if (!s.secret && !p.key) return;
-  if (s.id === "custom" && !s.base_url) { s.st = '<span class="dim">先填地址</span>'; $("#shSt").innerHTML = s.st; return; }
-  $("#shSt").innerHTML = '<span class="dim"><i class="spin"></i>检查 key、列出模型…</span>';
-  const r = await rtApi("prov-models", {kind: s.id, secret: s.secret, region: s.region, base_url: s.base_url, protocol: s.protocol === "auto" ? "" : s.protocol}).catch(e => ({ok: false, reason: e.message}));
-  if (!PV.sh || seq !== s.seq) return;
-  if (r.ok) { s.models = r.models; s.ctx = r.ctx || {}; s.labels = r.labels || {}; s.st = `<span class="ok">✓ key 可用 · 列出 ${r.models.length} 个模型</span>`; }
-  else s.st = `<span class="err">✗ ${esc(r.reason || "不通")}${s.secret ? "" : "（已保存的 key）"}</span><span class="dim"> · 仍可保存，模型名可以在选择器里手填</span>`;
-  const keep = s.secret; pvSheetDraw(); const k = $("#shKey"); if (k && keep) { k.value = keep; }
-}
-async function pvSheetSave(){
-  const s = PV.sh, p = pvById(s.id), b = $("#shSave");
-  const u = $("#shUrl"); if (u) s.base_url = u.value.trim();
-  if (!s.secret && !p.key) { $("#shSt").innerHTML = '<span class="err">先粘贴 key</span>'; $("#shKey").focus(); return; }
-  b.disabled = true;
-  try {
-    await rtApi("prov-save", {kind: s.id, secret: s.secret, region: s.region, base_url: s.base_url, protocol: s.protocol === "auto" ? "" : s.protocol, models: s.models, ctx: s.ctx});
-    const first = !pvReady().length;
-    closeDlg(); await pvLoad();
-    for (const cl of p.used_by) await agApply(cl, {}, `已按新的「${p.name}」设置重新接入`);
-    if (!p.used_by.length) toast(`✅ 已保存「${p.name}」${first ? "：在 Agent 里给 Codex / Claude Code 选它的模型" : ""}`, 4000);
-    if (first) mcSetTab("agent");
-  } catch(e){ const st = $("#shSt"); if (st) st.innerHTML = `<span class="err">${esc(e.message)}</span>`; b.disabled = false; return; }
-  ccLoad();
-}
-function ccDisable(cl){
-  confirmDlg(`停用「${CC_NAME[cl]} 使用 ${esc(CC.d[cl].kind_name)}」`, `${CC_NAME[cl]} 回到${cl === "codex" ? " ChatGPT 登录" : " claude.ai 登录"}。改过的文件没被别的工具动过就按字节还原，动过就只拿掉我们写的那几项。key 留在凭据管理器里，下次启用不用再贴。`, "停用", async () => {
-    closeDlg();
-    try { const r = await rtApi("card-disable", {client: cl}); CC.draft[cl] = null; CC.out[cl] = ""; doneOrQueued(r, `已停用，${CC_NAME[cl]} 回到默认`); } catch(e){ toast("❌ " + e.message); }
-    ccLoad(); });
-}
-async function ccLoad(){
-  try { const [r] = await Promise.all([api("/api/route"), pvLoad()]); RT.d = r; CC.d = r.cards; } catch(e){ const el = $("#ccBox"); if (el && !CC.d) el.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
-  const f = document.activeElement; if (f && f.closest && f.closest("#ccBox, #pvGrid") && f.tagName === "INPUT" && f.type !== "range" && f.type !== "checkbox") return;   // 正在输入就不重画
-  if (PV.pk) return;                                                                  // 选择器开着也不重画
-  ccRender(); rtSumUpdate();
-}
-function rtSumUpdate(){
-  const r = RT.d, e = $("#rtSumSt"); if (!e || !r) return;
-  e.innerHTML = r.providers.length ? `${r.status.running ? '<span class="tag ok">● 运行中</span>' : '<span class="tag warn">● 没在运行</span>'} ${r.providers.length} 个供应商${r.applied.codex ? " · Codex 已应用" : ""}${r.applied.claude ? " · Claude Code 已应用" : ""}` : "还没配置";
-}
-function mcList(){
-  const P = MC.p;
-  let h = "";
-  for (const tool of ["claude", "codex"]) {
-    h += `<div class="pvsec"><div class="pvhd"><b>${PV_TOOL[tool]}</b>${pvHint(tool, "global")}</div><div class="pvl" role="radiogroup" aria-label="${PV_TOOL[tool]} 供应商">` +
-      P[tool].map(p => `<div class="pvrow${p.live ? " on" : ""}" data-pvsw="${esc(p.id)}" data-t="${tool}" role="radio" aria-checked="${p.live ? "true" : "false"}" tabindex="0" title="${p.live ? "当前在用" : "点一下切换到它"}">
-        <span class="pvrad"></span><span class="pvn">${esc(p.name)}${p.projects.length ? `<span class="pvh" title="${esc(p.projects.join("\n"))}">${p.projects.length} 个项目在用</span>` : ""}</span>
-        <span class="pvu" title="${esc(p.mode === "key" ? p.base_url : "")}">${p.mode === "key" ? esc(p.base_url || "（官方地址）") : `<span class="dim">${tool === "claude" ? "官方登录（claude.ai 订阅）" : "ChatGPT 登录"}</span>`}</span>
-        <span class="pvkey">${pvLast4(p)}</span>
-        <span class="pvb">${p.mode === "key" ? `<button class="pvmini" data-pvts="${esc(p.id)}" data-t="${tool}" title="测一下这个地址和 key 通不通">测试</button>` : ""}<button class="pvmini ghost" data-pved="${esc(p.id)}" data-t="${tool}" title="编辑 / 删除">编辑</button></span></div>
-        <div class="pvo" data-pvo="${tool}:${esc(p.id)}"></div>`).join("") +
-      `<div class="pvadd"><button class="ghost pvaddb" data-pvadd="${tool}" data-pre="custom">＋ 添加供应商</button><span class="dim">预设：</span>${pvPresets(tool).map(([k, t]) => `<button class="pvmini ghost" data-pvadd="${tool}" data-pre="${k}">${t}</button>`).join("")}</div></div></div>`;
-  }
-  h += `<div class="pvsec rtsum" data-mcgo="route" role="button" tabindex="0"><div class="pvhd"><b>模型路由</b><span class="pvh">多个供应商 / 多 key 轮换 / 别名池 / CLIProxyAPI 导入（卡片背后用的就是它）</span><span style="flex:1"></span><span id="rtSumSt" class="dim"></span><button class="pvmini">打开 ›</button></div></div>`;
-  if (!["agent", "prov", "adv"].includes(PV.tab)) PV.tab = "agent";
-  $("#mcTab").innerHTML = `${mcTabs()}<div id="ccBox" class="ccbox"${PV.tab === "agent" ? "" : " hidden"}>${CC.d ? "" : '<div class="dim">读取中…</div>'}</div>
-    <div id="pvGrid"${PV.tab === "prov" ? "" : " hidden"}></div><div id="mcAdvBox" class="mcadv"${PV.tab === "adv" ? "" : " hidden"}>${h}</div>`;
-  $$("#mcTab [data-mtab]").forEach(b => b.onclick = () => mcSetTab(b.dataset.mtab));
-  $("#mcTab .mseg").onkeydown = e => { if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return; const ks = ["agent", "prov", "adv"], i = ks.indexOf(PV.tab);
-    mcSetTab(ks[(i + (e.key === "ArrowRight" ? 1 : 2)) % 3]); $(`#mcTab [data-mtab="${PV.tab}"]`).focus(); };
-  // 列表页没有外框：「⋯」菜单和提示行并进分段按钮那一行
-  const top = $("#mcBox .mctop"), tb = $("#mcTab .mtabs"), bx = $("#mcBx");
-  if (top && tb) { $("#mcBox").closest(".card").classList.add("plain"); top.classList.add("intabs"); tb.appendChild(top); if (bx) tb.after(bx); }
-  if (PV.tab === "prov") pgRender();
-  $("#mcTab .rtsum").onclick = () => mcGo("route");
-  if (CC.d) { ccRender(); rtSumUpdate(); }
-  ccLoad();
-  const row = (t, id) => P[t].find(p => p.id === id);
-  $$("#mcTab [data-pvadd]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.pvadd, null, b.dataset.pre); });
-  $$("#mcTab [data-pved]").forEach(b => b.onclick = e => { e.stopPropagation(); pvEdit(b.dataset.t, row(b.dataset.t, b.dataset.pved)); });
-  $$("#mcTab [data-pvts]").forEach(b => b.onclick = async e => { e.stopPropagation(); const o = $(`#mcTab [data-pvo="${b.dataset.t}:${CSS.escape(b.dataset.pvts)}"]`); o.innerHTML = '<div class="dim">测试中…</div>';
-    const r = await pvApi("test", {tool: b.dataset.t, id: b.dataset.pvts}).catch(e => ({ok: false, error: e.message})); o.innerHTML = mcTestHtml(r); });
-  $$("#mcTab .pvrow").forEach(r => { const go = () => pvPick(r.dataset.t, row(r.dataset.t, r.dataset.pvsw));
-    r.onclick = e => { if (!e.target.closest("button")) go(); };
-    r.onkeydown = e => { if ((e.key === "Enter" || e.key === " ") && e.target === r) { e.preventDefault(); go(); } }; });
-}
-// 点一行 = 切到它。只有两种情况先问：Claude 从登录改成按 API key 计费；配置里有明文 key 要拿掉（409）
-function pvPick(tool, p){
-  if (p.live) return toast(`${PV_TOOL[tool]} 已经在用「${p.name}」`);
-  const now = MC.p[tool].find(x => x.live);
-  if (tool === "claude" && p.mode === "key" && !(now && now.mode === "key")) return pvSwitch(tool, p);
-  pvDoSwitch(tool, p, null);
-}
-async function pvDoSwitch(tool, p, drop){
-  try { const r = await pvApi("switch", {tool, id: p.id, drop_plaintext: !!drop});
-    toast(r.live ? `${PV_TOOL[tool]} 已切到「${p.name}」（已备份，可在 ⋯ →「备份 / 恢复」还原）${(MC.d.running || {})[tool] ? "；开着的会话要重开" : ""}` : "写了，但核对不一致，请到 ⋯ →「备份 / 恢复」还原", 4200); }
-  catch(e){ if (e.status === 409 && e.j.plaintext) return pvSwitch(tool, p, e.j.plaintext); toast("没切换：" + e.message); }
-  mcOpen("list");
-}
-function pvSwitch(tool, p, drop){
-  const cl = tool === "claude", cs = MC.d.ccswitch, run = MC.d.running || {};
-  const warn = [];
-  if (cl && p.mode === "key") warn.push("Claude Code 会<b>改用这个 key 按 API 计费</b>，不走 claude.ai 订阅额度。");
-  if (cl) warn.push("Claude 桌面版不读这些设置（它走自己的登录 / 第三方推理配置），只影响命令行和 VS Code。");
-  else warn.push("Codex 桌面版也会用它，要退出重开桌面版。");
-  if (cs.installed) warn.push("CC Switch 还装着：在 CC Switch 里切换会<b>覆盖</b>这里的设置" + (cl ? "" : "（它会换掉整个 config.toml）") + "。");
-  if (run[tool]) warn.push("正在运行的会话要重开才生效。");
-  const f = cl ? "~/.claude/settings.json" : "~/.codex/config.toml";
-  const body = cl ? (p.mode === "key" ? `ANTHROPIC_BASE_URL = <b>${esc(p.base_url)}</b>；apiKeyHelper 从凭据管理器取 <b>${esc(p.key || "")}</b>（${esc(p.key_masked || "缺")}）；模型映射按这个供应商设，没填的删掉` : "去掉 Base URL、apiKeyHelper 和模型映射，回到 claude.ai 登录")
-    : (p.mode === "key" ? `model_provider = <b>${esc(MC.p.codex_slot)}</b>，[model_providers.${esc(MC.p.codex_slot)}] 改成 ${esc(p.base_url)}，key 从凭据管理器取 <b>${esc(p.key || "")}</b>` : "model_provider = <b>openai</b>（用 codex login 的 ChatGPT 登录；auth.json 不动）");
-  openDlg("切换全局供应商", `<div>把 ${PV_TOOL[tool]} 切到 <b>${esc(p.name)}</b>：改 <code>${f}</code>（先备份，写完核对）。</div><ul><li>${body}</li>${p.models && Object.keys(p.models).length ? "<li>模型：" + pvModels(tool, p) + "</li>" : ""}</ul>${warn.map(w => `<div class="miss" style="margin-top:6px">${w}</div>`).join("")}${drop ? `<div class="miss" style="margin-top:6px;border-color:var(--bad);background:var(--bad-weak)">${drop.map(x => `<code>${esc(x.field)}</code>（${esc(x.masked)}）`).join("、")} 是明文 key，会从配置里拿掉（备份里还在，不会存进凭据管理器）。</div>` : ""}`,
-    '<button id="pvNo">取消</button><button class="primary" id="mcGo">切换</button>');
-  $("#pvNo").onclick = () => mcOpen("list");
-  $("#mcGo").onclick = () => pvDoSwitch(tool, p, drop);
-}
-// 供应商的表单（添加 / 编辑、从 CC Switch 导入）也放在页面里，不弹窗；只有「确认写入」这类确认还是小对话框
-function pvPage(title, html, footer){
-  if (PAGE !== "models") go("models");
-  $("#pg-models").innerHTML = `<div class="pgv"><div class="pvhd"><button class="ghost" id="pvBack">‹ 供应商</button><h2 style="margin:0">${emoIcons(title)}</h2></div>
-    <div class="card" id="pvBody">${html}</div><div class="pvft">${footer || ""}</div></div>`;
-  $("#pvBack").onclick = () => mcOpen("list");
-  $("#main").scrollTop = 0;
-}
-function pvEdit(tool, p, preset){
-  const isNew = !p; p = p || {mode: "key", models: {}, wire_api: "responses"};
-  const m = p.models || {}, cl = tool === "claude", login = cl ? "login" : "chatgpt";
-  const maps = cl ? [["opus","Opus","opus 别名用哪个模型"],["sonnet","Sonnet","sonnet 别名"],["haiku","Haiku","haiku 别名，也用于后台小任务"],["fable","Fable","fable 别名"],["subagent","子代理","没单独指定模型的子代理 / 队友"]]
-                  : [["review_model","审查","/review 用（review_model）"],["subagent","子代理","派出去的子代理没指定模型时用（[agents] default_subagent_model）"],
-                     ["mem_extract","记忆 · 提取","总结对话写记忆用（[memories] extract_model；开了记忆功能才用得到）"],["mem_consolidate","记忆 · 整合","整理记忆用（[memories] consolidation_model）"]];
-  const cxEf = ["", "minimal", "low", "medium", "high", "xhigh"]; for (const x of [p.effort, p.subagent_effort, ...(p.catalog || []).map(r => r.effort)]) if (x && !cxEf.includes(x)) cxEf.push(x);
-  const efSel = (attr, v) => `<select ${attr}>${cxEf.map(e => `<option value="${e}" ${(v || "") === e ? "selected" : ""}>${e || "（默认）"}</option>`).join("")}</select>`;
-  const ri = (attr, v, ph, w) => `<input ${attr} value="${esc(v || "")}" placeholder="${ph}" autocomplete="off" spellcheck="false"${w ? ` style="width:${w}"` : ""}>`;
-  const rowX = '<button class="pvmini ghost pvrx" data-rx title="删掉这一行">✕</button>';
-  const catRow = r => `<div class="pvtr" data-cat>${ri('data-c="slug" class="pvmi"', r.slug, "真实模型名")}${ri('data-c="name"', r.name, "显示名（可空）")}${efSel('data-c="effort"', r.effort)}${ri('data-c="ctx" inputmode="numeric"', r.ctx, "上下文（可空）")}${rowX}</div>`;
-  const pkRow = r => `<div class="pvtr" data-pk>${ri('data-c="model" class="pvmi"', r.model, "模型 ID 或别名")}${ri('data-c="label"', r.label, "显示名（可空）")}${rowX}</div>`;
-  const ovRow = r => `<div class="pvtr" data-ov>${ri('data-c="from" class="pvmi"', r.from, "Anthropic 模型 ID，如 claude-opus-5-5")}<span class="pvarr">→</span>${ri('data-c="to" class="pvmi"', r.to, "实际发给供应商的模型名")}${rowX}</div>`;
-  const tag = (t, c) => `<span class="pvtag ${c || ""}">${t}</span>`;
-  const extra = cl ? `
-    <div class="pvsub"><div class="pvsubh"><b>/model 选单里加的模型</b>${tag("modelPicker")}${tag("命令行 + VS Code")}<span class="pvh">Claude Code ≥ 2.1.242；只在全局切换和 CC Session Sync 开的会话里生效（项目层 Claude Code 不认）</span></div>
-      <div class="pvtbl" id="pvPk">${((p.picker || {}).rows || []).map(pkRow).join("")}</div>
-      <div class="pvtadd"><button class="pvmini" data-add="pk">＋ 添加</button><label class="pvchk"><input type="checkbox" id="pvPkR" ${(p.picker || {}).replace ? "checked" : ""}> 只显示这些（隐藏内置的那几行）</label></div></div>
-    <div class="pvsub"><div class="pvsubh"><b>模型 ID 改写</b>${tag("modelOverrides")}${tag("命令行 + VS Code")}<span class="pvh">左边必须是 Anthropic 官方模型 ID；选到它（/model、--model、上面的别名）时实际发出去的是右边的名字。这是真正的映射</span></div>
-      <div class="pvtbl" id="pvOv">${(p.overrides || []).map(ovRow).join("")}</div>
-      <div class="pvtadd"><button class="pvmini" data-add="ov">＋ 添加</button></div></div>`
-  : `
-    <div class="setrow"><div class="sl"><div><b>子代理思考强度</b><div class="sd">[agents] default_subagent_reasoning_effort</div></div></div>${efSel('id="pvSE" style="width:300px"', p.subagent_effort)}</div>
-    <div class="pvsub"><div class="pvsubh"><b>/model 选单（模型目录）</b>${tag("model_catalog_json")}${tag("命令行")}${tag("桌面版要官方登录", "warn")}</div>
-      <div class="pvnote">Codex <b>没有别名</b>：「显示名」只改 /model 里看到的名字，请求里发的永远是左边的真实模型名。有行时 CC Session Sync 生成 <code>ccss-models-${esc(p.id || "<id>")}.json</code> 并在切换时写 <code>model_catalog_json</code>，/model 里就只列这些（每个带默认思考强度和上下文窗口）。Codex 启动时才读，改了要重开。桌面版的选单没检测到官方登录时只显示默认模型（Codex 桌面版自己的限制）；命令行 <code>codex</code> 的 /model 一定生效。空表 = 不管（CC Switch 写的目录不动）。</div>
-      <div class="pvtbl pvcat" id="pvCat"><div class="pvth"><span>真实模型</span><span>显示名</span><span>思考强度</span><span>上下文窗口</span><span></span></div>${(p.catalog || []).map(catRow).join("")}</div>
-      <div class="pvtadd"><button class="pvmini" data-add="cat">＋ 添加</button><button class="pvmini ghost" id="pvCatAll" title="把「获取模型列表」拿到的模型都加进来">把获取到的全部加入</button></div></div>`;
-  const efs = cl ? ["", "low", "medium", "high", "xhigh"] : ["", "minimal", "low", "medium", "high", "xhigh"];
-  if (p.effort && !efs.includes(p.effort)) efs.push(p.effort);          // 导入来的少见值也留着，保存时不丢
-  const nAdv = (p.effort ? 1 : 0) + (!cl && p.wire_api && p.wire_api !== "responses" ? 1 : 0);
-  const mi = (k, v) => `<input data-pvf="${k}" value="${esc(v || "")}" placeholder="（不设）" autocomplete="off" spellcheck="false" style="width:300px">`;
-  let mode = p.mode;
-  pvPage((isNew ? "添加" : "编辑") + " " + PV_TOOL[tool] + " 供应商", `<div class="us mc pve">
-    <div class="ufl pvpre"><span class="dim">预设：</span>${pvPresets(tool).map(([k,t]) => `<button class="pvmini ghost" data-pre="${k}">${t}</button>`).join("")}</div>
-    <div class="setlist">
-    <div class="setrow"><div class="sl"><b>名称</b></div><input id="pvN" value="${esc(p.name || "")}" placeholder="比如：公司网关" style="width:300px"></div>
-    <div class="setrow pvlg"><div class="sl"><div><b>官方登录</b><div class="sd">${cl ? "用 claude.ai 订阅登录，不需要地址和 key" : "用 codex login 的 ChatGPT 登录，不需要地址和 key"}</div></div></div><button class="ghost pvmini" id="pvToKey">改用 API key</button></div>
-    <div class="setrow pvk"><div class="sl"><div><b>Base URL</b><div class="sd">${cl ? "空 = https://api.anthropic.com（不带 /v1）" : "OpenAI 兼容地址，一般以 /v1 结尾"}</div></div></div><input id="pvU" value="${esc(p.base_url || "")}" placeholder="${cl ? "https://api.anthropic.com" : "https://api.openai.com/v1"}" style="width:300px"></div>
-    <div class="setrow pvk"><div class="sl"><div><b>Key</b><div class="sd">存进凭据管理器，只写不读${p.key_masked ? "；已存 …" + esc(p.key_masked.slice(-4)) + "，留空不改" : ""}</div></div></div><input id="pvK" type="password" autocomplete="new-password" placeholder="${p.key_masked ? "（不改）" : "粘贴 key"}" style="width:300px"></div>
-    <div class="setrow"><div class="sl"><div><b>模型</b><div class="sd">${cl ? "主模型" : "model"}；可以直接输入，留空 = 不改</div></div></div><span class="pvmf">${mi("model", m.model)}<button class="pvmini" id="pvFetch" title="${cl ? "GET <Base URL>/v1/models" : "GET <Base URL>/models"}：拿到中转站有哪些模型，填进下拉">获取模型列表</button></span></div>
-    <div class="pvmst" id="pvMst"></div>
-    </div>
-    <div class="pvmap"><div class="pvmh"><b>模型映射</b><span class="pvh">留空 = 不设${cl ? "；Claude Code 里的 opus / sonnet / haiku / fable 别名和子代理用哪个模型" : ""}</span></div><div class="setlist">
-    ${maps.map(([k, l, hint]) => `<div class="setrow"><div class="sl"><div><b>${l}</b><div class="sd">${hint}</div></div></div>${mi(k, m[k])}</div>`).join("")}
-    ${extra}
-    </div></div>
-    <details class="pvadv" id="pvAdv"><summary>高级${nAdv ? `<span class="dim">（已设 ${nAdv} 项）</span>` : ""}</summary><div class="setlist">
-    <div class="setrow"><div class="sl"><div><b>思考强度</b><div class="sd">${cl ? "effortLevel" : "model_reasoning_effort"}</div></div></div><select id="pvE" style="width:300px">${efs.map(e => `<option value="${e}" ${(p.effort||"")===e?"selected":""}>${e || "（不改）"}</option>`).join("")}</select></div>
-    ${cl ? "" : `<div class="setrow pvk"><div class="sl"><div><b>wire_api</b><div class="sd">大多数是 responses；老的 OpenAI 兼容网关用 chat</div></div></div><select id="pvW" style="width:300px">${["responses","chat"].map(w => `<option ${p.wire_api===w?"selected":""}>${w}</option>`).join("")}</select></div>`}
-    </div></details>
-    <div class="pvfh">${cl ? '<span class="pvk">用 API key 时按 API 计费，不走 claude.ai 订阅额度。</span>切换后对命令行 / VS Code 生效，Claude 桌面版不读。' : "切换后命令行和 Codex 桌面版都生效。"}</div></div>`,
-    `${isNew ? "" : '<button class="ghost danger" id="pvDel" style="margin-right:auto">删除…</button>'}<button id="pvNo">取消</button><button class="primary" id="pvSave">保存</button>`);
-  // 下拉：拿到的模型列表在前，常见名字垫底；输入框照样能随便填
-  let got = [];
-  const fillDL = list => { got = list || []; };
-  pvCombo($$("#pvBody [data-pvf], #pvBody .pvmi"), () => got);
-  const addRow = (box, html) => { box.insertAdjacentHTML("beforeend", html); const r = box.lastElementChild; pvCombo.attach(r.querySelectorAll(".pvmi")); return r; };
-  $$("#pvBody [data-add]").forEach(b => b.onclick = () => { const k = b.dataset.add;
-    const r = k === "cat" ? addRow($("#pvCat"), catRow({})) : k === "pk" ? addRow($("#pvPk"), pkRow({})) : addRow($("#pvOv"), ovRow({}));
-    r.querySelector("input").focus(); });
-  if (!pvEdit.rx) { pvEdit.rx = 1; $("#pvBody").addEventListener("click", e => { const x = e.target.closest("[data-rx]"); if (x) { e.preventDefault(); x.closest(".pvtr").remove(); } }); }
-  if ($("#pvCatAll")) $("#pvCatAll").onclick = () => { if (!got.length) return toast("先点「获取模型列表」");
-    const have = new Set($$("#pvCat [data-c=slug]").map(i => i.value.trim())); let n = 0;
-    for (const x of got) if (!have.has(x)) { addRow($("#pvCat"), catRow({slug: x})); n++; }
-    toast(n ? `加了 ${n} 个` : "都已经在表里了"); };
-  const showList = (r, cached) => { fillDL(r.models); $("#pvMst").innerHTML = `<span class="pvh" style="margin:0">${cached ? "上次" : "已"}获取 ${r.models.length} 个模型${r.at ? "（" + new Date(r.at * 1000).toLocaleString("zh-CN", {hour12: false}) + "）" : ""}，在下拉里选，也可以直接输入</span>`; };
-  fillDL(null);
-  const sync = () => { $$("#pvBody .pvk").forEach(r => r.style.display = mode === "key" ? "" : "none"); $$("#pvBody .pvlg").forEach(r => r.style.display = mode === "key" ? "none" : "");
-    $("#pvFetch").style.display = mode === "key" ? "" : "none"; };
-  const okb = ((MC.d.codex.user.providers || []).find(x => /openkey/i.test((x.name || "") + (x.base_url || ""))) || {}).base_url;
-  const pre = k => { mode = k === login ? login : "key";
-    if (k === login && !$("#pvN").value) $("#pvN").value = cl ? "Claude 官方登录" : "ChatGPT 登录";
-    if (k === "official") { $("#pvU").value = cl ? "https://api.anthropic.com" : "https://api.openai.com/v1"; if (!$("#pvN").value) $("#pvN").value = cl ? "Anthropic API" : "OpenAI API"; }
-    if (k === "openkey") { $("#pvU").value = okb ? (cl ? okb.replace(/\/v1\/?$/, "") : okb) : "https://"; if (!$("#pvN").value) $("#pvN").value = "OpenKey"; }
-    if (k === "custom") $("#pvU").value = "";
-    sync(); };
-  $$("#pvBody [data-pre]").forEach(b => b.onclick = () => pre(b.dataset.pre));
-  $("#pvToKey").onclick = () => { mode = "key"; sync(); $("#pvU").focus(); };
-  if (isNew && preset) pre(preset); else sync();
-  if (mode === "key") pvApi("models", {tool, id: p.id || null, base_url: $("#pvU").value.trim(), cached_only: true}).then(r => { if (r.ok && r.models && r.models.length) showList(r, true); }).catch(() => {});
-  $("#pvFetch").onclick = async () => { const b = $("#pvFetch"); b.disabled = true; $("#pvMst").innerHTML = '<span class="pvh" style="margin:0">获取中…</span>';
-    const r = await pvApi("models", {tool, id: p.id || null, base_url: $("#pvU").value.trim(), secret: $("#pvK").value || null}).catch(e => ({ok: false, error: e.message}));
-    b.disabled = false;
-    if (r.ok) { showList(r, false); pvCombo.refresh && pvCombo.refresh(); } else $("#pvMst").innerHTML = mcTestHtml(r); };
-  $("#pvNo").onclick = () => mcOpen("list");
-  if ($("#pvDel")) $("#pvDel").onclick = () => pvDelete(tool, p);
-  $("#pvSave").onclick = async () => { const models = {}; $$("#pvBody [data-pvf]").forEach(i => { if (i.value.trim()) models[i.dataset.pvf] = i.value.trim(); });
-    const rows = (sel, keys) => $$(sel).map(r => Object.fromEntries(keys.map(k => [k, (r.querySelector(`[data-c="${k}"]`).value || "").trim()])));
-    const prov = {id: p.id, name: $("#pvN").value.trim(), mode, base_url: $("#pvU").value.trim(), wire_api: $("#pvW") ? $("#pvW").value : undefined, models, effort: $("#pvE").value || null, from: p.from};
-    if (cl) { prov.picker = {rows: rows("#pvPk [data-pk]", ["model", "label"]).filter(r => r.model), replace: $("#pvPkR").checked};
-      prov.overrides = rows("#pvOv [data-ov]", ["from", "to"]).filter(r => r.from || r.to); }
-    else { prov.subagent_effort = $("#pvSE").value || null; prov.catalog = rows("#pvCat [data-cat]", ["slug", "name", "effort", "ctx"]).filter(r => r.slug); }
-    try { const r = await pvApi("save", {tool, provider: prov, secret: $("#pvK").value || null}); $("#pvK").value = ""; toast(`已保存 ${r.name}${r.key_masked ? "（key …" + r.key_masked.slice(-4) + "）" : ""}`); mcOpen("list"); }
-    catch(e){ toast("没保存：" + e.message); } };
-}
-// 模型输入框的下拉：获取到的模型在前（可搜索），常见名字垫底；输入框本身照样能随便填
-function pvCombo(inputs, getList){
-  let dd = $("#pvDD"); if (!dd) { dd = document.createElement("div"); dd.id = "pvDD"; dd.className = "pvdd"; document.body.appendChild(dd);
-    document.addEventListener("scroll", e => { if (!dd.contains(e.target)) (pvCombo.onScroll || (() => dd.style.display = "none"))(e); }, true); }
-  let cur = null, sel = -1;
-  const hide = () => { dd.style.display = "none"; cur = null; sel = -1; };
-  const show = inp => { cur = inp; const q = inp.value.trim().toLowerCase(), got = getList(), seen = new Set(), rows = [];
-    for (const [x, g] of [...got.map(x => [x, 1]), ...MODEL_SUGG.map(x => [x, 0])]) if (!seen.has(x) && (!q || x.toLowerCase().includes(q))) { seen.add(x); rows.push([x, g]); }
-    if (!rows.length || (rows.length === 1 && rows[0][0] === inp.value)) { dd.style.display = "none"; return; }
-    const r = inp.getBoundingClientRect();
-    dd.style.cssText = `display:block;left:${r.left}px;top:${r.bottom + 2}px;min-width:${r.width}px`;
-    dd.innerHTML = (got.length ? "" : '<div class="pvddh">还没获取模型列表，下面是常见名字</div>') + rows.slice(0, 80).map(([x, g], i) => `<div class="pvddi${i === sel ? " on" : ""}" data-v="${esc(x)}">${esc(x)}${g ? "" : '<span class="dim">常见</span>'}</div>`).join("");
-    const b = dd.getBoundingClientRect(); if (b.bottom > innerHeight - 8) dd.style.top = Math.max(8, r.top - 2 - b.height) + "px"; };
-  dd.onmousedown = e => { const it = e.target.closest(".pvddi"); if (!it || !cur) return; e.preventDefault(); cur.value = it.dataset.v; cur.dispatchEvent(new Event("change")); hide(); };
-  const attach = list => { for (const inp of list) {
-    inp.addEventListener("focus", () => { sel = -1; show(inp); });
-    inp.addEventListener("input", () => { sel = -1; show(inp); });
-    inp.addEventListener("blur", () => setTimeout(() => { if (cur === inp) hide(); }, 120));
-    inp.addEventListener("keydown", e => { const its = [...dd.querySelectorAll(".pvddi")]; if (dd.style.display !== "block" || !its.length) return;
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : its.length - 1)) % its.length; its.forEach((x, i) => x.classList.toggle("on", i === sel)); its[sel].scrollIntoView({block: "nearest"}); }
-      else if (e.key === "Enter" && sel >= 0) { e.preventDefault(); inp.value = its[sel].dataset.v; hide(); }
-      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); hide(); } });
-  } };
-  attach(inputs);
-  pvCombo.attach = attach;
-  pvCombo.onScroll = e => { if (cur && e.target.contains && e.target.contains(cur) && document.activeElement === cur) show(cur); else { dd.style.display = "none"; } };   // 对话框滚动：跟着输入框走                    // 表格里新加的行也接上同一个下拉
-  pvCombo.refresh = () => { if (cur) show(cur); };
-  return hide;
-}
-function pvDelete(tool, p){
-  openDlg("删除供应商", `删除 <b>${esc(p.name)}</b>？只删 CC Session Sync 里的这条记录，已经写进配置文件的不动。${p.key ? `<label style="display:block;margin-top:8px"><input type="checkbox" id="pvDk"> 同时从凭据管理器删掉它的 key（…${esc((p.key_masked || "").slice(-4))}）</label>` : ""}`, '<button id="pvNo">取消</button><button class="primary" id="mcGo">删除</button>');
-  $("#pvNo").onclick = () => mcOpen("list");
-  $("#mcGo").onclick = async () => { try { await pvApi("delete", {tool, id: p.id, drop_key: !!($("#pvDk") && $("#pvDk").checked)}); toast("已删除"); } catch(e){ toast("没删：" + e.message); } mcOpen("list"); };
-}
-async function pvCcs(){
-  let items; try { items = (await pvApi("ccs-preview", {})).items; } catch(e){ return toast("读不了 CC Switch：" + e.message); }
-  pvPage("从 CC Switch 导入供应商", `<div class="dim" style="margin-bottom:8px">只读打开 CC Switch 的数据库，不改它。导入的 key 存进凭据管理器；之后切换在 CC Session Sync 里做。</div>
-    <table><tr><th></th><th class="l">工具</th><th class="l">名称</th><th class="l">地址</th><th class="l">key</th><th class="l">模型</th></tr>${items.map(x => `<tr><td>${x.imported ? '<span class="dim">已导入</span>' : `<input type="checkbox" data-ci="${esc(x.ccs_id)}" checked>`}</td><td class="l">${PV_TOOL[x.tool]}</td><td class="l"><b>${esc(x.name)}</b>${x.current ? ' <span class="tag">CC Switch 当前</span>' : ""}</td>
-      <td class="l m">${x.mode === "key" ? esc(x.base_url || "官方") : "官方登录"}</td><td class="l">${esc(x.key_masked || "—")}</td><td class="l">${pvModels(x.tool, x)}</td></tr>`).join("") || '<tr><td colspan="6" class="dim">没有可导入的</td></tr>'}</table>`,
-    '<button id="pvNo">取消</button><button class="primary" id="mcGo">导入选中</button>');
-  $("#pvNo").onclick = () => mcOpen("list");
-  $("#mcGo").onclick = async () => { const ids = $$("#pvBody [data-ci]").filter(c => c.checked).map(c => c.dataset.ci); if (!ids.length) return toast("没选");
-    try { const r = await pvApi("ccs-import", {ids}); toast(`导入 ${r.imported.length} 个${r.skipped.length ? "，跳过 " + r.skipped.length + " 个" : ""}`); } catch(e){ toast("没导入：" + e.message); } mcOpen("list"); };
-}
-
 // ---------- 账号同步 ----------
 const SY = {plan: null, st: null, sel: new Set(), source: null};
 function acctCard(label, a, running){
@@ -3120,7 +2028,6 @@ R.timeline = async () => {
   return TL.cur ? tlSession() : tlGlobal();
 };
 R.backups = () => go("backups");        // 旧页面名：深链接 / 记住的上次页面 / 通知 → 备份分栏
-R.route = () => { MC.view = "route"; go("models"); };   // ?page=route → 供应商 › 模型路由
 R.jobs = () => go("jobs"); R.undo = () => go("undo");   // ?page=jobs / ?page=undo → 撤销记录分栏
 const tlHead = sub => tbHead() + `<div class="bar" style="margin:4px 0 6px">
   <span class="seg" id="tlMode"><button data-m="g" class="${TL.cur ? "" : "on"}">按时间点（全部会话）</button><button data-m="s" class="${TL.cur ? "on" : ""}" ${TL.cur ? "" : 'disabled title="在列表里点一个会话的「时间线」"'}>单个会话</button></span><span class="sp"></span>
@@ -3677,6 +2584,7 @@ async function updInstall(){
   const fromUrl = !!(qs.get("page") || location.hash.replace("#", ""));
   if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst"), tab: qs.get("tab") || (fromUrl && want === "timeline" ? "tl" : null)}); else go("sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);       // 老链接 ?dlg=usage 之类：现在都是页面
+  try { const lg = await api("/api/legacy"); if (lg && lg.notice) { ST.legacy = lg; renderBans(); } } catch(e){}
   poll();
   try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}
 })();

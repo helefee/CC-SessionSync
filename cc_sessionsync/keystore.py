@@ -4,6 +4,7 @@ API Key 存放：Windows 凭据管理器（CredWriteW / CredReadW，按当前用
 
 Claude 通过 settings.json 的 apiKeyHelper、Codex 通过 [model_providers.<id>.auth] 去跑 `CCSessionSync.exe key get <名字>` 取 key，
 所以 key 不落在任何配置文件里。网页 / API 只拿得到打码后的样子（sk-…abcd）。
+0.3.5 拿掉了「供应商」页面；这里和 `key get` 命令留着，是因为 0.2–0.3.4 写进配置的取 key 命令还在用它们（删了会断）。
 非 Windows（或设了 CC_SESSIONSYNC_KEYSTORE=file，测试用）退回 ~/.cc-sessionsync/keys.json（权限 600），界面会标出来。
 """
 from __future__ import annotations
@@ -187,7 +188,7 @@ def helper_selftest(name: str) -> None:
     kw = {"creationflags": 0x08000000} if sys.platform == "win32" else {}
     try:
         r = subprocess.run(helper_cmd(name), cwd=tempfile.gettempdir(), stdin=subprocess.DEVNULL,
-                           capture_output=True, timeout=30, env=dict(os.environ, CC_SESSIONSYNC_NO_ROUTE_SPAWN="1"), **kw)
+                           capture_output=True, timeout=30, **kw)
     except Exception as e:
         raise RuntimeError(f"取 key 命令跑不起来：{type(e).__name__}，没改配置") from None
     got = r.stdout.decode("utf-8", "replace").strip()
@@ -200,17 +201,6 @@ def helper_line(name: str) -> str:
     return " ".join('"' + a.replace('"', '') + '"' if (" " in a or "\\" in a) else a for a in helper_cmd(name))
 
 
-def _wake_route() -> None:
-    """Codex / Claude Code 取本机代理口令时：后台代理没在跑就拉起来（桌面端没开、开机自启被关了也能用）。"""
-    try:
-        from . import router
-        if router.needed() and not router.health():
-            if not router.ensure_running(wait=8):
-                print("cc-sessionsync: 后台转换（本机代理）起不来，打开 CC Session Sync →「诊断自检」看原因", file=sys.stderr)
-    except Exception as e:
-        print(f"cc-sessionsync: 拉起后台转换失败：{type(e).__name__}", file=sys.stderr)
-
-
 def main(argv: list[str]) -> int:
     """CLI：key get NAME（只给 Claude / Codex 调用，把 key 打到 stdout）；key list（只打码）。"""
     if len(argv) >= 2 and argv[0] == "get":
@@ -220,10 +210,8 @@ def main(argv: list[str]) -> int:
             print(f"cc-sessionsync key: {e}", file=sys.stderr)
             return 2
         if not v:
-            print(f"cc-sessionsync key: 凭据管理器里没有 {argv[1]}（在 CC Session Sync →「模型与 API」里存一个）", file=sys.stderr)
+            print(f"cc-sessionsync key: 凭据管理器里没有 {argv[1]}（CC Session Sync 0.3.5 起不再管理服务商 key：请在 Claude Code / Codex 里重新登录或改用自己的配置）", file=sys.stderr)
             return 1
-        if argv[1] == "route-token" and not os.environ.get("CC_SESSIONSYNC_NO_ROUTE_SPAWN"):
-            _wake_route()
         sys.stdout.write(v)
         sys.stdout.flush()
         return 0
