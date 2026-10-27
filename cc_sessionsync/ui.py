@@ -423,7 +423,7 @@ class H(BaseHTTPRequestHandler):
             return watch.status()
         if p == "/api/legacy":                   # 0.3.5：供应商功能移除后的收尾结果（界面提示一次）
             from . import legacy
-            return legacy.state() or {}
+            return dict(legacy.state() or {}, home=str(paths.HOME))
         if p.startswith("/api/usage/"):
             from . import usage
             f = {k: q.get(k) for k in ("app", "provider", "model", "from", "to")}
