@@ -23,7 +23,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import time
 import hashlib
 import urllib.request
@@ -469,7 +468,7 @@ def _stop_proxy(st: dict) -> list:
 
 
 def _remove_run_value() -> list:
-    if os.name != "nt":
+    if os.name != "nt" or os.environ.get("CC_SESSIONSYNC_NO_LOGIN_ITEM"):      # 测试时不碰真的注册表
         return []
     try:
         import winreg
@@ -539,16 +538,33 @@ def state() -> dict | None:
         return None
 
 
-def migrate(force: bool = False) -> dict:
-    """第一次启动 0.3.5 时跑一次。之后再跑（force=True 或标记丢了）也只做还需要做的事。"""
+def _codex_open() -> bool:
+    try:
+        from . import apps
+        return bool(apps.running("codex"))
+    except Exception:
+        return False
+
+
+def _queue_codex() -> dict | None:
+    """Codex 桌面端开着：现在改 config.toml 会在它退出时被盖回去 → 排队，等它完全退出再做（和以前「启用卡片」一样）。"""
+    from . import apps
+    if any(j.get("op") == "legacy-codex" and j.get("state") == "waiting" for j in apps._load_q()):
+        return {"deferred": True}
+    return apps.run_or_defer("codex", "legacy-codex", {}, "恢复 Codex 配置（供应商功能已移除）")
+
+
+def migrate(force: bool = False, codex_now: bool = False) -> dict:
+    """第一次启动 0.3.5 时跑一次；Codex 那部分要是排了队，之后每次启动 / 队列执行时再试。每一步都可以重复做（没东西就什么都不做）。"""
     prev = state()
-    if prev and not force:
+    if prev and not force and not prev.get("codex_pending"):
         return prev
     try:
         st = json.loads(ROUTE.read_text(encoding="utf-8")) if ROUTE.exists() else {}
         st = st if isinstance(st, dict) else {}
     except Exception:
         st = {}
+    busy = not codex_now and _codex_open()
     done, errs = [], []
     try:
         from . import watch
@@ -564,49 +580,69 @@ def migrate(force: bool = False) -> dict:
         except Exception as e:
             errs.append(f"{fn.__name__}: {type(e).__name__}: {e}")
 
-    def records():
+    def records(which):
         out = []
         for cl, recs in (st.get("cards_applied") or {}).items():
+            if cl not in which:
+                continue
             for name, rec in (recs or {}).items():
                 r = _revert_edits(rec)
                 if r not in ("untouched", "gone"):
                     out.append(f"{'Codex' if cl == 'codex' else 'Claude Code'}：{Path(rec['file']).name} " + _SAY.get(r, r))
         ap = st.get("applied") or {}
-        if ap.get("codex"):
+        if ap.get("codex") and "codex" in which:
             for x in _revert_route_codex(ap["codex"]):
                 if x["result"] not in ("untouched", "gone"):
                     out.append(f"Codex：{Path(x['file']).name} " + _SAY.get(x["result"], x["result"]))
-        if ap.get("claude"):
+        if ap.get("claude") and "claude" in which:
             x = _revert_route_claude(ap["claude"])
             if x["result"] not in ("untouched", "gone"):
                 out.append(f"Claude Code：{Path(x['file']).name} " + _SAY.get(x["result"], x["result"]))
         return out
 
-    step(_stop_proxy, st)                             # 先停代理（它可能还在写 route.json / 用量）
-    step(records)
-    step(_sweep_codex, st)
-    step(_sweep_claude, st)
-    step(_remove_catalogs)
-    step(_leftover_session_files)
-    step(_remove_run_value)
-    step(_remove_token)
-    if ROUTE.exists() and not errs:                   # 记录用完了：留一份备份，原文件改名（不再被读）
+    pending = False
+    if busy:
+        # 先把 Claude Code 恢复了；Codex 的配置、后台代理、口令留到 Codex 退出后（代理先留着，开着的 Codex 还能用）
+        step(records, ("claude",))
+        step(_sweep_claude, st)
+        step(_leftover_session_files)
         try:
-            backup(ROUTE, "legacy-route-json")
-            ROUTE.replace(ROUTE.with_name("route.json.removed-0.3.5"))
-        except OSError:
-            pass
+            q = _queue_codex()
+        except Exception as e:
+            q = None
+            errs.append(f"queue: {type(e).__name__}: {e}")
+        if q and q.get("deferred") is False:          # 刚好退出了：已经整套做完
+            return state() or {}
+        pending = bool(q)
+        if pending and not (prev or {}).get("codex_pending"):
+            done.append("Codex 桌面端开着：等它完全退出后再恢复 Codex 配置（已排队，也可以在顶上点「关闭 Codex 并执行」）")
+    else:
+        step(_stop_proxy, st)                         # 先停代理（它可能还在写 route.json / 用量）
+        step(records, ("codex", "claude"))
+        step(_sweep_codex, st)
+        step(_sweep_claude, st)
+        step(_remove_catalogs)
+        step(_leftover_session_files)
+        step(_remove_run_value)
+        step(_remove_token)
+        if ROUTE.exists() and not errs:               # 记录用完了：留一份备份，原文件改名（不再被读）
+            try:
+                backup(ROUTE, "legacy-route-json")
+                ROUTE.replace(ROUTE.with_name("route.json.removed-0.3.5"))
+            except OSError:
+                pass
     now = [x for x in done if x]
     prev = prev or {}
     seen_ = bool(prev.get("seen")) and not now               # 又收拾出新东西 → 再提示一次
     res = {"version": "0.3.5", "at": time.time(), "done": list(prev.get("done") or []) + now, "errors": errs,
-           "helper_still_used": _still_uses_helper(), "seen": seen_, "evented": bool(prev.get("evented")) and not now, "runs": int(prev.get("runs") or 0) + 1}
+           "codex_pending": pending, "helper_still_used": _still_uses_helper(), "seen": seen_,
+           "evented": bool(prev.get("evented")) and not now, "runs": int(prev.get("runs") or 0) + 1}
     res["notice"] = bool(res["done"]) and not res["seen"]
     try:
         MARK.parent.mkdir(parents=True, exist_ok=True)
         atomic_write(MARK, json.dumps(res, ensure_ascii=False, indent=1).encode("utf-8"))
         with open(paths.HOME / "legacy-0.3.5.log", "a", encoding="utf-8") as f:
-            f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + json.dumps(res, ensure_ascii=False) + "\n")
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + json.dumps({k: res[k] for k in ("done", "errors", "codex_pending")} | {"now": now}, ensure_ascii=False) + "\n")
     except OSError:
         pass
     return res

@@ -168,6 +168,25 @@ ok(not prof.exists() and "model_provider" not in d and d["model"] == "gpt-5.5" a
 ok(st.read_bytes() == b'{"model": "opus"}\n' and not (SS / "route/claude-settings.json").exists(), "E: 0.3.0 Claude settings byte-restored, session settings file deleted")
 ok(not r["errors"] and r["notice"], f"E: done ({r['done']})")
 
+# ================================================================ G. Codex 桌面端开着 → Claude 先恢复，Codex 排队等它退出
+reset(); enable_cards()
+(T / "desktop-running").write_text("1")
+Fake.hits.clear()
+r = legacy.migrate()
+ok((CL / "settings.json").read_bytes() == CLAUDE_ORIG, "G: Claude Code restored right away")
+ok((CX / "config.toml").read_bytes() == CODEX_OURS and (CX / "ccss-models-cc-route.json").exists(), "G: Codex config untouched while the desktop app runs (it would overwrite it on exit)")
+ok(not Fake.hits and keystore.get(legacy.TOKEN_KEY) == TOKEN and (SS / "route.json").exists(), "G: proxy + token + records kept for the still-running Codex")
+q = [j for j in apps.pending() if j["state"] == "waiting"]
+ok(r["codex_pending"] and r["notice"] and len(q) == 1 and q[0]["op"] == "legacy-codex" and any("排队" in x for x in r["done"]), "G: Codex part queued, notice says so")
+ok(legacy.migrate()["codex_pending"] and len([j for j in apps.pending() if j["state"] == "waiting"]) == 1, "G: next launch while still open → not queued twice")
+(T / "desktop-running").unlink()
+apps.watch("codex")
+r = legacy.state()
+ok((CX / "config.toml").read_bytes() == CODEX_ORIG and not list(CX.glob("ccss-models-*.json")), "G: after Codex quits, the queued job restores config.toml byte-identical + deletes the catalog")
+ok(not r["codex_pending"] and r["notice"] and ("/ccss/shutdown", True) in Fake.hits and keystore.get(legacy.TOKEN_KEY) is None and not (SS / "route.json").exists(),
+   "G: then proxy stopped, token deleted, records retired, notice shown again")
+ok(apps.pending()[-1]["state"] == "done", "G: job marked done")
+
 # ================================================================ F. 旧队列里的「启用卡片」任务、旧的开机自启命令
 reset()
 res = apps._ops()["route-card-enable"](client="codex")

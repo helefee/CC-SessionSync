@@ -12,7 +12,6 @@ import hashlib
 import json
 import os
 import time
-import urllib.request
 from pathlib import Path
 
 from . import __version__, paths
@@ -182,6 +181,8 @@ def check_legacy() -> list[dict]:
             left.append("Codex model_catalog_json 还指着 ccss-models-*.json")
     except Exception:
         pass
+    if left and r.get("codex_pending"):
+        return [_item("legacy", "供应商功能残留", "warn", "Codex 桌面端开着，恢复 Codex 配置排在队里：" + "；".join(left), "完全退出 Codex 桌面端（托盘里也退），或在顶上点「关闭 Codex 并执行」")]
     if left:
         return [_item("legacy", "供应商功能残留", "fail", "；".join(left), "重启 CC Session Sync 会再收拾一遍；还在就手动删掉这几项")]
     if r.get("errors"):
