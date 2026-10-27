@@ -18,17 +18,16 @@ session logs); optional `pywebview` (BSD-3-Clause) for the desktop window.
 
 ### 从 CC Msg 搬来的代码 / Code ported from CC Msg
 
-0.2.0 的桌面壳、托盘、检查更新、用量统计、模型与 API、凭据库、界面样式是从同一作者的 [CC Msg](https://github.com/helefee/CCMessage)
+0.2.0 的桌面壳、托盘、检查更新、用量统计、模型与 API（0.3.5 已移除）、凭据库、界面样式是从同一作者的 [CC Msg](https://github.com/helefee/CCMessage)
 （MIT）复制过来再改的（CC Msg 仓库本身没动）。详见 README「哪些是搬来的」。
-The 0.2.0 desktop shell, tray, updater, usage stats, Model & API page, keystore and UI styling are copied from the same author's
+The 0.2.0 desktop shell, tray, updater, usage stats, Model & API page (removed in 0.3.5), keystore and UI styling are copied from the same author's
 CC Msg (MIT) and adapted; see "What was ported" in the README.
 
 | 项目 / Project | 许可 / License | 用在哪 / What is used |
 |---|---|---|
-| [cc-switch](https://github.com/farion1231/cc-switch) — Copyright (c) 2025 Jason Young | MIT (`licenses/cc-switch-MIT.txt`) | 模型价格种子表（`usage_prices.json`）、导入 CC Switch 用量时的「新输入」口径、用量页布局、供应商预设和只读导入（不拷代码）、Codex 自定义供应商的 `model_catalog_json` 思路（本程序写自己的 `ccss-models-<id>.json`） / seed price table, usage page layout, provider presets and read-only import, the model-catalog idea |
-| [magpie](https://github.com/yetone/magpie) — Copyright (c) 2026 yetone | MIT (`licenses/magpie-MIT.txt`) | 会话日志用量去重规则（Claude `message.id` + `requestId`；Codex 累计 / 单轮 `token_count`、重置分段、归档去重），在 `usage.py` 里重写 / usage dedup rules, re-implemented in `usage.py`；0.3.4「供应商」页的布局 / 交互思路（Agent 一行一个 + 模型下拉 + 开关、带图标的服务商格子、可搜索分组的模型选择器、推理等级滑块、分段导航），自己实现，没有拷代码 / 0.3.4 providers-page layout & interaction ideas, re-implemented (no code copied) |
-| [lobe-icons](https://github.com/lobehub/lobe-icons) — Copyright (c) 2023 LobeHub | MIT (`licenses/lobe-icons-MIT.txt`) | 服务商图标（Anthropic、OpenAI、Gemini、DeepSeek、智谱、Kimi、Qwen、Grok、OpenRouter 的 SVG，去掉了 title / 尺寸属性后内嵌在 `index.html`）/ provider logos (SVG, inlined in `index.html`) |
-| [opencodex](https://github.com/lidge-jun/opencodex) — Copyright (c) 2026 opencodex contributors | MIT (`licenses/opencodex-MIT.txt`) | 「模型与 API → 代理」里探测本地网关（缺省端口 10100）和读它的 config.json / proxy detection on the Model & API page |
+| [cc-switch](https://github.com/farion1231/cc-switch) — Copyright (c) 2025 Jason Young | MIT (`licenses/cc-switch-MIT.txt`) | 模型价格种子表（`usage_prices.json`）、导入 CC Switch 用量时的「新输入」口径、用量页布局 / seed price table, usage page layout |
+| [magpie](https://github.com/yetone/magpie) — Copyright (c) 2026 yetone | MIT (`licenses/magpie-MIT.txt`) | 会话日志用量去重规则（Claude `message.id` + `requestId`；Codex 累计 / 单轮 `token_count`、重置分段、归档去重），在 `usage.py` 里重写 / usage dedup rules, re-implemented in `usage.py` |
+| [opencodex](https://github.com/lidge-jun/opencodex) — Copyright (c) 2026 opencodex contributors | MIT (`licenses/opencodex-MIT.txt`) | 「用量」页里探测本地网关（缺省端口 10100，读它 config.json 里的端口）/ local proxy detection on the Usage page |
 | [Inter](https://rsms.me/inter/) | SIL OFL 1.1 (`cc_sessionsync/fonts/Inter-OFL.txt`) | 界面字体子集 / UI font subset |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) | SIL OFL 1.1 (`cc_sessionsync/fonts/JetBrainsMono-OFL.txt`) | 等宽字体子集 / monospace font subset |
 | [Lucide](https://lucide.dev) | ISC | 界面里的 SVG 图标（内联在 `index.html`） / SVG icons inlined in `index.html` |
