@@ -146,6 +146,9 @@ r = legacy.migrate()
 ok(cfg.read_bytes() == CODEX_ORIG and st.read_bytes() == CLAUDE_ORIG and r["done"] == [] and r["notice"] is False and not r["errors"], "D: already clean → nothing changed, no notice")
 ok(not (SS / "backups").exists(), "D: no backups made when nothing changes")
 ok(legacy.migrate() == r, "D: idempotent")
+reset(); cfg.write_bytes(CODEX_ORIG); (T / "desktop-running").write_text("1")
+r = legacy.migrate(); (T / "desktop-running").unlink()
+ok(not r["codex_pending"] and not apps.pending() and cfg.read_bytes() == CODEX_ORIG, "D: Codex desktop open but nothing of ours in Codex → nothing queued")
 
 # ================================================================ E. 0.3.0「高级 → 模型路由」应用过（profile + 默认）
 reset()

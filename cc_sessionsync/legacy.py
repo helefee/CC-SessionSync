@@ -546,6 +546,22 @@ def _codex_open() -> bool:
         return False
 
 
+def _codex_needs_work(st: dict) -> bool:
+    """Codex 这边还有我们的东西没收拾吗（有记录、config 里还有 cc-route / 我们的模型目录、profile / 目录文件还在）。"""
+    if (st.get("cards_applied") or {}).get("codex") or (st.get("applied") or {}).get("codex"):
+        return True
+    try:
+        if (paths.CODEX_HOME / f"{PROFILE}.config.toml").exists() or any(paths.CODEX_HOME.glob("ccss-models-*.json")):
+            return True
+        from . import _toml
+        f = paths.CODEX_HOME / "config.toml"
+        cfg = _toml.loads(f.read_text(encoding="utf-8-sig")) if f.exists() else {}
+        return (cfg.get("model_provider") == PROFILE or PROFILE in (cfg.get("model_providers") or {})
+                or PROFILE in (cfg.get("profiles") or {}) or _is_ours_catalog(cfg.get("model_catalog_json")))
+    except Exception:
+        return False
+
+
 def _queue_codex() -> dict | None:
     """Codex 桌面端开着：现在改 config.toml 会在它退出时被盖回去 → 排队，等它完全退出再做（和以前「启用卡片」一样）。"""
     from . import apps
@@ -564,7 +580,7 @@ def migrate(force: bool = False, codex_now: bool = False) -> dict:
         st = st if isinstance(st, dict) else {}
     except Exception:
         st = {}
-    busy = not codex_now and _codex_open()
+    busy = not codex_now and _codex_open() and _codex_needs_work(st)
     done, errs = [], []
     try:
         from . import watch
