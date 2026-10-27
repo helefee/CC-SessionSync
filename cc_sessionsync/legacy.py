@@ -306,7 +306,7 @@ def _sweep_codex(st: dict) -> list:
         try:
             d = _Doc(f, "toml")
         except Exception as e:
-            return [f"Codex config.toml 读不了，没动：{type(e).__name__}"]
+            return [f"!Codex config.toml 读不了，没动：{type(e).__name__}"]
         doc, orig = d.doc, _orig_codex(st)
         if str(doc.get("model_provider") or "") == PROFILE:
             o = orig.get("model_provider", _ABSENT)
@@ -372,7 +372,7 @@ def _sweep_claude(st: dict) -> list:
     try:
         d = _Doc(f, "json")
     except Exception as e:
-        return [f"Claude Code settings.json 读不了，没动：{type(e).__name__}"]
+        return [f"!Claude Code settings.json 读不了，没动：{type(e).__name__}"]
     out, doc = [], d.doc
     env = doc.get("env") if isinstance(doc.get("env"), dict) else None
     port = _route_port(st)
@@ -409,7 +409,7 @@ def _remove_catalogs() -> list:
             p.unlink()
             out.append(f"Codex：删掉我们生成的模型目录 {p.name}")
         except OSError as e:
-            out.append(f"删不掉 {p.name}：{e}")
+            out.append(f"!删不掉 {p.name}：{e}")
     try:
         (paths.CODEX_HOME / "models_cache.json").unlink()      # Codex 的模型列表缓存：删掉让它马上按恢复后的设置重新拉
     except OSError:
@@ -459,7 +459,7 @@ def _stop_proxy(st: dict) -> list:
                         os.kill(pid, 15)
                     out.append(f"结束后台代理进程（pid {pid}）")
                 except Exception as e:
-                    out.append(f"结束后台代理进程失败：{type(e).__name__}")
+                    out.append(f"!结束后台代理进程失败：{type(e).__name__}")
     try:
         PIDFILE.unlink()
     except OSError:
@@ -481,7 +481,7 @@ def _remove_run_value() -> list:
             winreg.DeleteValue(k, RUN_VALUE)
             return [f"删掉开机自启「{RUN_VALUE}」"]
     except OSError as e:
-        return [f"开机自启「{RUN_VALUE}」删不掉：{e}"]
+        return [f"!开机自启「{RUN_VALUE}」删不掉：{e}"]
 
 
 def _remove_token() -> list:
@@ -491,7 +491,7 @@ def _remove_token() -> list:
             keystore.delete(TOKEN_KEY)
             return ["删掉凭据管理器里的本机代理口令"]
     except Exception as e:
-        return [f"本机代理口令删不掉：{type(e).__name__}"]
+        return [f"!本机代理口令删不掉：{type(e).__name__}"]
     return []
 
 
@@ -573,7 +573,7 @@ def _queue_codex() -> dict | None:
 def migrate(force: bool = False, codex_now: bool = False) -> dict:
     """第一次启动 0.3.5 时跑一次；Codex 那部分要是排了队，之后每次启动 / 队列执行时再试。每一步都可以重复做（没东西就什么都不做）。"""
     prev = state()
-    if prev and not force and not prev.get("codex_pending"):
+    if prev and not force and not prev.get("codex_pending") and not prev.get("errors"):
         return prev
     try:
         st = json.loads(ROUTE.read_text(encoding="utf-8")) if ROUTE.exists() else {}
@@ -592,7 +592,8 @@ def migrate(force: bool = False, codex_now: bool = False) -> dict:
     def step(fn, *a):
         try:
             r = fn(*a)
-            done.extend(r if isinstance(r, list) else [r])
+            for x in (r if isinstance(r, list) else [r]):
+                (errs.append(x[1:]) if isinstance(x, str) and x.startswith("!") else done.append(x))
         except Exception as e:
             errs.append(f"{fn.__name__}: {type(e).__name__}: {e}")
 

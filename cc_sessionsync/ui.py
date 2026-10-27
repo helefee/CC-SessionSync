@@ -740,6 +740,27 @@ def _reveal(path: str) -> dict:
 
 # ---------- 后台 ----------
 
+_legacy_done = False
+
+
+def _legacy_first() -> None:
+    """0.3.5：供应商（模型路由）拿掉了 → 第一次启动把它改过的配置恢复原样（只做一次）。在页面能打开之前做完，提示才不会漏。"""
+    global _legacy_done
+    if _legacy_done:
+        return
+    _legacy_done = True
+    from . import legacy
+    try:
+        r = legacy.migrate()
+        if r.get("notice") and not r.get("evented"):
+            events.add("legacy", "供应商功能已移除，已把 Codex / Claude Code 配置恢复原样",
+                       "；".join(r.get("done") or [])[:300], {"page": "sync"})
+            r["evented"] = True
+            legacy.atomic_write(legacy.MARK, json.dumps(r, ensure_ascii=False, indent=1).encode("utf-8"))
+    except Exception:
+        pass
+
+
 _bg_started = False
 
 
@@ -749,16 +770,8 @@ def start_background(auto_sync: bool | None = None) -> None:
     if _bg_started:
         return
     _bg_started = True
-    from . import legacy, sessions, update, usage, watch
-    try:                                         # 0.3.5：供应商（模型路由）拿掉了 → 第一次启动把它改过的配置恢复原样（只做一次）
-        r = legacy.migrate()
-        if r.get("notice") and not r.get("evented"):
-            events.add("legacy", "供应商功能已移除，已把 Codex / Claude Code 配置恢复原样",
-                       "；".join(r.get("done") or [])[:300], {"page": "sync"})
-            r["evented"] = True
-            legacy.atomic_write(legacy.MARK, json.dumps(r, ensure_ascii=False, indent=1).encode("utf-8"))
-    except Exception:
-        pass
+    from . import sessions, update, usage, watch
+    _legacy_first()
 
     def loop():
         events.poll_jobs()
@@ -805,6 +818,7 @@ def start(port: int = 8766, desktop: bool = False):
         return None
     MODE.update(desktop=desktop, port=port)
     srv.daemon_threads = True
+    _legacy_first()
     threading.Thread(target=srv.serve_forever, daemon=True, name="ccss-http").start()
     start_background()
     return srv

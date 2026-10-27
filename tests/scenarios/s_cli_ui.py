@@ -87,7 +87,7 @@ try:
     ok(len(g("/api/backups")) >= 2, "api/backups")
     ok(not any(x in html for x in ('data-p="models"', 'id="pg-models"', "function agPickOpen", "function pvSheet", "/api/route/", "/api/providers/", "/api/modelcfg")), "0.3.5: 供应商 page / nav / APIs gone from the page")
     ok(post("/api/route/prov-list", {}).get("code") == 404 and g("/api/modelcfg").get("code") == 404, "0.3.5: old provider APIs → 404")
-    lg = g("/api/legacy"); ok(lg.get("version") == "0.3.5" and lg.get("notice") is False and lg.get("done") == [], "0.3.5: legacy cleanup ran once at startup, nothing to restore → no notice")
+    lg = g("/api/legacy"); ok(lg.get("version") == "0.3.5" and lg.get("notice") is False and lg.get("done") == [], f"0.3.5: legacy cleanup ran once at startup, nothing to restore → no notice ({lg})")
     cp = g("/api/codex/plan?days=0"); ok(cp["counts"]["new"] == 1 and cp["rows"][0]["turns"], "api/codex/plan (dry)")
     r = post("/api/codex/import", {"days": "0", "only": [cp["rows"][0]["thread"]], "desktop": "1"}); ok(r.get("done") == 1, "api/codex/import")
     r = post("/api/codex/undo", {"ledger": r["ledger"]}); ok(r.get("ok") and r["moved"] == 2, "api/codex/undo")
