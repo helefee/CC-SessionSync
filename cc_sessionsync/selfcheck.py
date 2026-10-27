@@ -66,33 +66,11 @@ def check_home() -> dict:
                      "检查这个目录的权限 / 磁盘空间；或设环境变量 CC_SESSIONSYNC_HOME 换一个目录")
 
 
-def check_keystore() -> dict:
-    from . import keystore
-    if keystore.backend() == "file":
-        return _item("keystore", "凭据管理器", "warn", "不是 Windows（或测试模式）：key 存在 ~/.cc-sessionsync/keys.json（权限 600）",
-                     "只在 Windows 上用 Windows 凭据管理器；这台机器上供应商的 key 以文件形式保存")
-    name = f"selftest-{os.getpid()}"
-    try:
-        v = "selftest-" + os.urandom(8).hex()
-        keystore.put(name, v, "CC Session Sync 自检（会马上删掉）")
-        ok = keystore.get(name) == v
-        keystore.delete(name)
-        if not ok:
-            return _item("keystore", "凭据管理器", "fail", "写进去读回来不一致", "Windows 凭据管理器可能被策略禁用；问一下管理员")
-        return _item("keystore", "凭据管理器", "pass", "写入 / 读回 / 删除都正常")
-    except Exception as e:
-        try:
-            keystore.delete(name)
-        except Exception:
-            pass
-        return _item("keystore", "凭据管理器", "fail", f"{type(e).__name__}: {e}", "Windows 凭据管理器不可用：供应商的 key 存不了")
-
-
 def check_agents(r: dict | None = None) -> list[dict]:
-    from . import detect, providers
+    from . import detect, launch
     r = r or detect.report()
     out = []
-    for a, exe in (("claude", providers.claude_exe), ("codex", providers.codex_exe)):
+    for a, exe in (("claude", launch.claude_exe), ("codex", launch.codex_exe)):
         x = r[a]
         try:
             e = exe()
@@ -189,71 +167,33 @@ def check_autostart() -> dict | None:
     return _item("autostart", "开机自启", "warn", f"开着，但指向的程序不在：{exe}", "在设置里把「开机自启」关掉再打开")
 
 
-def check_route() -> list[dict]:
-    """模型路由（v0.3.0）：代理在不在跑、端口、key 在不在凭据管理器、最近的错误。没配过就不出现。"""
-    from . import cards, keystore, router
-    d = router.load()
-    out = []
-    for cl in cards.CLIENTS:                        # 0.3.1 卡片
-        c = cards.get(cl, d)
-        if not c["enabled"]:
-            continue
-        nm = f"{cards.CLIENT_NAME[cl]} 使用 {cards.KIND_NAME[c['kind']]}"
-        v = cards.view(cl, d)
-        if not keystore.get(cards.key_name(cl, c["kind"])):
-            out.append(_item(f"card-{cl}", nm, "fail", "凭据管理器里找不到这张卡的 key", "在「供应商」里重新贴一次 key 再点「启用」"))
-        elif v["drift"]:
-            out.append(_item(f"card-{cl}", nm, "warn", "配置文件在启用后被改过（停用时只会拿掉我们写的那几项）", "想重新写一遍就再点一次「启用」"))
-        else:
-            out.append(_item(f"card-{cl}", nm, "pass", f"{c['model']} · {'后台转换' if cards.needs(cl, c) else '直连'} {cards.upstream_url(c, cl)}"))
-    if cards.needs_proxy(d) and not d["providers"] and not d.get("applied"):
-        port = d.get("port")
-        if router.health(port, timeout=3):
-            out.append(_item("route", "后台转换（本机代理）", "pass", f"在跑：127.0.0.1:{port}" + ("；登录时自启" if router.login_get() else "")))
-        else:
-            out.append(_item("route", "后台转换（本机代理）", "fail", f"没在跑（127.0.0.1:{port}）：Codex / Claude Code 下次取口令时会自己拉起；拉不起来就会报连不上",
-                             "打开 CC Session Sync 会自动拉起；还不行就在「供应商」里点「测试」看原因，或者「停用」回到默认"))
-        return out
-    if not d["providers"] and not d.get("applied"):
-        return out
-    port = d.get("port")
-    alive = False
-    if port:
-        try:
-            op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-            with op.open(f"http://127.0.0.1:{port}/health", timeout=3) as r:
-                alive = b"cc-sessionsync-route" in r.read(200)
-        except Exception:
-            alive = False
-    applied = [k for k in ("codex", "claude") if (d.get("applied") or {}).get(k)]
-    who = "、".join({"codex": "Codex", "claude": "Claude Code"}[k] for k in applied)
-    if alive:
-        out.append(_item("route", "模型路由代理", "pass", f"在跑：127.0.0.1:{port}" + (f"；{who} 已指向它" if who else "")))
-    elif applied or cards.needs_proxy(d):
-        out.append(_item("route", "模型路由代理", "fail", f"{who} 已指向 127.0.0.1:{port}，但代理没在跑（请求会连不上）",
-                         "打开 CC Session Sync（代理随程序启动），或在「供应商 → 模型路由」点「启动」；不用了就点「撤销」"))
-    else:
-        out.append(_item("route", "模型路由代理", "warn", f"没在跑（端口 {port or '未分配'}）", "要用的话在「供应商 → 模型路由」点「启动」"))
-    if router.STATE.get("error"):
-        out[-1]["detail"] += "；" + router.STATE["error"]
-    miss = [f"{p['name']}·{k.get('label') or k['id']}" for p in d["providers"] for k in p["keys"] if not k.get("disabled") and not keystore.get(k["name"])]
-    nokey = [p["name"] for p in d["providers"] if not p.get("disabled") and not any(not k.get("disabled") for k in p["keys"])]
-    if miss or nokey:
-        out.append(_item("route-keys", "模型路由的 key", "fail", ("凭据管理器里找不到：" + "、".join(miss[:5]) if miss else "")
-                         + ("；没有 key 的供应商：" + "、".join(nokey[:5]) if nokey else ""), "在「供应商 → 模型路由」里把 key 重新填一次"))
-    else:
-        out.append(_item("route-keys", "模型路由的 key", "pass", f"{sum(len(p['keys']) for p in d['providers'])} 个 key 都在凭据管理器里"))
-    errs = router.status()["errors_recent"][:3]
-    if errs:
-        out.append(_item("route-errors", "模型路由最近的错误", "warn",
-                         "；".join(f"{e.get('provider') or ''} {e.get('status') or ''} {e.get('message') or ''}".strip() for e in errs)[:400],
-                         "看「供应商 → 模型路由」里的请求记录；401 / 403 多半是 key 不对，429 是限流（会自动换 key / 冷却）"))
-    return out
+def check_legacy() -> list[dict]:
+    """0.3.5 拿掉了供应商（模型路由）：确认配置里没有残留指向 cc-route / 本机代理。没用过就不出现。"""
+    from . import legacy
+    r = legacy.state() or {}
+    left = []
+    try:
+        from . import _toml
+        f = paths.CODEX_HOME / "config.toml"
+        cfg = _toml.loads(f.read_text(encoding="utf-8-sig")) if f.exists() else {}
+        if cfg.get("model_provider") == legacy.PROFILE or legacy.PROFILE in (cfg.get("model_providers") or {}):
+            left.append("Codex config.toml 还有 cc-route")
+        if legacy._is_ours_catalog(cfg.get("model_catalog_json")):
+            left.append("Codex model_catalog_json 还指着 ccss-models-*.json")
+    except Exception:
+        pass
+    if left:
+        return [_item("legacy", "供应商功能残留", "fail", "；".join(left), "重启 CC Session Sync 会再收拾一遍；还在就手动删掉这几项")]
+    if r.get("errors"):
+        return [_item("legacy", "供应商功能残留", "warn", "；".join(r["errors"])[:400], "重启 CC Session Sync 会再试一遍")]
+    if r.get("done"):
+        return [_item("legacy", "供应商功能已移除", "pass", "已把 Codex / Claude Code 配置恢复原样（" + str(len(r["done"])) + " 项）")]
+    return []
 
 
 def run(net: bool = True) -> dict:
     t0 = time.time()
-    items = [check_install(), check_home(), check_keystore()]
+    items = [check_install(), check_home()]
     for f in (check_webview, check_autostart):
         try:
             x = f()
@@ -267,9 +207,9 @@ def run(net: bool = True) -> dict:
         items.append(_item("agents", "找 Claude / Codex", "warn", f"{type(e).__name__}: {e}"))
     items += check_dirs()
     try:
-        items += check_route()
+        items += check_legacy()
     except Exception as e:
-        items.append(_item("route", "模型路由代理", "warn", f"{type(e).__name__}: {e}"))
+        items.append(_item("legacy", "供应商功能残留", "warn", f"{type(e).__name__}: {e}"))
     if net:
         items.append(check_update())
     n = {s: sum(1 for x in items if x["status"] == s) for s in ("pass", "warn", "fail")}

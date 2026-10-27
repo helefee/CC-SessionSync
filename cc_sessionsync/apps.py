@@ -177,9 +177,11 @@ def _dsh():
     return dsh
 
 
-def _cards():
-    from . import cards
-    return cards
+def _legacy_route_job(**a) -> dict:
+    """0.3.4 以前排队的「供应商卡片 启用/停用」：功能已经拿掉，改成跑一遍收尾（还原配置），不再报错。"""
+    from . import legacy
+    r = legacy.migrate(force=True)
+    return {"ok": True, "skipped": True, "note": "供应商功能已移除：没有启用，改为把配置恢复原样", "done": r.get("done") or []}
 
 
 def _convert():
@@ -207,8 +209,8 @@ def _ops():
         "sessions-undo": lambda **a: _sessions().undo(a["op"]),
         "desktop-register": lambda **a: _timeline().register_desktop(a["op"], a["regs"]),
         "timeline-replace": lambda **a: _timeline().replace(a["snaps"]),
-        "route-card-enable": lambda **a: _cards().enable(a["client"]),
-        "route-card-disable": lambda **a: _cards().disable(a["client"]),
+        "route-card-enable": _legacy_route_job,          # 0.3.5：供应商功能已移除，旧队列里的任务不再报错
+        "route-card-disable": _legacy_route_job,
     }
     for p in EXTRA_OPS:
         try:

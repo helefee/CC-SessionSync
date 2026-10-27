@@ -421,18 +421,9 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/watch":
             from . import watch
             return watch.status()
-        if p == "/api/modelcfg":
-            from . import modelcfg
-            return modelcfg.overview(None)
-        if p == "/api/modelcfg/proxies":
-            from . import modelcfg
-            return modelcfg.proxies(wait=True)
-        if p == "/api/providers":
-            from . import providers
-            return providers.overview(None)
-        if p == "/api/route":
-            from . import router
-            return router.overview()
+        if p == "/api/legacy":                   # 0.3.5：供应商功能移除后的收尾结果（界面提示一次）
+            from . import legacy
+            return legacy.state() or {}
         if p.startswith("/api/usage/"):
             from . import usage
             f = {k: q.get(k) for k in ("app", "provider", "model", "from", "to")}
@@ -625,50 +616,9 @@ class H(BaseHTTPRequestHandler):
             return dict(r, text=selfcheck.text(r))
         if p == "/api/reveal":
             return _reveal(b.get("path") or "")
-        if p.startswith("/api/modelcfg/"):
-            from . import keystore, modelcfg
-            act = p.rsplit("/", 1)[1]
-            if act == "claude":
-                return modelcfg.set_claude("user", None, b.get("changes") or {})
-            if act == "codex":
-                return modelcfg.set_codex("user", None, b.get("changes") or {}, b.get("provider_auth"), add_provider=b.get("add_provider"))
-            if act == "key-set":
-                keystore.put(b["name"], b["secret"], b.get("comment") or "")
-                return {"ok": True, "name": keystore.check_name(b["name"]), "masked": keystore.mask(b["secret"])}
-            if act == "key-delete":
-                return {"ok": keystore.delete(b["name"])}
-            if act == "restore":
-                return modelcfg.restore(str(b["id"]))
-            if act == "migrate":
-                return modelcfg.migrate(b["tool"], b["field"], b["key"])
-            if act == "test":
-                return modelcfg.test_connection(b.get("tool") or "claude", b.get("base_url"), b.get("key"), b.get("model"),
-                                                bool(b.get("use_settings_key")))
-        if p.startswith("/api/providers/"):
-            from . import providers
-            act = p.rsplit("/", 1)[1]
-            tool = b.get("tool") or "claude"
-            try:
-                if act == "save":
-                    return providers.upsert(tool, b.get("provider") or {}, b.get("secret") or None)
-                if act == "delete":
-                    return providers.delete(tool, str(b["id"]), bool(b.get("drop_key")))
-                if act == "switch":
-                    return providers.apply_global(tool, str(b["id"]), bool(b.get("drop_plaintext")))
-                if act == "slot":
-                    return providers.set_slot(str(b["slot"]))
-                if act == "ccs-preview":
-                    return {"items": providers.ccswitch_preview()}
-                if act == "ccs-import":
-                    return providers.ccswitch_import([str(x) for x in b.get("ids") or []])
-                if act == "test":
-                    return providers.test(tool, str(b["id"]))
-                if act == "models":
-                    return providers.models(tool, b.get("id") or None, b.get("base_url"), b.get("secret") or None, bool(b.get("cached_only")))
-            except providers.PlaintextError as e:
-                return {"error": str(e), "plaintext": e.items}, 409
-        if p.startswith("/api/route/"):
-            return _route(p.rsplit("/", 1)[1], b)
+        if p == "/api/legacy/seen":
+            from . import legacy
+            return legacy.seen()
         if p.startswith("/api/usage/"):
             from . import usage
             if p == "/api/usage/sync":
@@ -704,7 +654,7 @@ class H(BaseHTTPRequestHandler):
         return None
 
     def _sessions(self, act: str, b: dict):
-        from . import providers, sessions
+        from . import launch, sessions
         if act == "fulltext":
             return sessions.fulltext(b.get("q") or "")
         if act == "export":
@@ -719,7 +669,7 @@ class H(BaseHTTPRequestHandler):
             if not x or not x.get("file"):
                 raise FileNotFoundError("找不到这个会话的记录文件")
             cwd = x.get("cwd") if x.get("cwd") and Path(x["cwd"]).is_dir() else str(Path.home())
-            return providers.launch(b["agent"], None, cwd, b["id"], bool(b.get("dry")))
+            return launch.launch(b["agent"], cwd, b["id"], bool(b.get("dry")))
         if act == "restore-snapshot":
             return sessions.restore_snapshot(int(b["snap"]))
         if act == "trash-purge":
@@ -788,75 +738,6 @@ def _reveal(path: str) -> dict:
     return {"ok": True, "path": str(target)}
 
 
-def _route(act: str, b: dict):
-    """模型路由（v0.3.0）。key 明文只在 save 的 new_keys / models 的 secret 里进来，回去的都是打码的。"""
-    from . import router
-    if act == "save":
-        return router.upsert_provider(b.get("provider") or {}, b.get("new_keys") or [])
-    if act == "delete":
-        return router.delete_provider(str(b["id"]))
-    if act == "clients":
-        return router.set_clients(b)
-    if act == "start":
-        router.ensure_running()
-        return router.live_status()
-    if act == "stop":
-        router.stop()
-        router.shutdown_background()
-        return router.live_status()
-    if act == "restart":
-        router.stop()
-        router.shutdown_background()
-        router.ensure_running()
-        return router.live_status()
-    if act.startswith("prov-"):
-        from . import cards
-        fn = {"prov-list": lambda: cards.prov_list(), "prov-save": lambda: cards.prov_save(b), "prov-models": lambda: cards.prov_models(b),
-              "prov-delete": lambda: cards.prov_delete(b)}.get(act)
-        if fn:
-            return fn()
-    if act.startswith("card-"):
-        from . import cards
-        cl = str(b.get("client") or "")
-        if cl not in cards.CLIENTS:
-            raise ValueError("只有 codex / claude 两张卡")
-        if act == "card-save":
-            return cards.save_card(cl, b)
-        if act == "card-enable":
-            cards.save_card(cl, b)
-            return cards.run(cl, "enable")
-        if act == "card-disable":
-            return cards.run(cl, "disable")
-        if act == "card-models":
-            return cards.fetch_models(cl, b)
-        if act == "card-test":
-            return cards.test(cl)
-        if act == "card-fixrefs":
-            return cards.fix_refs(cl)
-    if act == "test":
-        return router.test_provider(str(b["id"]), b.get("model") or None)
-    if act == "models":
-        return router.list_models(b.get("id") or None, b.get("draft"))
-    if act == "apply-codex":
-        return router.apply_codex(bool(b.get("default")))
-    if act == "revert-codex":
-        return router.revert_codex()
-    if act == "apply-claude":
-        return router.apply_claude("session" if b.get("mode") == "session" else "global")
-    if act == "revert-claude":
-        return router.revert_claude()
-    if act == "cpa-preview":
-        return router.cpa_preview(str(b.get("text") or ""))
-    if act == "cpa-import":
-        return router.cpa_import(str(b.get("text") or ""), b.get("picks"))
-    if act == "rotate-token":
-        return router.rotate_token()
-    if act == "reset-cooldown":
-        router._COOL.clear()
-        return {"ok": True}
-    return None
-
-
 # ---------- 后台 ----------
 
 _bg_started = False
@@ -868,7 +749,16 @@ def start_background(auto_sync: bool | None = None) -> None:
     if _bg_started:
         return
     _bg_started = True
-    from . import sessions, update, usage, watch
+    from . import legacy, sessions, update, usage, watch
+    try:                                         # 0.3.5：供应商（模型路由）拿掉了 → 第一次启动把它改过的配置恢复原样（只做一次）
+        r = legacy.migrate()
+        if r.get("notice") and not r.get("evented"):
+            events.add("legacy", "供应商功能已移除，已把 Codex / Claude Code 配置恢复原样",
+                       "；".join(r.get("done") or [])[:300], {"page": "sync"})
+            r["evented"] = True
+            legacy.atomic_write(legacy.MARK, json.dumps(r, ensure_ascii=False, indent=1).encode("utf-8"))
+    except Exception:
+        pass
 
     def loop():
         events.poll_jobs()
@@ -892,25 +782,6 @@ def start_background(auto_sync: bool | None = None) -> None:
     if not os.environ.get("CC_SESSIONSYNC_NO_USAGE"):
         usage.start_background()
     sessions.start_auto(backup_settings)
-    if not os.environ.get("CC_SESSIONSYNC_NO_ROUTE"):
-        def route_up():
-            """后台代理看门狗：有卡片 / 高级路由在用就保证它活着，挂了自动拉起；拉不起来发一条通知（每次故障一条）。"""
-            from . import router
-            down = False
-            while True:
-                try:
-                    d = router.load()
-                    if router.needed(d) and d.get("autostart", True):
-                        ok = router.health() or router.ensure_running()
-                        if not ok and not down:
-                            events.add("route-down", "后台转换没在跑", "Codex / Claude Code 现在连不上本机代理：点这里看「诊断自检」", {"page": "selfcheck"})
-                        down = not ok
-                    else:
-                        down = False
-                except Exception:
-                    pass
-                time.sleep(20)
-        threading.Thread(target=route_up, daemon=True, name="ccss-route-start").start()
     update.auto_check_later(lambda: settings.get("update_auto", True))
     if MODE["desktop"] and not settings.get("selfcheck_done") and not os.environ.get("CC_SESSIONSYNC_NO_SELFCHECK"):
         def first():

@@ -28,6 +28,7 @@ import json
 import os
 import re
 import sqlite3
+import socket
 import threading
 import time
 import urllib.request
@@ -928,9 +929,38 @@ def _ping(url: str) -> bool:
         return getattr(e, "code", 0) in (401, 403, 404)
 
 
-def _port_running(port):
-    from .modelcfg import port_running        # 共用后台测端口 + 30 秒缓存（Windows 上同步测一个关着的端口要 ~1 秒）
-    return port_running(port)
+_PORTS: dict = {}
+_PEND: set = set()
+_PL = threading.Lock()
+
+
+def _probe(port: int):
+    ok = False
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(1.5)
+    try:
+        ok = s.connect_ex(("127.0.0.1", int(port))) == 0
+    except OSError:
+        ok = False
+    finally:
+        s.close()
+    with _PL:
+        _PORTS[port] = (time.time(), ok)
+        _PEND.discard(port)
+    return ok
+
+
+def _port_running(port, ttl: float = 30):
+    """True / False / None（还没测过）：后台测端口 + 30 秒缓存（Windows 上同步测一个关着的端口要 ~1 秒）。"""
+    port = int(port)
+    with _PL:
+        v = _PORTS.get(port)
+        go = (v is None or time.time() - v[0] > ttl) and port not in _PEND
+        if go:
+            _PEND.add(port)
+    if go:
+        threading.Thread(target=_probe, args=(port,), daemon=True).start()
+    return v[1] if v else None
 
 
 def proxies() -> list[dict]:
