@@ -375,6 +375,10 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 - 每个要改的文件**先备份**进 `~/.cc-sessionsync/backups`（和以前改配置时的备份同一处），做了什么记在 `~/.cc-sessionsync/legacy-0.3.5.json` / `legacy-0.3.5.log`；
   旧记录 `route.json` 改名成 `route.json.removed-0.3.5`。「诊断自检」里会检查还有没有残留。
 
+| 第一次启动 0.3.5 | 之后（顶栏没有「供应商」了） |
+|---|---|
+| ![](docs/screenshots/v035-notice.png) | ![](docs/screenshots/v035-nav.png) |
+
 **没动的**：你存在凭据管理器里的服务商 key（`prov-…` / `card-…` / 0.2 的 `claude-…` / `codex-…`）留着；`CCSessionSync.exe key get <名字>` 命令也留着——
 0.2 的「供应商列表」切换过去、或者直连卡片写的取 key 命令还指着它，删了那些配置会断。不想要了就在 Codex / Claude Code 里改回自己的设置，再到 Windows 凭据管理器里删 `CCSessionSync/key/…`。
 
