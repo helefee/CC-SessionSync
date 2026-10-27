@@ -68,10 +68,6 @@ jobs:
         run: npm install -g @openai/codex
       - name: verify any → Codex (codex exec resume against a local Responses-API mock)
         run: python tools/verify_codex.py "" 8792
-      - name: verify model routing (real codex exec + claude -p → local route proxy → mock Anthropic / Responses / Chat upstreams, tool round-trips, no real keys)
-        run: |
-          python -m pip install -e .
-          python tools/verify_route.py "" "" 8784
       - name: install OpenCode CLI 2.x (MIT) and 1.x (separate prefix)
         shell: bash
         run: |

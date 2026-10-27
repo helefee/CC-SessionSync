@@ -167,5 +167,7 @@ begin
     WaitForApp;
     { autostart entry written by the app (tray menu / settings): remove it with the app }
     RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', '{#MyRun}');
+    { 0.3.0-0.3.4 model-routing proxy autostart (feature removed in 0.3.5; the app also removes it on first launch) }
+    RegDeleteValue(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run', 'CC Session Sync Route');
   end;
 end;

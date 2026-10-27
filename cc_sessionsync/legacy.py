@@ -196,6 +196,7 @@ def _restore_whole(rec: dict) -> str:
     else:
         backup(p, "legacy-before-remove")
         p.unlink()
+        return "deleted"
     return "restored"
 
 
@@ -527,6 +528,10 @@ def _still_uses_helper() -> list:
 
 # ---------------- 入口 ----------------
 
+_SAY = {"restored": "按字节还原成启用前的样子", "partial": "放回启用前的值（只动我们写的那几项）", "gone": "文件已经不在了",
+        "removed": "是我们建的，删掉", "deleted": "启用前没有这个文件，删掉"}
+
+
 def state() -> dict | None:
     try:
         return json.loads(MARK.read_text(encoding="utf-8"))
@@ -564,18 +569,17 @@ def migrate(force: bool = False) -> dict:
         for cl, recs in (st.get("cards_applied") or {}).items():
             for name, rec in (recs or {}).items():
                 r = _revert_edits(rec)
-                if r != "untouched":
-                    out.append(f"{'Codex' if cl == 'codex' else 'Claude Code'}：{Path(rec['file']).name} "
-                               + {"restored": "按字节还原成启用前的样子", "partial": "放回启用前的值（只动我们写的那几项）", "gone": "文件已经不在了"}.get(r, r))
+                if r not in ("untouched", "gone"):
+                    out.append(f"{'Codex' if cl == 'codex' else 'Claude Code'}：{Path(rec['file']).name} " + _SAY.get(r, r))
         ap = st.get("applied") or {}
         if ap.get("codex"):
             for x in _revert_route_codex(ap["codex"]):
-                if x["result"] != "untouched":
-                    out.append(f"Codex：{Path(x['file']).name}（模型路由）{x['result']}")
+                if x["result"] not in ("untouched", "gone"):
+                    out.append(f"Codex：{Path(x['file']).name} " + _SAY.get(x["result"], x["result"]))
         if ap.get("claude"):
             x = _revert_route_claude(ap["claude"])
-            if x["result"] != "untouched":
-                out.append(f"Claude Code：{Path(x['file']).name}（模型路由）{x['result']}")
+            if x["result"] not in ("untouched", "gone"):
+                out.append(f"Claude Code：{Path(x['file']).name} " + _SAY.get(x["result"], x["result"]))
         return out
 
     step(_stop_proxy, st)                             # 先停代理（它可能还在写 route.json / 用量）
@@ -592,8 +596,11 @@ def migrate(force: bool = False) -> dict:
             ROUTE.replace(ROUTE.with_name("route.json.removed-0.3.5"))
         except OSError:
             pass
-    res = {"version": "0.3.5", "at": time.time(), "done": [x for x in done if x], "errors": errs,
-           "helper_still_used": _still_uses_helper(), "seen": bool(prev and prev.get("seen"))}
+    now = [x for x in done if x]
+    prev = prev or {}
+    seen_ = bool(prev.get("seen")) and not now               # 又收拾出新东西 → 再提示一次
+    res = {"version": "0.3.5", "at": time.time(), "done": list(prev.get("done") or []) + now, "errors": errs,
+           "helper_still_used": _still_uses_helper(), "seen": seen_, "evented": bool(prev.get("evented")) and not now, "runs": int(prev.get("runs") or 0) + 1}
     res["notice"] = bool(res["done"]) and not res["seen"]
     try:
         MARK.parent.mkdir(parents=True, exist_ok=True)

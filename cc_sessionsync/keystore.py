@@ -188,7 +188,7 @@ def helper_selftest(name: str) -> None:
     kw = {"creationflags": 0x08000000} if sys.platform == "win32" else {}
     try:
         r = subprocess.run(helper_cmd(name), cwd=tempfile.gettempdir(), stdin=subprocess.DEVNULL,
-                           capture_output=True, timeout=30, env=dict(os.environ, CC_SESSIONSYNC_NO_ROUTE_SPAWN="1"), **kw)
+                           capture_output=True, timeout=30, **kw)
     except Exception as e:
         raise RuntimeError(f"取 key 命令跑不起来：{type(e).__name__}，没改配置") from None
     got = r.stdout.decode("utf-8", "replace").strip()

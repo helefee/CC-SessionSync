@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""自检（文件版凭据库）、用量统计（自己扫、去重、缓存 tokens、没价格的模型是 None）、模型与 API（key 进凭据库不落明文、
-apiKeyHelper / model_providers auth、写之前备份、tomlkit 保留注释、连接测试带 User-Agent、模型列表）。全在临时目录 + 本机假接口。"""
+"""自检、用量统计（自己扫、去重、缓存 tokens、没价格的模型是 None）。0.3.5 拿掉了供应商（模型与 API），这里只确认它不再出现在自检里。
+全在临时目录 + 本机假接口。"""
 import json, os, sys, tempfile, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -28,13 +28,13 @@ class M(BaseHTTPRequestHandler):
 srv = ThreadingHTTPServer(("127.0.0.1", 0), M); threading.Thread(target=srv.serve_forever, daemon=True).start()
 BASE = f"http://127.0.0.1:{srv.server_address[1]}"
 
-from cc_sessionsync import keystore, modelcfg, providers, selfcheck, usage
+from cc_sessionsync import selfcheck, usage
 # 自检
 r = selfcheck.run(net=False)
 by = {i["id"]: i for i in r["items"]}
 ok(all(i["status"] in ("pass", "warn", "fail") and i["name"] for i in r["items"]), "selfcheck items have pass/warn/fail")
 ok(by["install"]["status"] == "pass" and by["home"]["status"] == "pass", "install + data dir writable pass")
-ok(by["keystore"]["status"] == "warn" and by["keystore"]["fix"], "file keystore → warn with a fix")
+ok("keystore" not in by and not any(i["id"].startswith(("route", "card-")) for i in r["items"]), "0.3.5: no keystore / route / card checks (供应商 removed)")
 ok(by["claude-found"]["status"] == "pass" and by["codex-found"]["status"] == "pass" and by["claude-projects"]["status"] == "pass", "Claude / Codex found + data dirs readable")
 ok(selfcheck.last()["time"] == r["time"] and "自检" in selfcheck.text(r), "selfcheck saved + text report")
 os.environ["CC_SESSIONSYNC_UPDATE_URL"] = BASE + "/release"
@@ -58,34 +58,6 @@ ok(row is not None and row.get("cost") is None, "unpriced model → cost None (U
 ok(not any(x.get("model") == "codex-import" for x in lg["rows"]), "our imported sessions (model codex-import) are not counted")
 ok((T / "ss/usage.sqlite").exists(), "usage DB lives in ~/.cc-sessionsync")
 
-# 模型与 API：Claude 供应商
-cs = H / ".claude/settings.json"; before = cs.read_text()
-p = providers.upsert("claude", {"name": "测试中转", "mode": "key", "base_url": BASE, "models": {"model": "claude-sonnet-4-5", "haiku": "claude-haiku-4-5"}}, "sk-test-SECRET-123456")
-ok(p["id"] and "SECRET" not in json.dumps(p) and keystore.get(p["key"]) == "sk-test-SECRET-123456", "provider key stored in the keystore, view is masked")
-r = providers.apply_global("claude", p["id"])
-j = json.loads(cs.read_text())
-ok(j["env"]["ANTHROPIC_BASE_URL"] == BASE and "key get" in j.get("apiKeyHelper", "") and "SECRET" not in cs.read_text(), "switch → settings.json gets base URL + apiKeyHelper, no plaintext key")
-ok(j.get("model") == "claude-sonnet-4-5" and j["env"].get("ANTHROPIC_DEFAULT_HAIKU_MODEL") == "claude-haiku-4-5", "model mapping written")
-ok(len(modelcfg.backups(50)) >= 1, "backup made before writing")
-tc = providers.test("claude", p["id"])
-post = [x for x in SEEN if x["path"].startswith("/v1/messages")]
-ok(tc.get("ok") and post and post[-1]["ua"].startswith("CCSessionSync/") and post[-1]["auth"] == "sk-test-SECRET-123456", "connection test hits the provider with User-Agent CCSessionSync/x and the stored key")
-ml = providers.models("claude", p["id"], None, None)
-ok("claude-haiku-4-5" in json.dumps(ml), "model list fetched")
-# Codex 供应商：config.toml 注释保留，model_providers.<id>.auth 走 key get
-ct = H / ".codex/config.toml"; ct.write_text('# 我的注释\nmodel = "gpt-5.5"\nmodel_provider = "openai"\n\n[projects."/work/web"]\ntrust_level = "trusted"\n', encoding="utf-8")
-q = providers.upsert("codex", {"name": "Codex 中转", "mode": "key", "base_url": BASE + "/v1", "models": {"model": "gpt-5.5"}}, "sk-codex-SECRET-999")
-providers.apply_global("codex", q["id"])
-txt = ct.read_text(encoding="utf-8")
-ok("# 我的注释" in txt and '[projects."/work/web"]' in txt, "config.toml comments / other tables preserved (tomlkit)")
-from cc_sessionsync import _toml as tomllib
-tj = tomllib.loads(txt)
-mp = tj["model_providers"][tj["model_provider"]]
-ok(mp["base_url"] == BASE + "/v1" and "SECRET" not in txt and ("auth" in mp or "env_key" in mp), f"Codex provider written with command auth, no plaintext ({list(mp)})")
-ok(not list(ct.parent.glob("*.ccss-*.tmp")), "atomic write leaves no temp files")
-# 恢复备份
-b0 = modelcfg.backups(50)[-1]
-rr = modelcfg.restore(str(b0["id"])); ok(rr.get("ok") is not False, "restore a config backup")
 srv.shutdown()
 print("FAILS", FAILS)
 sys.exit(1 if FAILS else 0)
