@@ -28,11 +28,12 @@ FILE = paths.HOME / "settings.json"
 DEFAULTS = {"auto_sync": False, "tray_close": True, "start_min": False, "notify": True, "update_auto": True,
             "codex_mark_imported": False, "selfcheck_done": False,
             "show_full_accounts": False,
+            "convert_skip_preview": False,          # 高级：转换前不弹预览直接做（0.3.6）
             # 会话自动备份（0.2.1 起缺省开，每 10 分钟；最少 5 分钟）+ 保留规则
             "session_backup_auto": True, "session_backup_every": 10, "session_backup_unit": "min",
             "retention_all_days": 7, "retention_daily_days": 90, "ui_font": 1, "ui_zoom": 1}
 BOOL_KEYS = ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
-             "tray_hint_shown", "show_full_accounts", "session_backup_auto")
+             "tray_hint_shown", "show_full_accounts", "session_backup_auto", "convert_skip_preview")
 _lock = threading.Lock()
 
 

@@ -307,9 +307,9 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
   桌面版自带的 `opencode-cli` 也认）。目标应用开着时走「关闭并执行（完成后重启）」/ 等它退出后自动做。
 - **导出**：Cursor 和 ZCode 不写它们的库（格式没公开、要几处一起改、写坏了可能影响应用本身），只写一份 Markdown 上下文文件 + 一句粘贴提示
   （写好自动复制）；可以写进项目里的 `.cc-sessionsync/`。原生方向也可以勾「只导出上下文文件」。
-- 先**演练**；每次一本账，在「转换记录」里撤回（只删这次新建的；转过去以后又接着聊过的保留）。转过且没变的跳过，来源有新内容时标出来，
+- 先**预览**（0.3.6 起写明写到哪、多少条、会丢 / 会变什么，见下文）；每次一本账，在「转换记录」里撤回（只删这次新建的；转过去以后又接着聊过的保留）。转过且没变的跳过，来源有新内容时标出来，
   勾「再转一份」才新建；从 A 转来的会话不会被原生转回 A（防止来回导）。标题带来源前缀，比如「（OpenCode）」。
-- 工具调用变成文字摘要（输出截短），思考缺省不带（可以当文字带上），图片换成占位。
+- 工具调用变成文字摘要（输出截短），思考缺省不带（可以当文字带上），图片 / 附件换成占位。
 - **OpenCode**（开源终端 / 桌面编码代理）：会话在 `~/.local/share/opencode/opencode.db`（Windows 也是 `%USERPROFILE%\.local\share\opencode`；
   `XDG_DATA_HOME` 优先），1.x 的 `session/message/part` 和 2.x 的 `session_v2/session_message` 都读。
   **ZCode**（智谱 Z.ai 的 GLM 编码桌面端，引擎是 OpenCode 的分支）：`~/.zcode/cli/db/db.sqlite`，标题 / 删除标记合并
@@ -353,6 +353,24 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### 转换前预览（0.3.6）
+
+会话转换 / 导出之前先弹一个**预览**，确认了才写：
+
+- **写到哪**：每个会话具体写到哪个目录 / 文件（Claude Code 是 `~/.claude/projects/<项目>/<新会话号>.jsonl`，并说明会不会写进桌面端列表；
+  Codex 是 `sessions/年/月/日/rollout-….jsonl` + `session_index.jsonl`；dsh 是会话根下的新目录；OpenCode 交给 `opencode import`；导出是哪个文件）。
+- **多少条消息**：一共几问几答、每个会话几条、时间范围。
+- **会丢 / 会变 / 照旧**：图片、文件附件（PDF 等）不带过去（换成占位）；思考缺省不带（打开「带上思考内容」就当文字带上）；工具调用变成文字摘要，
+  输出超过 20 行 / 2000 字的会截短（预览里写明几个）；出错的工具调用标出来；模型名和 token 用量不带；导出方向不进目标应用的会话列表、只有对话文字。
+- 上面是合起来的，下面每个会话可以点开看自己的。Codex → Claude Code 的导入器确认框里也加了「转过去以后」。
+- 嫌烦可以勾「以后不预览，直接转换」，或者在 **设置 → 高级 → 跳过转换前预览** 里开 / 关（缺省关）。开了以后「预览」按钮照样能看。
+
+| 转换前预览 | 导出前预览（深色） |
+|---|---|
+| ![](docs/screenshots/v036-convert-preview.png) | ![](docs/screenshots/v036-export-preview-dark.png) |
+| **设置 → 高级** | |
+| ![](docs/screenshots/v036-settings-advanced.png) | |
 
 ### 拿掉了「供应商」（0.3.5）
 

@@ -103,6 +103,10 @@ h2{font-size:calc(18px*var(--fk));font-weight:600;margin:2px 0 4px;display:flex;
 .cvm{border-collapse:separate;border-spacing:4px;font-size:calc(13.5px*var(--fk))}.cvm th{font-weight:600;color:var(--muted);text-align:center;padding:4px 6px}.cvm th.r{text-align:right}.cvm td{text-align:center;padding:6px 8px;border-radius:7px;cursor:pointer;white-space:nowrap}.cvm td.nat{background:color-mix(in srgb,var(--ok,#2e7d32) 14%,transparent);color:var(--ok,#2e7d32)}.cvm td.exp{background:color-mix(in srgb,var(--warn,#b26a00) 14%,transparent);color:var(--warn,#b26a00)}.cvm td.same{color:var(--muted);cursor:default}.cvm td.on{outline:2px solid var(--accent);outline-offset:-2px}
 .cvpk{display:flex;flex-wrap:wrap;gap:6px}.cvpk button{display:inline-flex;align-items:center;gap:6px}.cvpk button.on{background:var(--accent);color:var(--ink-on)}.cvpk button.on .ic.logo{color:inherit}
 .tag.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-weak)}.tag.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-weak)}
+.pvh{margin:12px 0 4px;font-size:calc(13.5px*var(--fk))}.pvl{display:grid;grid-template-columns:auto minmax(7em,auto) 1fr;gap:8px;align-items:baseline;margin:3px 0}.pvl b{font-weight:600}.pvl .dim{font-size:calc(13px*var(--fk))}
+details.adv>summary{cursor:pointer;display:flex;gap:10px;align-items:baseline;list-style:none}details.adv>summary::-webkit-details-marker{display:none}
+details.adv>summary h3{margin:0}details.adv>summary::before{content:"▸";color:var(--muted)}details.adv[open]>summary::before{content:"▾"}details.adv[open]>summary{margin-bottom:8px}
+.pvr{border-top:1px solid var(--line);padding:5px 0}.pvr summary{cursor:pointer}.pvr code{word-break:break-all}
 .tag.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-weak)}.tag.acc{color:var(--accent);border-color:var(--accent);background:var(--accent-weak)}
 table.t{width:100%;border-collapse:collapse;font-size:calc(13.5px*var(--fk))}
 table.t th,table.t td{padding:6px 8px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:middle}
@@ -148,8 +152,9 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .dlg .hd{padding:16px 20px 6px;font-weight:600;display:flex;align-items:center}
 .dlg .hd button{margin-left:auto}
 #dlgTitle{display:inline-flex;align-items:center;gap:8px}
-.dlg .bd{padding:8px 20px 12px;overflow:auto}
+.dlg .bd{padding:8px 20px 12px;overflow:auto;min-height:0}
 .dlg .ft{padding:10px 20px 18px;display:flex;gap:8px;justify-content:flex-end;align-items:center}
+.dlg.pvw .box{width:min(840px,100%)}
 .dlg.wide .box{width:min(1100px,100%);height:calc(88*var(--vh));max-height:calc(88*var(--vh))}
 .dlg pre{white-space:pre-wrap;font-family:var(--mono);font-size:calc(13.5px*var(--fk));margin:0}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px 16px;font-size:calc(14px*var(--fk));z-index:40;display:none;max-width:calc(90*var(--vw));align-items:center;gap:8px}
@@ -588,7 +593,7 @@ async function api(path, body){
 }
 let toastT; function toast(t, ms=2800){ const el=$("#toast"); el.innerHTML=emoIcons(t); el.style.display="block"; clearTimeout(toastT); toastT=setTimeout(()=>el.style.display="none", ms); }
 function openDlg(title, html, footer){ $("#dlgTitle").innerHTML=emoIcons(title); $("#dlgBody").innerHTML=html; $("#dlgFt").innerHTML=footer||'<button onclick="closeDlg()">关闭</button>'; $("#dlg").classList.add("open"); }
-function closeDlg(){ $("#dlg").classList.remove("open", "wide"); setOpen = false; }
+function closeDlg(){ $("#dlg").classList.remove("open", "wide", "pvw"); setOpen = false; }
 $("#dlg").onclick = e => { if (e.target.id === "dlg") closeDlg(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#dlg").classList.contains("open")) closeDlg(); });
 const pad = n => String(n).padStart(2,"0");
@@ -1453,11 +1458,14 @@ async function cxDry(thenApply){
   const todo = r.rows.filter(x => x.state === "new" || x.state === "update");
   const c = r.counts || {};
   const mk = r.mark_check || {};
+  let pv = null;                              // 会丢 / 会变（0.3.6）：用统一格式算一遍
+  if (todo.length) try { pv = await api(`/api/convert/preview?src=codex&dst=claude&again=1&reasoning=${CX.reasoning ? 1 : 0}&desktop=${CX.desktop ? 1 : 0}&ids=${encodeURIComponent(todo.map(x => x.thread || x.id).join(","))}`); } catch(e){}
   const html = `<div class="kv"><div>会新建</div><div><b>${c.new || 0}</b> 个 Claude Code 会话</div><div>会更新</div><div><b>${c.update || 0}</b> 个（Codex 那边有新内容，旧版本留在账本里）</div>
       <div>不动</div><div>${(c.same || 0) + (c.diverged || 0)} 个（导过了没变 / 已在 Claude 里接着聊过）</div>
       <div>桌面端列表</div><div>${r.desktop ? `写进当前账号 <code>${esc(short(r.desktop.key))}…</code>` : esc(r.desktop_note || "不写（只写命令行记录）")}</div>
       <div>防重复导入</div><div>${r.mark ? (mk.ok ? `登记进 <code>${esc(mk.file)}</code>（${mk.exists ? "先备份再改" : "新建"}）` : `<span style="color:var(--bad)">${esc(mk.error || "")}</span>`) : "关"}</div></div>
     <div class="diff updn" style="margin-top:10px">${todo.length ? todo.map(x => `<div class="${x.state === "new" ? "a" : "u"}">${x.state === "new" ? "+ 新建" : "~ 更新"}  ${esc(x.target || "")}/…jsonl   ${esc(x.title || "")}  (${x.turns} 轮 / ${Math.round((x.chars || 0) / 1000)}K 字)</div>`).join("") : "（没有要写的）"}</div>
+    ${pv && pv.total && pv.total.sessions ? `<div class="dim" style="margin-top:8px">共 ${pv.total.msgs} 条消息（${pv.total.user} 问 / ${pv.total.assistant} 答）</div>${lossBox(pv.summary)}` : ""}
     <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是演练，还什么都没写。${CX.desktop && SY.st && SY.st.running.claude ? "Claude 桌面端开着：确认后会排队，退出桌面端后自动导入。" : ""}</div>`;
   openDlg(thenApply ? "确认导入" : "演练结果", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${todo.length && !(r.mark && !mk.ok) ? `<button class="primary" id="cxApply">${ic("download")} 确认导入 ${todo.length} 个</button>` : ""}`);
   const b = $("#cxApply");
@@ -1651,6 +1659,7 @@ R.convert = async () => {
   const ids = new Set((CV.rows || []).map(r => r.id)); for (const t of [...CV.sel]) if (!ids.has(t)) CV.sel.delete(t);
   const T = mat.targets || {}, cell = (s, d) => (mat.cells[s] || {})[d];
   const md = (T[CV.dst] || {}).mode, exp = md === "export" || CV.export;
+  CV.expNow = exp;
   const pick = (id, cur, dis) => `<div class="cvpk" id="${id}">${CV_AG.map(a => `<button data-a="${a}" class="${a === cur ? "on" : ""}" ${dis === a ? "disabled" : ""}>${logo(a)} ${CV_N[a]}</button>`).join("")}</div>`;
   const det = mat.detect || {};
   const detRow = k => { const d = det[k] || {}; return `<div>${logo(k)} <b>${CV_N[k]}</b>：${d.install ? `${esc(d.install.version || "")} <code>${esc(d.install.path || "")}</code> · ` : ""}数据 <code>${esc(d.db || "")}</code> ${d.db_exists ? `✓ ${d.sessions} 个会话 · ${d.projects} 个项目${d.legacy ? ` · 旧版 JSON 记录 ${d.legacy} 个（不读）` : ""}` : "✗ 没有"}${k === "opencode" ? ` · 命令行 ${d.cli ? `<code>${esc(d.cli)}</code>${d.cli_version ? " " + esc(d.cli_version) : ""}` : '<span class="tag warn">没找到（只能导出）</span>'}` : ""}${d.running ? ' · <span class="tag warn">在运行（照样能读）</span>' : ""}${d.error ? ` <span class="tag bad">${esc(d.error)}</span>` : ""}</div>`; };
@@ -1670,7 +1679,7 @@ R.convert = async () => {
         <span class="tag warn">导出</span> 写一份上下文文件 + 一句粘贴提示：Cursor 和 ZCode 的会话库没有公开格式、还有好几处要一起改，写坏了可能影响应用本身，所以不碰。</div></details></div>
     ${cxMode ? `<div id="cvCodex"><div class="empty">读取 Codex 对话…</div></div>` : `    <div class="bar"><input type="search" id="cvQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(CV.q)}"><span class="sp"></span><span class="dim">${logo(CV.src)} ${CV_N[CV.src]} 的会话 ${CV.rows.length} 个</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="cvList" style="border:0;border-radius:0;max-height:calc(48*var(--vh))"></div>
-      <div class="batch"><span id="cvN"></span><span style="flex:1"></span><button id="cvDry">${ic("eye")} 演练：看会写什么</button><button class="primary" id="cvGo">${ic(exp ? "download" : "shuffle")} ${exp ? "导出选中的" : "转换选中的"}</button></div></div>
+      <div class="batch"><span id="cvN"></span><span style="flex:1"></span><button id="cvDry">${ic("eye")} 预览：写到哪、丢什么</button><button class="primary" id="cvGo">${ic(exp ? "download" : "shuffle")} ${exp ? "导出选中的" : "转换选中的"}</button></div></div>
     <div class="card"><h3>选项</h3>
       <div class="setrow"><div class="sl">${ic("sparkles")}<div><b>带上思考内容（当文字）</b><div class="sd">缺省不带：各家的思考块互相不认，只能当普通文字放进回复里</div></div></div>${sw("cvReas", CV.reasoning)}</div>
       ${CV.dst === "claude" && !exp ? `<div class="setrow"><div class="sl">${ic("monitor")}<div><b>写进 Claude 桌面端的会话列表</b><div class="sd">关掉就只写命令行能 <code>claude --resume</code> 的记录；桌面端开着时会排队</div></div></div>${sw("cvDesk", CV.desktop)}</div>` : ""}
@@ -1721,34 +1730,56 @@ function cvList(){
   cvN();
 }
 function cvN(){ const n = CV.sel.size; $("#cvN").textContent = n ? `已选 ${n} 个` : "勾选要转换的会话"; $("#cvGo").disabled = $("#cvDry").disabled = !n || CV.src === CV.dst; }
+// 转换前预览（0.3.6）：写到哪、多少条消息、会丢 / 会变什么，确认了才写。设置 → 高级 里可以跳过
+const LOSS_T = {lost: ["bad", "会丢"], changed: ["warn", "会变"], kept: ["ok", "照旧"]};
+const lossBox = L => (L || []).length ? `<h4 class="pvh">转过去以后</h4>` + L.map(x => `<div class="pvl"><span class="tag ${LOSS_T[x.level][0]}">${LOSS_T[x.level][1]}</span><b>${esc(x.what)}</b><span class="dim">${esc(x.detail)}</span></div>`).join("") : "";
+const lossChips = L => (L || []).filter(x => x.level !== "kept").map(x => `<span class="tag ${LOSS_T[x.level][0]}" title="${esc(x.detail)}">${esc(x.what)}</span>`).join(" ");
+function cvQs(){ return `src=${CV.src}&dst=${CV.dst}&again=${CV.again ? 1 : 0}&export=${CV.export ? 1 : 0}&reasoning=${CV.reasoning ? 1 : 0}&project=${CV.project ? 1 : 0}&desktop=${CV.desktop ? 1 : 0}`; }
+async function cvRun(ids, b){
+  if (b) b.disabled = true;
+  try {
+    const x = await api("/api/convert/run", {src: CV.src, dst: CV.dst, ids, again: CV.again, reasoning: CV.reasoning,
+                                             desktop: CV.desktop, project: CV.project, export: CV.export});
+    closeDlg();
+    if (x.deferred) { doneOrQueued(x); return; }
+    if (x.ok === false) return toast("❌ " + (x.error || "没做成"), 6000);
+    CV.sel.clear(); CV.rows = null; SS.d = null; treeLoad(); R.convert();
+    if (x.mode === "export") cvPaste(x);
+    else toast(`✅ 转好了 ${x.done || 0} 个${(x.errors || []).length ? `，${x.errors.length} 个出错` : ""}（账本 ${x.ledger}，可撤回）`, 7000);
+  } catch(e){ if (b) b.disabled = false; toast("❌ " + e.message, 6000); }
+}
 async function cvDry(thenApply){
   const ids = [...CV.sel];
+  if (thenApply) {                          // 高级里勾了「不预览」：直接做（目标应用开着照样先问 / 排队）
+    let sk = false;
+    try { sk = !!(await api("/api/settings")).convert_skip_preview; } catch(e){}
+    if (sk) { toast(`⏳ 正在${CV.expNow ? "导出" : "转换"} ${ids.length} 个…（设置 → 高级 里关掉「跳过转换前预览」可以恢复预览）`, 4000); return cvRun(ids); }
+  }
   let r;
-  try { r = await api(`/api/convert/plan?src=${CV.src}&dst=${CV.dst}&ids=${encodeURIComponent(ids.join(","))}&again=${CV.again ? 1 : 0}&export=${CV.export ? 1 : 0}`); }
+  try { r = await api(`/api/convert/preview?${cvQs()}&ids=${encodeURIComponent(ids.join(","))}`); }
   catch(e){ return toast("❌ " + e.message); }
-  const rows = r.rows || [], todo = rows.filter(x => x.state === "new"), exp = r.mode === "export";
-  const st = x => { const s = x.stats || {}; return [`${s.user || 0} 问 / ${s.assistant || 0} 答`, s.tools ? `工具 ${s.tools}` : "", s.images ? `图片 ${s.images}` : "",
-    s.thinking ? `思考 ${s.thinking}（${CV.reasoning ? "带上" : "不带"}）` : ""].filter(Boolean).join(" · "); };
-  const html = `<div class="kv"><div>方向</div><div>${logo(r.src)} ${CV_N[r.src]} → ${logo(r.dst)} ${CV_N[r.dst]} <span class="tag ${exp ? "warn" : "ok"}">${exp ? "导出上下文文件" : "原生写入"}</span></div>
-      <div>会${exp ? "导出" : "新建"}</div><div><b>${todo.length}</b> 个${rows.length - todo.length ? `（跳过 ${rows.length - todo.length} 个）` : ""}</div>
-      ${exp ? `<div>写到</div><div><code>${CV.project ? "项目目录/.cc-sessionsync/" : esc((todo[0] || {}).target || "")}</code></div>` : ""}
+  const rows = r.rows || [], todo = rows.filter(x => x.state === "new"), skip = rows.filter(x => x.state !== "new"), exp = r.mode === "export", t = r.total || {};
+  const verb = exp ? "导出" : "转换";
+  const one = x => `<details class="pvr"><summary>${logo(r.src)} ${esc(x.title || x.id)} <span class="dim">· ${x.msgs || 0} 条消息</span> ${lossChips(x.losses)}</summary>
+      <div class="kv" style="margin:6px 0 4px 18px"><div>写到</div><div>${esc(x.target.where)}${x.target.path ? `<br><code>${esc(x.target.path)}</code>` : ""}</div>
+      <div>消息</div><div>${x.stats.user || 0} 问 / ${x.stats.assistant || 0} 答${x.stats.tools ? ` · 工具 ${x.stats.tools}` : ""}${x.span && x.span[0] ? ` · ${esc(when(x.span[0] / 1000))} – ${esc(when(x.span[1] / 1000))}` : ""}</div>
+      ${x.cwd ? `<div>项目</div><div><code>${esc(x.cwd)}</code></div>` : ""}</div>
+      ${(x.losses || []).map(l => `<div class="pvl" style="margin-left:18px"><span class="tag ${LOSS_T[l.level][0]}">${LOSS_T[l.level][1]}</span><b>${esc(l.what)}</b><span class="dim">${esc(l.detail)}</span></div>`).join("")}</details>`;
+  const html = `<div class="kv"><div>方向</div><div>${logo(r.src)} ${CV_N[r.src]} → ${logo(r.dst)} ${CV_N[r.dst]} <span class="tag ${exp ? "warn" : "ok"}">${exp ? "导出上下文文件" : "原生写入"}</span>${exp && r.why ? ` <span class="dim">${esc(r.why)}</span>` : ""}</div>
+      <div>会${exp ? "导出" : "新建"}</div><div><b>${todo.length}</b> 个会话，共 <b>${t.msgs || 0}</b> 条消息（${t.user || 0} 问 / ${t.assistant || 0} 答）${skip.length ? `<span class="dim">，跳过 ${skip.length} 个</span>` : ""}</div>
+      ${todo.length ? `<div>写到</div><div>${(r.dirs || []).slice(0, 4).map(d => `<div><code>${esc(d)}</code></div>`).join("") || esc(todo[0].target.where)}${(r.dirs || []).length > 4 ? `<div class="dim">…等 ${r.dirs.length} 个目录</div>` : ""}</div>` : ""}
       ${r.running && !exp ? `<div>注意</div><div><span class="tag warn">${CV_N[r.dst]} 在运行</span> 点确认后会问要不要关掉它再写（或等它退出后自动写）</div>` : ""}</div>
-    <div class="diff updn" style="margin-top:10px">${rows.map(x => `<div class="${x.state === "new" ? "a" : x.error ? "d" : ""}">${x.state === "new" ? "+ " : "  "}${esc((CV_LAB[x.state] || ["", x.state])[1])}  ${esc(x.title || x.id)}${x.stats ? "  (" + st(x) + ")" : ""}${x.error ? "  " + esc(x.error) : ""}</div>`).join("") || "（没有）"}</div>
-    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是演练，还什么都没写。${esc(CV_N[r.src])} 的数据只读；${exp ? "只写文件，不碰目标应用的数据。" : "目标只新建会话，写之前先备份，账本可撤回。"}</div>`;
-  openDlg(thenApply ? "确认转换" : "演练结果", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${todo.length ? `<button class="primary" id="cvApply">${ic(exp ? "download" : "shuffle")} 确认${exp ? "导出" : "转换"} ${todo.length} 个</button>` : ""}`);
+    ${lossBox(r.summary)}
+    ${todo.length ? `<h4 class="pvh">每个会话（点开看具体路径）</h4><div class="scroll" style="max-height:240px">${todo.map(one).join("")}</div>` : ""}
+    ${skip.length ? `<details style="margin-top:6px"><summary class="dim" style="cursor:pointer">跳过的 ${skip.length} 个</summary><div class="diff updn">${skip.map(x => `<div class="${x.error ? "d" : ""}">${esc((CV_LAB[x.state] || ["", x.state])[1])}  ${esc(x.title || x.id)}${x.error ? "  " + esc(x.error) : ""}</div>`).join("")}</div></details>` : ""}
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">这是预览，还什么都没写。${esc(CV_N[r.src])} 的数据只读；${exp ? "只写文件，不碰目标应用的数据。" : "目标只新建会话，写之前先备份，账本可撤回。"}</div>
+    ${thenApply && todo.length ? `<label class="dim" style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:calc(13px*var(--fk))"><input type="checkbox" id="cvSkip"> 以后不预览，直接${verb}（在 设置 → 高级 里能改回来）</label>` : ""}`;
+  $("#dlg").classList.add("pvw");
+  openDlg(thenApply ? `${verb}前预览` : "预览（演练）", html, `<button onclick="closeDlg()">${thenApply ? "取消" : "关闭"}</button>${todo.length ? `<button class="primary" id="cvApply">${ic(exp ? "download" : "shuffle")} 确认${verb} ${todo.length} 个</button>` : ""}`);
   const b = $("#cvApply");
   if (b) b.onclick = async () => {
-    b.disabled = true;
-    try {
-      const x = await api("/api/convert/run", {src: CV.src, dst: CV.dst, ids: todo.map(t => t.id), again: CV.again, reasoning: CV.reasoning,
-                                               desktop: CV.desktop, project: CV.project, export: CV.export});
-      closeDlg();
-      if (x.deferred) { doneOrQueued(x); return; }
-      if (x.ok === false) return toast("❌ " + (x.error || "没做成"), 6000);
-      CV.sel.clear(); CV.rows = null; SS.d = null; treeLoad(); R.convert();
-      if (x.mode === "export") cvPaste(x);
-      else toast(`✅ 转好了 ${x.done || 0} 个${(x.errors || []).length ? `，${x.errors.length} 个出错` : ""}（账本 ${x.ledger}，可撤回）`, 7000);
-    } catch(e){ b.disabled = false; toast("❌ " + e.message, 6000); }
+    if ($("#cvSkip") && $("#cvSkip").checked) { try { await api("/api/settings", {convert_skip_preview: true}); } catch(e){} }
+    cvRun(todo.map(x => x.id), b);
   };
 }
 function cvPaste(x){
@@ -2446,6 +2477,8 @@ R.settings = async () => {
       ${setRow("refresh", "自动检查更新", "每 6 小时最多查一次 GitHub 发布页。<b>只提示，不会自动安装</b>：有新版本时托盘弹一次通知、按钮上出红点，点「立即更新」才下载安装", sw("stUpd", s.update_auto))}
       ${setRow("info", `当前版本 v${esc(u.current)}`, u.checked ? `上次检查 ${when(u.checked)}：${u.error ? esc(u.error) : u.newer ? `有新版本 v${esc(u.latest)}${u.ignored === u.latest ? "（已忽略）" : ""}` : "已经是最新"}` : "还没检查过",
         `<button class="tbx has-dot-able${u.badge ? " has-dot" : ""}" id="setUpd" style="position:relative;background:var(--hover);color:var(--text);padding:5px 12px">${ic("refresh")} 检查更新<span class="rdot"></span></button>`)}</div></div>
+    <details class="card adv" id="stAdv"${s.convert_skip_preview ? " open" : ""}><summary><h3>高级</h3><span class="dim">一般用不着改</span></summary><div class="setlist">
+      ${setRow("eye", "跳过转换前预览", "缺省关：会话转换 / 导出之前先弹预览（写到哪、多少条消息、会丢 / 会变什么），确认了才写。打开后点「转换选中的」直接做；「预览」按钮照样能看", sw("stSkipPv", s.convert_skip_preview))}</div></details>
     <div class="card"><h3>数据</h3><div class="kv"><div>本程序数据</div><div><code>${esc(st.home)}</code> <button class="ghost" id="stRev" style="padding:1px 6px">${ic("folder")}</button></div>
       <div>Claude Code</div><div><code>${esc(st.claude_home)}</code></div><div>Codex</div><div><code>${esc(st.codex_home)}</code></div></div>
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
@@ -2454,7 +2487,7 @@ R.settings = async () => {
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
-  bind("#stMark", "codex_mark_imported"); bind("#stUpd", "update_auto");
+  bind("#stMark", "codex_mark_imported"); bind("#stUpd", "update_auto"); bind("#stSkipPv", "convert_skip_preview");
   $("#stBk").onchange = e => { $("#stBkE").disabled = $("#stBkU").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
   const stEv = async () => { const r = await saveSetting({session_backup_every: +$("#stBkE").value, session_backup_unit: $("#stBkU").value}); if (!r) R.settings(); };
   $("#stBkE").onchange = stEv; $("#stBkU").onchange = stEv;

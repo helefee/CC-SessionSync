@@ -245,8 +245,9 @@ def _items_v2(rows) -> list[dict]:
         if t == "user":
             files = d.get("files") or []
             imgs = sum(1 for f in files if isinstance(f, dict) and str(f.get("mime") or f.get("mediaType") or "").startswith("image/"))
-            if d.get("text") or imgs:
-                items.append({"role": "user", "kind": "text", "text": d.get("text") or "", "ts": ts, "images": imgs or None})
+            fls = sum(1 for f in files if isinstance(f, dict)) - imgs
+            if d.get("text") or imgs or fls:
+                items.append({"role": "user", "kind": "text", "text": d.get("text") or "", "ts": ts, "images": imgs or None, "files": fls or None})
         elif t == "assistant":
             mdl = _model(d.get("model"))
             for c in d.get("content") or []:
@@ -275,7 +276,7 @@ def _items_v1(msgs, parts_by: dict) -> list[dict]:
         mdl = _model({"providerID": d.get("providerID") or d.get("providerId"), "id": d.get("modelID") or d.get("modelId")}) \
             if role == "assistant" else None
         ts = (d.get("time") or {}).get("created") or m["time_created"]
-        imgs, texts = 0, []
+        imgs, fls, texts = 0, 0, []
         for p in parts_by.get(m["id"], []):
             pd = _j(p["data"]) or {}
             pt = pd.get("type")
@@ -293,8 +294,10 @@ def _items_v1(msgs, parts_by: dict) -> list[dict]:
                               "error": _clip(st.get("error")) if st.get("error") else None, "ts": ts, "model": mdl})
             elif pt == "file" and str(pd.get("mime") or pd.get("mediaType") or "").startswith("image/"):
                 imgs += 1
-        if role == "user" and (texts or imgs):
-            items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None})
+            elif pt == "file" and role == "user":
+                fls += 1
+        if role == "user" and (texts or imgs or fls):
+            items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None})
     return items
 
 
