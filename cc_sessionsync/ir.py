@@ -297,7 +297,7 @@ def turns(h: dict, items: list[dict], reasoning: bool = False, out_lines: int = 
         push("user", f"（{lab} 的这个会话是空的。）", h.get("created"))
     if out[-1][0] == "user":
         push("assistant", f"（{LABEL.get(src, src)} 那边到这里还没有回复。导入到此为止。）", out[-1][2])
-    return out, dict(st, turns=len(out), title=title)
+    return out, dict(st, turns=len(out), title=title, user_turns=sum(1 for t in out if t[0] == "user"))
 
 
 def _texts(parts) -> str:

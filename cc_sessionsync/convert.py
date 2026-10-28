@@ -515,6 +515,30 @@ def _to_opencode(h, items, opts, led) -> dict:
 WRITERS = {"claude": _to_claude, "codex": _to_codex, "dsh": _to_dsh, "opencode": _to_opencode}
 
 
+def check_written(dst: str, out: dict) -> dict:
+    """转换后自检（0.4.1）：按目标应用读会话的规矩把刚写的再读一遍（nativecheck）。出错不影响已经写好的会话，只报出来。"""
+    from . import nativecheck as NC
+    want = NC.expect(out.get("stats") or {})
+    try:
+        if dst == "claude":
+            return NC.check_claude(Path(out["file"]), want)
+        if dst == "codex":
+            return NC.check_codex(Path(out["file"]), want, Path(out["index"]) if out.get("index") else None)
+        if dst == "dsh":
+            return NC.check_dsh(Path(out["file"]), want)
+        if dst == "opencode":
+            return NC.check_opencode(out["id"], out.get("cli"), out.get("cli_major") or 2, want, out.get("cwd"))
+    except Exception as e:
+        return {"ok": False, "issues": [f"自检本身出错：{type(e).__name__}: {e}"], "by": "自检"}
+    return {"ok": True, "issues": [], "by": "（这个目标不查）", "skipped": True}
+
+
+def _kept(st: dict) -> dict:
+    """结果里给人看的：工具调用多少按原样写、多少当文字；图片带过去几张；思考按原样几段。"""
+    return {"tools": st.get("tools", 0), "tools_native": st.get("tools_native", 0), "images": st.get("images", 0),
+            "images_kept": st.get("images_kept", 0), "reasoning_native": st.get("reasoning_native", 0)}
+
+
 def _safe(s: str) -> str:
     return re.sub(r'[\\/:*?"<>|\s]+', "-", s or "").strip("-")[:40] or "session"
 
@@ -719,14 +743,16 @@ def run(src: str, ids: list[str], dst: str, dry: bool = True, again: bool = Fals
             h, items = load_ir(src, r["id"])
             out = _export(h, items, dst, opts) if p["mode"] == "export" else WRITERS[dst](h, items, opts, led)
             out.update(agent=dst, src_id=r["id"])
+            if p["mode"] == "native":
+                out["check"] = check_written(dst, out)
             led["created"].append(out)
             if p["mode"] == "native":
                 led["map_before"][k] = mp.get(k)
                 mp[k] = {"id": out["id"], "file": out.get("file"), "sha": out.get("sha"), "src_sig": r.get("sig"), "title": out["title"],
                          "cwd": out.get("cwd"), "time": time.time(), "ledger": led_dir.name}
                 _save(MAP, mp)
-            r.update({x: out.get(x) for x in ("id", "file", "title", "resume", "paste", "turns")}, id=r["id"], target_id=out.get("id"),
-                     done=True)
+            r.update({x: out.get(x) for x in ("id", "file", "title", "resume", "paste", "turns", "check")}, id=r["id"], target_id=out.get("id"),
+                     done=True, kept=_kept(out.get("stats") or {}))
             done += 1
         except Exception as e:
             led["errors"].append(f"{r['id']}：{type(e).__name__}: {e}")
