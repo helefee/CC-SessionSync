@@ -2642,7 +2642,7 @@ R.settings = async () => {
         `<button class="tbx has-dot-able${u.badge ? " has-dot" : ""}" id="setUpd" style="position:relative;background:var(--hover);color:var(--text);padding:5px 12px">${ic("refresh")} 检查更新<span class="rdot"></span></button>`)}</div></div>
     <details class="card adv" id="stAdv"${s.convert_skip_preview || s.backup_clean_auto || ST.advOpen ? " open" : ""}><summary><h3>高级</h3><span class="dim">一般用不着改</span></summary><div class="setlist">
       ${setRow("eye", "跳过转换前预览", "缺省关：会话转换 / 导出之前先弹预览（写到哪、多少条消息、会丢 / 会变什么），确认了才写。打开后点「转换选中的」直接做；「预览」按钮照样能看", sw("stSkipPv", s.convert_skip_preview))}
-      ${setRow("trash", "自动清理旧的配置备份", `缺省关。<code>backups</code> 文件夹里是改配置文件之前留的备份（不是会话备份）。打开后每天看一次：删掉比 N 天旧的、总共超过 M MB 时从最旧的删（填 0 = 不按这个删）。<b>每个文件最新的一份永远留着</b>。想先看看会删什么：用下面「数据」里的「清理…」`,
+      ${setRow("trash", "自动清理旧的配置备份", `缺省关。<code>backups</code> 里是改配置文件前留的备份（不是会话备份）。打开后每天清一次：删比 N 天旧的；总共超过 M MB 时从最旧的删（0 = 不按这个）。<b>每个文件最新的一份永远留着</b>。先看会删什么：「数据」→「清理…」`,
         `<span class="numu"><input type="number" id="stBcD" min="0" value="${esc(s.backup_clean_days ?? 90)}" ${s.backup_clean_auto ? "" : "disabled"}> 天<input type="number" id="stBcM" min="0" value="${esc(s.backup_clean_mb ?? 0)}" ${s.backup_clean_auto ? "" : "disabled"}> MB</span>${sw("stBc", s.backup_clean_auto)}`)}</div></details>
     <div class="card"><h3>数据</h3><div class="kv"><div>本程序数据</div><div><code>${esc(st.home)}</code> <button class="ghost" id="stRev" style="padding:1px 6px">${ic("folder")}</button></div>
       <div>Claude Code</div><div><code>${esc(st.claude_home)}</code></div><div>Codex</div><div><code>${esc(st.codex_home)}</code></div>
