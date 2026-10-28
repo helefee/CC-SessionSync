@@ -537,7 +537,11 @@ class H(BaseHTTPRequestHandler):
             b = {}
         p = urlparse(self.path).path
         try:
-            r = self._post(p, b)
+            try:
+                r = self._post(p, b)
+            finally:
+                from . import sessions as _ss
+                _ss.invalidate()
             if r is not None:
                 code = 200
                 if isinstance(r, tuple):
@@ -548,6 +552,11 @@ class H(BaseHTTPRequestHandler):
         self._json({"error": "not found"}, 404)
 
     def _post(self, p: str, b: dict):
+        try:                                                   # 0.4.0：改东西之后，下次要会话列表一定重新看
+            from . import sessions as _ss
+            _ss.invalidate()
+        except Exception:
+            pass
         if p == "/api/sync":
             return sync_now(b.get("to") or None, b.get("only"), b.get("source") or None)
         if p == "/api/restore":

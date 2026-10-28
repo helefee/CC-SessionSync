@@ -474,7 +474,13 @@ def list_all(agent: str | None = None) -> dict:
 # 回给界面的 JSON 第一个键固定是 "stale"，启动时把快照开头的 {"stale": false 换成 {"stale": true, "cached_at": …}，不用整个解析一遍。
 
 SERIALIZE = None                 # ui 设：把对象变成回给页面的 bytes（账号打码）；没设就是普通 JSON
-_LIST = {"bytes": None, "at": 0.0, "gen": 0, "sig": None, "refreshing": False, "booted": False, "snap": None}
+_LIST = {"bytes": None, "at": 0.0, "gen": 0, "sig": None, "refreshing": False, "booted": False, "snap": None, "dirty": 0.0}
+REUSE_S = 2.0                    # 两秒内又要（页面一打开常常连着要两次）：直接用刚算好的，除非中间改过东西（invalidate）
+
+
+def invalidate() -> None:
+    """改了会话（改名 / 删除 / 转换 / 同步……）之后：下一次要列表一定重新看。界面每个 POST 都会调。"""
+    _LIST["dirty"] = time.time()
 _list_lock = threading.Lock()
 SLIM_DROP = ("file", "resume")   # 列表里不带；点开会话时再要（/api/sessions/item）
 FIRST_MAX = 120
@@ -515,7 +521,8 @@ def _sig(res: dict) -> int:
 def _compute(asked: float) -> bytes:
     """同一时间只算一份；排队等的请求，如果在它开口之后已经有人算好了，直接用。没变就用上次序列化好的。"""
     with _list_lock:
-        if _LIST["bytes"] is not None and _LIST["snap"] is None and _LIST["at"] >= asked:
+        if _LIST["bytes"] is not None and _LIST["snap"] is None and (
+                _LIST["at"] >= asked or (asked - _LIST["at"] < REUSE_S and _LIST["at"] > _LIST["dirty"])):
             return _LIST["bytes"]
         res = _slim(list_all())
         sig = _sig(res)

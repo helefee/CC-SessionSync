@@ -110,9 +110,13 @@ t = {x["id"]: x for x in v3["items"]}
 ok(t[SIDS[5]]["title"] == "改过的标题" and NEW in t and len(v3["items"]) == n0 + 1, "changes show up")
 # 程序开着的时候：马上就是新的（不是快照）
 NEW2 = str(uuid.uuid4()); claude(NEW2, "又一个", "x", days=0.01)
-ok(any(x["id"] == NEW2 for x in S.list_parsed()["items"]), "while running: new session visible on the next request")
+READS.clear(); S.list_parsed(); S.list_parsed()
+ok(not READS, "two requests within 2 s share one computation")
+S._LIST["at"] -= S.REUSE_S + 0.1
+ok(any(x["id"] == NEW2 for x in S.list_parsed()["items"]), "while running: new session visible once the 2 s window passed")
 (H / ".claude" / "projects" / "-proj" / f"{NEW2}.jsonl").unlink()
-ok(not any(x["id"] == NEW2 for x in S.list_parsed()["items"]), "deleted session disappears")
+ui.H._post(None, "/api/settings", {})            # 任何 POST 之后：下次一定重新看
+ok(not any(x["id"] == NEW2 for x in S.list_parsed()["items"]), "after a POST the list is recomputed at once (deleted session gone)")
 
 # ---------- 坏缓存 / 上限 / 空闲放内存 ----------
 relaunch()
