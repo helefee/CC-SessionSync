@@ -557,7 +557,7 @@ def _facts(items: list[dict]) -> dict:
 
 def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> list[dict]:
     """→ [{level: lost | changed | kept, what, detail}]：这个会话转过去以后，哪些没了、哪些变了样、哪些照旧。"""
-    L, app, to = [], ir.LABEL.get(src, src), ir.LABEL.get(dst, dst)
+    L, app, to = [], ir.LABEL.get(src, "来源应用"), ir.LABEL.get(dst, dst)
     exp = mode == "export"
     if f.get("images"):
         L.append({"level": "lost", "what": f"图片 {f['images']} 张", "detail": "不带过去，原位置换成「[图片 ×N，没有带过来]」"})
@@ -585,8 +585,8 @@ def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> l
         L.append({"level": "changed", "what": "不进会话列表", "detail": f"只写一个 Markdown 上下文文件；在 {to} 里新开对话，粘贴提示 + 把文件 @ 进去"})
         L.append({"level": "lost", "what": "时间 / 模型 / 用量", "detail": "上下文文件里只有对话文字"})
     else:
-        L.append({"level": "changed", "what": "模型名和 token 用量", "detail": f"不带：新会话里记成「{src}-import」、0 token（不算进用量）"})
-        L.append({"level": "changed", "what": "标题", "detail": f"加来源前缀「{ir.PREFIX.get(src, '')}」，以后不会被转回 {app}"})
+        L.append({"level": "changed", "what": "模型名和 token 用量", "detail": f"不带：新会话里记成「{src if src in ir.LABEL else '<来源>'}-import」、0 token（不算进用量）"})
+        L.append({"level": "changed", "what": "标题", "detail": f"加来源前缀「{ir.PREFIX.get(src, '（来源应用）')}」，以后不会被转回 {app}"})
         L.append({"level": "kept", "what": "对话文字和时间", "detail": "用户 / 助手的文字原样带过去；相邻的同一方合并成一轮；时间照旧"})
     return L
 
@@ -674,7 +674,7 @@ def _new_ledger(what: str) -> tuple[Path, dict]:
 
 
 def run(src: str, ids: list[str], dst: str, dry: bool = True, again: bool = False, reasoning: bool = False,
-        desktop: bool = True, to: str | None = None, project: bool = False, export: bool = False) -> dict:
+        desktop: bool = True, to: str | None = None, project: bool = False, export: bool = False, progress=None) -> dict:
     """src 的这几个会话 → dst。dry=True 只演练（算出要写什么，不写）。export=True：能原生写也只导出上下文文件。"""
     p = plan(src, ids, dst, again)
     if export and p["mode"] == "native":
@@ -714,6 +714,8 @@ def run(src: str, ids: list[str], dst: str, dry: bool = True, again: bool = Fals
             led["errors"].append(f"{r['id']}：{type(e).__name__}: {e}")
             r["error"] = f"{type(e).__name__}: {e}"
         _save(led_dir / "ledger.json", led)
+        if progress:
+            progress(src, r)
     _save(led_dir / "ledger.json", led)
     try:
         from . import events
@@ -723,7 +725,118 @@ def run(src: str, ids: list[str], dst: str, dry: bool = True, again: bool = Fals
                        {"page": "convert"})
     except Exception:
         pass
+    try:
+        from . import xsearch
+        xsearch.forget()
+    except Exception:
+        pass
     return dict(p, dry=False, done=done, errors=led["errors"], ledger=led_dir.name, ledger_path=str(led_dir))
+
+
+# ---------- 批量：好几个应用的会话一起转到一个目标（0.3.7） ----------
+
+def _groups(items: list[dict], dst: str) -> dict[str, list[str]]:
+    g: dict[str, list[str]] = {}
+    for it in items:
+        a, i = str(it.get("agent") or it.get("src") or ""), str(it.get("id") or "")
+        if a not in AGENTS:
+            raise ValueError(f"不认识的应用 {a}")
+        if i and a != dst and i not in g.setdefault(a, []):
+            g[a].append(i)
+    return {a: v for a, v in g.items() if v}
+
+
+def batch_preview(items: list[dict], dst: str, again: bool = False, reasoning: bool = False, project: bool = False,
+                  export: bool = False, desktop: bool = True) -> dict:
+    """items = [{agent, id}]（可以来自不同应用）→ 合起来的预览。和目标是同一个应用的跳过。"""
+    if dst not in AGENTS:
+        raise ValueError("目标只能是 " + " / ".join(AGENTS))
+    g = _groups(items, dst)
+    same = sum(1 for it in items if str(it.get("agent") or it.get("src")) == dst)
+    rows, tot, dirs, out = [], {}, set(), {"mode": None, "why": None, "paste": None, "running": False}
+    for src, ids in g.items():
+        p = preview(src, ids, dst, again=again, reasoning=reasoning, project=project, export=export, desktop=desktop)
+        for r in p["rows"]:
+            r["src"] = src
+        rows += p["rows"]
+        for k, v in p["total"].items():
+            tot[k] = tot.get(k, 0) + v
+        dirs |= set(p["dirs"])
+        out.update(mode=out["mode"] or p["mode"], why=out["why"] or p["why"], paste=out["paste"] or p["paste"], running=out["running"] or p["running"])
+    if not g:
+        out.update(mode=mode(dst)[0] if not export else "export")
+    tot = tot or {"sessions": 0, "msgs": 0, "user": 0, "assistant": 0, "tools": 0, "thinking": 0, "images": 0, "files": 0, "long_out": 0}
+    src1 = next(iter(g)) if len(g) == 1 else "*"
+    summary = losses(dict(tot, tool_errors=0, long_in=0), src1, dst, out["mode"] or "native", reasoning) if tot.get("sessions") else []
+    counts: dict[str, int] = {}
+    for r in rows:
+        counts[r["state"]] = counts.get(r["state"], 0) + 1
+    return dict(out, dst=dst, rows=rows, total=tot, summary=summary, dirs=sorted(dirs), counts=counts, same_app=same,
+                apps={a: len(v) for a, v in g.items()}, preview=True, reasoning=reasoning, project=project, export=export)
+
+
+def batch_run(items: list[dict], dst: str, again: bool = False, reasoning: bool = False, desktop: bool = True, to: str | None = None,
+              project: bool = False, export: bool = False, progress=None) -> dict:
+    """真做：每个来源应用一本账（撤回时一本一本撤）。progress(done, total, row) 每做完一个调一次。"""
+    g = _groups(items, dst)
+    total, done_n, res = sum(len(v) for v in g.values()), [0], {"done": 0, "errors": [], "ledgers": [], "rows": [], "mode": None, "paste": None}
+    for src, ids in g.items():
+        def step(s, r):
+            done_n[0] += 1
+            if progress:
+                progress(done_n[0], total, dict(r, src=s))
+        r = run(src, ids, dst, dry=False, again=again, reasoning=reasoning, desktop=desktop, to=to, project=project, export=export, progress=step)
+        res["done"] += r.get("done") or 0
+        res["errors"] += [f"{ir.LABEL.get(src, src)} {e}" for e in r.get("errors") or []]
+        if r.get("ledger"):
+            res["ledgers"].append(r["ledger"])
+        res["rows"] += [dict(x, src=src) for x in r.get("rows") or []]
+        res.update(mode=res["mode"] or r.get("mode"), paste=res["paste"] or r.get("paste"))
+        skipped = len(ids) - len([x for x in r.get("rows") or [] if x.get("state") == "new"])
+        done_n[0] += max(0, skipped)
+        if progress and skipped:
+            progress(done_n[0], total, None)
+    try:
+        from . import xsearch
+        xsearch.forget()
+    except Exception:
+        pass
+    return dict(res, ok=True, dst=dst, total=total, apps={a: len(v) for a, v in g.items()})
+
+
+_JOBS: dict[str, dict] = {}
+
+
+def batch_start(**kw) -> dict:
+    """后台做批量转换，前端轮询 batch_status 看进度。"""
+    import threading
+    jid = uuid.uuid4().hex[:10]
+    st = {"id": jid, "state": "running", "done": 0, "total": sum(len(v) for v in _groups(kw.get("items") or [], kw.get("dst") or "").values()),
+          "current": None, "result": None, "error": None, "started": time.time()}
+    _JOBS[jid] = st
+
+    def prog(n, total, r):
+        st.update(done=n, total=total, current=(r or {}).get("title") if r else st["current"])
+        if r and r.get("error"):
+            st.setdefault("errs", []).append(r["error"])
+
+    def work():
+        try:
+            st["result"] = batch_run(progress=prog, **kw)
+            st["state"] = "done"
+        except Exception as e:
+            st.update(state="error", error=f"{type(e).__name__}: {e}")
+    threading.Thread(target=work, daemon=True, name="ccss-convert-batch").start()
+    for k in [k for k, v in _JOBS.items() if v["state"] != "running" and time.time() - v["started"] > 3600]:
+        _JOBS.pop(k, None)
+    return {"ok": True, "job": jid, "total": st["total"], "deferred": False}
+
+
+def batch_status(jid: str) -> dict:
+    st = _JOBS.get(jid)
+    if not st:
+        return {"ok": False, "error": "找不到这个任务（程序重启过？）"}
+    return dict(st, ok=True)
 
 
 # ---------- 账本 / 撤回 ----------

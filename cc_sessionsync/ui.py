@@ -398,8 +398,16 @@ class H(BaseHTTPRequestHandler):
                 yes = lambda k: q.get(k) in ("1", "true")
                 return convert.preview(q.get("src") or "", ids, q.get("dst") or "", again=yes("again"), reasoning=yes("reasoning"),
                                        project=yes("project"), export=yes("export"), desktop=q.get("desktop") not in ("0", "false"))
+            if p == "/api/convert/batch/status":
+                return convert.batch_status(q.get("id") or "")
             if p == "/api/convert/ledgers":
                 return convert.ledgers()
+        if p == "/api/xsearch":                          # 跨应用搜索（0.3.7）
+            from . import xsearch
+            num = lambda k: float(q[k]) if (q.get(k) or "").strip() else None
+            return xsearch.search(q.get("q") or "", [a for a in (q.get("agents") or "").split(",") if a] or None, q.get("project") or "",
+                                  num("since"), num("until"), q.get("content") in ("1", "true"), q.get("sub") in ("1", "true"),
+                                  int(q.get("limit") or 500), q.get("force") in ("1", "true"))
         if p == "/api/diag":
             return diag()
         if p == "/api/jobs":
@@ -542,6 +550,17 @@ class H(BaseHTTPRequestHandler):
             if k:
                 return apps.run_or_defer(k, "convert-run", kw, f"把 {len(kw['ids'])} 个 {ir.LABEL.get(kw['src'], kw['src'])} 会话转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
             return dict(convert.run(dry=False, **kw), deferred=False)
+        if p in ("/api/convert/batch/preview", "/api/convert/batch/run"):     # 好几个应用的会话一起转（0.3.7）
+            from . import convert, ir
+            its = [{"agent": str(x.get("agent") or ""), "id": str(x.get("id") or "")} for x in (b.get("items") or []) if isinstance(x, dict)]
+            kw = {"items": its, "dst": str(b.get("dst") or ""), "again": bool(b.get("again")), "reasoning": bool(b.get("reasoning")),
+                  "project": bool(b.get("project")), "export": bool(b.get("export")), "desktop": b.get("desktop", True) is not False}
+            if p.endswith("preview"):
+                return convert.batch_preview(**kw)
+            k = None if kw["export"] else convert.needs_close(kw["dst"], kw["desktop"])
+            if k:
+                return apps.run_or_defer(k, "convert-batch", kw, f"把 {len(its)} 个会话批量转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
+            return convert.batch_start(**kw)
         if p == "/api/convert/undo":
             from . import convert
             k = convert.undo_needs_close(str(b.get("ledger")))
