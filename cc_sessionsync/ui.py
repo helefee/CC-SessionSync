@@ -408,6 +408,11 @@ class H(BaseHTTPRequestHandler):
             return xsearch.search(q.get("q") or "", [a for a in (q.get("agents") or "").split(",") if a] or None, q.get("project") or "",
                                   num("since"), num("until"), q.get("content") in ("1", "true"), q.get("sub") in ("1", "true"),
                                   int(q.get("limit") or 500), q.get("force") in ("1", "true"))
+        if p in ("/api/formats", "/api/formats/banner"):     # 格式自检（0.3.8）
+            from . import formats
+            if p.endswith("banner"):
+                return {"banner": formats.banner()}
+            return formats.check_all(force=q.get("force") in ("1", "true"))
         if p == "/api/diag":
             return diag()
         if p == "/api/jobs":
@@ -561,6 +566,9 @@ class H(BaseHTTPRequestHandler):
             if k:
                 return apps.run_or_defer(k, "convert-batch", kw, f"把 {len(its)} 个会话批量转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
             return convert.batch_start(**kw)
+        if p == "/api/formats/seen":
+            from . import formats
+            return formats.seen()
         if p == "/api/convert/undo":
             from . import convert
             k = convert.undo_needs_close(str(b.get("ledger")))
@@ -799,6 +807,7 @@ def start_background(auto_sync: bool | None = None) -> None:
 
     def loop():
         events.poll_jobs()
+        fmt_at = time.time() - 6 * 3600 + 60          # 格式自检（0.3.8）：启动 1 分钟后一次，之后每 6 小时；只在问题变了时通知
         while True:
             try:
                 on = settings.get("auto_sync", False) if auto_sync is None else auto_sync
@@ -808,6 +817,10 @@ def start_background(auto_sync: bool | None = None) -> None:
                         events.add("auto-sync", f"已自动同步 {ev['added']} 个会话到当前账号",
                                    "、".join(ev.get("titles") or [])[:180] or f"账号 {ev.get('account')}", {"page": "sync"})
                 events.poll_jobs()
+                if time.time() - fmt_at > 6 * 3600 and not os.environ.get("CC_SESSIONSYNC_NO_FORMATS"):
+                    fmt_at = time.time()
+                    from . import formats
+                    formats.check_all(force=True)
                 v = update.should_notify()
                 if v:
                     events.add("update", f"CC Session Sync 有新版本 {v}", "点这里查看；不会自动安装，点「立即更新」才装", {"page": "update"})

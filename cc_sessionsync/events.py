@@ -9,6 +9,7 @@
     update        有新版本
     backup        会话自动备份完成（只在有新内容时）
     selfcheck     自检有失败项
+    format        有应用的存储格式变了，会话读不全（formats.py，同样的问题只提醒一次）
 """
 from __future__ import annotations
 

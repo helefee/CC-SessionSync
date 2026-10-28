@@ -110,6 +110,7 @@ details.adv>summary h3{margin:0}details.adv>summary::before{content:"▸";color:
 .xsa button.on{opacity:1;background:var(--accent-weak);color:var(--accent);border-color:var(--accent)}.xsa .n{font-variant-numeric:tabular-nums;color:var(--muted);font-size:calc(12px*var(--fk))}
 .xsck{display:inline-flex;gap:6px;align-items:center;white-space:nowrap}.xsn{white-space:normal!important;color:var(--muted)}.xsn mark{background:var(--warn-weak);color:inherit;border-radius:3px}
 #cvList .more{padding:8px;text-align:center}.pbar{height:10px;border-radius:99px;background:var(--hover);overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.ban.bad{border-color:var(--bad);background:var(--bad-weak)}.fmtt td{vertical-align:top}
 .pvr{border-top:1px solid var(--line);padding:5px 0}.pvr summary{cursor:pointer}.pvr code{word-break:break-all}
 .tag.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-weak)}.tag.acc{color:var(--accent);border-color:var(--accent);background:var(--accent-weak)}
 table.t{width:100%;border-collapse:collapse;font-size:calc(13.5px*var(--fk))}
@@ -816,10 +817,11 @@ const PAGE_ALIAS = {codex: ["codex", "claude"], dsh: ["dsh", "claude"], cursor: 
 function goTo(p, o){
   o = o || {};
   if (p === "timeline" && o.tab) tbSetTab(o.tab);
+  ST.goArgs = p === "diag" ? o : null;
   const a = PAGE_ALIAS[p];
   if (a || (p === "convert" && (o.src || o.dst))) {
     const src = o.src || (a && a[0]), dst = o.dst || (a && a[1]);
-    if (src && CV_AG.includes(src) && src !== CV.src) { CV.src = src; CV.rows = null; CV.sel.clear(); }
+    if (src && (CV_AG.includes(src) || src === "all") && src !== CV.src) { CV.src = src; CV.rows = null; CV.sel.clear(); }
     if (dst && CV_AG.includes(dst) && dst !== CV.src) CV.dst = dst;
     if (CV.dst === CV.src) CV.dst = CV.src === "claude" ? "codex" : "claude";
     p = "convert";
@@ -938,6 +940,10 @@ function renderBans(){
       <ul class="lglist">${(lg.done || []).slice(0, 8).map(x => `<li>${esc(x)}</li>`).join("")}${(lg.done || []).length > 8 ? `<li class="dim">还有 ${lg.done.length - 8} 项…</li>` : ""}</ul>
       <div class="dim">改之前的文件都备份在 <code>${esc(lg.home || "~/.cc-sessionsync")}/backups</code>${(lg.errors || []).length ? `；有 ${lg.errors.length} 项没做成：${esc(lg.errors.join("；").slice(0, 200))}` : ""}</div></div>
       <div class="acts"><button class="primary" data-lg="ok">知道了</button></div></div>`);
+  const fm = ST.fmt;                       // 0.3.8：有应用的存储格式变了，会话读不全
+  if (fm) out.push(`<div class="ban ${fm.level === "fail" ? "bad" : "warn"}" id="banFmt">${ic("warn")}<div class="tx"><b>${esc(fm.apps.join("、"))} 的会话格式和本程序认识的不一样${fm.unread ? `，${fm.unread} 个会话读不出来` : "，可能读不全"}</b>
+      <div class="dim">${esc(fm.text.slice(0, 220))}</div></div>
+      <div class="acts"><button class="primary" data-fm="diag">看诊断</button><button class="ghost" data-fm="ok">知道了</button></div></div>`);
   const cr = ST.cr;
   if (cr) out.push(`<div class="ban acc">${ic("power")}<div class="tx">正在关闭 ${esc(cr.app)} 并执行排队的改动，做完自动重新打开…</div><div class="acts"><button data-crv="${esc(cr.id)}">查看进度</button></div></div>`);
   else if (ST.jobs) out.push(`<div class="ban">${ic("pause")}<div class="tx">${ST.jobs} 个改动在排队：等${ST.jobKinds.map(k => APPN[k] || k).join(" / ")} 桌面端完全退出后自动做（会弹通知）</div><div class="acts">${ST.jobKinds.map(k => `<button class="primary" data-crk="${esc(k)}">${ic("power")} 关闭 ${APPN[k] || k} 并执行（完成后重启）</button>`).join("")}<button data-j="1">查看</button></div></div>`);
@@ -960,6 +966,8 @@ function renderBans(){
     if (page === "codex" || (page === "convert" && a.open.src === "codex")) { goTo("convert", {src: "codex", dst: "claude"}); return; }     // Codex 换号：会话转换（Codex → Claude Code）按新账号重新看一遍
     go("sync"); syncSelected(true);
   });
+  $$("#bans [data-fm]").forEach(b => b.onclick = async () => { if (b.dataset.fm === "diag") return goTo("diag", {fmt: 1});
+    ST.fmt = null; renderBans(); try { await api("/api/formats/seen", {}); } catch(e){} });
   $$("#bans [data-lg]").forEach(b => b.onclick = async () => { ST.legacy = null; renderBans(); try { await api("/api/legacy/seen", {}); } catch(e){} });
   $$("#bans [data-j]").forEach(b => b.onclick = () => ccOpen("jobs"));
   $$("#bans [data-crk]").forEach(b => b.onclick = () => crAsk({kind: b.dataset.crk, banner: true}));
@@ -2684,9 +2692,12 @@ R.diag = async () => {
       ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}${dirRow("DeepSeek Harness", "dsh_home", d.dsh_home || "")}${dirRow("Cursor（User）", "cursor_user_dir", d.cursor_user_dir || "")}${dirRow("Cursor（~/.cursor）", "cursor_home", d.cursor_home || "")}${dirRow("OpenCode", "opencode_dir", d.opencode_dir || "")}${dirRow("ZCode", "zcode_dir", d.zcode_dir || "")}
       <div class="dgls" style="margin-top:8px">${(d.app_dirs.parts || []).map(p => `<div>桌面端${esc(p.name)}：${esc(p.path)}（${esc(p.why)}）</div>`).join("")}</div>
       <div class="dim" style="font-size:calc(13px*var(--fk))">留空 / 点「自动」= 自动检测。改 Claude Code / Codex 目录要重启本程序才全面生效；环境变量 CLAUDE_CONFIG_DIR / CODEX_HOME / DSH_HOME / CURSOR_USER_DIR / CURSOR_CONFIG_DIR 优先。</div></div>
+    <div class="card" id="dgFmt"><h3>${ic("activity")}存储格式自检<span class="sp"></span><button id="dgFmtRe">${ic("refresh")} 重新检查</button></h3><div id="dgFmtBox"><div class="empty">检查中…</div></div></div>
     ${apiCard(d.api)}
     <div class="card"><h3>${ic("text")}诊断报告<span class="sp"></span><button class="primary" id="dgCp">${ic("copy")} 复制报告</button></h3><pre class="rep" id="dgRep">${esc(d.text + "\n\n" + (sc && !sc.never ? sc.text : ""))}</pre></div>`;
   $("#dgCp").onclick = () => copyText($("#dgRep").textContent);
+  fmtLoad(false); $("#dgFmtRe").onclick = () => fmtLoad(true);
+  if (new URLSearchParams(location.search).get("fmt") || (ST.goArgs && ST.goArgs.fmt)) { ST.goArgs = null; setTimeout(() => $("#dgFmt").scrollIntoView({block: "start"}), 200); }
   $("#dgScCp").onclick = () => copyText(sc.text || "");
   $("#dgSc").onclick = async () => { $("#dgSc").disabled = true; $("#dgScBox").innerHTML = '<div class="empty">自检中…</div>'; try { sc = await api("/api/selfcheck", {}); } catch(e){ toast("❌ " + e.message); } R.diag(); };
   $$("[data-pick]").forEach(b => b.onclick = async () => { const w = b.dataset.pick, inp = $(`[data-dir="${w}"]`);
@@ -2696,6 +2707,23 @@ R.diag = async () => {
   $$("[data-save]").forEach(b => b.onclick = () => saveDir(b.dataset.save, $(`[data-dir="${b.dataset.save}"]`).value.trim()));
   $$("[data-clr]").forEach(b => b.onclick = () => saveDir(b.dataset.clr, ""));
 };
+// 存储格式自检（0.3.8）：每个应用的格式 / 版本认不认识、几个会话读不出来
+const FMT_T = {ok: ["ok", "认识"], warn: ["warn", "有新东西"], fail: ["bad", "读不全"], absent: ["", "没找到"]};
+async function fmtLoad(force){
+  const box = $("#dgFmtBox"); if (!box) return;
+  if (force) { box.innerHTML = '<div class="empty">检查中…</div>'; $("#dgFmtRe").disabled = true; }
+  let r;
+  try { r = await api("/api/formats" + (force ? "?force=1" : "")); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  if (!$("#dgFmtBox")) return;
+  $("#dgFmtRe").disabled = false;
+  $("#dgFmtBox").innerHTML = `<table class="t fmtt"><tr><th>应用</th><th>状态</th><th>格式</th><th class="n">读得出</th><th class="n">读不出</th><th>说明</th></tr>
+    ${r.items.map(x => `<tr class="${x.status === "absent" ? "dim" : ""}"><td class="nw">${logo(x.agent)} ${esc(x.name)}</td><td><span class="tag ${FMT_T[x.status][0]}">${FMT_T[x.status][1]}</span></td>
+      <td>${esc(x.format || "—")}</td><td class="n">${x.read ?? "—"}</td><td class="n">${x.unread ? `<b style="color:var(--bad)">${x.unread}</b>` : x.status === "absent" ? "—" : 0}</td>
+      <td>${x.issues.map(i => `<div>${esc(i)}</div>`).join("")}${x.fix ? `<div class="dim">建议：${esc(x.fix)}</div>` : ""}</td></tr>`).join("")}</table>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">只读：只看表名 / 列名 / 记录类型 / 格式版本和条数，不读账号 / 凭据。应用升级改了存储格式时，这里会说清楚哪儿变了，
+      而不是在会话列表里悄悄少几个。${r.ms} ms · ${when(r.time)}</div>`;
+  if (force) { ST.fmt = null; try { const f = await api("/api/formats/banner"); ST.fmt = f.banner || null; } catch(e){} renderBans(); }
+}
 // API 模式（3P）：桌面端用自己的推理网关 / 第三方供应商时，数据在 Claude-3p 目录；只显示供应商类型，不显示 key / 地址
 function apiCard(a){
   if (!a || a.error) return a && a.error ? `<div class="card"><h3>${ic("key")}Claude 桌面端 API 模式</h3><div class="miss">${esc(a.error)}</div></div>` : "";
@@ -2770,6 +2798,7 @@ async function updInstall(){
   if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst"), tab: qs.get("tab") || (fromUrl && want === "timeline" ? "tl" : null)}); else go("sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);       // 老链接 ?dlg=usage 之类：现在都是页面
   try { const lg = await api("/api/legacy"); if (lg && lg.notice) { ST.legacy = lg; renderBans(); } } catch(e){}
+  setTimeout(async () => { try { const f = await api("/api/formats/banner"); if (f && f.banner) { ST.fmt = f.banner; renderBans(); } } catch(e){} }, 1500);   // 格式自检（0.3.8）：后台查，不挡启动
   poll();
   try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}
 })();

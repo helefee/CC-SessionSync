@@ -207,6 +207,11 @@ def run(net: bool = True) -> dict:
     except Exception as e:
         items.append(_item("agents", "找 Claude / Codex", "warn", f"{type(e).__name__}: {e}"))
     items += check_dirs()
+    try:                                   # 0.3.8：六个应用的存储格式认不认识
+        from . import formats
+        items += formats.selfcheck_items()
+    except Exception as e:
+        items.append(_item("formats", "存储格式自检", "warn", f"{type(e).__name__}: {e}"))
     try:
         items += check_legacy()
     except Exception as e:
