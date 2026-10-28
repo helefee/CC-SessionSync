@@ -18,7 +18,7 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
    也能把 Claude Code 会话导成一个**新的** dsh 会话；dsh 已有的会话一个字节都不改。用量统计也算 dsh 的。
 7. **Cursor ⇄ Claude Code（0.2.6）**：Cursor 的对话（编辑器里的 Agent / Chat、agent 记录、`cursor-agent` 命令行）也在会话管理里（只读），
    能导成 Claude Code 会话接着聊；反方向导出一份给 Cursor 的上下文文件（不写 Cursor 的数据库，原因见下）。界面字号和缩放可调（0.2.6）。
-8. **会话转换（0.2.7）**：Claude Code、Codex、DeepSeek Harness、Cursor、**OpenCode**、**ZCode** 任意两个之间转会话；能安全原生写的写成目标的新会话，
+8. **会话转换（0.2.7）**：0.3.7 起可以在「全部应用」里跨应用搜索、勾好几个应用的会话一起转；Claude Code、Codex、DeepSeek Harness、Cursor、**OpenCode**、**ZCode** 任意两个之间转会话；能安全原生写的写成目标的新会话，
    写不了的（Cursor、ZCode）导出上下文文件 + 粘贴提示。OpenCode / ZCode 的会话也进会话管理（只读）、备份和时间线。
 9. **0.3.5 拿掉了「供应商」**（模型路由 / 卡片 / 服务商）：太重、不好懂。第一次启动 0.3.5 会把它改过的 Codex / Claude Code 配置**恢复原样**，见下文。
 10. **用量**、**诊断 / 自检**、**检查更新**、托盘和系统通知。
@@ -353,6 +353,25 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### 全部应用：跨应用搜索 + 批量转换（0.3.7）
+
+会话转换页「从」那一排最前面多了 **全部应用**：六个应用（Claude Code、Codex、DeepSeek Harness、Cursor、OpenCode、ZCode）的会话放在一张表里搜、勾、一起转。
+
+- **搜**：关键词（标题 / 项目目录 / 会话号；空格分开，每个词都要有）、**应用**（点按钮开 / 关，Ctrl 点只看这一个；按钮上是命中个数）、**项目**、**时间**
+  （24 小时 / 7 / 30 / 90 天 / 一年内，或自定义日期）。勾「**也搜对话内容**」在问 / 答文字里找，命中的会显示一小段上下文。
+- **快**：会话清单缓存在内存里，旧了在后台刷新；对话内容建一个本地索引 `~/.cc-sessionsync/search-index.sqlite`（只存问 / 答文字，
+  按文件修改时间增量更新，后台建，建好的先出结果）。几千个会话也不卡；表格先画前 300 个。索引随时可以删，下次自动重建。
+- **批量转**：跨应用勾好几个（和目标是同一个应用的不能勾），点「转换选中的 → 目标」：先弹**合起来的预览**（每个来源几个、共多少条消息、会丢 / 会变什么、
+  每个会话写到哪），确认后**后台做、显示进度**（可以关掉进度框），做完列出每个结果；导出方向会自动复制粘贴提示。每个来源应用一本账，在「转换记录」里撤回。
+  目标应用开着时整批排成一个任务，等它退出后做。
+- 单个应用的会话列表也只先画前 400 个（「再显示」），会话很多时不再卡。
+
+| 全部应用 | 也搜对话内容 |
+|---|---|
+| ![](docs/screenshots/v037-all-apps-search.png) | ![](docs/screenshots/v037-content-search.png) |
+| **批量转换前预览** | **批量导出完成（深色）** |
+| ![](docs/screenshots/v037-batch-preview.png) | ![](docs/screenshots/v037-batch-done-dark.png) |
 
 ### 转换前预览（0.3.6）
 

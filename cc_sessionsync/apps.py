@@ -114,7 +114,7 @@ def relaunch(info: dict | None) -> bool:
 
 VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "codex-import": "导入", "codex-undo": "撤回导入",
          "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
-         "timeline-replace": "恢复", "convert-run": "转换", "convert-undo": "撤回转换",
+         "timeline-replace": "恢复", "convert-run": "转换", "convert-batch": "批量转换", "convert-undo": "撤回转换",
          "route-card-enable": "恢复", "route-card-disable": "恢复", "legacy-codex": "恢复"}
 
 
@@ -202,6 +202,7 @@ def _ops():
         "cursor-to-claude": lambda **a: _cursor().run_to_claude(dry=False, **a),
         "cursor-undo": lambda **a: _cursor().undo(a["ledger"]),
         "convert-run": lambda **a: _convert().run(dry=False, **a),
+        "convert-batch": lambda **a: _convert().batch_run(**a),
         "convert-undo": lambda **a: _convert().undo(a["ledger"]),
         "sessions-batch": lambda **a: _sessions().batch(a["action"], a["items"]),
         "sessions-rename": lambda **a: _sessions().rename(a["agent"], a["id"], a["name"], bool(a.get("write_tool"))),
