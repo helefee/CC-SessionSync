@@ -316,6 +316,31 @@ def cmd_backups(a) -> int:
     return claude_sync.main(["--backups"])
 
 
+def cmd_clean_backups(a) -> int:
+    """清理 ~/.cc-sessionsync/backups（0.3.9）：不加 --yes 只列出会删哪些。"""
+    from . import bakclean
+    try:
+        p = bakclean.plan(a.days, a.mb)
+    except ValueError as e:
+        print("✗ " + str(e))
+        return 2
+    mbs = lambda n: f"{n / 1048576:.1f} MB"
+    print(f"{p['dir']}：{p['count']} 份备份，共 {mbs(p['total'])}；每个文件最新的一份不删（{p['protected']} 份）")
+    if not p["rule"]:
+        print("加 --days N（比 N 天旧的）和 / 或 --mb N（总共超过 N MB 时从最旧的删）")
+        return 0
+    for x in p["delete"]:
+        print(f"  删  {_t(x['at'])}  {mbs(x['size']):>9}  {x['file'] or x['name']}")
+    print(f"会删 {p['delete_count']} 份，腾出 {mbs(p['freed'])}")
+    if not a.yes or not p["delete_count"]:
+        if p["delete_count"]:
+            print("（只是预览；确认删除加 --yes）")
+        return 0
+    r = bakclean.apply(a.days, a.mb)
+    print(f"✓ 删了 {r['deleted']} 份，腾出 {mbs(r['freed'])}" + ("；" + "；".join(r["errors"]) if r["errors"] else ""))
+    return 0 if r["ok"] else 1
+
+
 def cmd_restore(a) -> int:
     return claude_sync.main(["--restore", a.backup])
 
@@ -419,7 +444,7 @@ def cmd_after_quit(a) -> int:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="cc-sessionsync", description="Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code")
     ap.add_argument("--version", action="version", version=f"cc-sessionsync {__version__}")
-    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,restore,auto,codex,sessions,usage,settings,jobs,diag,selfcheck,ui}")
+    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,clean-backups,restore,auto,codex,sessions,usage,settings,jobs,diag,selfcheck,ui}")
     sub.add_parser("status", help="看当前账号、会话文件夹、Codex 对话数").set_defaults(fn=cmd_status)
     s = sub.add_parser("sync", help="把别的账号下的 Claude 会话补进当前账号的会话列表")
     s.add_argument("--dry-run", action="store_true", help="只演练，不写")
@@ -428,6 +453,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--only", help="只补这几个（local_*.json 文件名，逗号分隔）")
     s.set_defaults(fn=cmd_sync)
     sub.add_parser("backups", help="同步备份列表").set_defaults(fn=cmd_backups)
+    s = sub.add_parser("clean-backups", help="清理 ~/.cc-sessionsync/backups 里旧的配置备份（先预览，加 --yes 才删）")
+    s.add_argument("--days", type=float, help="删比 N 天旧的")
+    s.add_argument("--mb", type=float, help="总共超过 N MB 时从最旧的删")
+    s.add_argument("--yes", action="store_true", help="确认删除（不加只预览）")
+    s.set_defaults(fn=cmd_clean_backups)
     r = sub.add_parser("restore", help="撤回某次同步")
     r.add_argument("backup")
     r.set_defaults(fn=cmd_restore)

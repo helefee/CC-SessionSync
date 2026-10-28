@@ -14,6 +14,7 @@
     ui_font / ui_zoom                         界面字号倍数（0.8–1.5，缺省 1）和界面缩放（0.8–2，缺省 1）（0.2.6）
     cursor_user_dir / cursor_home             Cursor 的 User 目录（state.vscdb 所在）和 ~/.cursor（诊断里选）（0.2.6）
     opencode_dir / zcode_dir / opencode_cli    OpenCode 数据目录、ZCode 主目录（~/.zcode）、opencode 命令行路径（0.2.7）
+    backup_clean_auto / backup_clean_days / backup_clean_mb   自动清理 ~/.cc-sessionsync/backups（缺省关；天数 / MB，0 = 不按这个删）（0.3.9）
 开机自启不存在这里：看注册表 HKCU\\...\\Run 本身（tray.autostart_get）。
 """
 from __future__ import annotations
@@ -29,11 +30,12 @@ DEFAULTS = {"auto_sync": False, "tray_close": True, "start_min": False, "notify"
             "codex_mark_imported": False, "selfcheck_done": False,
             "show_full_accounts": False,
             "convert_skip_preview": False,          # 高级：转换前不弹预览直接做（0.3.6）
+            "backup_clean_auto": False, "backup_clean_days": 90, "backup_clean_mb": 0,   # 高级：自动清理旧的配置备份（0.3.9）
             # 会话自动备份（0.2.1 起缺省开，每 10 分钟；最少 5 分钟）+ 保留规则
             "session_backup_auto": True, "session_backup_every": 10, "session_backup_unit": "min",
             "retention_all_days": 7, "retention_daily_days": 90, "ui_font": 1, "ui_zoom": 1}
 BOOL_KEYS = ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
-             "tray_hint_shown", "show_full_accounts", "session_backup_auto", "convert_skip_preview")
+             "tray_hint_shown", "show_full_accounts", "session_backup_auto", "convert_skip_preview", "backup_clean_auto")
 _lock = threading.Lock()
 
 

@@ -367,6 +367,8 @@ button.big{padding:8px 16px;font-size:calc(14.5px*var(--fk));font-weight:600;dis
 .sched>div{background:var(--panel2);border-radius:10px;padding:8px 10px;font-size:calc(13px*var(--fk));color:var(--muted)}
 .sched b{display:block;font-size:calc(14.5px*var(--fk));color:var(--text);font-weight:600;margin-top:2px}
 .numu{display:inline-flex;gap:6px;align-items:center}.numu input{width:70px}
+.bcrule{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 10px}.bcrule input{width:70px}.bcsum{margin:4px 0 8px}
+.bcl{max-height:min(46vh,420px);overflow:auto;border:1px solid var(--line);border-radius:8px}.bcl table{margin:0}
 /* ---- v0.2.2：顶部按钮栏 + 左侧只放会话列表 ---- */
 button.brand{background:transparent;padding:3px 6px;border-radius:8px;font-size:calc(15px*var(--fk))}
 button.brand:hover{background:var(--hover)}
@@ -2638,10 +2640,13 @@ R.settings = async () => {
       ${setRow("refresh", "自动检查更新", "每 6 小时最多查一次 GitHub 发布页。<b>只提示，不会自动安装</b>：有新版本时托盘弹一次通知、按钮上出红点，点「立即更新」才下载安装", sw("stUpd", s.update_auto))}
       ${setRow("info", `当前版本 v${esc(u.current)}`, u.checked ? `上次检查 ${when(u.checked)}：${u.error ? esc(u.error) : u.newer ? `有新版本 v${esc(u.latest)}${u.ignored === u.latest ? "（已忽略）" : ""}` : "已经是最新"}` : "还没检查过",
         `<button class="tbx has-dot-able${u.badge ? " has-dot" : ""}" id="setUpd" style="position:relative;background:var(--hover);color:var(--text);padding:5px 12px">${ic("refresh")} 检查更新<span class="rdot"></span></button>`)}</div></div>
-    <details class="card adv" id="stAdv"${s.convert_skip_preview ? " open" : ""}><summary><h3>高级</h3><span class="dim">一般用不着改</span></summary><div class="setlist">
-      ${setRow("eye", "跳过转换前预览", "缺省关：会话转换 / 导出之前先弹预览（写到哪、多少条消息、会丢 / 会变什么），确认了才写。打开后点「转换选中的」直接做；「预览」按钮照样能看", sw("stSkipPv", s.convert_skip_preview))}</div></details>
+    <details class="card adv" id="stAdv"${s.convert_skip_preview || s.backup_clean_auto || ST.advOpen ? " open" : ""}><summary><h3>高级</h3><span class="dim">一般用不着改</span></summary><div class="setlist">
+      ${setRow("eye", "跳过转换前预览", "缺省关：会话转换 / 导出之前先弹预览（写到哪、多少条消息、会丢 / 会变什么），确认了才写。打开后点「转换选中的」直接做；「预览」按钮照样能看", sw("stSkipPv", s.convert_skip_preview))}
+      ${setRow("trash", "自动清理旧的配置备份", `缺省关。<code>backups</code> 文件夹里是改配置文件之前留的备份（不是会话备份）。打开后每天看一次：删掉比 N 天旧的、总共超过 M MB 时从最旧的删（填 0 = 不按这个删）。<b>每个文件最新的一份永远留着</b>。想先看看会删什么：用下面「数据」里的「清理…」`,
+        `<span class="numu"><input type="number" id="stBcD" min="0" value="${esc(s.backup_clean_days ?? 90)}" ${s.backup_clean_auto ? "" : "disabled"}> 天<input type="number" id="stBcM" min="0" value="${esc(s.backup_clean_mb ?? 0)}" ${s.backup_clean_auto ? "" : "disabled"}> MB</span>${sw("stBc", s.backup_clean_auto)}`)}</div></details>
     <div class="card"><h3>数据</h3><div class="kv"><div>本程序数据</div><div><code>${esc(st.home)}</code> <button class="ghost" id="stRev" style="padding:1px 6px">${ic("folder")}</button></div>
-      <div>Claude Code</div><div><code>${esc(st.claude_home)}</code></div><div>Codex</div><div><code>${esc(st.codex_home)}</code></div></div>
+      <div>Claude Code</div><div><code>${esc(st.claude_home)}</code></div><div>Codex</div><div><code>${esc(st.codex_home)}</code></div>
+      <div>配置备份</div><div><span id="stBcInfo" class="dim">…</span> <button class="ghost" id="stBcGo" style="padding:1px 8px">${ic("trash")} 清理…</button></div></div>
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
   $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
@@ -2652,10 +2657,45 @@ R.settings = async () => {
   $("#stBk").onchange = e => { $("#stBkE").disabled = $("#stBkU").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
   const stEv = async () => { const r = await saveSetting({session_backup_every: +$("#stBkE").value, session_backup_unit: $("#stBkU").value}); if (!r) R.settings(); };
   $("#stBkE").onchange = stEv; $("#stBkU").onchange = stEv;
+  $("#stAdv").ontoggle = e => { ST.advOpen = e.target.open; };
+  const bcSave = async ch => { const r = await saveSetting(ch); if (!r) R.settings(); };
+  $("#stBc").onchange = e => { $("#stBcD").disabled = $("#stBcM").disabled = !e.target.checked; bcSave({backup_clean_auto: e.target.checked, backup_clean_days: +$("#stBcD").value || 0, backup_clean_mb: +$("#stBcM").value || 0}); };
+  $("#stBcD").onchange = $("#stBcM").onchange = () => bcSave({backup_clean_days: +$("#stBcD").value || 0, backup_clean_mb: +$("#stBcM").value || 0});
+  $("#stBcGo").onclick = () => bcOpen(s);
+  api("/api/backups/clean").then(b => { if ($("#stBcInfo")) $("#stBcInfo").innerHTML = b.count ? `${b.count} 份，${kb(b.total)}${b.last && b.last.auto ? ` · 上次自动清理 ${when(b.last.auto.time)}（删 ${b.last.auto.deleted} 份）` : ""}` : "没有"; }).catch(() => {});
   $("#stFull").onchange = e => { saveSetting({show_full_accounts: e.target.checked}); rvSet(e.target.checked); };
   $("#setUpd").onclick = () => updOpen(true);
   $("#stRev").onclick = () => api("/api/reveal", {path: st.home}).catch(e => toast("❌ " + e.message));
 };
+
+// ---------- 清理配置备份（0.3.9） ----------
+async function bcOpen(s){
+  const st = await api("/api/backups/clean").catch(e => { toast("❌ " + e.message); return null; }); if (!st) return;
+  const d0 = s && s.backup_clean_days ? s.backup_clean_days : 90, m0 = s && s.backup_clean_mb ? s.backup_clean_mb : 0;
+  $("#dlg").classList.add("wide");
+  openDlg("清理配置备份", `<div class="bcd">
+    <div class="dim">这里是改 Codex / Claude Code 配置文件之前留的备份，<b>不是会话备份</b>（会话备份在 sessions.sqlite，不受影响）。</div>
+    <div class="kv" style="margin:8px 0"><div>位置</div><div><code>${esc(st.dir)}</code> <button class="ghost" id="bcRev" style="padding:1px 6px">${ic("folder")}</button></div><div>现在</div><div>${st.count} 份，${kb(st.total)}</div></div>
+    <div class="bcrule">删掉比 <input type="number" id="bcD" min="0" value="${esc(d0)}"> 天旧的；总共超过 <input type="number" id="bcM" min="0" value="${esc(m0)}"> MB 时从最旧的删 <span class="dim">（0 = 不按这个删；每个文件最新的一份不删）</span></div>
+    <div id="bcPv"><div class="empty">算一下…</div></div></div>`,
+    `<button onclick="closeDlg()">取消</button><button class="primary danger" id="bcGo" disabled>删除</button>`);
+  $("#bcRev").onclick = () => api("/api/reveal", {path: st.dir}).catch(e => toast("❌ " + e.message));
+  let P = null, seq = 0, tm = 0;
+  const load = async () => { const my = ++seq, d = +$("#bcD").value || 0, m = +$("#bcM").value || 0;
+    try { const r = await api(`/api/backups/clean?days=${d}&mb=${m}`); if (my !== seq || !$("#bcPv")) return; P = r; show(); }
+    catch(e){ if (my === seq && $("#bcPv")) { P = null; $("#bcPv").innerHTML = `<div class="miss">${esc(e.message)}</div>`; $("#bcGo").disabled = true; } } };
+  const show = () => { const r = P;
+    $("#bcGo").disabled = !r.delete_count; $("#bcGo").textContent = r.delete_count ? `删除 ${r.delete_count} 份，腾出 ${kb(r.freed)}` : "删除";
+    if (!r.rule) { $("#bcPv").innerHTML = '<div class="empty">填天数或大小</div>'; return; }
+    $("#bcPv").innerHTML = `<div class="bcsum">${r.delete_count ? `会删 <b>${r.delete_count}</b> 份，腾出 <b>${kb(r.freed)}</b>；` : "按这个规则没有要删的；"}剩 ${r.count - r.delete_count} 份（${kb(r.after)}），其中 ${r.protected} 份是每个文件最新的一份，不删。</div>`
+      + (r.delete.length ? `<div class="bcl"><table class="t"><tr><th>备份时间</th><th>是哪个文件的</th><th>为什么备份</th><th class="n">大小</th></tr>${r.delete.map(x => `<tr><td class="nw">${when(x.at)}</td><td class="m" title="${esc(x.file || x.name)}">${esc(x.file ? ellip(x.file, 70) : x.name)}</td><td class="dim">${esc(x.label)}</td><td class="n nw">${kb(x.size)}</td></tr>`).join("")}</table>${r.delete_count > r.delete.length ? `<div class="dim">还有 ${r.delete_count - r.delete.length} 份没列出来</div>` : ""}</div>` : ""); };
+  $("#bcD").oninput = $("#bcM").oninput = () => { clearTimeout(tm); tm = setTimeout(load, 250); };
+  $("#bcGo").onclick = async () => { if (!P || !P.delete_count) return; $("#bcGo").disabled = true;
+    try { const r = await api("/api/backups/clean", {days: P.days, mb: P.mb, names: P.delete_count === P.delete.length ? P.delete.map(x => x.name) : undefined});
+      closeDlg(); toast(r.ok ? `✓ 删了 ${r.deleted} 份，腾出 ${kb(r.freed)}` : "⚠ " + r.errors.join("；")); if (PAGE === "settings") R.settings(); }
+    catch(e){ toast("❌ " + e.message); $("#bcGo").disabled = false; } };
+  load();
+}
 
 // ---------- 诊断 ----------
 const SC_IC = {pass: "ok", warn: "warn", fail: "err"};
