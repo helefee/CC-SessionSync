@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -559,3 +560,49 @@ def delete_session(sid: str, cli: str | None = None) -> dict:
         return {"ok": ok, "error": None if ok else f"opencode 退出码 {r.returncode}", "out": ((r.stdout or "") + (r.stderr or ""))[-300:]}
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "opencode 命令行超时"}
+
+
+# ---------- 原图（0.4.1：转换时现拿，镜像里只记张数） ----------
+
+def images(agent: str, sid: str) -> list[list[dict]]:
+    """这个会话里用户贴的图，按用户消息的顺序（只算贴了图的那几条，和镜像里 images>0 的用户条目一一对应）：
+    [[{"mt", "b64"}…]…]。从库的只读快照里拿；拿不到原图（只存了路径 / 网址）的那张就不在列表里。"""
+    f = db_path(agent)
+    out: list[list[dict]] = []
+    if not f.exists():
+        return out
+
+    def one(mime, data=None, url=None):
+        mt = str(mime or "")
+        if data:
+            return {"mt": mt, "b64": data}
+        m = re.match(r"^data:([\w/+.-]+);base64,(.*)$", str(url or ""), re.S)
+        return {"mt": m.group(1), "b64": m.group(2)} if m else None
+
+    with _Snap(f) as con:
+        T = _tables(con)
+        if "session_v2" in T and "session_message" in T and con.execute("select 1 from session_v2 where id=?", (sid,)).fetchone():
+            for r in con.execute("select type, data from session_message where session_id=? order by seq", (sid,)):
+                if r["type"] != "user":
+                    continue
+                d = _j(r["data"]) or {}
+                fs = [x for x in d.get("files") or [] if isinstance(x, dict)]
+                ims = [x for x in fs if str(x.get("mime") or x.get("mediaType") or "").startswith("image/")]
+                if ims:
+                    out.append([y for y in (one(x.get("mime") or x.get("mediaType"), x.get("data"), x.get("url")) for x in ims) if y])
+            return out
+        if "message" in T and "part" in T:
+            seq_m = "sequence" if "sequence" in T["message"] else "time_created"
+            seq_p = "sequence" if "sequence" in T["part"] else "id"
+            pb: dict = {}
+            for p in con.execute(f"select message_id, data from part where session_id=? order by {seq_p}", (sid,)):
+                pb.setdefault(p["message_id"], []).append(_j(p["data"]) or {})
+            for m in con.execute(f"select id, data from message where session_id=? order by {seq_m}, id", (sid,)):
+                d = _j(m["data"]) or {}
+                sem = d.get("semantics") if isinstance(d.get("semantics"), dict) else None
+                if d.get("role") != "user" or (sem and sem.get("kind") and sem["kind"] not in _KEEP_KINDS):
+                    continue
+                ims = [p for p in pb.get(m["id"], []) if p.get("type") == "file" and str(p.get("mime") or p.get("mediaType") or "").startswith("image/")]
+                if ims:
+                    out.append([y for y in (one(p.get("mime") or p.get("mediaType"), None, p.get("url")) for p in ims) if y])
+    return out

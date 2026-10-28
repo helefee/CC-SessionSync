@@ -19,7 +19,6 @@ import os
 import random
 import re
 import shutil
-import tempfile
 import time
 import uuid
 from datetime import datetime
@@ -137,7 +136,7 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                 if c.strip() and not c.lstrip().startswith(SKIP):
                     items.append({"role": "user", "kind": "text", "text": c, "ts": ts})
                 continue
-            texts, imgs, fls = [], 0, 0
+            texts, imgs, fls, data = [], 0, 0, []
             for b in c or []:
                 if not isinstance(b, dict):
                     continue
@@ -145,6 +144,10 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                     texts.append(b["text"])
                 elif b.get("type") == "image":
                     imgs += 1
+                    srcb = b.get("source") or {}
+                    im = ir.img(srcb.get("media_type"), srcb.get("data")) if srcb.get("type") == "base64" else None
+                    if im:
+                        data.append(im)
                 elif b.get("type") == "document":
                     fls += 1
                 elif b.get("type") == "tool_result":
@@ -156,7 +159,8 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                         if b.get("is_error"):
                             it["status"] = "error"
             if texts or imgs or fls:
-                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None})
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None,
+                              "image_data": data or None})
         else:
             mdl = m.get("model") if m.get("model") not in (None, "<synthetic>") else None
             for b in c if isinstance(c, list) else [{"type": "text", "text": c}] if isinstance(c, str) else []:
@@ -176,7 +180,7 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
 
 def _codex_ir(f: Path) -> tuple[dict, list[dict]]:
     from . import codex_import as CI
-    p = CI.parse(f, reasoning=True)
+    p = CI.parse(f, reasoning=True, images=True)
     meta = p["meta"] or {}
     h = {"agent": "codex", "id": meta.get("id") or f.stem[-36:], "cwd": CI.norm_cwd(meta.get("cwd")) or None,
          "created": ir.to_ms(meta.get("timestamp"))}
@@ -184,7 +188,8 @@ def _codex_ir(f: Path) -> tuple[dict, list[dict]]:
     for x in p["items"]:
         ts = ir.to_ms(x.get("ts"))
         if x["role"] == "user":
-            items.append({"role": "user", "kind": "text", "text": x["text"], "ts": ts})
+            items.append({"role": "user", "kind": "text", "text": x["text"], "ts": ts, "images": len(x.get("images") or []) or None,
+                          "image_data": [im for im in (ir.img_url(u) for u in x.get("images") or []) if im] or None})
         elif x["role"] == "assistant":
             items.append({"role": "assistant", "kind": "text", "text": x["text"], "ts": ts})
         elif x["role"] == "reasoning":
@@ -210,9 +215,16 @@ def _dsh_ir(f: Path) -> tuple[dict, list[dict]]:
             if (m.get("source") or {}).get("kind") != "user":
                 continue
             texts = [b["text"] for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "text" and b.get("text")]
-            imgs = sum(1 for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "image")
+            imgs = [b for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "image"]
+            data = []
+            for b in imgs:
+                raw, mt = dsh._attachment(b.get("attachment") or {})
+                im = ir.img(mt, raw) if raw is not None else None
+                if im:
+                    data.append(im)
             if texts or imgs:
-                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None})
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": len(imgs) or None,
+                              "image_data": data or None})
         elif t == "assistant/message":
             mdl = m.get("model") if isinstance(m.get("model"), str) else None
             for b in m.get("content") or []:
@@ -253,6 +265,15 @@ def load_ir(agent: str, sid: str, row: dict | None = None) -> tuple[dict, list[d
     else:                                   # cursor / opencode / zcode：本程序的镜像就是中间格式
         h, items = ir.load(f.read_bytes())
         h["agent"] = agent
+        if agent in ("opencode", "zcode") and any(it.get("images") for it in items):
+            try:                            # 镜像里只记了张数；原图现从库里（只读快照）拿
+                per = ocstore.images(agent, h.get("id") or sid)
+                users = [it for it in items if it["role"] == "user" and it.get("images")]
+                if len(per) == len(users):
+                    for it, ims in zip(users, per):
+                        it["image_data"] = [im for im in (ir.img(x.get("mt"), x.get("b64")) for x in ims) if im] or None
+            except Exception:
+                pass
     h["id"] = h.get("id") or sid
     h["title"] = row.get("tool_title") or row.get("title") or h.get("title") or ir.title_of(items)
     h["cwd"] = h.get("cwd") or row.get("cwd")
@@ -456,24 +477,21 @@ def _to_codex(h, items, opts, led) -> dict:
 
 
 def _to_dsh(h, items, opts, led) -> dict:
+    """0.4.1：直接从中间格式拼 dsh 会话（工具调用 / 图片 / 思考按 dsh 自己的样子写）；图片放进 dsh 的附件库，这次新放进去的记在账本里，撤回时一起删。"""
     from . import codex_import as CI
     from . import dsh
     wr = dsh.write_root()
-    tmp = Path(tempfile.mkdtemp(prefix="ccss-conv-"))
-    try:
-        cwd = CI.norm_cwd(h.get("cwd")) or str(Path.home())
-        b = ir.build_claude(h, items, str(uuid.uuid4()), CI.claude_version(), reasoning=opts.get("reasoning", False), cwd=cwd)
-        b["records"] = [r for r in b["records"] if r.get("type") != "custom-title"]
-        cf = tmp / "x.jsonl"
-        cf.write_text(CI._dump(b["records"]), encoding="utf-8")
-        pre = ir.PREFIX.get(h.get("agent"), "")
-        d = dsh.build_dsh(cf, title=h.get("title") or ir.title_of(items) or "对话", note=False, prefix=pre)
-        title = pre + d["title"]
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    h = dict(h, cwd=CI.norm_cwd(h.get("cwd")) or str(Path.home()))
+    pre = ir.PREFIX.get(h.get("agent"), "")
+    d = dsh.build_from_ir(h, items, reasoning=opts.get("reasoning", False), prefix=pre, title=h.get("title") or ir.title_of(items) or "对话")
     f = dsh.write_session(Path(wr["root"]), wr["compression"], d["header"], d["events"])
-    return {"id": d["id"], "file": str(f), "dir": str(f.parent), "sha": _sha(f), "title": title, "cwd": d["cwd"], "turns": d["turns"],
-            "stats": d["stats"], "resume": dsh.resume_cmd(d["cwd"], d["id"])}
+    att = []
+    for raw in d.get("attachments") or []:
+        _ref, af, new = dsh.put_attachment(raw)
+        if new:
+            att.append({"file": str(af), "sha": _sha(af)})
+    return {"id": d["id"], "file": str(f), "dir": str(f.parent), "sha": _sha(f), "title": pre + d["title"], "cwd": d["cwd"], "turns": d["turns"],
+            "stats": d["stats"], "resume": dsh.resume_cmd(d["cwd"], d["id"]), "attachments": att}
 
 
 def _to_opencode(h, items, opts, led) -> dict:
@@ -905,6 +923,10 @@ def undo(name: str) -> dict:
             ef = Path(c["desktop_file"]) if c.get("desktop_file") else None
             if ef and ef.exists() and _sha(ef) == c.get("desktop_sha"):
                 ef.unlink()
+            for at in c.get("attachments") or []:          # 这次放进 dsh 附件库的图片（当时新建的才记）
+                af = Path(at["file"])
+                if af.exists() and _sha(af) == at.get("sha"):
+                    af.unlink()
         except Exception as e:
             errs.append(f"{c.get('id')}：{type(e).__name__}: {e}")
     mp = _load(MAP, {})

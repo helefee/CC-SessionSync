@@ -309,8 +309,9 @@ def _call_desc(pl: dict) -> tuple[str, str]:
     return name, str(a)
 
 
-def parse(p: Path, reasoning: bool = False) -> dict:
-    """→ {meta, items:[{role: user|assistant|tool|reasoning, text, ts, ...}], stats}"""
+def parse(p: Path, reasoning: bool = False, images: bool = False) -> dict:
+    """→ {meta, items:[{role: user|assistant|tool|reasoning, text, ts, ...}], stats}
+    images=True（0.4.1）：用户贴的图不往文字里塞占位，记在 item["images"]（image_url 原样，data URL 才带得走）。"""
     items, calls, meta = [], {}, {}
     st = {"images": 0, "tools": 0, "reasoning": 0, "reasoning_encrypted": 0, "skipped_context": 0, "bad_lines": 0,
           "compactions": 0}
@@ -333,23 +334,27 @@ def parse(p: Path, reasoning: bool = False) -> dict:
                 continue
             pt = pl.get("type")
             if pt == "message" and pl.get("role") in ("user", "assistant"):
-                parts = []
+                parts, ims = [], []
                 for x in pl.get("content") or []:
                     if not isinstance(x, dict):
                         continue
                     if x.get("type") in ("input_text", "output_text", "text"):
                         parts.append(x.get("text", ""))
                     elif x.get("type") in ("input_image", "image"):
-                        parts.append("[图片：Codex 里贴的图，没有导过来]")
                         st["images"] += 1
+                        if images:
+                            u = x.get("image_url")
+                            ims.append(u.get("url") if isinstance(u, dict) else u)
+                        else:
+                            parts.append("[图片：Codex 里贴的图，没有导过来]")
                     elif x.get("type") == "refusal":
                         parts.append(x.get("refusal", ""))
                 text = "\n".join(t for t in parts if t).strip()
                 if pl["role"] == "user" and text.startswith(SKIP_USER):
                     st["skipped_context"] += 1
                     continue
-                if text:
-                    items.append({"role": pl["role"], "text": text, "ts": ts})
+                if text or ims:
+                    items.append({"role": pl["role"], "text": text, "ts": ts, **({"images": ims} if ims else {})})
             elif pt == "reasoning":
                 summ = "\n".join(x.get("text", "") for x in pl.get("summary") or [] if isinstance(x, dict)).strip()
                 if summ or pl.get("content"):
