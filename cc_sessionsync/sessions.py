@@ -26,7 +26,7 @@ import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import paths
+from . import listcache, paths
 
 TRASH = paths.HOME / "trash"
 OPS = paths.HOME / "session-ops"
@@ -36,7 +36,6 @@ HEAD = 256 * 1024
 SKIP_USER = ("# AGENTS.md instructions", "<environment_context", "<app-context", "<user_instructions", "<INSTRUCTIONS",
              "<permissions", "<user_shell_command", "<turn_aborted", "<command-name>", "<local-command", "<system-reminder",
              "Caveat: The messages below", "This session is being continued from a previous conversation")
-_title_cache: dict[str, tuple] = {}
 _db_lock = threading.Lock()
 
 
@@ -126,12 +125,13 @@ def _ts(s) -> float:
 def _first_user(f: Path, agent: str) -> tuple[str, str | None, str | None]:
     """（第一句人话, 工作目录, 自定义标题）。按 (路径, 修改时间) 缓存。"""
     try:
-        mt = f.stat().st_mtime
+        st = f.stat()
     except OSError:
         return "", None, None
-    c = _title_cache.get(str(f))
-    if c and c[0] == mt:
-        return c[1], c[2], c[3]
+    sig = (st.st_mtime, st.st_size)
+    c = listcache.head_get("first:" + agent, str(f), sig)          # 0.4.0：缓存在磁盘上，重开程序时没改过的文件不用再读
+    if c:
+        return c[0], c[1], c[2]
     text, cwd, title = "", None, None
     if agent == "dsh":
         try:
@@ -143,7 +143,7 @@ def _first_user(f: Path, agent: str) -> tuple[str, str | None, str | None]:
             text = next((" ".join(x["text"].split())[:200] for x in dsh.entries(L["events"]) if x["role"] == "user"), "")
         except Exception:
             pass
-        _title_cache[str(f)] = (mt, text, cwd, title)
+        listcache.head_put("first:" + agent, str(f), sig, [text, cwd, title])
         return text, cwd, title
     try:
         with open(f, "rb") as fh:
@@ -175,7 +175,7 @@ def _first_user(f: Path, agent: str) -> tuple[str, str | None, str | None]:
                             pass
     except Exception:
         pass
-    _title_cache[str(f)] = (mt, text, cwd, title)
+    listcache.head_put("first:" + agent, str(f), sig, [text, cwd, title])
     return text, cwd, title
 
 
@@ -349,13 +349,28 @@ def rollouts():
             yield from base.rglob("rollout-*.jsonl")
 
 
+META_KEYS = ("id", "cwd", "model_provider", "originator", "timestamp", "cli_version", "thread_source", "source")
+
+
 def _codex_meta(f: Path) -> dict:
+    """rollout 第一行的 session_meta（只留列表用得到的几样；按修改时间 / 大小缓存在磁盘上，0.4.0）。"""
+    try:
+        st = f.stat()
+    except OSError:
+        return {}
+    sig = (st.st_mtime, st.st_size)
+    c = listcache.head_get("codexmeta", str(f), sig)
+    if c is not None:
+        return c
     try:
         with open(f, "rb") as fh:
             m = json.loads(fh.readline())
-        return (m.get("payload") or {}) if m.get("type") == "session_meta" else {}
+        p = (m.get("payload") or {}) if m.get("type") == "session_meta" else {}
     except Exception:
-        return {}
+        p = {}
+    p = {k: p[k] for k in META_KEYS if k in p and isinstance(p[k], (str, int, float, bool))}
+    listcache.head_put("codexmeta", str(f), sig, p)
+    return p
 
 
 def codex_titles() -> dict:
@@ -452,6 +467,139 @@ def list_all(agent: str | None = None) -> dict:
     groups = account_groups(items)
     return {"ok": True, "items": items, "projects": projects, "accounts": accounts, "account_labels": _account_labels(accounts),
             "groups": groups, "ms": int((time.time() - t0) * 1000)}
+
+
+# ---------- 列表：启动先给上次的快照，后台增量刷新（0.4.0） ----------
+# 内存里只留「序列化好的列表」（bytes）和它的指纹；列表对象本身用完就丢。磁盘上的快照就是这份 bytes。
+# 回给界面的 JSON 第一个键固定是 "stale"，启动时把快照开头的 {"stale": false 换成 {"stale": true, "cached_at": …}，不用整个解析一遍。
+
+SERIALIZE = None                 # ui 设：把对象变成回给页面的 bytes（账号打码）；没设就是普通 JSON
+_LIST = {"bytes": None, "at": 0.0, "gen": 0, "sig": None, "refreshing": False, "booted": False, "snap": None}
+_list_lock = threading.Lock()
+SLIM_DROP = ("file", "resume")   # 列表里不带；点开会话时再要（/api/sessions/item）
+FIRST_MAX = 120
+_HEAD = b'{"stale": false'
+
+
+def _ser(o: dict) -> bytes:
+    if SERIALIZE:
+        return SERIALIZE(o)
+    return json.dumps(o, ensure_ascii=False, default=str).encode("utf-8")
+
+
+def _slim(res: dict) -> dict:
+    """界面列表用的精简版：少几个大字段，第一句话截短（几千个会话时省内存、省传输）。"""
+    for y in res["items"]:                       # 原地改（list_all 每次都是新的），不多复制一份
+        for k in SLIM_DROP:
+            y.pop(k, None)
+        if isinstance(y.get("first"), str) and len(y["first"]) > FIRST_MAX:
+            y["first"] = y["first"][:FIRST_MAX]
+    return res
+
+
+def item(agent: str, sid: str) -> dict:
+    """一个会话的完整信息（列表里省掉的那几样也有）。"""
+    x = find(agent, sid)
+    if not x:
+        return {"ok": False, "error": "找不到这个会话"}
+    return {"ok": True, "item": x}
+
+
+def _sig(res: dict) -> int:
+    return hash((tuple((x["agent"], x["id"], x.get("title"), x.get("last"), x.get("size"), x.get("archived"), x.get("visible"),
+                        x.get("alias"), x.get("backups"), x.get("why"), x.get("gacct"), x.get("first"), x.get("cwd"),
+                        tuple(x.get("accounts") or ())) for x in res["items"]),
+                 json.dumps([res.get("groups"), res.get("account_labels"), res.get("projects")], sort_keys=True, ensure_ascii=False, default=str)))
+
+
+def _compute(asked: float) -> bytes:
+    """同一时间只算一份；排队等的请求，如果在它开口之后已经有人算好了，直接用。没变就用上次序列化好的。"""
+    with _list_lock:
+        if _LIST["bytes"] is not None and _LIST["snap"] is None and _LIST["at"] >= asked:
+            return _LIST["bytes"]
+        res = _slim(list_all())
+        sig = _sig(res)
+        if sig != _LIST["sig"] or _LIST["bytes"] is None or _LIST["snap"] is not None:
+            if sig != _LIST["sig"]:
+                _LIST["gen"] += 1
+            b = _ser(dict({"stale": False, "gen": _LIST["gen"]}, **{k: v for k, v in res.items() if k not in ("stale", "gen")}))
+            if sig != _LIST["sig"] or _LIST["snap"] is not None:
+                listcache.snapshot_write(b)
+            _LIST.update(bytes=b, sig=sig)
+        del res
+        listcache.save(prune=True)
+        _LIST.update(at=time.time(), snap=None)
+        return _LIST["bytes"]
+
+
+def _kick() -> None:
+    if _LIST["refreshing"]:
+        return
+    _LIST["refreshing"] = True
+
+    def run():
+        try:
+            _compute(time.time())
+        except Exception:
+            pass
+        finally:
+            _LIST["refreshing"] = False
+            import gc
+            gc.collect()
+    threading.Thread(target=run, daemon=True, name="ccss-list-refresh").start()
+
+
+def list_view(agent: str | None = None) -> dict:
+    """界面用的列表。刚启动、磁盘上有上次的快照：马上给它（stale=True），后台刷新；之后每次都给最新的（没改过的文件不重读）。
+    返回 {"_raw": bytes}（已经是回给页面的 JSON）；带 agent 时照旧返回对象。"""
+    if agent:
+        return list_all(agent)
+    if not _LIST["booted"]:
+        _LIST["booted"] = True
+        snap = listcache.snapshot_read()
+        if snap and snap[0].startswith(_HEAD) and _LIST["bytes"] is None:
+            _LIST["snap"] = snap[1]
+            _LIST["bytes"] = b'{"stale": true, "cached_at": %.3f' % snap[1] + snap[0][len(_HEAD):]
+            _kick()
+    if _LIST["snap"] is not None:                    # 还在用快照、后台还没刷新完
+        if not _LIST["refreshing"]:
+            _kick()
+        return {"_raw": _LIST["bytes"]}
+    return {"_raw": _compute(time.time())}
+
+
+IDLE_RELEASE = float(os.environ.get("CC_SESSIONSYNC_IDLE_RELEASE") or 180)
+
+
+def release_idle(idle_s: float | None = None) -> bool:
+    """后台循环调：几分钟没人看会话列表，就把缓存从内存里放掉（磁盘上的还在，下次几十毫秒读回来）。"""
+    idle_s = IDLE_RELEASE if idle_s is None else idle_s
+    done = False
+    with _list_lock:
+        if _LIST["bytes"] is not None and _LIST["snap"] is None and time.time() - _LIST["at"] > idle_s and not _LIST["refreshing"]:
+            _LIST.update(bytes=None)
+            done = True
+    if listcache.release_if_idle(idle_s):
+        done = True
+    try:
+        from . import dsh
+        if done:
+            dsh._CACHE.clear()
+    except Exception:
+        pass
+    if done:
+        import gc
+        gc.collect()
+    return done
+
+
+def list_gen() -> dict:
+    return {"gen": _LIST["gen"], "refreshing": _LIST["refreshing"], "stale": _LIST["snap"] is not None}
+
+
+def list_parsed() -> dict:
+    """测试 / 命令行用：list_view 的对象形式。"""
+    return json.loads(list_view()["_raw"])
 
 
 def account_groups(items: list[dict]) -> list[dict]:
@@ -634,15 +782,18 @@ def read(agent: str, sid: str, limit: int = 400) -> dict:
     if not f:
         return {"ok": False, "error": "找不到会话记录文件"}
     parse = parse_claude if agent == "claude" else parse_codex
-    es = []
+    from collections import deque
+    es: deque = deque(maxlen=max(1, limit))             # 0.4.0：只留最后 limit 条，大会话也不占多少内存
+    total = 0
     with open(f, "rb") as fh:
         for line in fh:
             try:
-                es += parse(json.loads(line))
+                got = parse(json.loads(line))
             except Exception:
                 continue
-    return {"ok": True, "file": str(f), "total": len(es), "entries": [dict(e, text=e["text"][:6000]) for e in es[-limit:]],
-            "cut": max(0, len(es) - limit)}
+            total += len(got)
+            es.extend(dict(e, text=e["text"][:6000]) for e in got)
+    return {"ok": True, "file": str(f), "total": total, "entries": list(es), "cut": max(0, total - len(es))}
 
 
 def fulltext(q: str, limit_s: float = 15) -> dict:

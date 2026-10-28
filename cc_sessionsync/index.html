@@ -871,7 +871,22 @@ function trLabel(sel = TR.sel){
   const g = sel.acct && trGroup(sel.acct);
   return [g ? (g.kind === "codex" ? "Codex · " : "") + (["dsh", "cursor", "opencode", "zcode"].includes(g.kind) ? esc(g.masked) : g.masked) : "", sel.proj != null ? projName(sel.proj) || "（没有目录）" : ""].filter(Boolean).join(" / ");
 }
-async function treeLoad(){ try { SS.d = await api("/api/sessions"); } catch(e){ $("#tree").innerHTML = `<div class="hint">读不到：${esc(e.message)}</div>`; return; } treeRender(); }
+async function treeLoad(){ try { SS.d = await api("/api/sessions"); } catch(e){ $("#tree").innerHTML = `<div class="hint">读不到：${esc(e.message)}</div>`; return; } treeRender(); ssStale(); }
+// 0.4.0：刚启动先显示上次的列表，后台刷新好了悄悄换上（不重画详情、不丢勾选）
+let ssWatching = false;
+function ssStale(){
+  const t = $("#ssStale"); if (t) t.innerHTML = SS.d && SS.d.stale ? `<span class="tag" title="先显示上次的会话列表，后台正在看有没有新的 / 改过的会话">上次的列表 · 正在刷新…</span>` : "";
+  if (SS.d && SS.d.stale) ssWatch();
+}
+async function ssWatch(){
+  if (ssWatching) return; ssWatching = true;
+  try {
+    for (let i = 0; i < 400; i++) { await new Promise(r => setTimeout(r, 600)); const g = await api("/api/sessions/gen"); if (!g.stale) break; }
+    const d = await api("/api/sessions"); if (d.stale) return;
+    SS.d = d; const live = new Set(d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
+    if ($("#ssList")) { ssList(); ssChip(); } treeRender();
+  } catch(e){} finally { ssWatching = false; const t = $("#ssStale"); if (t && SS.d && !SS.d.stale) t.innerHTML = ""; }
+}
 function treeRender(){
   const box = $("#tree"); if (!box || !SS.d) return;
   $$("#trMode button").forEach(b => b.classList.toggle("on", b.dataset.m === TR.mode));
@@ -1992,7 +2007,7 @@ R.sessions = async (keep) => {
   if (!SS.d) pg.innerHTML = '<div class="emp">' + ic("list") + '读取会话…</div>';
   try { SS.d = await api("/api/sessions"); } catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   const live = new Set(SS.d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
-  pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span class="sp"></span>
+  pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
       <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
       <button id="ssImp" title="把导出的 .md / .html 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html</button>
       <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
@@ -2000,7 +2015,7 @@ R.sessions = async (keep) => {
     <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
       <div class="batch" id="ssBatch"></div></div></div><div class="grip" id="ssGrip" title="拖动调整宽度"></div>
       <div class="r"><div class="card" id="ssView"><div class="emp">${ic("messages")}点左边一个会话，在这里看记录（只读）</div></div></div></div>`;
-  ssList(); ssChip(); treeRender();
+  ssList(); ssChip(); treeRender(); ssStale();
   $("#ssImp").onclick = () => imDlg();
   const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
   $("#ssRef").onclick = () => R.sessions();
@@ -2056,10 +2071,14 @@ const chatHtml = (entries, agent) => entries.length ? entries.map(m => `<div cla
 async function ssView(agent, id){
   SS.cur = {agent, id};
   $$("#ssList tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === agent + ":" + id));
-  const x = SS.d.items.find(i => i.agent === agent && i.id === id) || {};
+  let x = SS.d.items.find(i => i.agent === agent && i.id === id) || {};
   const box = $("#ssView"); box.innerHTML = '<div class="empty">读取…</div>';
   if (x.orphan) return ssOrphan(agent, id, x, box);
-  let r; try { r = await api(`/api/sessions/read?agent=${agent}&id=${encodeURIComponent(id)}&limit=300`); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  let r, dt;                          // 0.4.0：列表里省掉的（继续命令等）点开时再要
+  try { [r, dt] = await Promise.all([api(`/api/sessions/read?agent=${agent}&id=${encodeURIComponent(id)}&limit=300`),
+    api(`/api/sessions/item?agent=${agent}&id=${encodeURIComponent(id)}`).catch(() => null)]); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  if (SS.cur.agent !== agent || SS.cur.id !== id) return;
+  if (dt && dt.item) x = Object.assign({}, dt.item, x, {resume: dt.item.resume, file: dt.item.file});
   const g = trGroup(x.gacct);
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
