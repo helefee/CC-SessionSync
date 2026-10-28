@@ -78,6 +78,16 @@ def _check_backup_settings(ch: dict) -> None:
         ch["session_backup_every"] = int(every) if every == int(every) else every
         ch["session_backup_unit"] = unit
         ch["session_backup_hours"] = None                      # 换成新键了，老的删掉
+    for k in ("backup_clean_days", "backup_clean_mb"):          # 自动清理配置备份（0.3.9）：0 = 不按这个删
+        if k in ch:
+            try:
+                ch[k] = max(0, int(float(ch[k] or 0)))
+            except (TypeError, ValueError):
+                raise ValueError("天数 / 大小要填整数")
+    if ch.get("backup_clean_auto"):
+        s = settings.load()
+        if not (ch.get("backup_clean_days", s.get("backup_clean_days")) or ch.get("backup_clean_mb", s.get("backup_clean_mb"))):
+            raise ValueError("自动清理要填天数或大小（至少一个）")
     for k in ("retention_all_days", "retention_daily_days"):
         if k in ch:
             try:
@@ -408,6 +418,11 @@ class H(BaseHTTPRequestHandler):
             return xsearch.search(q.get("q") or "", [a for a in (q.get("agents") or "").split(",") if a] or None, q.get("project") or "",
                                   num("since"), num("until"), q.get("content") in ("1", "true"), q.get("sub") in ("1", "true"),
                                   int(q.get("limit") or 500), q.get("force") in ("1", "true"))
+        if p == "/api/backups/clean":                          # 清理配置备份（0.3.9）：?days=&mb= 给预览；不带就是现状
+            from . import bakclean
+            if "days" in q or "mb" in q:
+                return dict(bakclean.plan(q.get("days"), q.get("mb")), status=bakclean.status())
+            return bakclean.status()
         if p in ("/api/formats", "/api/formats/banner"):     # 格式自检（0.3.8）
             from . import formats
             if p.endswith("banner"):
@@ -566,6 +581,10 @@ class H(BaseHTTPRequestHandler):
             if k:
                 return apps.run_or_defer(k, "convert-batch", kw, f"把 {len(its)} 个会话批量转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
             return convert.batch_start(**kw)
+        if p == "/api/backups/clean":
+            from . import bakclean
+            names = b.get("names")
+            return bakclean.apply(b.get("days"), b.get("mb"), names=list(names) if isinstance(names, list) else None)
         if p == "/api/formats/seen":
             from . import formats
             return formats.seen()
@@ -599,7 +618,8 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/settings":
             ch = {k: b[k] for k in ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
                                     "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
-                                    "show_full_accounts", "retention_all_days", "retention_daily_days", "convert_skip_preview") if k in b}
+                                    "show_full_accounts", "retention_all_days", "retention_daily_days", "convert_skip_preview",
+                                    "backup_clean_auto", "backup_clean_days", "backup_clean_mb") if k in b}
             for k, lo, hi in (("ui_font", 0.8, 1.5), ("ui_zoom", 0.8, 2.0)):      # 字号 / 界面缩放（0.2.6）
                 if k in b:
                     try:
@@ -821,6 +841,11 @@ def start_background(auto_sync: bool | None = None) -> None:
                     fmt_at = time.time()
                     from . import formats
                     formats.check_all(force=True)
+                try:                                            # 自动清理配置备份（0.3.9，缺省关，一天最多一次）
+                    from . import bakclean
+                    bakclean.auto_tick()
+                except Exception:
+                    pass
                 v = update.should_notify()
                 if v:
                     events.add("update", f"CC Session Sync 有新版本 {v}", "点这里查看；不会自动安装，点「立即更新」才装", {"page": "update"})

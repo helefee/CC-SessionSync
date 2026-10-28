@@ -354,6 +354,23 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
+### 清理配置备份（0.3.9）
+
+`~/.cc-sessionsync/backups` 里放的是改配置文件之前留的备份，来自 0.2–0.3.4 改 Codex / Claude Code 配置时，以及 0.3.5 收拾旧改动时。
+时间久了会越攒越多。它和会话备份（`sessions.sqlite`）、Claude 同步备份（`claude-sync-bak`）无关，这里不碰那两样。
+
+- **手动清理**：设置 → 数据 → 配置备份 →「清理…」。
+  - 填规则：删比 N 天旧的，和 / 或总共超过 M MB 时从最旧的删（填 0 = 不按这一条删）。
+  - 先列出**会删哪些**（备份时间、是哪个文件的、为什么备份、大小）和**能腾出多少**，确认了才删。
+- **自动清理**：设置 → 高级 →「自动清理旧的配置备份」，**缺省关**。打开后每天最多清一次，规则同上。
+- **每个文件最新的一份永远不删**：按 `index.jsonl` 里记的原文件分组；没有记录的，按标签和后缀分组。
+- 只删 backups 文件夹第一层里认得出来的备份文件，`index.jsonl` 里对应的行会一起去掉。子文件夹和认不出来的文件都不动。
+- 命令行：`cc-sessionsync clean-backups --days 90 [--mb 200]` 只预览，加 `--yes` 才删。
+
+| 清理前预览 | 设置 → 高级 |
+|---|---|
+| ![](docs/screenshots/v039-clean-preview.png) | ![](docs/screenshots/v039-settings-advanced.png) |
+
 ### 存储格式自检（0.3.8）
 
 应用升级后可能改了存会话的格式：OpenCode 换了表、ZCode 改了列名、Cursor 的 `_v` 版本变了、Codex 的 rollout 多了新的记录类型等等。
@@ -501,6 +518,7 @@ cc-sessionsync sync                       # 按桌面端当前账号补齐
 cc-sessionsync sync --source cli          # 按命令行（~/.claude.json）当前账号补齐
 cc-sessionsync sync --to <账号>/<组织>     # 手动指定目标文件夹
 cc-sessionsync backups                    # 每次同步前的备份
+cc-sessionsync clean-backups --days 90    # 清理旧的配置备份：先预览，加 --yes 才删；每个文件最新的一份不删（0.3.9）
 cc-sessionsync restore 20261017-101500    # 撤回某次同步（撤回前也先备份）
 cc-sessionsync auto                       # 前台常驻：桌面端没开时自动补齐（Ctrl+C 停）
 
@@ -709,6 +727,10 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Backup cleanup (0.3.9):** `~/.cc-sessionsync/backups` (config-file backups from 0.2–0.3.5) can be cleaned by age and/or total size:
+  a manual 清理 dialog in 设置 → 数据 previews exactly which files go and how much space is freed; optional daily auto-clean under 高级
+  (off by default); `cc-sessionsync clean-backups --days N [--mb M] [--yes]`. The newest backup of every original file is never deleted;
+  `index.jsonl` is updated; unknown files, subfolders, `sessions.sqlite` and `claude-sync-bak` are untouched.
 - **Storage format self-check (0.3.8):** read-only probes (table / column names, record types, format versions, counts; never account or
   credential tables) for Claude Code, Codex, Cursor, DeepSeek Harness, OpenCode and ZCode detect when an app changed how it stores sessions
   (new OpenCode tables, renamed ZCode columns, a newer Cursor `_v`, unknown Codex rollout records, broken files). Instead of sessions silently

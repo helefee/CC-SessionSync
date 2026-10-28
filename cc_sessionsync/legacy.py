@@ -86,10 +86,18 @@ def _backup_bytes(bid: str | None) -> bytes | None:
     if not bid:
         return None
     try:
-        rows = [json.loads(x) for x in (BACKUPS / "index.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+        lines = (BACKUPS / "index.jsonl").read_text(encoding="utf-8").splitlines()
     except OSError:
         return None
-    r = next((x for x in rows if x.get("id") == bid), None)
+    r = None
+    for x in lines:                                   # 坏行跳过（0.3.9）
+        try:
+            y = json.loads(x)
+        except ValueError:
+            continue
+        if isinstance(y, dict) and y.get("id") == bid:
+            r = y
+            break
     return _read(BACKUPS / (bid + r["ext"])) if r else None
 
 
