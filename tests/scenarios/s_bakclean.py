@@ -122,8 +122,8 @@ ok(all(B._norm(f) in kept for f in (CFG, SET, ONE)), "every original file still 
 
 # 跟真的 legacy.backup 一起用
 real = H / ".codex" / "config.toml"; real.parent.mkdir(parents=True, exist_ok=True)
-real.write_text("a = 1\n"); b1 = legacy.backup(real, "t1"); time.sleep(0.01)
-real.write_text("a = 2\n"); b2 = legacy.backup(real, "t2")
+real.write_bytes(b"a = 1\n"); b1 = legacy.backup(real, "t1"); time.sleep(0.01)
+real.write_bytes(b"a = 2\n"); b2 = legacy.backup(real, "t2")
 newest = [x for x in B.scan() if x["group"] == B._norm(str(real))][0]
 ok(newest["name"].startswith(b2) and newest["keep"], "real legacy.backup: newest is protected")
 B.apply(mb=0.000001)
