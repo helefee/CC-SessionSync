@@ -106,6 +106,8 @@ def entries(items: list[dict]) -> list[dict]:
             s = it.get("text") or ""
             if it.get("images"):
                 s = (s + "\n" if s else "") + f"[图片 ×{it['images']}]"
+            if it.get("files"):
+                s = (s + "\n" if s else "") + f"[附件 ×{it['files']}]"
             if s:
                 out.append({"role": "user", "text": s, "ts": ts})
         elif it.get("kind") == "text":
@@ -133,7 +135,7 @@ def stats_of(items: list[dict]) -> dict:
             "assistant": sum(1 for i in items if i["role"] == "assistant" and i.get("kind") == "text"),
             "tools": sum(1 for i in items if i.get("kind") == "tool"),
             "thinking": sum(1 for i in items if i.get("kind") == "thinking"),
-            "images": sum(int(i.get("images") or 0) for i in items)}
+            "images": sum(int(i.get("images") or 0) for i in items), "files": sum(int(i.get("files") or 0) for i in items)}
 
 
 # ---------- 拼成一轮一轮的文字（各写入器共用） ----------
@@ -188,6 +190,9 @@ def turns(h: dict, items: list[dict], reasoning: bool = False, out_lines: int = 
             if it.get("images"):
                 st["images"] += int(it["images"])
                 t = (t + "\n" if t else "") + f"[图片 ×{it['images']}，没有带过来]"
+            if it.get("files"):
+                st["files"] = st.get("files", 0) + int(it["files"])
+                t = (t + "\n" if t else "") + f"[附件 ×{it['files']}，没有带过来]"
             push("user", t, ts)
         elif it.get("kind") == "text":
             st["assistant"] += 1

@@ -393,6 +393,11 @@ class H(BaseHTTPRequestHandler):
                 ids = [x for x in (q.get("ids") or "").split(",") if x.strip()]
                 return convert.run(q.get("src") or "", ids, q.get("dst") or "", dry=True, again=q.get("again") in ("1", "true"),
                                    export=q.get("export") in ("1", "true"))
+            if p == "/api/convert/preview":              # 转换前预览（0.3.6）：写到哪、多少条、会丢 / 会变什么
+                ids = [x for x in (q.get("ids") or "").split(",") if x.strip()]
+                yes = lambda k: q.get(k) in ("1", "true")
+                return convert.preview(q.get("src") or "", ids, q.get("dst") or "", again=yes("again"), reasoning=yes("reasoning"),
+                                       project=yes("project"), export=yes("export"), desktop=q.get("desktop") not in ("0", "false"))
             if p == "/api/convert/ledgers":
                 return convert.ledgers()
         if p == "/api/diag":
@@ -567,7 +572,7 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/settings":
             ch = {k: b[k] for k in ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
                                     "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
-                                    "show_full_accounts", "retention_all_days", "retention_daily_days") if k in b}
+                                    "show_full_accounts", "retention_all_days", "retention_daily_days", "convert_skip_preview") if k in b}
             for k, lo, hi in (("ui_font", 0.8, 1.5), ("ui_zoom", 0.8, 2.0)):      # 字号 / 界面缩放（0.2.6）
                 if k in b:
                     try:

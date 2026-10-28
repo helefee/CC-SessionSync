@@ -137,7 +137,7 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                 if c.strip() and not c.lstrip().startswith(SKIP):
                     items.append({"role": "user", "kind": "text", "text": c, "ts": ts})
                 continue
-            texts, imgs = [], 0
+            texts, imgs, fls = [], 0, 0
             for b in c or []:
                 if not isinstance(b, dict):
                     continue
@@ -145,6 +145,8 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                     texts.append(b["text"])
                 elif b.get("type") == "image":
                     imgs += 1
+                elif b.get("type") == "document":
+                    fls += 1
                 elif b.get("type") == "tool_result":
                     it = calls.get(b.get("tool_use_id"))
                     if it is not None:
@@ -153,8 +155,8 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                             x.get("text", "") if x.get("type") == "text" else "[图片]" for x in rc or [] if isinstance(x, dict))
                         if b.get("is_error"):
                             it["status"] = "error"
-            if texts or imgs:
-                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None})
+            if texts or imgs or fls:
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None})
         else:
             mdl = m.get("model") if m.get("model") not in (None, "<synthetic>") else None
             for b in c if isinstance(c, list) else [{"type": "text", "text": c}] if isinstance(c, str) else []:
@@ -301,7 +303,9 @@ def origin_of(agent: str, sid: str, title: str | None, org: dict | None = None) 
 # ---------- 演练 ----------
 
 def _ir_sig(h: dict, items: list[dict]) -> str:
-    return _shab(json.dumps(items, ensure_ascii=False, sort_keys=True).encode("utf-8"))
+    # 0.3.6 加的 "files": None 不算进指纹，免得升级后老转换全变成「源会话改过」
+    its = [{k: v for k, v in i.items() if not (k == "files" and v is None)} for i in items]
+    return _shab(json.dumps(its, ensure_ascii=False, sort_keys=True).encode("utf-8"))
 
 
 def _exists(dst: str, rec: dict) -> bool:
@@ -334,7 +338,7 @@ def plan(src: str, ids: list[str], dst: str, again: bool = False) -> dict:
             continue
         sig = _ir_sig(h, items)
         st = ir.stats_of(items)
-        row.update(stats=st, sig=sig)
+        row.update(stats=st, sig=sig, facts=_facts(items), cwd=h.get("cwd") or row.get("cwd"))
         rec = mp.get(f"{src}:{sid}>{dst}")
         if o == dst and m == "native":
             row["state"] = "loop"                        # 本来就是从目标应用导过来的
@@ -508,6 +512,156 @@ def _export(h, items, dst, opts) -> dict:
             "paste": PASTE.get(dst, PASTE_ANY), "chars": len(md["text"])}
 
 
+
+# ---------- 转换前预览（0.3.6）：写到哪、多少条、会丢 / 会变什么 ----------
+
+OUT_LINES, OUT_CHARS, IN_LINES, IN_CHARS = 20, 2000, 30, 3000       # 和 ir.turns 的截短一致
+
+
+def _long(v, lines: int, chars: int) -> bool:
+    s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False, indent=1) if v is not None else ""
+    return len(s) > chars or s.count("\n") >= lines
+
+
+def _facts(items: list[dict]) -> dict:
+    """预览用的计数（不含正文）。"""
+    f = {"user": 0, "assistant": 0, "tools": 0, "tool_errors": 0, "long_out": 0, "long_in": 0, "thinking": 0, "images": 0, "files": 0,
+         "models": [], "first": None, "last": None}
+    ms = set()
+    for it in items:
+        ts = it.get("ts")
+        if ts:
+            f["first"] = min(f["first"] or ts, ts)
+            f["last"] = max(f["last"] or ts, ts)
+        if it.get("model"):
+            ms.add(str(it["model"]))
+        if it["role"] == "user":
+            f["user"] += 1
+            f["images"] += int(it.get("images") or 0)
+            f["files"] += int(it.get("files") or 0)
+        elif it.get("kind") == "text":
+            f["assistant"] += 1
+        elif it.get("kind") == "thinking":
+            f["thinking"] += 1
+        elif it.get("kind") == "tool":
+            f["tools"] += 1
+            if it.get("status") == "error" or it.get("error"):
+                f["tool_errors"] += 1
+            if _long(it.get("output") or it.get("error") or "", OUT_LINES, OUT_CHARS):
+                f["long_out"] += 1
+            if _long(it.get("input"), IN_LINES, IN_CHARS):
+                f["long_in"] += 1
+    f["models"] = sorted(ms)[:6]
+    return f
+
+
+def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> list[dict]:
+    """→ [{level: lost | changed | kept, what, detail}]：这个会话转过去以后，哪些没了、哪些变了样、哪些照旧。"""
+    L, app, to = [], ir.LABEL.get(src, src), ir.LABEL.get(dst, dst)
+    exp = mode == "export"
+    if f.get("images"):
+        L.append({"level": "lost", "what": f"图片 {f['images']} 张", "detail": "不带过去，原位置换成「[图片 ×N，没有带过来]」"})
+    if f.get("files"):
+        L.append({"level": "lost", "what": f"附件 {f['files']} 个", "detail": "文件附件不带过去，只剩对话里提到它的文字"})
+    if f.get("thinking"):
+        if reasoning and not exp:
+            L.append({"level": "changed", "what": f"思考 {f['thinking']} 段", "detail": f"当普通文字放进回复里（标「{app} 里的思考」）；{to} 不会把它当思考"})
+        else:
+            L.append({"level": "lost", "what": f"思考 {f['thinking']} 段", "detail": "不带（各家的思考格式互相不认）" + ("" if exp else "；要带上就打开「带上思考内容」")})
+    if f.get("tools"):
+        if exp:
+            L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次", "detail": "只留一行摘要（工具名 + 主要参数），参数全文和输出都不带"})
+        else:
+            cut = []
+            if f.get("long_out"):
+                cut.append(f"{f['long_out']} 个输出超过 {OUT_LINES} 行 / {OUT_CHARS} 字被截短")
+            if f.get("long_in"):
+                cut.append(f"{f['long_in']} 个参数超过 {IN_LINES} 行被截短")
+            L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
+                      "detail": f"变成文字摘要（工具名 + 参数 + 输出），{to} 里不能重放 / 展开" + ("；" + "，".join(cut) if cut else "")})
+        if f.get("tool_errors"):
+            L.append({"level": "changed", "what": f"出错的工具调用 {f['tool_errors']} 次", "detail": "标成「（出错）」，错误信息当文字留着"})
+    if exp:
+        L.append({"level": "changed", "what": "不进会话列表", "detail": f"只写一个 Markdown 上下文文件；在 {to} 里新开对话，粘贴提示 + 把文件 @ 进去"})
+        L.append({"level": "lost", "what": "时间 / 模型 / 用量", "detail": "上下文文件里只有对话文字"})
+    else:
+        L.append({"level": "changed", "what": "模型名和 token 用量", "detail": f"不带：新会话里记成「{src}-import」、0 token（不算进用量）"})
+        L.append({"level": "changed", "what": "标题", "detail": f"加来源前缀「{ir.PREFIX.get(src, '')}」，以后不会被转回 {app}"})
+        L.append({"level": "kept", "what": "对话文字和时间", "detail": "用户 / 助手的文字原样带过去；相邻的同一方合并成一轮；时间照旧"})
+    return L
+
+
+def _target_of(dst: str, mode: str, row: dict, opts: dict, src: str = "") -> dict:
+    """→ {where: 人看的位置, path: 目录或文件（可能是样子，带 <新会话号>）}。"""
+    from . import codex_import as CI
+    cwd = CI.norm_cwd(row.get("cwd")) or str(Path.home())
+    if mode == "export":
+        name = f"{datetime.now():%Y%m%d-%H%M%S}-{src}-{_safe(str(row.get('id') or ''))[:12]}-{_safe(row.get('title') or '')}.md"
+        if opts.get("project") and row.get("cwd") and Path(row["cwd"]).is_dir():
+            d = Path(row["cwd"]) / ".cc-sessionsync"
+            return {"where": "项目目录里的上下文文件", "path": str(d / name), "dir": str(d)}
+        return {"where": "本程序导出目录里的上下文文件", "path": str(EXPORTS / dst / name), "dir": str(EXPORTS / dst)}
+    if dst == "claude":
+        d = paths.CLAUDE_HOME / "projects" / CI.project_slug(cwd)
+        w = "Claude Code 新会话（命令行 claude --resume）" + ("，同时写进 Claude 桌面端当前账号的会话列表" if opts.get("desktop", True) else "")
+        return {"where": w, "path": str(d / "<新会话号>.jsonl"), "dir": str(d)}
+    if dst == "codex":
+        now = datetime.now()
+        d = CI.codex_home() / "sessions" / f"{now:%Y}" / f"{now:%m}" / f"{now:%d}"
+        return {"where": "Codex 新线程（codex resume / 桌面端列表），并在 session_index.jsonl 追加一行标题",
+                "path": str(d / f"rollout-{now:%Y-%m-%dT%H-%M-%S}-<新线程号>.jsonl"), "dir": str(d)}
+    if dst == "dsh":
+        try:
+            from . import dsh
+            root = dsh.write_root()["root"]
+        except Exception:
+            root = None
+        return {"where": "DeepSeek Harness 新会话目录（dsh --session-id）", "path": str(Path(root) / "<新会话号>") if root else "（算不出 dsh 的会话根）",
+                "dir": str(root) if root else None}
+    if dst == "opencode":
+        try:
+            db = str(ocstore.db_path("opencode"))
+        except Exception:
+            db = None
+        return {"where": "OpenCode 新会话：交给 OpenCode 自己的命令行导入（opencode import），本程序不直接写它的库",
+                "path": db or "OpenCode 数据库", "dir": None}
+    return {"where": ir.LABEL.get(dst, dst), "path": None, "dir": None}
+
+
+def preview(src: str, ids: list[str], dst: str, again: bool = False, reasoning: bool = False, project: bool = False,
+            export: bool = False, desktop: bool = True) -> dict:
+    """转换 / 导出之前给人看的：每个会话写到哪、多少条消息、会丢 / 会变什么；合起来的总数。不写任何东西。"""
+    p = plan(src, ids, dst, again)
+    if export and p["mode"] == "native":
+        p.update(mode="export", why="选了只导出上下文文件", paste=PASTE.get(dst, PASTE_ANY))
+        for r in p["rows"]:
+            if r["state"] in ("same", "changed", "loop"):
+                r["state"] = "new"
+    opts = {"project": project, "desktop": desktop}
+    tot = {"sessions": 0, "msgs": 0, "user": 0, "assistant": 0, "tools": 0, "thinking": 0, "images": 0, "files": 0, "long_out": 0}
+    agg: dict = {}
+    for r in p["rows"]:
+        f = r.pop("facts", None)
+        if r["state"] != "new" or not f:
+            continue
+        r["msgs"] = f["user"] + f["assistant"]
+        r["target"] = _target_of(dst, p["mode"], r, opts, src)
+        r["losses"] = losses(f, src, dst, p["mode"], reasoning)
+        r["span"] = [f["first"], f["last"]]
+        tot["sessions"] += 1
+        tot["msgs"] += r["msgs"]
+        for k in ("user", "assistant", "tools", "thinking", "images", "files", "long_out"):
+            tot[k] += f.get(k) or 0
+        for x in r["losses"]:
+            a = agg.setdefault((x["level"], x["what"].split(" ")[0]), {"level": x["level"], "what": x["what"].split(" ")[0], "n": 0, "detail": x["detail"]})
+            a["n"] += 1
+    for r in p["rows"]:
+        r.pop("facts", None)
+    p["total"] = tot
+    p["summary"] = losses(dict(tot, tool_errors=0, long_in=0), src, dst, p["mode"], reasoning) if tot["sessions"] else []
+    p["dirs"] = sorted({(r.get("target") or {}).get("dir") for r in p["rows"] if (r.get("target") or {}).get("dir")})
+    return dict(p, preview=True, reasoning=reasoning, project=project, export=export)
+
 # ---------- 真做 ----------
 
 def _new_ledger(what: str) -> tuple[Path, dict]:
@@ -530,11 +684,12 @@ def run(src: str, ids: list[str], dst: str, dry: bool = True, again: bool = Fals
                 r["state"] = "new"
     opts = {"reasoning": reasoning, "desktop": desktop, "to": to, "project": project}
     todo = [r for r in p["rows"] if r["state"] == "new"]
+    for r in p["rows"]:
+        r.pop("facts", None)
     if dry or not todo:
         for r in todo:
-            r["target"] = (f"上下文文件 → {EXPORTS / dst}" if p["mode"] == "export" else
-                           {"claude": "Claude Code 新会话", "codex": "Codex 新线程", "dsh": "dsh 新会话目录",
-                            "opencode": "OpenCode 新会话（命令行导入）"}.get(dst))
+            t = _target_of(dst, p["mode"], r, opts, src)
+            r["target"] = t["where"] + (f" → {t['path']}" if t.get("path") else "")
         return dict(p, dry=True, done=0)
     mp = _load(MAP, {})
     led_dir, led = _new_ledger(f"{src}-to-{dst}")
