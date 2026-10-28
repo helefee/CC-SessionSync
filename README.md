@@ -354,6 +354,23 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
+### 存储格式自检（0.3.8）
+
+应用升级后可能改了存会话的格式：OpenCode 换了表、ZCode 改了列名、Cursor 的 `_v` 版本变了、Codex 的 rollout 多了新的记录类型等等。
+以前遇到这种情况，会话就悄悄从列表里少了几个；现在会**明确告诉你**。
+
+- 启动 1 分钟后在后台查一次，之后每 6 小时查一次，**只读**：只看表名、列名、记录类型、格式版本和条数，不读账号或凭据表。
+- 有问题时**顶上出提示条**：哪些应用、有几个会话读不出来。点「看诊断」看细节；点「知道了」后，同样的问题不再提示，出了新问题才会再提示。
+  托盘也会弹一次通知，每种问题只弹一次。
+- **诊断自检 → 存储格式自检**：每个应用一行，写明认出的格式、读得出 / 读不出的会话数、发现了什么，并给出建议（一般是先升级 CC Session Sync；会话本身没坏）。可以点「重新检查」。
+  「自检」列表里也有每个应用的「存储格式」一项。
+- 会话转换页：某个应用有会话读不出来时，会话数旁边会显示「另有 N 个读不出来」，点它会跳到诊断。
+- OpenCode / ZCode 缺了不认识的可选列时，照样把能读的会话读出来，不再整库读失败。
+
+| 顶上提示 | 诊断里的存储格式自检 |
+|---|---|
+| ![](docs/screenshots/v038-format-banner.png) | ![](docs/screenshots/v038-diag-formats.png) |
+
 ### 全部应用：跨应用搜索 + 批量转换（0.3.7）
 
 会话转换页「从」那一排最前面多了 **全部应用**：六个应用（Claude Code、Codex、DeepSeek Harness、Cursor、OpenCode、ZCode）的会话放在一张表里搜、勾、一起转。
@@ -692,6 +709,17 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Storage format self-check (0.3.8):** read-only probes (table / column names, record types, format versions, counts; never account or
+  credential tables) for Claude Code, Codex, Cursor, DeepSeek Harness, OpenCode and ZCode detect when an app changed how it stores sessions
+  (new OpenCode tables, renamed ZCode columns, a newer Cursor `_v`, unknown Codex rollout records, broken files). Instead of sessions silently
+  missing, a dismissible banner names the apps and how many sessions can't be read, 诊断自检 gets a "存储格式自检" card and per-app self-check
+  items, and the conversion page shows "另有 N 个读不出来". Runs 1 min after start and every 6 h; notifies once per distinct problem.
+- **Cross-app search + batch convert (0.3.7):** a 全部应用 source searches all six apps by keyword, app, project and time range (optionally
+  inside conversation text via an incremental background index, `search-index.sqlite`), and converts / exports many sessions at once with a
+  combined preview, a background job with progress, and one undo ledger per source app. Session lists are cached (stale-while-refresh) and
+  rendered in pages.
+- **Conversion preview (0.3.6):** before writing, shows target paths, message counts and what is lost / changed (images, attachments,
+  reasoning, tool output, model names); "skip preview" lives under 设置 → 高级 (off by default).
 - **Providers removed (0.3.5):** the 供应商 page (Agent / 服务商 / 高级), the model-routing proxy (Anthropic ⇄ OpenAI Responses / Chat
   conversion, key rotation), the generated Codex model catalogs, config warnings / one-click fixes, the tray entry and the `route` CLI are
   gone — too heavy. On the first launch of 0.3.5 the app undoes what 0.3.0–0.3.4 wrote, once: Codex `config.toml` and Claude Code

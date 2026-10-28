@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """0.3.8：格式自检。六个应用的存储格式认不认识；格式变了（新表 / 缺列 / 新记录类型 / 新格式版本 / 新 _v / 写坏的文件）时说清楚、数出读不出来的会话，
 只通知一次、顶上提示可以「知道了」、进诊断自检。全在临时目录，不碰真实数据。"""
-import os, sys, pathlib, json, tempfile, hashlib, sqlite3, subprocess, uuid, time
+import os, sys, pathlib, json, tempfile, hashlib, sqlite3, uuid
 from pathlib import Path
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tests"))
@@ -22,7 +22,6 @@ os.environ.update(HOME=str(H), USERPROFILE=str(H), CC_SESSIONSYNC_HOME=str(T / "
 os.environ.pop("XDG_DATA_HOME", None)
 (T / "procs.json").write_text("[]")
 import oc_fixture as OF, codex_fixture as CF
-from cc_sessionsync import ocstore as O, convert as CV, ir, sessions as S, timeline, apps
 FAILS = []
 def ok(c, m): print(("PASS " if c else "FAIL ") + m); c or FAILS.append(m)
 def tree(p: Path) -> dict:
@@ -34,7 +33,7 @@ CWD = str(T / "proj"); Path(CWD).mkdir()
 oc = OF.opencode(OCD, CWD)
 zc = OF.zcode(ZH, CWD)
 import dsh_fixture as DF, cursor_fixture as CuF
-from cc_sessionsync import formats as F, events, selfcheck, ui, cursor as CU, dsh
+from cc_sessionsync import formats as F, events, selfcheck, ui, cursor as CU
 pj = H / ".claude" / "projects" / "-proj"; pj.mkdir(parents=True)
 CSID = str(uuid.uuid4())
 (pj / f"{CSID}.jsonl").write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in [

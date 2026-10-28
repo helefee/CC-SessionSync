@@ -415,7 +415,7 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 @keyframes crspin{to{transform:rotate(360deg)}}
 .crbar{height:6px;border-radius:4px;background:var(--line);overflow:hidden}.crbar i{display:block;height:100%;background:var(--accent);transition:width .4s}
 .crj{list-style:none;padding:0 !important}.crj li{display:flex;gap:6px;align-items:baseline}
-td.nw{white-space:nowrap}
+td.nw,th.nw{white-space:nowrap}
 #mdCr{margin-left:6px;padding:1px 8px;font-size:calc(13px*var(--fk))}
 .ag+.ag{border-top:1px solid var(--line2)}
 .dot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--faint)}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
@@ -1692,7 +1692,7 @@ R.convert = async () => {
           return `<td class="${c === "same" ? "same" : c === "native" ? "nat" : "exp"} ${s === CV.src && d === CV.dst ? "on" : ""}" ${c === "same" ? "" : `data-s="${s}" data-d="${d}"`} title="${c === "same" ? "" : esc(c === "native" ? (mat.how || {})[d] || "" : (T[d] || {}).why || "")}">${c === "same" ? "—" : c === "native" ? "原生" : "导出"}</td>`; }).join("")}</tr>`).join("")}</table>
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px"><span class="tag ok">原生</span> 写成目标应用自己的会话，能在它里面接着聊（Claude Code / Codex / DeepSeek Harness / OpenCode）。
         <span class="tag warn">导出</span> 写一份上下文文件 + 一句粘贴提示：Cursor 和 ZCode 的会话库没有公开格式、还有好几处要一起改，写坏了可能影响应用本身，所以不碰。</div></details></div>
-    ${cxMode ? `<div id="cvCodex"><div class="empty">读取 Codex 对话…</div></div>` : `${xMode ? cvXsHtml(exp) : `    <div class="bar"><input type="search" id="cvQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(CV.q)}"><span class="sp"></span><span class="dim">${logo(CV.src)} ${CV_N[CV.src]} 的会话 ${CV.rows.length} 个</span></div>
+    ${cxMode ? `<div id="cvCodex"><div class="empty">读取 Codex 对话…</div></div>` : `${xMode ? cvXsHtml(exp) : `    <div class="bar"><input type="search" id="cvQ" placeholder="搜标题 / 目录 / 会话号" value="${esc(CV.q)}"><span class="sp"></span><span class="dim">${logo(CV.src)} ${CV_N[CV.src]} 的会话 ${CV.rows.length} 个</span>${(ST.fmtU || {})[CV.src] ? ` <a class="tag bad" href="#" id="cvFmtU" title="${CV_N[CV.src]} 的存储格式和本程序认识的不一样，这些会话列不出来。点开看诊断">另有 ${ST.fmtU[CV.src]} 个读不出来</a>` : ""}</div>
     <div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="cvList" style="border:0;border-radius:0;max-height:calc(48*var(--vh))"></div>
       <div class="batch"><span id="cvN"></span><span style="flex:1"></span><button id="cvDry">${ic("eye")} 预览：写到哪、丢什么</button><button class="primary" id="cvGo">${ic(exp ? "download" : "shuffle")} ${exp ? "导出选中的" : "转换选中的"}</button></div></div>`}
     <div class="card"><h3>选项</h3>
@@ -1720,6 +1720,7 @@ R.convert = async () => {
   $$("#pg-convert .cvm [data-s]").forEach(td => td.onclick = () => { const ch = CV.src !== td.dataset.s; CV.src = td.dataset.s; CV.dst = td.dataset.d; if (ch) { CV.sel.clear(); CV.rows = null; } CV.mx = true; R.convert(); });
   $("#cvMx").ontoggle = e => { CV.mx = e.target.open; };
   if ($("#cvQ")) $("#cvQ").oninput = e => { CV.q = e.target.value; CV.show = 400; cvList(); };
+  if ($("#cvFmtU")) $("#cvFmtU").onclick = e => { e.preventDefault(); goTo("diag", {fmt: 1}); };
   const on = (id, k) => { const e = $(id); if (e) e.onchange = ev => { CV[k] = ev.target.checked; if (["export", "sub"].includes(k)) R.convert(); }; };
   on("#cvReas", "reasoning"); on("#cvDesk", "desktop"); on("#cvExp", "export"); on("#cvAgain", "again"); on("#cvProj", "project"); on("#cvSub", "sub");
   $$("#pg-convert [data-go]").forEach(a => a.onclick = e => { e.preventDefault(); go(a.dataset.go); });
@@ -2716,7 +2717,7 @@ async function fmtLoad(force){
   try { r = await api("/api/formats" + (force ? "?force=1" : "")); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
   if (!$("#dgFmtBox")) return;
   $("#dgFmtRe").disabled = false;
-  $("#dgFmtBox").innerHTML = `<table class="t fmtt"><tr><th>应用</th><th>状态</th><th>格式</th><th class="n">读得出</th><th class="n">读不出</th><th>说明</th></tr>
+  $("#dgFmtBox").innerHTML = `<table class="t fmtt"><tr><th>应用</th><th>状态</th><th>格式</th><th class="n nw">读得出</th><th class="n nw">读不出</th><th>说明</th></tr>
     ${r.items.map(x => `<tr class="${x.status === "absent" ? "dim" : ""}"><td class="nw">${logo(x.agent)} ${esc(x.name)}</td><td><span class="tag ${FMT_T[x.status][0]}">${FMT_T[x.status][1]}</span></td>
       <td>${esc(x.format || "—")}</td><td class="n">${x.read ?? "—"}</td><td class="n">${x.unread ? `<b style="color:var(--bad)">${x.unread}</b>` : x.status === "absent" ? "—" : 0}</td>
       <td>${x.issues.map(i => `<div>${esc(i)}</div>`).join("")}${x.fix ? `<div class="dim">建议：${esc(x.fix)}</div>` : ""}</td></tr>`).join("")}</table>
@@ -2798,7 +2799,9 @@ async function updInstall(){
   if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst"), tab: qs.get("tab") || (fromUrl && want === "timeline" ? "tl" : null)}); else go("sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);       // 老链接 ?dlg=usage 之类：现在都是页面
   try { const lg = await api("/api/legacy"); if (lg && lg.notice) { ST.legacy = lg; renderBans(); } } catch(e){}
-  setTimeout(async () => { try { const f = await api("/api/formats/banner"); if (f && f.banner) { ST.fmt = f.banner; renderBans(); } } catch(e){} }, 1500);   // 格式自检（0.3.8）：后台查，不挡启动
+  setTimeout(async () => { try { const f = await api("/api/formats/banner"); if (f && f.banner) { ST.fmt = f.banner; renderBans(); }
+    const all = await api("/api/formats"); ST.fmtU = Object.fromEntries((all.items || []).filter(x => x.unread).map(x => [x.agent, x.unread]));
+    if (PAGE === "convert" && ST.fmtU[CV.src] && !$("#cvFmtU")) R.convert(); } catch(e){} }, 1500);   // 格式自检（0.3.8）：后台查，不挡启动
   poll();
   try { const sc = await api("/api/selfcheck"); diagCnt(sc); } catch(e){}
 })();
