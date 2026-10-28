@@ -312,32 +312,37 @@ def _read_db(agent: str) -> tuple[list[dict], dict]:
         proj = {}
         if "project" in T:
             for r in con.execute("select * from project"):
-                proj[r["id"]] = {"worktree": r["worktree"], "name": r["name"] if "name" in T["project"] else None}
+                r = dict(r)
+                proj[r.get("id")] = {"worktree": r.get("worktree"), "name": r.get("name")}
         if "session_v2" in T and "session_message" in T:
-            for s in con.execute("select * from session_v2 order by time_updated desc"):
+            order = " order by time_updated desc" if "time_updated" in T["session_v2"] else ""
+            for s in con.execute("select * from session_v2" + order):
+                s = dict(s)                 # 少了哪列（格式变了）就当空的，能读多少读多少；格式自检会报出来
                 rows = con.execute("select type, time_created, data from session_message where session_id=? order by seq",
                                    (s["id"],)).fetchall()
-                out.append({"id": s["id"], "source": "opencode2", "title": s["title"] or "", "cwd": s["directory"],
-                            "created": s["time_created"], "updated": s["time_updated"], "parent": s["parent_id"],
-                            "archived": bool(s["time_archived"]), "model": _model(_j(s["model"])), "project": s["project_id"],
-                            "project_dir": (proj.get(s["project_id"]) or {}).get("worktree"), "items": _items_v2(rows)})
+                out.append({"id": s["id"], "source": "opencode2", "title": s.get("title") or "", "cwd": s.get("directory"),
+                            "created": s.get("time_created"), "updated": s.get("time_updated"), "parent": s.get("parent_id"),
+                            "archived": bool(s.get("time_archived")), "model": _model(_j(s.get("model"))), "project": s.get("project_id"),
+                            "project_dir": (proj.get(s.get("project_id")) or {}).get("worktree"), "items": _items_v2(rows)})
                 stat["v2"] += 1
         if "session" in T and "message" in T and "part" in T:
             sc = T["session"]
             seq_m = "sequence" if "sequence" in T["message"] else "time_created"
             seq_p = "sequence" if "sequence" in T["part"] else "id"
             where = " where time_deleted is null" if "time_deleted" in sc else ""
-            for s in con.execute(f"select * from session{where} order by time_updated desc"):
+            order = " order by time_updated desc" if "time_updated" in sc else ""
+            for s in con.execute(f"select * from session{where}{order}"):
+                s = dict(s)
                 msgs = con.execute(f"select id, time_created, data from message where session_id=? order by {seq_m}, id", (s["id"],)).fetchall()
                 pb: dict = {}
                 for p in con.execute(f"select message_id, data from part where session_id=? order by {seq_p}", (s["id"],)):
                     pb.setdefault(p["message_id"], []).append(p)
-                sub = bool(s["parent_id"]) or ("task_type" in sc and (s["task_type"] or "") not in ("", "interactive"))
-                out.append({"id": s["id"], "source": "zcode" if agent == "zcode" else "opencode1", "title": s["title"] or "",
-                            "cwd": s["directory"], "created": s["time_created"], "updated": s["time_updated"],
-                            "parent": s["parent_id"], "subagent": sub, "archived": bool(s["time_archived"]),
-                            "model": _model(_j(s["model"])) if "model" in sc else None, "project": s["project_id"],
-                            "project_dir": (proj.get(s["project_id"]) or {}).get("worktree"), "items": _items_v1(msgs, pb)})
+                sub = bool(s.get("parent_id")) or ("task_type" in sc and (s.get("task_type") or "") not in ("", "interactive"))
+                out.append({"id": s["id"], "source": "zcode" if agent == "zcode" else "opencode1", "title": s.get("title") or "",
+                            "cwd": s.get("directory"), "created": s.get("time_created"), "updated": s.get("time_updated"),
+                            "parent": s.get("parent_id"), "subagent": sub, "archived": bool(s.get("time_archived")),
+                            "model": _model(_j(s.get("model"))), "project": s.get("project_id"),
+                            "project_dir": (proj.get(s.get("project_id")) or {}).get("worktree"), "items": _items_v1(msgs, pb)})
                 stat["v1"] += 1
     if agent == "zcode":
         tk = _zcode_tasks()
