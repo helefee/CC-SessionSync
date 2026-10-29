@@ -222,6 +222,23 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .us svg.ucv path.ln.dash{stroke-dasharray:5 4;stroke-width:1.6}
 .us svg.ucv line.gl{stroke:var(--line);stroke-dasharray:2 4}
 .us svg.ucv line.hl{stroke:var(--faint);stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
+.us .uheat .ct select{max-width:220px;padding:3px 6px;font-size:calc(12.5px*var(--fk))}
+.us .hm-scroll{overflow-x:auto;overflow-y:hidden;padding:4px 0 2px;scrollbar-width:thin}
+.us .uchart svg.hm{display:block;width:auto;height:auto;max-width:none;margin:0 auto}
+.us .hm text{fill:var(--muted);font-size:calc(11px*var(--fk))}
+.us .hc{fill:var(--hm0);background:var(--hm0);outline:1px solid var(--hm-ln);outline-offset:-1px}
+.us rect.hc{outline:none;stroke:var(--hm-ln);stroke-width:1}
+.us .hc.l1{fill:var(--hm1);background:var(--hm1)}.us .hc.l2{fill:var(--hm2);background:var(--hm2)}
+.us .hc.l3{fill:var(--hm3);background:var(--hm3)}.us .hc.l4{fill:var(--hm4);background:var(--hm4)}
+.us rect.hc:hover{stroke:var(--text);stroke-width:1.2}
+.us .hm-ft{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:calc(12.5px*var(--fk));color:var(--muted)}
+.us .hm-top{display:flex;justify-content:space-between;gap:14px}.us .hm-top .m{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.us .hm-leg{display:inline-flex;align-items:center;gap:3px}
+.us .hm-leg i{display:inline-block;width:11px;height:11px;border-radius:2.5px}
+.us .hm-leg i:first-child{margin-left:4px}.us .hm-leg i:last-child{margin-right:4px}
+:root{--hm0:#ebe8de;--hm1:#f2cdbb;--hm2:#e49d7e;--hm3:#cf6f4d;--hm4:#a9482a;--hm-ln:rgba(20,20,19,.05)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--hm0:#353431;--hm1:#5b3a2d;--hm2:#8b4b33;--hm3:#c4653f;--hm4:#f3976f;--hm-ln:rgba(255,255,255,.04)}}
+:root[data-theme="dark"]{--hm0:#353431;--hm1:#5b3a2d;--hm2:#8b4b33;--hm3:#c4653f;--hm4:#f3976f;--hm-ln:rgba(255,255,255,.04)}
 .us .utip{position:absolute;display:none;pointer-events:none;z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:calc(13px*var(--fk));box-shadow:var(--shadow);min-width:180px;max-width:380px}
 .us .utip div{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .us .utip div span{margin-left:auto;padding-left:14px;font-variant-numeric:tabular-nums;font-weight:600}
@@ -1119,17 +1136,21 @@ function usRenderShell(){
       ${seg("range", [["today","今天"],["24h","24 小时"],["7d","7 天"],["30d","30 天"],["all","全部"]])}</div>
     <div class="ucards" id="usCards"></div>
     <div class="uchart" id="usTrend"><div class="ct"><span id="usChTitle">用量趋势</span><span class="sp" style="flex:1"></span><span id="usSerSeg"></span>${seg("metric", [["tokens","Tokens"],["requests","请求数"],["cost","费用"]])}${styleSeg("trend")}</div><div class="ucv-body" id="usChart"></div><div class="uleg"></div><div class="utip"></div></div>
-    <div class="uchart udist" id="usDist"><div class="ct"><span id="usDistTitle">分布</span><span class="sp" style="flex:1"></span><span class="seg" data-dim="1"><button data-v="model" class="${USS.dim==="model"?"on":""}">按模型</button><button data-v="project" class="${USS.dim==="project"?"on":""}">按项目</button></span>${styleSeg("dist")}</div><div class="ucv-body"></div><div class="uleg"></div><div class="utip"></div></div>
+    <div class="uchart uheat" id="usHeat"><div class="ct"><span>每天用量 · 最近一年</span><span class="sp" style="flex:1"></span><span class="seg" data-dim="1"><button data-v="model" class="${USS.dim==="model"?"on":""}">按模型</button><button data-v="project" class="${USS.dim==="project"?"on":""}">按项目</button></span><select id="usHeatKey" title="只看一个模型 / 项目"></select><span class="seg" data-hm="1">${[["tokens","Tokens"],["requests","请求数"],["cost","费用"]].map(([v, t]) => `<button data-v="${v}" class="${hmMetric()===v?"on":""}">${t}</button>`).join("")}</span></div><div class="hm-scroll"></div><div class="hm-ft"><span class="hm-sum dim"></span><span class="sp" style="flex:1"></span><span class="hm-leg">少<i class="hc l0"></i><i class="hc l1"></i><i class="hc l2"></i><i class="hc l3"></i><i class="hc l4"></i>多</span></div><div class="utip"></div></div>
     <div id="usMiss"></div>
     <div class="utabs">${[["logs","请求日志"],["providers","供应商"],["models","模型"],["prices","价格"]].map(([v,t]) => `<button data-tab="${v}" class="${US.tab===v?"on":""}">${t}</button>`).join("")}</div>
     <div id="usTab"></div>`;
   icons($("#usBox"));
   $$("#usBox .seg[data-k] button").forEach(b => b.onclick = () => { const k = b.parentNode.dataset.k; US[k] = b.dataset.v;
-    $$(`#usBox .seg[data-k="${k}"] button`).forEach(x => x.classList.toggle("on", x === b)); k === "metric" ? (usChart(), usDist()) : usLoad(); });
+    $$(`#usBox .seg[data-k="${k}"] button`).forEach(x => x.classList.toggle("on", x === b)); k === "metric" ? usChart() : usLoad(); });
   $$("#usBox .seg.sty button").forEach(b => b.onclick = () => { const k = b.parentNode.dataset.sty; USS[k] = b.dataset.v; ussSave();
-    $$(`#usBox .seg[data-sty="${k}"] button`).forEach(x => x.classList.toggle("on", x === b)); k === "trend" ? usChart() : usDist(); });
-  $$("#usBox .seg[data-dim] button").forEach(b => b.onclick = () => { USS.dim = b.dataset.v; ussSave();
+    $$(`#usBox .seg[data-sty="${k}"] button`).forEach(x => x.classList.toggle("on", x === b)); if (k === "trend") usChart(); });
+  $$("#usBox .seg[data-dim] button").forEach(b => b.onclick = () => { USS.dim = b.dataset.v; USS.hkey = ""; ussSave();
     $$("#usBox .seg[data-dim] button").forEach(x => x.classList.toggle("on", x === b)); usDist(); });
+  $$("#usBox .seg[data-hm] button").forEach(b => b.onclick = () => { USS.hm = b.dataset.v; ussSave();
+    $$("#usBox .seg[data-hm] button").forEach(x => x.classList.toggle("on", x === b)); hmDraw(); });
+  $("#usHeatKey").onchange = e => { USS.hkey = e.target.value; ussSave(); usDist(); };
+  window.addEventListener("resize", () => { clearTimeout(HM.rt); HM.rt = setTimeout(() => PAGE === "usage" && hmDraw(), 150); });
   $("#usProv").onchange = e => { US.provider = e.target.value; usLoad(); };
   $("#usModel").onchange = e => { US.model = e.target.value; usLoad(); };
   $$("#usBox .utabs button").forEach(b => b.onclick = () => { US.tab = b.dataset.tab; $$("#usBox .utabs button").forEach(x => x.classList.toggle("on", x === b)); usTab(); });
@@ -1147,7 +1168,7 @@ async function usLoad(quiet){
   try {
     const [s, st] = await Promise.all([api("/api/usage/summary?" + qs), api("/api/usage/status")]);
     if (!$("#usBox")) return;
-    US.sum = s; US.st = st; usHead(); usCards(); usChart(); usDist(); usOpts(); usMissing();
+    US.sum = s; US.st = st; usHead(); usCards(); usChart(); usDist(true); usOpts(); usMissing();
     if (!quiet || US.tab !== "logs") { US.off = 0; US.logs = []; }
     await usTab(quiet); usCachePut();
   } catch(e){ $("#usCards") && ($("#usCards").innerHTML = `<div class="miss">读不到用量数据：${esc(e.message)}</div>`); }
@@ -1289,31 +1310,85 @@ function usChart(){
   usCurve(box, xs, series, {id: "trend", fmt: usFmt(), full: usFull(), lab, title,
     extra: i => `<div class="s">请求 ${fmtFull(B[i].n)} · Tokens ${fmtFull(B[i].tok)} · 费用 ${fmtCF(B[i].cost)}${B[i].unpriced ? "（部分）" : ""}</div>` + (B[i].cost ? `<div class="s">${costParts(B[i])}</div>` : "")});
 }
-function usDist(){
-  const s = US.sum, box = $("#usDist"); if (!s || !box) return;
-  const dim = USS.dim, curve = USS.dist === "curve", mi = usMi(), f = usFmt();
-  box.querySelector("#usDistTitle").textContent = (dim === "model" ? "按模型" : "按项目") + "分布 · " + {tokens: "Tokens", requests: "请求数", cost: "费用"}[US.metric];
-  box.querySelector(".utip").style.display = "none";
-  const name = k => dim === "model" ? k : usProjName(k);
-  if (!curve) {
-    box.querySelector(".uleg").innerHTML = "";
-    const pick = r => US.metric === "cost" ? r.cost : US.metric === "requests" ? r.n : r.inp + r.cr + r.cw5 + r.cw1h + r.out;
-    const list = (dim === "model" ? s.models : s.projects).map(r => ({r, v: pick(r)})).sort((a, b) => b.v - a.v);
-    const all = list.reduce((a, x) => a + x.v, 0) || 1, top = list.slice(0, 10), max = Math.max(1e-9, ...top.map(x => x.v));
-    const rest = list.slice(10).reduce((a, x) => a + x.v, 0);
-    box.querySelector(".ucv-body").innerHTML = !list.length ? `<div class="uempty">这段时间没有记录</div>` : top.map(({r, v}, j) =>
-      `<div class="drow" title="${esc(dim === "model" ? r.key : (r.key || "日志里没写工作目录"))}\n请求 ${fmtFull(r.n)} · Tokens ${fmtFull(r.inp + r.cr + r.cw5 + r.cw1h + r.out)} · 费用 ${r.unpriced === r.n ? "—" : fmtCF(r.cost)}${r.unpriced && r.unpriced < r.n ? "（部分）" : ""}\n${costParts(r)}">
-        <span class="dn m">${esc(name(r.key))}</span><span class="dbar"><i style="width:${(v / max * 100).toFixed(1)}%;background:var(--u${j % 8 + 1})"></i></span>
-        <span class="dv">${US.metric === "cost" && r.unpriced === r.n ? "—" : f(v)} <span class="dim">${(v / all * 100).toFixed(1)}%</span></span></div>`).join("") +
-      (rest ? `<div class="drow dim"><span class="dn">其余 ${list.length - 10} 个</span><span class="dbar"></span><span class="dv">${f(rest)} <span class="dim">${(rest / all * 100).toFixed(1)}%</span></span></div>` : "");
-    return;
+// ---- 0.4.4：每天用量（日历热力图，最近一年；像 GitHub 的贡献图）----
+// 列 = 周（星期一开始），行 = 星期几；5 档颜色（按有用量那些天的四分位分档）；悬停看当天的 Tokens / 请求 / 费用和用得最多的模型。
+const HM = {data: null, q: "", seq: 0};
+const hmMetric = () => USS.hm || "tokens";
+const hmVal = (d, m) => !d ? 0 : m === "cost" ? d.cost : m === "requests" ? d.n : d.tok;
+function hmLevels(vals){
+  const nz = vals.filter(v => v > 0).sort((a, b) => a - b);
+  const q = p => nz.length ? nz[Math.min(nz.length - 1, Math.floor(p * nz.length))] : 0;
+  const t = [q(0.25), q(0.5), q(0.75)];
+  return v => v <= 0 ? 0 : v <= t[0] ? 1 : v <= t[1] ? 2 : v <= t[2] ? 3 : 4;
+}
+function hmQs(){
+  const p = new URLSearchParams();
+  for (const k of ["app", "provider", "model"]) if (US[k]) p.set(k, US[k]);
+  p.set("dim", USS.dim || "model"); if (USS.hkey) p.set("key", USS.hkey);
+  return p.toString();
+}
+async function usDist(force){
+  const box = $("#usHeat"); if (!box) return;
+  const q = hmQs();
+  if (HM.data && HM.q === q && !force) return hmDraw();
+  const seq = ++HM.seq;
+  if (HM.q !== q) box.querySelector(".hm-scroll").innerHTML = '<div class="uempty">读取中…</div>';
+  try { const d = await api("/api/usage/heatmap?" + q); if (seq !== HM.seq) return; HM.data = d; HM.q = q; hmDraw(); }
+  catch(e){ box.querySelector(".hm-scroll").innerHTML = `<div class="uempty">${esc(e.message)}</div>`; }
+}
+function hmKeys(){
+  const sel = $("#usHeatKey"); if (!sel || !HM.data) return;
+  const dim = USS.dim || "model", ks = HM.data.keys[dim] || [];
+  if (USS.hkey && !ks.includes(USS.hkey)) ks.unshift(USS.hkey);
+  sel.innerHTML = `<option value="">${dim === "model" ? "全部模型" : "全部项目"}</option>` + ks.map(k => `<option value="${esc(k)}" ${k === USS.hkey ? "selected" : ""}>${esc(dim === "model" ? k : usProjName(k))}</option>`).join("");
+}
+function hmDraw(){
+  const box = $("#usHeat"), D = HM.data; if (!box || !D) return;
+  hmKeys();
+  const m = hmMetric(), en = LANG === "en", f = m === "cost" ? fmtC : fmtN, full = m === "cost" ? fmtCF : fmtFull;
+  const byD = new Map(D.days.map(d => [d.d, d]));
+  const p = s => { const [y, mo, d] = s.split("-").map(Number); return new Date(y, mo - 1, d); };
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const start = p(D.from), end = p(D.to), weeks = D.weeks, cells = [];
+  for (let w = 0; w < weeks; w++) for (let r = 0; r < 7; r++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7 + r);
+    if (d > end) continue;
+    const k = iso(d); cells.push({w, r, k, date: d, day: byD.get(k)});
   }
-  const {arr, lab, title} = usBuckets(), field = dim === "model" ? "models" : "projs";
-  const tot = {}; arr.forEach(([, b]) => Object.entries(b[field]).forEach(([k, v]) => tot[k] = (tot[k] || 0) + v[mi]));
-  const keys = Object.keys(tot).sort((a, b) => tot[b] - tot[a]).slice(0, 8);
-  if (!keys.length) { box.querySelector(".ucv-body").innerHTML = `<div class="uempty">${dim === "project" && !arr.some(([, b]) => Object.keys(b.models).length) ? "这段时间没有记录" : dim === "project" ? "按项目的曲线按天画，选「7 天」或更长" : "这段时间没有记录"}</div>`; box.querySelector(".uleg").innerHTML = ""; return; }
-  usCurve(box, arr.map(([ts]) => ({ts})), keys.map((k, j) => ({k: dim + ":" + k, name: name(k), c: j + 1, vals: arr.map(([, b]) => (b[field][k] || [0,0,0])[mi])})),
-    {id: "dist-" + dim, fmt: f, full: usFull(), lab, title});
+  const lv = hmLevels(cells.map(c => hmVal(c.day, m)));
+  const sc = box.querySelector(".hm-scroll"), avail = Math.max(300, (sc.clientWidth || 700) - 34);
+  const gap = 3, cs = Math.max(10, Math.min(15, Math.floor(avail / weeks) - gap)), st = cs + gap, L = 30, T = 18;
+  const W = L + weeks * st + 22, H = T + 7 * st;   // 右边留一点给最后一个月份名
+  const MON = en ? ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"] : Array.from({length: 12}, (_, i) => (i + 1) + "月");
+  const WD = en ? ["Mon", "", "Wed", "", "Fri", "", ""] : ["一", "", "三", "", "五", "", ""];
+  let months = "", lastW = -9;
+  for (let w = 0; w < weeks; w++) {
+    const d0 = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7);
+    const d1 = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() + 6);
+    const first = w === 0 ? d0 : d1.getDate() <= 7 ? d1 : null;          // 这一列里有某月 1 号 → 标月份
+    if (first && w - lastW >= 3 && !(w === 0 && d0.getDate() > 21)) { months += `<text x="${L + w * st}" y="${T - 6}" translate="no">${MON[first.getMonth()]}</text>`; lastW = w; }
+  }
+  const wd = WD.map((t, r) => t ? `<text x="0" y="${T + r * st + cs - 1}" translate="no">${t}</text>` : "").join("");
+  const rects = cells.map((c, i) => `<rect class="hc l${lv(hmVal(c.day, m))}" x="${L + c.w * st}" y="${T + c.r * st}" width="${cs}" height="${cs}" rx="2.5" data-i="${i}"/>`).join("");
+  sc.innerHTML = `<svg class="hm" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${months}${wd}${rects}</svg>`;
+  sc.scrollLeft = sc.scrollWidth;                                    // 默认看最近几周
+  const act = D.days.filter(d => hmVal(d, m) > 0), tot = D.days.reduce((a, d) => a + hmVal(d, m), 0);
+  box.querySelector(".hm-sum").textContent = act.length ? `最近一年 ${act.length} 天有用量 · 合计 ${f(tot)}` : "最近一年没有用量记录";
+  const tip = box.querySelector(".utip");
+  const dfmt = d => d.toLocaleDateString(en ? "en-US" : "zh-CN", {year: "numeric", month: "short", day: "numeric", weekday: "short"});
+  const svg = sc.querySelector("svg");
+  svg.onmousemove = e => {
+    const r = e.target.closest("rect.hc"); if (!r) { tip.style.display = "none"; return; }
+    const c = cells[+r.dataset.i], d = c.day;
+    tip.innerHTML = `<b translate="no">${esc(dfmt(c.date))}</b>` + (d ? `<div>Tokens ${fmtFull(d.tok)} · 请求 ${fmtFull(d.n)} · 费用 ${d.unpriced === d.n ? "—" : fmtCF(d.cost)}${d.unpriced && d.unpriced < d.n ? "（部分）" : ""}</div>` +
+      (d.top && d.top.length ? `<div class="s" style="margin-top:4px">用得最多：</div>` + d.top.map(([k, n, t]) => `<div class="s hm-top"><span class="m" translate="no">${esc(k)}</span><span>${fmtN(t)}</span></div>`).join("") : "") : `<div class="s">没有用量</div>`);
+    tip.style.display = "block";
+    const bb = box.getBoundingClientRect(), rr = r.getBoundingClientRect();
+    let x = rr.left - bb.left + cs / 2 - tip.offsetWidth / 2, y = rr.top - bb.top - tip.offsetHeight - 8;
+    x = Math.max(4, Math.min(bb.width - tip.offsetWidth - 4, x)); if (y < 4) y = rr.bottom - bb.top + 8;
+    tip.style.left = x + "px"; tip.style.top = y + "px";
+  };
+  svg.onmouseleave = () => tip.style.display = "none";
 }
 function usOpts(){
   const o = US.sum.options, fill = (sel, list, cur, all) => { sel.innerHTML = `<option value="">${all}</option>` + list.map(v => `<option ${v===cur?"selected":""}>${esc(v)}</option>`).join(""); };
