@@ -568,8 +568,9 @@ def _long(v, lines: int, chars: int) -> bool:
 
 def _facts(items: list[dict]) -> dict:
     """预览用的计数（不含正文）。"""
+    from . import toolmap
     f = {"user": 0, "assistant": 0, "tools": 0, "tool_errors": 0, "long_out": 0, "long_in": 0, "thinking": 0, "images": 0, "files": 0,
-         "models": [], "first": None, "last": None}
+         "models": [], "first": None, "last": None, "images_data": 0, "tools_native": {d: 0 for d in NATIVE}}
     ms = set()
     for it in items:
         ts = it.get("ts")
@@ -582,12 +583,17 @@ def _facts(items: list[dict]) -> dict:
             f["user"] += 1
             f["images"] += int(it.get("images") or 0)
             f["files"] += int(it.get("files") or 0)
+            f["images_data"] += sum(1 for im in it.get("image_data") or [] if isinstance(im, dict) and ir.img(im.get("mt"), im.get("b64")))
         elif it.get("kind") == "text":
             f["assistant"] += 1
         elif it.get("kind") == "thinking":
             f["thinking"] += 1
         elif it.get("kind") == "tool":
             f["tools"] += 1
+            c = toolmap.canon(it.get("tool"), it.get("input"))
+            for d in NATIVE:
+                if c and toolmap.emit(d, c[0], c[1]):
+                    f["tools_native"][d] += 1
             if it.get("status") == "error" or it.get("error"):
                 f["tool_errors"] += 1
             if _long(it.get("output") or it.get("error") or "", OUT_LINES, OUT_CHARS):
@@ -602,12 +608,18 @@ def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> l
     """→ [{level: lost | changed | kept, what, detail}]：这个会话转过去以后，哪些没了、哪些变了样、哪些照旧。"""
     L, app, to = [], ir.LABEL.get(src, "来源应用"), ir.LABEL.get(dst, dst)
     exp = mode == "export"
-    if f.get("images"):
-        L.append({"level": "lost", "what": f"图片 {f['images']} 张", "detail": "不带过去，原位置换成「[图片 ×N，没有带过来]」"})
+    img_ok = 0 if exp or dst not in NATIVE else min(f.get("images_data") or 0, f.get("images") or 0)
+    if img_ok:
+        L.append({"level": "kept", "what": f"图片 {img_ok} 张", "detail": f"原图带过去（{to} 里能看到），单张超过 5 MB 的除外"})
+    if (f.get("images") or 0) - img_ok > 0:
+        n = f["images"] - img_ok
+        L.append({"level": "lost", "what": f"图片 {n} 张", "detail": "没有原图数据（只记了路径 / 网址，或格式不认识 / 太大），原位置换成「[图片 ×N，没有带过来]」"})
     if f.get("files"):
         L.append({"level": "lost", "what": f"附件 {f['files']} 个", "detail": "文件附件不带过去，只剩对话里提到它的文字"})
     if f.get("thinking"):
-        if reasoning and not exp:
+        if reasoning and not exp and dst in ir.NATIVE_REASONING:
+            L.append({"level": "kept", "what": f"思考 {f['thinking']} 段", "detail": f"写成 {to} 自己的思考块（只有文字，原来的签名 / 加密内容带不过去）"})
+        elif reasoning and not exp:
             L.append({"level": "changed", "what": f"思考 {f['thinking']} 段", "detail": f"当普通文字放进回复里（标「{app} 里的思考」）；{to} 不会把它当思考"})
         else:
             L.append({"level": "lost", "what": f"思考 {f['thinking']} 段", "detail": "不带（各家的思考格式互相不认）" + ("" if exp else "；要带上就打开「带上思考内容」")})
@@ -616,12 +628,19 @@ def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> l
             L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次", "detail": "只留一行摘要（工具名 + 主要参数），参数全文和输出都不带"})
         else:
             cut = []
+            nat = (f.get("tools_native") or {}).get(dst, 0)
             if f.get("long_out"):
                 cut.append(f"{f['long_out']} 个输出超过 {OUT_LINES} 行 / {OUT_CHARS} 字被截短")
             if f.get("long_in"):
                 cut.append(f"{f['long_in']} 个参数超过 {IN_LINES} 行被截短")
-            L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
-                      "detail": f"变成文字摘要（工具名 + 参数 + 输出），{to} 里不能重放 / 展开" + ("；" + "，".join(cut) if cut else "")})
+            if nat:
+                L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
+                          "detail": f"{nat} 次按 {to} 自己的工具（命令行 / 读写文件 / 搜索这类）原样记成工具调用，在 {to} 里能展开看"
+                                    + (f"；另外 {f['tools'] - nat} 次 {to} 没有对应的工具，变成文字摘要" if f["tools"] > nat else "")
+                                    + "；输出" + ("：" + "，".join(cut) if cut else "照旧（太长的会截短）")})
+            else:
+                L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
+                          "detail": f"变成文字摘要（工具名 + 参数 + 输出），{to} 里不能重放 / 展开" + ("；" + "，".join(cut) if cut else "")})
         if f.get("tool_errors"):
             L.append({"level": "changed", "what": f"出错的工具调用 {f['tool_errors']} 次", "detail": "标成「（出错）」，错误信息当文字留着"})
     if exp:
@@ -681,7 +700,8 @@ def preview(src: str, ids: list[str], dst: str, again: bool = False, reasoning: 
             if r["state"] in ("same", "changed", "loop"):
                 r["state"] = "new"
     opts = {"project": project, "desktop": desktop}
-    tot = {"sessions": 0, "msgs": 0, "user": 0, "assistant": 0, "tools": 0, "thinking": 0, "images": 0, "files": 0, "long_out": 0}
+    tot = {"sessions": 0, "msgs": 0, "user": 0, "assistant": 0, "tools": 0, "thinking": 0, "images": 0, "files": 0, "long_out": 0,
+           "images_data": 0, "tools_native": {d: 0 for d in NATIVE}}
     agg: dict = {}
     for r in p["rows"]:
         f = r.pop("facts", None)
@@ -693,8 +713,10 @@ def preview(src: str, ids: list[str], dst: str, again: bool = False, reasoning: 
         r["span"] = [f["first"], f["last"]]
         tot["sessions"] += 1
         tot["msgs"] += r["msgs"]
-        for k in ("user", "assistant", "tools", "thinking", "images", "files", "long_out"):
+        for k in ("user", "assistant", "tools", "thinking", "images", "files", "long_out", "images_data"):
             tot[k] += f.get(k) or 0
+        for d in NATIVE:
+            tot["tools_native"][d] += (f.get("tools_native") or {}).get(d, 0)
         for x in r["losses"]:
             a = agg.setdefault((x["level"], x["what"].split(" ")[0]), {"level": x["level"], "what": x["what"].split(" ")[0], "n": 0, "detail": x["detail"]})
             a["n"] += 1

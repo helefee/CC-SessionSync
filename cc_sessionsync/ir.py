@@ -163,7 +163,23 @@ def img(mt, data) -> dict | None:
         return None
     if not raw or len(raw) > IMG_MAX:
         return None
-    return {"mt": mt, "b64": base64.b64encode(raw).decode("ascii")}
+    real = sniff_img(raw)
+    if not real:                            # 不是真的图片（坏数据 / 占位）：带过去目标应用的接口会拒绝，宁可占位
+        return None
+    return {"mt": real, "b64": base64.b64encode(raw).decode("ascii")}
+
+
+def sniff_img(raw: bytes) -> str | None:
+    """看文件头认图片类型（以内容为准，标的类型写错了也能纠正）。"""
+    if raw[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if raw[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if raw[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 
 def img_url(url) -> dict | None:
