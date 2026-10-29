@@ -87,6 +87,8 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
   的镜像走和「会话转换」同一套转换器，变成新的 Claude Code 会话。一样先预览、记进操作记录能撤回，写完按 Claude Code 的会话规矩自检一遍；
   可以和 .md / .html 混在一起选；单个文件最大 200 MB；认不出的 jsonl 会说明能导什么。
 
+![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
+
 ### 检测到换号
 
 每 10 秒看一眼 Claude 桌面端 / 命令行 / Codex 的登录信息（只看文件修改时间，变了才读，几乎不占 CPU），确认稳定后弹一次通知

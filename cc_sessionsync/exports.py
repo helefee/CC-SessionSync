@@ -401,6 +401,8 @@ def import_files(paths_: list[str], cwd: str | None = None, desktop: bool = True
         try:
             r = parse_file(f)
             rows.append({k: v for k, v in r.items() if k != "raw"} | {"_raw": r["raw"]})
+        except ValueError as e:                                # 认不出 / 太大 / 没消息：中文说明本身就够了
+            rows.append({"file": f, "error": str(e)})
         except Exception as e:
             rows.append({"file": f, "error": f"{type(e).__name__}: {e}"})
     if dry:

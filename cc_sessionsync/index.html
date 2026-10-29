@@ -2795,7 +2795,7 @@ async function imDry(){
   try { IM.plan = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), dry: true}); }
   catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
   const rows = IM.plan.rows || [];
-  box.innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop())}：${esc(r.error)}</div>`
+  box.innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop().replace(/^\d\d-/, ""))}：${esc(r.error)}</div>`
     : `<div class="mk"><div class="tl">${esc(r.title)} ${r.format === "jsonl" ? `<span class="tag ok">原始 jsonl · ${esc(IM_APP[r.agent] || r.agent)}</span>` : r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>'} ${r.agent !== "claude" && r.format !== "jsonl" ? `<span class="tag codex">原来是 ${esc(IM_APP[r.agent] || r.agent)}</span>` : ""}</div>
       <div class="dim" style="font-size:calc(13px*var(--fk))">${r.messages} 条消息 · ${kb(r.size)} · 放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div>
       <div class="pv" style="max-height:160px;margin-top:6px">${chatHtml((r.preview || []).slice(0, 6), r.agent)}</div></div>`).join("")}`;
