@@ -66,12 +66,14 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.4
 
-- **Daily usage heatmap (0.4.4):** the second chart on the Usage page is now a GitHub-contributions-style calendar heatmap of the past year
-  (columns = weeks, rows = weekdays labelled Mon / Wed / Fri, month labels, 5 colour levels in the app's accent colour for light and dark,
-  Less…More legend, scrolls to the latest week, horizontally scrollable when narrow). Hover a day for its tokens / requests / cost and the
-  top models. Switch Tokens / Requests / Cost, and limit it to one model or project; the page's app / provider / model filters still apply.
+- **Matrix view for daily usage (0.4.4 / 0.4.5):** the Usage page shows *By model distribution* on top (unchanged) and the daily card below.
+  The daily card's style switch is now Bars / Curves / **Matrix**, and Matrix is the default (your choice is remembered): a GitHub-contributions-style
+  calendar heatmap of the past year (columns = weeks, rows = weekdays labelled Mon / Wed / Fri, month labels, 5 levels in the app's accent colour
+  for light and dark, Less…More legend, scrolls to the latest week, horizontally scrollable when narrow). Hover a day for its tokens / requests /
+  cost and top models. The card's controls still apply: Tokens / Requests / Cost, By type (total / new input / output / cache read / cache write),
+  Claude / Codex (one app), By model (one model); the page's app / provider / model filters too.
 
-![Daily usage heatmap (English, dark)](docs/screenshots/v044-heatmap-english-dark.png)
+![Matrix view (English, dark)](docs/screenshots/v045-matrix-english-dark.png)
 
 - **Chinese / English UI (0.4.3):** a language switch in Settings (System / 中文 / English; the default follows the system language).
   All UI strings were extracted into `cc_sessionsync/i18n/en.json` (about 2,080 fragments); the tray menu, tooltips and notifications follow
