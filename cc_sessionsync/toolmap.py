@@ -20,6 +20,7 @@
 """
 from __future__ import annotations
 
+import re
 import json
 
 KINDS = ("shell", "read", "write", "edit", "grep", "glob", "fetch", "search")
@@ -76,7 +77,7 @@ def canon(name, inp) -> tuple[str, dict] | None:
     """来源的 (工具名, 参数) → (通用工具, 参数)。参数：shell{command, description?, workdir?} read{path, offset?, limit?}
     write{path, content} edit{path, old, new, all?} grep{pattern, path?, include?} glob{pattern, path?} fetch{url} search{query}。"""
     n = str(name or "").strip().lower().split(".")[-1].split("__")[-1]
-    kind = _KIND_OF.get(n)
+    kind = _KIND_OF.get(n) or _KIND_OF.get(re.sub(r"_v\d+$", "", n))      # Cursor 新版：run_terminal_command_v2 / read_file_v2
     if not kind:
         return None
     a = _obj(inp)

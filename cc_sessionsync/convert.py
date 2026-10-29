@@ -13,6 +13,7 @@
   不会把从 X 导过来的会话再导回 X（loop）。来源的数据只读。"""
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -249,6 +250,32 @@ def _dsh_ir(f: Path) -> tuple[dict, list[dict]]:
     return h, items
 
 
+def _cursor_images(it: dict) -> list[dict]:
+    """Cursor 镜像里记的原图（本机路径 / 内嵌 base64）→ 能带过去的图片；文件没了、太大、不是图片的跳过（只读）。"""
+    out = []
+    for x in it.get("image_inline") or []:
+        im = ir.img(x.get("mt") or "image/png", x.get("b64"))
+        if not im and x.get("b64"):         # 标的类型不对：按内容再认一次
+            try:
+                raw = base64.b64decode(x["b64"], validate=True)
+                im = ir.img(ir.sniff_img(raw), raw)
+            except Exception:
+                im = None
+        if im:
+            out.append(im)
+    for p in it.get("image_paths") or []:
+        try:
+            f = Path(p).expanduser()
+            if f.is_file() and f.stat().st_size <= ir.IMG_MAX:
+                raw = f.read_bytes()
+                im = ir.img(ir.sniff_img(raw), raw)
+                if im:
+                    out.append(im)
+        except Exception:
+            pass
+    return out
+
+
 def load_ir(agent: str, sid: str, row: dict | None = None) -> tuple[dict, list[dict]]:
     """→ (头, 条目)。来源只读。"""
     if row is None:
@@ -265,6 +292,10 @@ def load_ir(agent: str, sid: str, row: dict | None = None) -> tuple[dict, list[d
     else:                                   # cursor / opencode / zcode：本程序的镜像就是中间格式
         h, items = ir.load(f.read_bytes())
         h["agent"] = agent
+        if agent == "cursor":
+            for it in items:
+                if it["role"] == "user" and (it.get("image_paths") or it.get("image_inline")):
+                    it["image_data"] = _cursor_images(it) or None
         if agent in ("opencode", "zcode") and any(it.get("images") for it in items):
             try:                            # 镜像里只记了张数；原图现从库里（只读快照）拿
                 per = ocstore.images(agent, h.get("id") or sid)

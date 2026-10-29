@@ -373,6 +373,9 @@ def bubble_items(b: dict) -> list[dict]:
             it = {"role": "user", "kind": "text", "text": t or "", "ts": ts}
             if imgs:
                 it["images"] = imgs
+                paths = [x.get("path") for x in b.get("images") if isinstance(x, dict) and isinstance(x.get("path"), str) and x.get("path")]
+                if paths:                       # 0.4.1：记下原图在本机的位置，转换时（文件还在的话）把原图带过去
+                    it["image_paths"] = paths[:20]
             out.append(it)
         return out
     th = b.get("thinking")
@@ -555,7 +558,15 @@ def _cli_msg(m: dict) -> list[dict]:
             if s:
                 out.append({"role": "user", "kind": "text", "text": s})
         elif role == "user" and t == "image":
-            out.append({"role": "user", "kind": "text", "text": "", "images": 1})
+            it = {"role": "user", "kind": "text", "text": "", "images": 1}
+            d = p.get("image") if isinstance(p.get("image"), str) else p.get("data") if isinstance(p.get("data"), str) else None
+            if d:                               # 0.4.1：命令行版把图片内嵌成 base64 / data URL，原样留着给转换用
+                mt = p.get("mimeType") or p.get("mediaType") or ""
+                if d.startswith("data:") and "," in d:
+                    mt, d = d[5:].split(",", 1)[0].split(";")[0], d.split(",", 1)[1]
+                if len(d) <= 7_000_000:
+                    it["image_inline"] = [{"mt": mt, "b64": d}]
+            out.append(it)
         elif role == "assistant" and t == "text" and p.get("text"):
             out.append({"role": "assistant", "kind": "text", "text": p["text"]})
         elif role == "assistant" and t in ("reasoning", "redacted-reasoning") and p.get("text"):
