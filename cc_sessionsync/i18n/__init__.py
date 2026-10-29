@@ -13,6 +13,19 @@ from pathlib import Path
 
 LANGS = ("zh", "en")
 _CJK = re.compile(r"[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]")
+_HAN = re.compile(r"[\u4e00-\u9fff]")
+_PUNC = {"（": " (", "）": ")", "：": ": ", "；": "; ", "、": ", ", "，": ", ", "。": ". ", "！": "! ", "？": "? ",
+         "「": "\"", "」": "\"", "《": "\"", "》": "\"", "【": "[", "】": "]", "　": " "}
+_PRX = re.compile("|".join(map(re.escape, _PUNC)))
+
+
+def _tidy(s: str) -> str:
+    """换完以后的中文标点 → 英文标点，再收拾空格。"""
+    s = _PRX.sub(lambda m: _PUNC[m.group(0)], s)
+    s = re.sub(r"\(\s+", "(", s)
+    s = re.sub(r"[ \t]+([).,;:!?])", r"\1", s)
+    s = re.sub(r"(^|\n) \(", r"\1(", s)
+    return re.sub(r"[ \t]{2,}", " ", s)
 
 
 def system_lang() -> str:
@@ -72,9 +85,11 @@ def translate(s: str) -> str:
     rx = _rx()
     if not rx:
         return s
-    out = rx.sub(lambda m: d.get(m.group(0), m.group(0)), s)
-    out = re.sub(r"[ \t]{2,}", " ", out)
-    return s if _CJK.search(out) else out
+    out = rx.sub(lambda m: "\x01" + d.get(m.group(0), m.group(0)) + "\x01", s)
+    if _HAN.search(out):
+        return s
+    out = re.sub(r"(?<=[^\s(\[\"'/\x01])\x01+(?=[^\s)\]\"',.;:!?/\x01（）：；、，。])", " ", out)   # 两段英文挨着 → 加空格
+    return _tidy(out.replace("\x01", ""))
 
 
 def t(s: str) -> str:

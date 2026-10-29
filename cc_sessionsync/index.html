@@ -495,7 +495,10 @@ const TOKEN = "__TOKEN__", VERSION = "__VERSION__";
 const I18N = "__I18N__", LANG = "__LANG__";
 const tr = (() => {
   if (!I18N || !I18N.dict) return s => s;
-  const D = I18N.dict, CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/;
+  const D = I18N.dict, CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/, HAN = /[\u4e00-\u9fff]/;
+  const PUNC = {"（": " (", "）": ")", "：": ": ", "；": "; ", "、": ", ", "，": ", ", "。": ". ", "！": "! ", "？": "? ", "「": '"', "」": '"', "《": '"', "》": '"', "【": "[", "】": "]", "　": " "};
+  const PRX = new RegExp(Object.keys(PUNC).join("|"), "g");
+  const tidy = s => s.replace(PRX, m => PUNC[m]).replace(/\(\s+/g, "(").replace(/[ \t]+([).,;:!?])/g, "$1").replace(/(^|\n) \(/g, "$1(").replace(/[ \t]{2,}/g, " ");
   const keys = Object.keys(D).filter(k => k).sort((a, b) => b.length - a.length);
   const RX = new RegExp(keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
   const cache = new Map();
@@ -505,7 +508,7 @@ const tr = (() => {
     if (r !== undefined) return r;
     const k = s.trim();
     if (D[k]) r = s.replace(k, D[k]);
-    else { r = s.replace(RX, m => D[m] ?? m).replace(/[ \t]{2,}/g, " "); if (CJK.test(r)) r = s; }
+    else { r = s.replace(RX, m => "\x01" + (D[m] ?? m) + "\x01"); r = HAN.test(r) ? s : tidy(r.replace(/(?<=[^\s(\["'\/\x01])\x01+(?=[^\s)\]"',.;:!?\/\x01（）：；、，。])/g, " ").replace(/\x01/g, "")); }
     if (cache.size > 20000) cache.clear();
     cache.set(s, r);
     return r;
