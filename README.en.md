@@ -66,6 +66,14 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.4
 
+- **Faster Usage page (0.4.6):** the matrix view reads a small per-day rollup table (kept up to date incrementally, rebuilt after price changes)
+  instead of re-scanning a year of raw request logs, and results are cached per filter until the data changes; the payload is compact per-day arrays.
+  Switching Today / 24 hours / 7 days / 30 days / All no longer refetches or redraws the matrix (it always shows the past year); rapid clicks cancel
+  stale requests. The page draws the last matrix from a local cache right away and refreshes it after the cards and log; errors and timeouts show a
+  reason and a Retry button instead of staying on "Loading…". The summary cards got faster too (no per-row time-zone conversion, fewer scans,
+  options / per-source counts from rollups, incremental rollup by time range). On ~570k fake requests: 7 days 3.4 s → 0.3 s, 30 days 3.9 s → 1.2 s,
+  five rapid clicks 17 s → 0.7 s; matrix data ~2 s → 15–40 ms (under 1 ms when cached).
+
 - **Matrix view for daily usage (0.4.4 / 0.4.5):** the Usage page shows *By model distribution* on top (unchanged) and the daily card below.
   The daily card's style switch is now Bars / Curves / **Matrix**, and Matrix is the default (your choice is remembered): a GitHub-contributions-style
   calendar heatmap of the past year (columns = weeks, rows = weekdays labelled Mon / Wed / Fri, month labels, 5 levels in the app's accent colour

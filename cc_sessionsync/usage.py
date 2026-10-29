@@ -63,6 +63,9 @@ def _conn() -> sqlite3.Connection:
     CREATE TABLE IF NOT EXISTS daily(d TEXT, app TEXT, provider TEXT, model TEXT, sub INT, n INT, inp INT, cr INT, cw5 INT, cw1h INT, out INT,
         PRIMARY KEY(d, app, provider, model, sub));
     CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
+    CREATE TABLE IF NOT EXISTS dayagg(d TEXT, app TEXT, provider TEXT, model TEXT, proj TEXT, n INT, tok INT, inp INT, out INT, cr INT, cw INT,
+        c_inp REAL, c_out REAL, c_cr REAL, c_cw REAL, unpriced INT);
+    CREATE INDEX IF NOT EXISTS dayagg_d ON dayagg(d);
     """)
     have = {r[1] for r in c.execute("PRAGMA table_info(calls)")}
     for col, typ in _NEWCOLS:
@@ -514,6 +517,8 @@ def _recost(c: sqlite3.Connection, only_old: bool = False) -> int:
         up.append((*(cp[:5] if cp else (None,) * 5), 1 if cp else 0, cp[5] if cp else 0, prompt, SCHEMA, i))
     c.executemany("UPDATE calls SET c_in=?, c_cr=?, c_cw5=?, c_cw1h=?, c_out=?, priced=?, est=?, prompt=?, ver=? WHERE id=?", up)
     c.commit()
+    if up:                                                 # 费用变了：矩阵图的日汇总跟着重算
+        _dayagg_full(c)
     return len(up)
 
 
@@ -562,16 +567,55 @@ def recost() -> int:
             c.close()
 
 
+def _day_bounds(d: str) -> tuple[float, float]:
+    """'YYYY-MM-DD'（本机日历日）→ [当天 0 点, 第二天 0 点) 的时间戳，查询走 calls_ts 索引，不用逐行换算时区。"""
+    import datetime as _dt
+    a = _dt.date.fromisoformat(d)
+    b = a + _dt.timedelta(days=1)
+    return time.mktime((a.year, a.month, a.day, 0, 0, 0, 0, 0, -1)), time.mktime((b.year, b.month, b.day, 0, 0, 0, 0, 0, -1))
+
+
+# 0.4.6：「按天分布」矩阵图用的日汇总（本机日历日 × 应用 / 供应商 / 模型 / 项目，含费用拆分），跟 daily 一起增量维护，
+# 矩阵图只读这张小表，不再每次把一年的原始记录全扫一遍。
+_DAYAGG_SEL = ("SELECT date(ts, 'unixepoch', 'localtime'), app, provider, model, coalesce(proj,''), count(*), "
+               "sum(inp)+sum(cr)+sum(cw5)+sum(cw1h)+sum(out), sum(inp), sum(out), sum(cr), sum(cw5)+sum(cw1h), "
+               "sum(coalesce(c_in,0)), sum(coalesce(c_out,0)), sum(coalesce(c_cr,0)), sum(coalesce(c_cw5,0)+coalesce(c_cw1h,0)), "
+               "sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END) FROM calls")
+_DAYAGG_V = "1"
+
+
+def _bump(c: sqlite3.Connection):
+    """汇总表变了：换一个版本号，矩阵图的结果缓存就作废。"""
+    c.execute("INSERT OR REPLACE INTO meta VALUES('aggver', ?)", (str(time.time_ns()),))
+
+
+def _dayagg_full(c: sqlite3.Connection):
+    c.execute("DELETE FROM dayagg")
+    c.execute(f"INSERT INTO dayagg {_DAYAGG_SEL} GROUP BY 1,2,3,4,5")
+    c.execute("INSERT OR REPLACE INTO meta VALUES('dayagg', ?)", (_DAYAGG_V,))
+    _bump(c)
+    c.commit()
+
+
+def _ensure_dayagg(c: sqlite3.Connection):
+    """升级上来第一次用（或表是老版本）：整张建一次，之后只增量。查一下 meta 主键，很便宜。"""
+    r = c.execute("SELECT v FROM meta WHERE k='dayagg'").fetchone()
+    if r and r[0] == _DAYAGG_V:
+        return
+    _dayagg_full(c)
+
+
 def _rollup(c: sqlite3.Connection, hours: set | None):
-    """重算受影响小时的 hourly，再重算受影响日期的 daily（按本机时区，直接按每条的时间算日历日）。"""
+    """重算受影响小时的 hourly，再重算受影响日期的 daily / dayagg（按本机时区的日历日；按当天的时间范围查，走索引）。"""
     cols = "count(*), sum(inp), sum(cr), sum(cw5), sum(cw1h), sum(out)"
     if hours is None:
         c.execute("DELETE FROM hourly")
         c.execute(f"INSERT INTO hourly SELECT CAST(ts/3600 AS INT), app, provider, model, sub, {cols} FROM calls GROUP BY 1,2,3,4,5")
         c.execute("DELETE FROM daily")
         c.execute(f"INSERT INTO daily SELECT date(ts, 'unixepoch', 'localtime'), app, provider, model, sub, {cols} FROM calls GROUP BY 1,2,3,4,5")
-        c.commit()
+        _dayagg_full(c)
         return
+    _ensure_dayagg(c)
     hs = sorted(hours)
     days = set()
     for i in range(0, len(hs), 400):
@@ -580,11 +624,17 @@ def _rollup(c: sqlite3.Connection, hours: set | None):
         c.execute(f"DELETE FROM hourly WHERE h IN ({q})", part)
         c.execute(f"INSERT INTO hourly SELECT CAST(ts/3600 AS INT) h, app, provider, model, sub, {cols} FROM calls "
                   f"WHERE CAST(ts/3600 AS INT) IN ({q}) GROUP BY 1,2,3,4,5", part)
-        days |= {r[0] for r in c.execute(f"SELECT DISTINCT date(ts, 'unixepoch', 'localtime') FROM calls WHERE CAST(ts/3600 AS INT) IN ({q})", part)}
+        for h in part:                                   # 这个小时的头尾落在哪个本机日历日（时区不是整点也算对）
+            days.add(time.strftime("%Y-%m-%d", time.localtime(h * 3600)))
+            days.add(time.strftime("%Y-%m-%d", time.localtime(h * 3600 + 3599)))
     for d in days:
+        a, b = _day_bounds(d)
         c.execute("DELETE FROM daily WHERE d=?", (d,))
         c.execute(f"INSERT INTO daily SELECT date(ts, 'unixepoch', 'localtime'), app, provider, model, sub, {cols} FROM calls "
-                  f"WHERE date(ts, 'unixepoch', 'localtime')=? GROUP BY 1,2,3,4,5", (d,))
+                  f"WHERE ts>=? AND ts<? GROUP BY 1,2,3,4,5", (a, b))
+        c.execute("DELETE FROM dayagg WHERE d=?", (d,))
+        c.execute(f"INSERT INTO dayagg {_DAYAGG_SEL} WHERE ts>=? AND ts<? GROUP BY 1,2,3,4,5", (a, b))
+    _bump(c)
     c.commit()
 
 
@@ -788,17 +838,44 @@ def _local_hour_ts(s: str) -> float:
     return time.mktime(time.strptime(s, "%Y-%m-%d %H"))
 
 
+def _bucket() -> int:
+    """按 UTC 时间戳分桶再换成本机小时：时区（含夏令时）都是整点就按小时分桶，不是整点（+5:30 之类）就按 15 分钟。"""
+    return 3600 if time.timezone % 3600 == 0 and time.altzone % 3600 == 0 else 900
+
+
 def summary(f: dict) -> dict:
     """按本机时区：小时 / 日历日的序列（含每种 token、费用拆分、按应用 / 模型分），按模型 / 供应商 / 项目的合计。
-    费用是每条请求存好的拆分加起来（长上下文 / fast 档已经按每条算过），有没价格的部分就标 partial。"""
+    费用是每条请求存好的拆分加起来（长上下文 / fast 档已经按每条算过），有没价格的部分就标 partial。
+    0.4.6：不再逐行换算时区、也不再按「小时 × 应用 × 供应商 × 模型 × 项目」一次分组（几十万条时 Python 要处理十几万组）：
+    拆成三次小分组——合计（不分时间）、按时间桶 × 应用 × 模型（曲线）、按时间桶 × 项目（按天的项目分布），时间桶再在 Python 里换成本机小时。"""
     c = _conn()
     w, a = _where(f)
-    q = ("SELECT strftime('%Y-%m-%d %H', ts, 'unixepoch', 'localtime') hk, app, provider, model, sub, coalesce(proj,''), "
-         "count(*), sum(inp), sum(cr), sum(cw5), sum(cw1h), sum(out), "
+    B = _bucket()
+    S = ("count(*), sum(inp), sum(cr), sum(cw5), sum(cw1h), sum(out), "
          "sum(coalesce(c_in,0)), sum(coalesce(c_cr,0)), sum(coalesce(c_cw5,0)), sum(coalesce(c_cw1h,0)), sum(coalesce(c_out,0)), "
-         f"sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END), sum(coalesce(est,0)) FROM calls{w} GROUP BY 1,2,3,4,5,6")
-    rows = c.execute(q, a).fetchall()
+         "sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END)")
+    q_tot = f"SELECT app, provider, model, sub, coalesce(proj,''), {S}, sum(coalesce(est,0)) FROM calls{w} GROUP BY 1,2,3,4,5"
+    q_ser = f"SELECT CAST(ts/{B} AS INT), app, model, {S} FROM calls{w} GROUP BY 1,2,3"
+    q_prj = (f"SELECT CAST(ts/{B} AS INT), coalesce(proj,''), count(*), sum(inp)+sum(cr)+sum(cw5)+sum(cw1h)+sum(out), "
+             f"sum(coalesce(c_in,0)+coalesce(c_cr,0)+coalesce(c_cw5,0)+coalesce(c_cw1h,0)+coalesce(c_out,0)) FROM calls{w} GROUP BY 1,2")
     c.close()
+
+    def run(q):
+        cc = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)   # WAL：几个只读连接可以同时查
+        try:
+            return cc.execute(q, a).fetchall()
+        finally:
+            cc.close()
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(3) as ex:                       # SQLite 查询时会放开 GIL，三次分组并行跑
+        r_tot, r_ser, r_prj = ex.map(run, (q_tot, q_ser, q_prj))
+    hk_of: dict = {}
+
+    def hk(b):
+        k = hk_of.get(b)
+        if k is None:
+            k = hk_of[b] = time.strftime("%Y-%m-%d %H", time.localtime(b * B))
+        return k
     Z = lambda: {"n": 0, **{x: 0 for x in TOK}, **{x: 0.0 for x in CPARTS}, "cost": 0.0, "unpriced": 0, "sub": 0, "est": 0, "app": set()}
     tot = Z()
     by_h: dict = {}
@@ -820,41 +897,52 @@ def summary(f: dict) -> dict:
         e["est"] += est
         e["app"].add(app)
 
-    for hk, app, prov, model, sub, proj, n, *rest in rows:
+    for app, prov, model, sub, proj, n, *rest in r_tot:
         tk = dict(zip(TOK, [v or 0 for v in rest[:5]]))
         cp = dict(zip(CPARTS, [v or 0.0 for v in rest[5:10]]))
         unp, est = rest[10] or 0, rest[11] or 0
         for d, key in ((by_model, model), (by_prov, prov), (by_proj, proj)):
             add(d.setdefault(key, Z()), n, tk, cp, unp, sub, est, app)
         add(tot, n, tk, cp, unp, sub, est, app)
-        for d, key in ((by_h, hk), (by_d, hk[:10])):
-            e = d.setdefault(key, {"n": 0, "tok": 0, "cost": 0.0, **{x: 0 for x in TOK}, **{x: 0.0 for x in CPARTS},
-                                   "unpriced": 0, "apps": {}, "models": {}})
-            e["n"] += n
-            e["tok"] += sum(tk.values())
-            e["cost"] += sum(cp.values())
-            e["unpriced"] += unp
-            for x in TOK:
-                e[x] += tk[x]
-            for x in CPARTS:
-                e[x] += cp[x]
-            if d is by_d:
-                s = e.setdefault("projs", {}).setdefault(proj, [0, 0, 0.0])
-                s[0] += n
-                s[1] += sum(tk.values())
-                s[2] += sum(cp.values())
-            for sub_d, k2 in ((e["apps"], app if app in ("codex", "dsh") else "claude"), (e["models"], model)):
-                s = sub_d.setdefault(k2, [0, 0, 0.0])
-                s[0] += n
-                s[1] += sum(tk.values())
-                s[2] += sum(cp.values())
         if unp:
             missing[model] = missing.get(model, 0) + unp
+    NEW = lambda: {"n": 0, "tok": 0, "cost": 0.0, **{x: 0 for x in TOK}, **{x: 0.0 for x in CPARTS}, "unpriced": 0, "apps": {}, "models": {}}
+    for b, app, model, n, *rest in r_ser:
+        tks = [v or 0 for v in rest[:5]]
+        cps = [v or 0.0 for v in rest[5:10]]
+        unp = rest[10] or 0
+        st, sc = sum(tks), sum(cps)
+        k = hk(b)
+        for d, key in ((by_h, k), (by_d, k[:10])):
+            e = d.get(key)
+            if e is None:
+                e = d[key] = NEW()
+            e["n"] += n
+            e["tok"] += st
+            e["cost"] += sc
+            e["unpriced"] += unp
+            for x, v in zip(TOK, tks):
+                e[x] += v
+            for x, v in zip(CPARTS, cps):
+                e[x] += v
+            for sub_d, k2 in ((e["apps"], app if app in ("codex", "dsh") else "claude"), (e["models"], model)):
+                s = sub_d.get(k2)
+                if s is None:
+                    s = sub_d[k2] = [0, 0, 0.0]
+                s[0] += n
+                s[1] += st
+                s[2] += sc
+    for b, proj, n, tk, cs in r_prj:
+        e = by_d[hk(b)[:10]]
+        s = e.setdefault("projs", {}).setdefault(proj, [0, 0, 0.0])
+        s[0] += n
+        s[1] += tk or 0
+        s[2] += cs or 0.0
     inp_all = tot["inp"] + tot["cr"] + tot["cw5"] + tot["cw1h"]
     r6 = lambda v: round(v, 6)
     fin = lambda d: [{"key": k, **{x: v[x] for x in ("n", *TOK, "unpriced", "sub", "est")}, **{x: r6(v[x]) for x in CPARTS},
-                      "cost": r6(v["cost"]), "apps": sorted(v["app"])} for k, v in sorted(d.items(), key=lambda kv: -kv[1]["n"])]
-    top_proj = [k for k, _ in sorted(by_proj.items(), key=lambda kv: -kv[1]["n"])[:8]]
+                      "cost": r6(v["cost"]), "apps": sorted(v["app"])} for k, v in sorted(d.items(), key=lambda kv: (-kv[1]["n"], str(kv[0])))]
+    top_proj = [k for k, _ in sorted(by_proj.items(), key=lambda kv: (-kv[1]["n"], str(kv[0])))[:8]]
     for v in by_d.values():                  # 按天的项目分布：只留前 8 个项目，其余并进「其他」（项目可能上千个）
         pj, other = v.pop("projs", {}), [0, 0, 0.0]
         v["projs_"] = {k: pj[k] for k in top_proj if k in pj}
@@ -877,66 +965,96 @@ def summary(f: dict) -> dict:
             "options": options(), "tz": time.strftime("%z")}
 
 
+HEAT_COLS = ("d", "n", "tok", "cost", "unpriced", "inp", "out", "cr", "cw", "c_inp", "c_out", "c_cr", "c_cw", "top")
+_HEAT_MEMO: dict = {}
+
+
 def heatmap(f: dict, weeks: int = 53, now: float | None = None) -> dict:
-    """0.4.4「每天用量」日历热力图：最近 weeks 周（按本机日历日），每天的请求数 / tokens / 费用 + 当天用得最多的模型。
+    """「按天分布」矩阵图（日历热力图）：最近 weeks 周（按本机日历日，星期一开始），每天的请求数 / tokens / 费用 + 当天用得最多的模型。
     不看界面上选的时间段（总是最近一年）；app / provider / model 照样筛；happ：再只看一个应用；dim=model|project + key：只算这一个模型 / 项目。
-    每天还给各种 token（inp / out / cr / cw）和对应费用（c_inp / c_out / c_cr / c_cw），界面「按类型」用。"""
+    0.4.6：只读 dayagg 日汇总表（增量维护），结果按（筛选 + 汇总版本）缓存；数据没变就直接给上次的结果。
+    days 是紧凑数组，每天一行，列见 cols（HEAT_COLS）；top = [[模型, 请求数, tokens, 费用], …] 前 3。"""
     now = time.time() if now is None else now
     lt = time.localtime(now)
     today = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
     import datetime as _dt
     d0 = _dt.date(lt.tm_year, lt.tm_mon, lt.tm_mday) - _dt.timedelta(days=lt.tm_wday + (weeks - 1) * 7)   # 星期一开始，最后一列是这周
     start = time.mktime((d0.year, d0.month, d0.day, 0, 0, 0, 0, 0, -1))
-    g = {k: f.get(k) for k in ("app", "provider", "model")}
-    dim, key = f.get("dim") or "model", f.get("key")
-    if key is not None and key != "":
-        g["proj" if dim == "project" else "model"] = key
-    w, a = _where(dict(g, **{"from": start}))
-    if f.get("happ"):                                   # 卡片里「Claude / Codex」再选一个应用
-        apps = {"claude": ("claude-code", "claude-desktop")}.get(f["happ"], (f["happ"],))
-        w += f" AND app IN ({','.join('?' * len(apps))})"
-        a += list(apps)
+    sd = d0.isoformat()
     c = _conn()
-    rows = c.execute("SELECT date(ts, 'unixepoch', 'localtime') d, model, coalesce(proj,''), count(*), "
-                     "sum(inp)+sum(cr)+sum(cw5)+sum(cw1h)+sum(out), "
-                     "sum(coalesce(c_in,0)+coalesce(c_cr,0)+coalesce(c_cw5,0)+coalesce(c_cw1h,0)+coalesce(c_out,0)), "
-                     "sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END), sum(inp), sum(out), sum(cr), sum(cw5)+sum(cw1h), "
-                     "sum(coalesce(c_in,0)), sum(coalesce(c_out,0)), sum(coalesce(c_cr,0)), sum(coalesce(c_cw5,0)+coalesce(c_cw1h,0)) "
-                     f"FROM calls{w} GROUP BY 1,2,3", a).fetchall()
-    w2, a2 = _where(dict({k: f.get(k) for k in ("app", "provider", "model")}, **{"from": start}))
-    keys = {"model": {}, "project": {}}
-    for m, pj, n in c.execute(f"SELECT model, coalesce(proj,''), count(*) FROM calls{w2} GROUP BY 1,2", a2):
-        keys["model"][m] = keys["model"].get(m, 0) + n
-        if pj:
-            keys["project"][pj] = keys["project"].get(pj, 0) + n
-    c.close()
+    try:
+        _ensure_dayagg(c)
+        ver = (c.execute("SELECT v FROM meta WHERE k='aggver'").fetchone() or ("",))[0]
+        mk = (str(DB_PATH), ver, sd, time.strftime("%Y-%m-%d", lt), weeks, *(str(f.get(k) or "") for k in ("app", "provider", "model", "dim", "key", "happ")))
+        hit = _HEAT_MEMO.get(mk)
+        if hit is not None:
+            return dict(hit, cached=True)
+        base, a0 = [], []
+        if f.get("app"):
+            apps = {"claude": ("claude-code", "claude-desktop")}.get(f["app"], (f["app"],))
+            base.append(f"app IN ({','.join('?' * len(apps))})")
+            a0 += list(apps)
+        for k in ("provider", "model"):
+            if f.get(k):
+                base.append(f"{k}=?")
+                a0.append(f[k])
+        base.append("d>=?")
+        a0.append(sd)
+        w, a = list(base), list(a0)
+        dim, key = f.get("dim") or "model", f.get("key")
+        if key is not None and key != "":
+            w.append(("proj" if dim == "project" else "model") + "=?")
+            a.append(key)
+        if f.get("happ"):                                   # 卡片里「Claude / Codex」再选一个应用
+            apps = {"claude": ("claude-code", "claude-desktop")}.get(f["happ"], (f["happ"],))
+            w.append(f"app IN ({','.join('?' * len(apps))})")
+            a += list(apps)
+        rows = c.execute("SELECT d, model, sum(n), sum(tok), sum(c_inp+c_out+c_cr+c_cw), sum(unpriced), sum(inp), sum(out), sum(cr), sum(cw), "
+                         "sum(c_inp), sum(c_out), sum(c_cr), sum(c_cw) FROM dayagg WHERE " + " AND ".join(w) + " GROUP BY 1,2", a).fetchall()
+        keys = {"model": {}, "project": {}}
+        for m, pj, n in c.execute("SELECT model, proj, sum(n) FROM dayagg WHERE " + " AND ".join(base) + " GROUP BY 1,2", a0):
+            keys["model"][m] = keys["model"].get(m, 0) + n
+            if pj:
+                keys["project"][pj] = keys["project"].get(pj, 0) + n
+    finally:
+        c.close()
     days: dict = {}
-    KS = ("inp", "out", "cr", "cw", "c_inp", "c_out", "c_cr", "c_cw")
-    for d, model, proj, n, tok, cost, unp, *ks in rows:
-        e = days.setdefault(d, {"d": d, "n": 0, "tok": 0, "cost": 0.0, "unpriced": 0, **{k: 0 for k in KS}, "models": {}})
-        for k, v in zip(KS, ks):
-            e[k] += v or 0
-        e["n"] += n
-        e["tok"] += tok or 0
-        e["cost"] += cost or 0.0
-        e["unpriced"] += unp or 0
-        m = e["models"].setdefault(model, [0, 0, 0.0])
-        m[0] += n
-        m[1] += tok or 0
-        m[2] += cost or 0.0
+    for d, model, n, tok, cost, unp, *ks in rows:
+        e = days.get(d)
+        if e is None:
+            e = days[d] = [d, 0, 0, 0.0, 0, 0, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, {}]
+        e[1] += n
+        e[2] += tok or 0
+        e[3] += cost or 0.0
+        e[4] += unp or 0
+        for i, v in enumerate(ks):
+            e[5 + i] += v or 0
+        e[13][model] = [n, tok or 0, cost or 0.0]
     out = []
     for d in sorted(days):
         e = days[d]
-        top = sorted(e.pop("models").items(), key=lambda kv: -kv[1][1])[:3]
-        out.append(dict(e, cost=round(e["cost"], 6), **{k: round(e[k], 6) for k in KS[4:]}, top=[[k, v[0], v[1], round(v[2], 6)] for k, v in top]))
+        top = sorted(e[13].items(), key=lambda kv: -kv[1][1])[:3]
+        out.append(e[:3] + [round(e[3], 6), e[4]] + e[5:9] + [round(v, 6) for v in e[9:13]]
+                   + [[[k, v[0], v[1], round(v[2], 6)] for k, v in top]])
     srt = lambda m: [k for k, _ in sorted(m.items(), key=lambda kv: -kv[1])][:50]
-    return {"from": time.strftime("%Y-%m-%d", time.localtime(start)), "to": time.strftime("%Y-%m-%d", time.localtime(today)),
-            "weeks": weeks, "days": out, "keys": {"model": srt(keys["model"]), "project": srt(keys["project"])}}
+    res = {"from": sd, "to": time.strftime("%Y-%m-%d", time.localtime(today)), "weeks": weeks, "ver": ver,
+           "cols": list(HEAT_COLS), "days": out, "keys": {"model": srt(keys["model"]), "project": srt(keys["project"])}}
+    if len(_HEAT_MEMO) > 64:
+        _HEAT_MEMO.clear()
+    _HEAT_MEMO[mk] = res
+    return res
+
+
+def heat_rows(h: dict) -> list:
+    """紧凑数组 → 每天一个 dict（测试 / 脚本用）。"""
+    return [dict(zip(h["cols"], r)) for r in h["days"]]
 
 
 def options() -> dict:
+    """筛选下拉框的选项。0.4.6：从 daily 日汇总表取（几千行），不再每次把全部原始记录扫三遍。"""
     c = _conn()
-    r = {k: [x[0] for x in c.execute(f"SELECT DISTINCT {k} FROM calls WHERE coalesce({k},'')<>'' ORDER BY 1")] for k in ("app", "provider", "model")}
+    src = "daily" if c.execute("SELECT 1 FROM daily LIMIT 1").fetchone() else "calls"
+    r = {k: [x[0] for x in c.execute(f"SELECT DISTINCT {k} FROM {src} WHERE coalesce({k},'')<>'' ORDER BY 1")] for k in ("app", "provider", "model")}
     span = c.execute("SELECT min(ts), max(ts) FROM calls").fetchone()
     c.close()
     r["span"] = list(span)
@@ -1117,9 +1235,18 @@ def import_ccswitch(retries: int = 6) -> dict:
     raise RuntimeError(f"CC Switch 数据库一直被占用：{last_err}")
 
 
+_STATUS_MEMO: dict = {}
+
+
 def status() -> dict:
     c = _conn()
-    n = c.execute("SELECT src, app, count(*), min(ts), max(ts) FROM calls GROUP BY 1,2").fetchall()
+    # 0.4.6：各来源条数要把全部记录扫一遍；汇总版本 + 最大 rowid 没变就用上次的（切时间段时页面每次都会来问）
+    mk = (str(DB_PATH), (c.execute("SELECT v FROM meta WHERE k='aggver'").fetchone() or ("",))[0], c.execute("SELECT max(rowid) FROM calls").fetchone()[0])
+    n = _STATUS_MEMO.get(mk)
+    if n is None:
+        n = c.execute("SELECT src, app, count(*), min(ts), max(ts) FROM calls GROUP BY 1,2").fetchall()
+        _STATUS_MEMO.clear()
+        _STATUS_MEMO[mk] = n
     nf = c.execute("SELECT kind, count(*) FROM files GROUP BY 1").fetchall()
     imp = c.execute("SELECT v FROM meta WHERE k='ccswitch_import'").fetchone()
     c.close()
