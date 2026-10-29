@@ -9,6 +9,9 @@
   用户点「立即更新」才下载、校验、静默安装、重启；「忽略此版本」后这个版本不再提示。
 - Windows 安装版：新版的 CCSessionSync-Setup-<版本>.exe 下到临时目录，用同一发布里的 .sha256 校验，
   然后静默运行安装程序（按用户安装、不用管理员），本程序退出，装完自动重新打开。
+- 装坏了能自动换回（0.4.2）：安装程序先把正在用的版本挪到 <安装目录>.prev 留着，装完先跑一遍 `CCSessionSync.exe health`
+  （不开窗口的启动自检）；没通过就把上一个版本原样换回来、照常打开，并发一条通知，记在 ~/.cc-sessionsync/update-rollback.json。
+  再次打开时（0.4.2 以后的版本）在「检查更新」里和通知里说明；更新照样是可选的，只亮红点。
 - 源码版 / Linux：只提示有新版本，用 pip install -U 更新。
 （从 CC Msg 的 update.py 移植。）
 断网、GitHub 限流都只记一条错误，不影响别的功能。
@@ -34,6 +37,9 @@ API = os.environ.get("CC_SESSIONSYNC_UPDATE_URL") or f"https://api.github.com/re
 STATE = paths.HOME / "update.json"
 EVERY = 6 * 3600
 UA = f"CCSessionSync/{__version__}"
+
+PENDING = paths.HOME / "update-pending.json"     # 点了「立即更新」：从哪个版本更新到哪个
+ROLLBACK = paths.HOME / "update-rollback.json"   # 安装程序写的：新版本自检没过，换回了旧版本
 
 _lock = threading.Lock()
 DL = {"state": "idle", "done": 0, "total": 0, "error": None, "file": None, "version": None}
@@ -103,7 +109,51 @@ def status() -> dict:
             "checked": d.get("checked"), "error": d.get("error"), "newer": newer,
             "ignored": ign, "badge": newer and r.get("latest") != ign,
             **({k: r.get(k) for k in ("latest", "tag", "name", "notes", "page", "published")} if r else {}),
-            "has_setup": bool(r.get("setup") and r.get("sha_url")), "download": dict(DL)}
+            "has_setup": bool(r.get("setup") and r.get("sha_url")), "download": dict(DL), "rollback": last_rollback()}
+
+
+def _read(f: Path) -> dict | None:
+    try:
+        d = json.loads(f.read_text(encoding="utf-8-sig"))
+        return d if isinstance(d, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def last_rollback() -> dict | None:
+    """最近一次「新版本没启动成功、换回旧版本」的记录（30 天内的）；界面「检查更新」里显示。"""
+    d = _read(ROLLBACK)
+    if not d or not d.get("to"):
+        return None
+    t = d.get("time")
+    if not isinstance(t, (int, float)) and d.get("when"):      # 安装程序写的是本地时间 yyyy-mm-ddThh:nn:ss
+        try:
+            from datetime import datetime
+            t = datetime.fromisoformat(str(d["when"])).timestamp()
+        except ValueError:
+            t = None
+    if isinstance(t, (int, float)) and time.time() - t > 30 * 86400:
+        return None
+    return {"from": str(d.get("from") or ""), "to": str(d.get("to")), "time": t, "reason": str(d.get("reason") or "")[:300]}
+
+
+def after_start() -> dict | None:
+    """启动时调一次：上次点了更新的结果。换回过 → {"kind": "rolled_back"}；更新好了 → {"kind": "updated"}。每件事只报一次。"""
+    rb = _read(ROLLBACK)
+    if rb and rb.get("to") and not rb.get("seen"):
+        rb["seen"] = time.time()
+        try:
+            ROLLBACK.write_text(json.dumps(rb, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+        PENDING.unlink(missing_ok=True)
+        return {"kind": "rolled_back", "from": str(rb.get("from") or __version__), "to": str(rb["to"])}
+    p = _read(PENDING)
+    if p:
+        PENDING.unlink(missing_ok=True)
+        if p.get("to") and vtuple(str(p["to"])) == vtuple(__version__):
+            return {"kind": "updated", "from": str(p.get("from") or ""), "to": __version__}
+    return None
 
 
 def check(force: bool = False) -> dict:
@@ -189,6 +239,11 @@ def apply(relaunch_args: list[str] | None = None) -> dict:
     args = [DL["file"], "/VERYSILENT", "/SUPPRESSMSGBOXES", "/CLOSEAPPLICATIONS", "/NORESTART", "/RELAUNCH=1"]
     if relaunch_args:
         args.append("/RELAUNCHARGS=" + " ".join(relaunch_args))
+    try:
+        PENDING.parent.mkdir(parents=True, exist_ok=True)
+        PENDING.write_text(json.dumps({"from": __version__, "to": DL.get("version"), "time": time.time()}), encoding="utf-8")
+    except OSError:
+        pass
     if FAKE_INSTALL:
         Path(FAKE_INSTALL).write_text(json.dumps({"args": args, "time": time.time()}), encoding="utf-8")
         DL["state"] = "installing"

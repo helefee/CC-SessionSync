@@ -437,6 +437,11 @@ def cmd_usage(a) -> int:
     return 0
 
 
+def cmd_health(a) -> int:
+    from . import health
+    return health.run(timeout=a.timeout, out=a.out, fail=a.fail)
+
+
 def cmd_after_quit(a) -> int:
     return apps.watch(a.kind)
 
@@ -590,7 +595,12 @@ def build_parser() -> argparse.ArgumentParser:
     aq.add_argument("kind", choices=("claude", "codex"))
     aq.set_defaults(fn=cmd_after_quit)
     sub.add_parser("key")
-    sub._choices_actions = [c for c in sub._choices_actions if c.dest not in ("after-quit", "key")]   # 后台用的，不在帮助里列
+    he = sub.add_parser("health")                 # 0.4.2：安装程序更新后跑的启动自检（不开窗口）
+    he.add_argument("--timeout", type=float, default=40)
+    he.add_argument("--out")
+    he.add_argument("--fail", action="store_true")
+    he.set_defaults(fn=cmd_health)
+    sub._choices_actions = [c for c in sub._choices_actions if c.dest not in ("after-quit", "key", "health")]   # 后台用的，不在帮助里列
     return ap
 
 

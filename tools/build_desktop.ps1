@@ -49,6 +49,17 @@ $cc = @()
 $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
 $hasMsvc = (Test-Path $vswhere) -and (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)
 if ($hasMsvc) { $cc = @("--msvc=latest"); Write-Host "    compiler: MSVC" } else { $cc = @("--mingw64"); Write-Host "    compiler: MinGW64 (Nuitka downloads it)" }
+# 0.4.2 smaller installer: leave out what CC Session Sync never runs (checked with the Nuitka module report + the smoke / health tests)
+#   asyncio / multiprocessing (only reachable from bottle's unused aiohttp adapter / concurrent.futures.process), pure-Python
+#   fallbacks that have a C version (_pydecimal, _pyio), the 2nd zstandard backend (cffi, ~650 KB), libyaml (we use the pure loader),
+#   pywebview's CEF backend + Android jar, dev-only stdlib modules; link-time optimisation and no asserts.
+$slim = @(
+    "--nofollow-import-to=asyncio,multiprocessing,concurrent.futures.process,_pydecimal,_pyio,doctest,pdb,xmlrpc,xdrlib,pickletools,pstats,trace,timeit,pyclbr,modulefinder,symtable,cgitb,imaplib,poplib,__phello__,__hello__",
+    "--nofollow-import-to=zstandard.backend_cffi,zstandard._cffi,yaml._yaml,yaml.cyaml",
+    "--noinclude-data-files=webview/lib/pywebview-android.jar",
+    "--python-flag=no_asserts", "--lto=yes"
+)
+if ($env:CCSS_NO_SLIM) { $slim = @(); Write-Host "    CCSS_NO_SLIM: building without the size options (for comparison)" }
 Push-Location $root
 try {
     $env:PYTHONPATH = $root
@@ -59,7 +70,8 @@ try {
         "--output-dir=build\nuitka-app" "--output-filename=CCSessionSync.exe" `
         "--windows-console-mode=attach" "--file-description=CC Session Sync" `
         "--include-package=cc_sessionsync" "--include-package-data=cc_sessionsync" "--include-package=zstandard" "--include-package=yaml" `
-        "--nofollow-import-to=unittest,pydoc,test" `
+        "--nofollow-import-to=unittest,pydoc,test" "--report=build\nuitka-report.xml" `
+        @slim `
         "tools\nuitka\CCSessionSync.py"
     Check "nuitka"
 } finally { Pop-Location; Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue }
@@ -82,6 +94,15 @@ $lines = Get-ChildItem $out -Recurse -File | Where-Object { $_.Name -ne "files.s
 [IO.File]::WriteAllLines((Join-Path $out "files.sha256"), $lines, (New-Object Text.UTF8Encoding $false))
 $size = (Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum
 Write-Host ("    {0:N1} MB, {1} files, no .py files" -f ($size / 1MB), $lines.Count)
+# size report: biggest files (to see what the installer is made of)
+Get-ChildItem $out -Recurse -File | Sort-Object Length -Descending | Select-Object -First 40 | ForEach-Object {
+    Write-Host ("    {0,10:N0}  {1}" -f $_.Length, $_.FullName.Substring($out.Length + 1)) }
+$rep = Join-Path $build "nuitka-report.xml"
+if (Test-Path $rep) {
+    $mods = ([xml](Get-Content $rep -Raw)).SelectNodes("//module") | ForEach-Object { $_.name } | Sort-Object
+    Write-Host "    compiled modules: $($mods.Count)"
+    [IO.File]::WriteAllLines((Join-Path $build "nuitka-modules.txt"), [string[]]$mods, (New-Object Text.UTF8Encoding $false))
+}
 
 if (-not $NoTest) {
     Step "smoke test (hidden, temp data dirs, port 8799, no Python on PATH)"
@@ -97,6 +118,8 @@ if (-not $NoTest) {
         Native $exe status | Out-Null; Check "status"
         Native $exe codex list --days 0 | Out-Null; Check "codex list"
         Native $exe sessions list | Out-Null; Check "sessions list"
+        $hc = Native $exe health --timeout 60; if ($LASTEXITCODE) { throw "health: $hc" }
+        Write-Host "    health: $(("$hc" | ConvertFrom-Json).checks | ForEach-Object { $_.id + '=' + $_.ok })"
         $sc = Native $exe selfcheck --offline --json
         $scj = ($sc -join "`n") | ConvertFrom-Json
         $inst = $scj.items | Where-Object { $_.id -eq "install" }
