@@ -15,7 +15,7 @@ from pathlib import Path
 
 from . import __version__
 
-MODULES = ("cc_sessionsync.ui", "cc_sessionsync.sessions", "cc_sessionsync.convert", "cc_sessionsync.listcache", "cc_sessionsync.update",
+MODULES = ("cc_sessionsync.ui", "cc_sessionsync.i18n", "cc_sessionsync.sessions", "cc_sessionsync.convert", "cc_sessionsync.listcache", "cc_sessionsync.update",
            "cc_sessionsync.selfcheck", "cc_sessionsync.tray", "cc_sessionsync.desktop", "sqlite3", "ssl", "zstandard", "yaml", "tomlkit")
 
 

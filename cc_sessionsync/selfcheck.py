@@ -17,7 +17,7 @@ from pathlib import Path
 from . import __version__, paths
 
 LAST = paths.HOME / "selfcheck.json"
-REQUIRED = ("index.html", "icon.ico", "icon.png", "usage_prices.json", "fonts/inter-regular.woff2")
+REQUIRED = ("index.html", "icon.ico", "icon.png", "usage_prices.json", "fonts/inter-regular.woff2", "i18n/en.json")
 
 
 def _item(i: str, name: str, status: str, detail: str = "", fix: str = "") -> dict:

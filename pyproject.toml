@@ -33,10 +33,11 @@ Issues = "https://github.com/helefee/CC-SessionSync/issues"
 cc-sessionsync = "cc_sessionsync.cli:main"
 
 [tool.setuptools]
-packages = ["cc_sessionsync"]
+packages = ["cc_sessionsync", "cc_sessionsync.i18n"]
 
 [tool.setuptools.package-data]
 cc_sessionsync = ["index.html", "*.ico", "*.png", "usage_prices.json", "fonts/*"]
+"cc_sessionsync.i18n" = ["*.json"]
 
 [tool.setuptools.dynamic]
 version = { attr = "cc_sessionsync.__version__" }

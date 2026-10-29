@@ -519,7 +519,11 @@ if (I18N && I18N.dict) {
   const SKIP = "script,style,textarea,code,pre.raw,[translate=no],[contenteditable]";
   const ATTRS = ["title", "placeholder", "aria-label", "data-tip"];
   const node = n => {
-    if (n.nodeType === 3) { const p = n.parentElement; if (p && !p.closest(SKIP)) { const v = tr(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } return; }
+    if (n.nodeType === 3) { const p = n.parentElement; if (p && !p.closest(SKIP)) { const o = n.nodeValue; let v = tr(o);
+      if (v !== o) {   // 中文挨着别的标签不用空格，英文要：两头补一个
+        if (/[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]$/.test(o) && /[\w.,;:!?)"]$/.test(v) && n.nextSibling) v += " ";
+        if (/^[\u4e00-\u9fff]/.test(o) && /^[\w("]/.test(v) && n.previousSibling && !/\s$/.test(n.previousSibling.textContent || "")) v = " " + v;
+        n.nodeValue = v; } } return; }
     if (n.nodeType !== 1 || n.closest(SKIP)) return;
     for (const a of ATTRS) { const v = n.getAttribute(a); if (v) { const w = tr(v); if (w !== v) n.setAttribute(a, w); } }
     if ((n.tagName === "INPUT" && /^(button|submit)$/i.test(n.type)) && n.value) n.value = tr(n.value);
