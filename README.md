@@ -354,6 +354,28 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
+### 安装包更小 + 更新失败自动换回（0.4.2）
+
+- **安装包更小**：打包时不再带用不着的模块（asyncio、multiprocessing、调试 / 性能分析工具、zstandard 和 PyYAML 的备用实现等），
+  打开链接时优化（LTO），去掉断言，安装包用更强的压缩。实测（GitHub Actions 同一台 Windows 构建机）：
+
+  | | 0.4.1 | 0.4.2 |
+  |---|---|---|
+  | 安装包 `CCSessionSync-Setup-*.exe` | 12.87 MB（12,866,801 字节） | 11.94 MB（11,936,051 字节，−7%） |
+  | 装好后的程序目录 | 39.4 MB，64 个文件 | 36.1 MB，55 个文件 |
+  | `CCSessionSync.exe` | 21.3 MB | 19.1 MB |
+
+  最大的几块是 Python 本身（python311.dll 5.8 MB）、OpenSSL（libcrypto 5.2 MB，检查更新 / 下载要用 HTTPS）和 WebView2 的组件，
+  这些省不掉。每次构建都会在日志里列出最大的 40 个文件，并上传 Nuitka 的模块报告（`nuitka-report`），方便以后继续瘦身。
+- **更新失败自动换回**：点「立即更新」后，安装程序会**先把现在的版本留一份**（`CCSessionSync.prev`），装完新版本马上跑一次
+  启动自检（程序文件完整、模块能加载、窗口组件在、本机界面服务能起来）。自检不通过 → **自动换回原来的版本**、
+  卸载信息里的版本号也改回来，弹一个通知「更新到 x 后没能正常启动，已经自动换回 y」。你的数据（`~/.cc-sessionsync`）不动。
+  自检通过就把留的那份删掉。
+- 换回过之后，「检查更新」里会显示一条「换回过」的说明（30 天内），可以再试一次或到发布页手动下载。
+- 更新仍然**只提示、不会自动安装**（红点 + 一次通知），点了才装。
+
+![更新失败自动换回](docs/screenshots/v042-update-rolled-back.png)
+
 ### 转换更像原样：工具调用、图片、思考（0.4.1）
 
 - **工具调用按目标自己的样子写**：跑命令、读 / 写 / 改文件、搜索、抓网页这些常见工具，转过去用目标应用自己的工具名和参数
@@ -771,6 +793,13 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Smaller installer + automatic rollback (0.4.2):** the build skips unused modules (asyncio, multiprocessing, debugger/profiler tools,
+  the fallback implementations of zstandard and PyYAML), uses LTO, drops asserts and stronger LZMA2 settings. Measured on the same GitHub
+  Actions Windows runner: installer 12.87 MB → 11.94 MB (−7%), installed app 39.4 MB / 64 files → 36.1 MB / 55 files, `CCSessionSync.exe`
+  21.3 MB → 19.1 MB. When you click **Update now**, the installer keeps the current version (`CCSessionSync.prev`), runs a start-up health
+  check of the new one (files intact, modules import, WebView present, local UI server answers) and, if it fails, restores the previous
+  version automatically, fixes the version shown in Apps & features and notifies you; your data is untouched. The Check-for-updates dialog
+  then shows a "rolled back" note for 30 days. Updates are still never installed automatically.
 - **Conversion fidelity (0.4.1):** common tool calls (shell, read/write/edit, grep/glob, web fetch/search) are written as the target's own native tool calls with paired results
   (Claude Code Bash/Read/…, Codex `exec_command`, dsh `bash`/`read`/…, OpenCode 2.x `shell`/`read`, 1.x `bash`/`read`); tools a target lacks stay as text.
   Real images (PNG/JPEG/GIF/WebP, ≤5 MB each, ≤30 MB per session) are carried over (dsh attachments store, OpenCode inline files, Cursor images read from their local path).
