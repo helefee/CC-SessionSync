@@ -656,9 +656,10 @@ const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}},
 let cur = null, setOpen = false;          // cur：搬来的「模型与 API」代码按项目区分缓存用；这里只有用户级，一直是 null
 
 // ---------- 基础 ----------
-async function api(path, body){
+async function api(path, body, more){
   const h = {"x-token": TOKEN};
   const opt = body === undefined ? {headers: h} : {method: "POST", headers: Object.assign(h, {"Content-Type": "application/json"}), body: JSON.stringify(body)};
+  if (more) Object.assign(opt, more);                     // 0.4.6：{signal}，切换太快时取消上一次请求
   const r = await fetch(path, opt); let j = {};
   try { j = await r.json(); } catch(e){}
   if (!r.ok) { const e = new Error(j.error || ("HTTP " + r.status)); e.status = r.status; e.j = j; throw e; }
@@ -1107,13 +1108,13 @@ function usOpen(){
   if (PAGE !== "usage") return go("usage");
   $("#pg-usage").innerHTML = `<div class="pgv"><h2>${ic("chart")}用量</h2><p class="sub">读本机 Claude Code / Codex / DeepSeek Harness 的会话日志（只读）。费用按 API 价折算（DeepSeek 按高峰价，错峰半价没算）；订阅（Claude / ChatGPT 登录）不是实际账单。</p>
     <div class="card"><div class="us" id="usBox"></div></div></div>`;
-  usRenderShell();
+  usRenderShell(); HM.fresh.clear(); HM.sig = "";
   const c = usCacheGet();                       // 上次的数据先画出来（内存 / 本地缓存），后台再刷新
   if (c) { US.sum = c.sum; US.st = c.st; US.logs = c.logs || []; US.total = c.total || 0; US.off = US.logs.length;
     try { usHead(); usCards(); usChart(); usDist(); usOpts(); usMissing(); usTab(true); } catch(e){} usLoad("fresh"); }
   else usLoad();
   clearInterval(US.timer);
-  US.timer = setInterval(() => { if (!$("#usBox") || PAGE !== "usage") return clearInterval(US.timer); usLoad(true); }, 60000);
+  US.timer = setInterval(() => { if (!$("#usBox") || PAGE !== "usage") return clearInterval(US.timer); usLoad(true, "tick"); }, 60000);
 }
 const US_CK = "ccss.uscache";
 function usCacheGet(){
@@ -1156,19 +1157,31 @@ function usRenderShell(){
 function icons(root){ root.querySelectorAll("[data-ic]").forEach(e => { e.outerHTML = ic(e.dataset.ic, e.dataset.cls); }); }
 async function usSync(){
   const b = $("#usSync"); b.disabled = true; $("#usSrc").classList.add("busy");
-  try { const r = await api("/api/usage/sync", {}); toast(`已同步：读了 ${r.files} 个文件，新增 ${r.added} 条（${r.ms} ms）`); await usLoad(); }
+  try { const r = await api("/api/usage/sync", {}); toast(`已同步：读了 ${r.files} 个文件，新增 ${r.added} 条（${r.ms} ms）`); await usLoad(false, "tick"); }
   catch(e){ toast("同步失败：" + e.message); }
   finally { b.disabled = false; $("#usSrc") && $("#usSrc").classList.remove("busy"); }
 }
-async function usLoad(quiet){
-  const qs = usQs();
+// 0.4.6：切换时间段 / 筛选太快时取消上一次还没回来的请求（只认最后一次）；矩阵图不看时间段，切时间段不重新取、不重画它，
+// 等这一页其余部分画完再让矩阵图去取（它自己有缓存，先画上次的）。heat="tick"：定时刷新 / 同步 / 改了价格，数据可能变了，矩阵图也问一下。
+async function usLoad(quiet, heat){
+  const qs = usQs(), seq = US.seq = (US.seq || 0) + 1;
+  if (US.ac) US.ac.abort();
+  const ac = US.ac = new AbortController();
+  if (heat === "tick" || quiet === true) HM.fresh.clear();
+  let done;
+  US.p = new Promise(r => done = r);
   try {
-    const [s, st] = await Promise.all([api("/api/usage/summary?" + qs), api("/api/usage/status")]);
-    if (!$("#usBox")) return;
-    US.sum = s; US.st = st; usHead(); usCards(); usChart(true); usDist(); usOpts(); usMissing();
+    const [s, st] = await Promise.all([api("/api/usage/summary?" + qs, undefined, {signal: ac.signal}), api("/api/usage/status", undefined, {signal: ac.signal})]);
+    if (seq !== US.seq || !$("#usBox")) return;
+    US.sum = s; US.st = st; usHead(); usCards(); if (USS.trend !== "heat") usChart(); usDist(); usOpts(); usMissing();
     if (!quiet || US.tab !== "logs") { US.off = 0; US.logs = []; }
-    await usTab(quiet); usCachePut();
-  } catch(e){ $("#usCards") && ($("#usCards").innerHTML = `<div class="miss">读不到用量数据：${esc(e.message)}</div>`); }
+    done();
+    if (USS.trend === "heat") setTimeout(() => seq === US.seq && usChart(), 0);   // 不挡住卡片 / 日志
+    await usTab(quiet); if (seq === US.seq) usCachePut();
+  } catch(e){
+    if (seq !== US.seq || e.name === "AbortError") return;          // 被更新的一次取代了
+    $("#usCards") && ($("#usCards").innerHTML = `<div class="miss">读不到用量数据：${esc(e.message)}</div>`);
+  } finally { done(); if (US.ac === ac) US.ac = null; }
 }
 function usHead(){
   const st = US.st; $("#usSrc").classList.toggle("busy", !!st.scanning || !st.first_done);
@@ -1272,9 +1285,9 @@ const usMi = () => ({tokens: 1, requests: 0, cost: 2}[US.metric]);          // a
 const usFmt = () => US.metric === "cost" ? fmtC : fmtN;
 const usFull = () => US.metric === "cost" ? fmtCF : fmtFull;
 function usChart(force){
-  const s = US.sum; if (!s) return;
+  const s = US.sum; if (!s && USS.trend !== "heat") return;
   if (USS.trend === "heat") {                 // 0.4.4 矩阵图：最近一年，按天
-    $("#usChTitle").textContent = "按天分布 · 最近一年" + (US.metric === "cost" && s.totals.sub ? "（按 API 价折算，非实际账单）" : "");
+    $("#usChTitle").textContent = "按天分布 · 最近一年" + (US.metric === "cost" && s && s.totals.sub ? "（按 API 价折算，非实际账单）" : "");
     $("#usSerSeg").innerHTML = `<span class="seg" data-ser="1">${[["kind","按类型"],["app","Claude / Codex"],["model","按模型"]].map(([v, t]) => `<button data-v="${v}" class="${USS.series===v?"on":""}">${t}</button>`).join("")}</span><span id="hmSubBox">${hmSub()}</span>`;
     $$("#usSerSeg .seg button").forEach(b => b.onclick = () => { USS.series = b.dataset.v; ussSave(); usChart(); });
     hmBindSub();
@@ -1347,7 +1360,22 @@ function usDist(){
 // ---- 0.4.4：「按天分布」的矩阵图（日历热力图，最近一年；像 GitHub 的贡献图）----
 // 列 = 周（星期一开始），行 = 星期几；5 档颜色（按有用量那些天的四分位分档）；悬停看当天的 Tokens / 请求 / 费用和用得最多的模型。
 // 这张卡片原有的控件照样生效：Tokens / 请求数 / 费用；按类型（算哪种 token）/ Claude·Codex（只看一个应用）/ 按模型（只看一个模型）。
-const HM = {data: null, q: "", seq: 0};
+const HM = {data: null, q: "", seq: 0, sig: "", ac: null, mem: new Map(), fresh: new Set(), err: ""};
+const HM_CK = "ccss.hmcache";
+// 0.4.6：后端给紧凑数组（cols + 每天一行），这里换回每天一个对象（365 个，很快）
+function hmNorm(d){
+  if (d && d.cols && d.days.length && Array.isArray(d.days[0])) { const C = d.cols; d.days = d.days.map(r => { const o = {}; for (let i = 0; i < C.length; i++) o[C[i]] = r[i]; return o; }); }
+  return d;
+}
+function hmCacheGet(q){
+  let d = HM.mem.get(q); if (d) return d;
+  try { const j = JSON.parse(localStorage.getItem(HM_CK) || "null"); if (j && j.q === q && j.d) { d = hmNorm(j.d); HM.mem.set(q, d); return d; } } catch(e){}
+  return null;
+}
+function hmCachePut(q, raw, d){
+  HM.mem.set(q, d); if (HM.mem.size > 24) HM.mem.delete(HM.mem.keys().next().value);
+  try { localStorage.setItem(HM_CK, `{"q":${JSON.stringify(q)},"d":${raw}}`); } catch(e){}     // 只留最后一次（几十 KB）
+}
 const HM_KIND = [["tok", "合计"], ["inp", "新输入"], ["out", "输出"], ["cr", "缓存读"], ["cw", "缓存写"]];
 function hmVal(d, m){
   if (!d) return 0;
@@ -1381,20 +1409,55 @@ function hmBindSub(){
   const on = (id, k, refetch) => { const e = $(id); if (e) e.onchange = () => { USS[k] = e.value; ussSave(); refetch ? usHeat() : hmDraw(); }; };
   on("#hmKind", "hkind", false); on("#hmApp", "happ", true); on("#hmModel", "hmodel", true);
 }
-async function usHeat(force){
+function usHeat(force){
   const box = $("#usTrend"); if (!box) return;
   let body = box.querySelector(".hm-scroll");
-  if (!body) { box.querySelector(".ucv-body").innerHTML = `<div class="hm-scroll"></div><div class="hm-ft"><span class="hm-sum dim"></span><span class="sp" style="flex:1"></span><span class="hm-leg">少<i class="hc l0"></i><i class="hc l1"></i><i class="hc l2"></i><i class="hc l3"></i><i class="hc l4"></i>多</span></div>`; body = box.querySelector(".hm-scroll"); }
-  const q = hmQs();
-  if (HM.data && HM.q === q && !force) return hmDraw();
-  const seq = ++HM.seq;
-  if (HM.q !== q || !HM.data) body.innerHTML = '<div class="uempty">读取中…</div>';
-  try { const d = await api("/api/usage/heatmap?" + q); if (seq !== HM.seq || USS.trend !== "heat") return; HM.data = d; HM.q = q; hmDraw(); }
-  catch(e){ body.innerHTML = `<div class="uempty">${esc(e.message)}</div>`; }
+  if (!body) { box.querySelector(".ucv-body").innerHTML = `<div class="hm-scroll"></div><div class="hm-ft"><span class="hm-sum dim"></span><span class="hm-st dim"></span><span class="sp" style="flex:1"></span><span class="hm-leg">少<i class="hc l0"></i><i class="hc l1"></i><i class="hc l2"></i><i class="hc l3"></i><i class="hc l4"></i>多</span></div>`; body = box.querySelector(".hm-scroll"); HM.sig = ""; }
+  const q = hmQs(), c = hmCacheGet(q);
+  if (c) { HM.data = c; HM.q = q; hmDraw(); }                      // 有缓存（这次打开取过的 / 上次关掉前的）：马上画
+  else if (HM.q !== q || !HM.data) { HM.data = null; HM.q = q; HM.sig = ""; body.innerHTML = '<div class="uempty">读取中…</div>'; box.querySelector(".hm-sum").textContent = ""; }
+  if (force) HM.fresh.delete(q);
+  if (HM.fresh.has(q) && c) return;                                // 这次打开已经取过、数据没变：不再问后端
+  clearTimeout(HM.dt); HM.dt = setTimeout(() => hmFetch(q), 120);  // 连着切筛选只取最后一次
+}
+async function hmFetch(q){
+  if (HM.ac) HM.ac.abort();
+  const ac = HM.ac = new AbortController(), seq = ++HM.seq;
+  const to = setTimeout(() => { HM.to = seq; ac.abort(); }, 45000);
+  try {
+    await (US.p || Promise.resolve());                             // 先让卡片 / 日志那次请求回来
+    if (seq !== HM.seq) return;
+    hmStatus("");
+    const d = await api("/api/usage/heatmap?" + q, undefined, {signal: ac.signal});
+    if (seq !== HM.seq) return;
+    HM.fresh.add(q);
+    const old = HM.mem.get(q);
+    if (!(old && old.ver === d.ver && old.to === d.to)) {          // 汇总版本没变：不重画
+      const raw = JSON.stringify(d), n = hmNorm(d); hmCachePut(q, raw, n);
+      if (hmQs() === q && USS.trend === "heat") { HM.data = n; HM.q = q; hmDraw(); }
+    }
+  } catch(e){
+    if (seq !== HM.seq) return;                                    // 已经换了筛选，这次的结果不要了
+    const msg = HM.to === seq ? "读取超时" : e.message;
+    if (hmQs() === q) hmStatus(msg);
+  } finally { clearTimeout(to); if (HM.ac === ac) HM.ac = null; }
+}
+// 出错时：没数据就在图的位置显示错误 + 重试；有旧数据就在底部小字提示，不会一直停在「读取中…」
+function hmStatus(err){
+  const box = $("#usTrend"); if (!box) return;
+  const st = box.querySelector(".hm-st"), body = box.querySelector(".hm-scroll"); if (!st || !body) return;
+  if (!err) { st.textContent = ""; return; }
+  const btn = '<button class="hm-retry">重试</button>';
+  if (!HM.data) body.innerHTML = `<div class="uempty">读不到矩阵图数据：${esc(err)} ${btn}</div>`;
+  else st.innerHTML = ` · 更新失败：${esc(err)} ${btn}`;
+  box.querySelectorAll(".hm-retry").forEach(b => b.onclick = () => { HM.fresh.delete(HM.q); usHeat(true); });
 }
 function hmDraw(){
   const box = $("#usTrend"), D = HM.data; if (!box || !D || USS.trend !== "heat") return;
   const sc = box.querySelector(".hm-scroll"); if (!sc) return usHeat();
+  const sig = [HM.q, D.ver, D.to, US.metric, USS.hkind || "tok", sc.clientWidth, LANG].join("|");
+  if (sig === HM.sig && sc.querySelector("svg.hm")) return;        // 0.4.6：数据 / 指标 / 宽度都没变就不重画（比如只切了时间段）
+  HM.sig = sig;
   const ss = $("#hmSubBox"); if (ss) { ss.innerHTML = hmSub(); hmBindSub(); }
   const m = US.metric, en = LANG === "en", f = m === "cost" ? fmtC : fmtN;
   const byD = new Map(D.days.map(d => [d.d, d]));

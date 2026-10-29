@@ -318,12 +318,15 @@ class H(BaseHTTPRequestHandler):
             b = obj["_raw"]                                    # 0.4.0：会话列表已经序列化好了（并且打过码）
         else:
             b = json.dumps(_clean(obj, reveal), ensure_ascii=False).encode("utf-8")
-        self.send_response(code)
-        self.send_header("content-type", "application/json; charset=utf-8")
-        self.send_header("cache-control", "no-store")
-        self.send_header("content-length", str(len(b)))
-        self.end_headers()
-        self.wfile.write(b)
+        try:
+            self.send_response(code)
+            self.send_header("content-type", "application/json; charset=utf-8")
+            self.send_header("cache-control", "no-store")
+            self.send_header("content-length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            pass                                               # 0.4.6：页面已经取消了这次请求（切换太快），不用管
 
     def _file(self, f: Path, ctype: str | None = None, cache: bool = True):
         b = f.read_bytes()

@@ -1233,9 +1233,18 @@ def import_ccswitch(retries: int = 6) -> dict:
     raise RuntimeError(f"CC Switch 数据库一直被占用：{last_err}")
 
 
+_STATUS_MEMO: dict = {}
+
+
 def status() -> dict:
     c = _conn()
-    n = c.execute("SELECT src, app, count(*), min(ts), max(ts) FROM calls GROUP BY 1,2").fetchall()
+    # 0.4.6：各来源条数要把全部记录扫一遍；汇总版本 + 最大 rowid 没变就用上次的（切时间段时页面每次都会来问）
+    mk = (str(DB_PATH), (c.execute("SELECT v FROM meta WHERE k='aggver'").fetchone() or ("",))[0], c.execute("SELECT max(rowid) FROM calls").fetchone()[0])
+    n = _STATUS_MEMO.get(mk)
+    if n is None:
+        n = c.execute("SELECT src, app, count(*), min(ts), max(ts) FROM calls GROUP BY 1,2").fetchall()
+        _STATUS_MEMO.clear()
+        _STATUS_MEMO[mk] = n
     nf = c.execute("SELECT kind, count(*) FROM files GROUP BY 1").fetchall()
     imp = c.execute("SELECT v FROM meta WHERE k='ccswitch_import'").fetchone()
     c.close()
