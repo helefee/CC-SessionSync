@@ -569,8 +569,10 @@ def recost() -> int:
 
 def _day_bounds(d: str) -> tuple[float, float]:
     """'YYYY-MM-DD'（本机日历日）→ [当天 0 点, 第二天 0 点) 的时间戳，查询走 calls_ts 索引，不用逐行换算时区。"""
-    y, m, dd = (int(x) for x in d.split("-"))
-    return time.mktime((y, m, dd, 0, 0, 0, 0, 0, -1)), time.mktime((y, m, dd + 1, 0, 0, 0, 0, 0, -1))
+    import datetime as _dt
+    a = _dt.date.fromisoformat(d)
+    b = a + _dt.timedelta(days=1)
+    return time.mktime((a.year, a.month, a.day, 0, 0, 0, 0, 0, -1)), time.mktime((b.year, b.month, b.day, 0, 0, 0, 0, 0, -1))
 
 
 # 0.4.6：「按天分布」矩阵图用的日汇总（本机日历日 × 应用 / 供应商 / 模型 / 项目，含费用拆分），跟 daily 一起增量维护，
