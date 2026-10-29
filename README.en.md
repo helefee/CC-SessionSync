@@ -64,6 +64,19 @@ anything that can be dry-run is dry-run first.
 - Developers: all UI text is written in Chinese in the code; `cc_sessionsync/i18n/en.json` maps each Chinese fragment to English.
   `python tools/i18n_extract.py` adds new fragments (as `null`), `--check` fails when one is missing (run in the tests).
 
+## What's new in 0.5
+
+- **Account sync: deleted sessions stay deleted, undo restores byte-for-byte, and every sync / undo is verified (0.5.0):**
+  sync used to check only the current account's deletion tombstones, so a session you deleted in account A could come back from an older
+  copy in account C when syncing to B. Tombstones in every account folder now count (a session used again after the delete still syncs),
+  and the sync page shows how many were skipped. Account-bound Remote Control fields (`bridgeSessionIds`, `remoteControlAutoEligible`) are no
+  longer copied to another account (they caused "Previous session is unavailable"); a refresh keeps the target account's own values.
+  Each sync records per-file before / after fingerprints. Undo moves added entries to the trash and restores changed files byte-for-byte from the
+  checked backup, even if Claude touched them later. Undoing twice does nothing, and the backup list marks undone syncs and pre-undo backups.
+  After a sync or undo the result is verified file by file (plus a fresh plan); differences are listed, and "opened in Claude afterwards" is
+  reported as normal. Every sync in *Timeline & backups → Undo history* has a *Verify* button; CLI: `cc-sessionsync verify <backup>`.
+  Running the same sync again is a no-op.
+
 ## What's new in 0.4
 
 - **Parent / child sessions and a chat-style transcript (0.4.9):** the session list nests side sessions and task-spawned sessions

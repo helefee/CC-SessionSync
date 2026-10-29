@@ -22,6 +22,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -843,10 +844,44 @@ def _transcript_exists(cli_sid: str | None) -> bool:
 _KEEP = ("isArchived", "isStarred", "lastFocusedAt")
 # 旧账号被停用时留下的报错（「organization has disabled …」），带到新账号里会一直挂着
 _DROP = ("error", "errorAt", "priorErrorMark")
+# 0.5.0：跟账号绑死的字段。Remote Control（远程控制）的桥接会话是在原来那个号下开的，带到新号里桌面端一开就报
+# 「Previous session is unavailable — run /remote-control to start a new one」。补进来时去掉；刷新时用新号自己的。
+_ACCOUNT_BOUND = ("bridgeSessionIds", "remoteControlAutoEligible")
 
 
 def _fresh(d: dict) -> dict:
-    return {k: v for k, v in d.items() if k not in _DROP}
+    return {k: v for k, v in d.items() if k not in _DROP and k not in _ACCOUNT_BOUND}
+
+
+def _sha(f: Path) -> str | None:
+    try:
+        return hashlib.sha256(f.read_bytes()).hexdigest()
+    except FileNotFoundError:
+        return None
+
+
+def _tomb_time(f: Path) -> float:
+    """墓碑 deleted_<会话号> 里记的是删除时间（毫秒）；读不出来按文件修改时间算。"""
+    try:
+        v = float(f.read_text(encoding="utf-8").strip())
+        return v * 1000 if v < 1e11 else v
+    except Exception:
+        try:
+            return f.stat().st_mtime * 1000
+        except Exception:
+            return 0.0
+
+
+def _all_tombs(fs: list[dict], skip_key: str | None = None) -> dict[str, float]:
+    """所有会话列表文件夹里的墓碑：会话号 → 最晚的删除时间（毫秒）。"""
+    out: dict[str, float] = {}
+    for f in fs:
+        if f["key"] == skip_key:
+            continue
+        for t in Path(f["path"]).glob("deleted_*"):
+            k = t.name[len("deleted_"):]
+            out[k] = max(out.get(k, 0.0), _tomb_time(t))
+    return out
 
 
 SOURCES = {"desktop": "桌面端", "cli": "命令行（CLI）", "api": "API 模式"}
@@ -1033,7 +1068,10 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
             old = best.get(src.name)
             if old is None or d.get("lastActivityAt", 0) > old[1].get("lastActivityAt", 0):
                 best[src.name] = (src, d, f["key"])
-    add, update, skip_missing, skip_tomb, skip_have = [], [], 0, 0, 0
+    # 0.5.0：在别的号里删过、删了以后没再用过的，也不复活（之前只看目标文件夹的墓碑：在 A 号删掉的会话，同步到 B 号时
+    # 会从更早的 C 号文件夹里把旧登记又补回去）
+    gtomb = _all_tombs(fs, tgt["key"])
+    add, update, skip_missing, skip_tomb, skip_have, skip_gone = [], [], 0, 0, 0, 0
     for name, (src, d, frm) in best.items():
         item = {"src": str(src), "name": name, "title": d.get("title") or "（无标题）",
                 "cwd": d.get("cwd"), "from": frm, "archived": bool(d.get("isArchived")),
@@ -1051,6 +1089,10 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
         if d.get("cliSessionId") in tomb or name[len("local_"):-len(".json")] in tomb:
             skip_tomb += 1
             continue
+        dead = max(gtomb.get(name[len("local_"):-len(".json")], 0.0), gtomb.get(d.get("cliSessionId") or "", 0.0))
+        if dead and dead >= (d.get("lastActivityAt") or 0):
+            skip_gone += 1
+            continue
         if d.get("cliSessionId") in have_cli:
             skip_have += 1
             continue
@@ -1065,7 +1107,7 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
     tgt = dict(tgt, label=("API 模式（所有供应商共用）" + (f" · {acc.get('provider')}" if acc.get("provider") else ""))
                if tgt.get("profile") == "3p" else None)
     return dict(base, ok=True, target=tgt, folders=fs, add=add, update=update, skip_missing=skip_missing,
-                skip_tomb=skip_tomb, skip_have=skip_have, tombstones=len(tomb), warns=sum(1 for x in add + update if x.get("warn")),
+                skip_tomb=skip_tomb, skip_have=skip_have, skip_gone=skip_gone, tombstones=len(tomb), warns=sum(1 for x in add + update if x.get("warn")),
                 children=sum(1 for x in add + update if x.get("rel")), rel_warns=rel_warns)
 
 
@@ -1105,34 +1147,43 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
         return dict(p, done=0, updated=0, dry=dry)
     tdir = Path(p["target"]["path"])
     bak = _backup(tdir)
+    files: dict[str, dict] = {}                 # 0.5.0：逐个文件记「改之前 / 改之后」的指纹，撤回和核对都按这个来
     done = 0
     for a in p["add"]:
         dst = tdir / a["name"]
         if dst.exists():
             continue
         _atomic_write(dst, json.dumps(_fresh(json.loads(Path(a["src"]).read_text(encoding="utf-8"))), ensure_ascii=False))
+        files[a["name"]] = {"before": None, "after": _sha(dst), "title": a.get("title")}
         done += 1
     updated = 0
     for a in p["update"]:
         dst = tdir / a["name"]
+        before = _sha(dst)
         cur = json.loads(dst.read_text(encoding="utf-8"))
         new = _fresh(json.loads(Path(a["src"]).read_text(encoding="utf-8")))
-        for k in _KEEP:                      # 在当前账号里做过的收藏 / 归档 / 点开时间，留着
+        for k in _KEEP + _ACCOUNT_BOUND:     # 在当前账号里做过的收藏 / 归档 / 点开时间、这个号自己的远程控制，留着
             if k in cur:
                 new[k] = cur[k]
         _atomic_write(dst, json.dumps(new, ensure_ascii=False))
+        files[a["name"]] = {"before": before, "after": _sha(dst), "title": a.get("title")}
         updated += 1
     srcs: dict[str, set] = {}
     for a in p["add"] + p["update"]:            # 0.4.8：子会话引用的任务记录一起合并
         t = (a.get("rel") or {}).get("task")
         if t:
             srcs.setdefault(a["from_dir"], set()).add(t)
+    snap = bak / tdir.parent.name / tdir.name
+    task_before = {n: _sha(snap / n) for n in TASK_FILES}
     tasks = _merge_tasks(tdir, srcs) if srcs else {"merged": 0, "files_added": [], "files_updated": [], "warn": []}
+    for n in tasks["files_added"] + tasks["files_updated"]:
+        files[n] = {"before": task_before.get(n), "after": _sha(tdir / n)}
     _write_ledger(bak, tdir, what, source=source, added=[a["name"] for a in p["add"]], updated=[a["name"] for a in p["update"]],
-                  task_files_added=tasks["files_added"], task_files_updated=tasks["files_updated"], tasks_merged=tasks["merged"])
+                  task_files_added=tasks["files_added"], task_files_updated=tasks["files_updated"], tasks_merged=tasks["merged"],
+                  files=files, v=2)
     if only is None or not [x for x in plan(target, source).get("add", [])]:
         _switch_handled(p)
-    return dict(p, done=done, updated=updated, dry=False, backup=str(bak), tasks=tasks)
+    return dict(p, done=done, updated=updated, dry=False, backup=str(bak), tasks=tasks, verify=verify(bak.name))
 
 
 def _switch_handled(p: dict) -> None:
@@ -1182,18 +1233,20 @@ def list_backups() -> list[dict]:
         dirs = [d for a in b.iterdir() if a.is_dir() for d in a.iterdir() if d.is_dir()]
         out.append({"id": b.name, "ledger": led, "key": led["key"] if led else (f"{dirs[0].parent.name}/{dirs[0].name}" if dirs else None),
                     "count": sum(1 for d in dirs for _ in d.glob("local_*.json")),
-                    "added": len(led.get("added", [])) if led else None, "updated": len(led.get("updated", [])) if led else None})
+                    "added": len(led.get("added", [])) if led else None, "updated": len(led.get("updated", [])) if led else None,
+                    "what": led.get("what") if led else None, "restored": _undone(led),
+                    "verifiable": bool(led and isinstance(led.get("files"), dict))})
     return out
 
 
-def restore(backup_id: str) -> dict:
-    """把某次同步撤回去。没有账本的老备份：只补回现在缺的登记，不覆盖、不删。"""
+def _bak_ctx(backup_id: str) -> tuple[Path | None, Path | None, dict | None, Path | None, str | None]:
+    """→ (备份目录, 备份里的文件夹快照, 账本, 现在的目标文件夹, 错误)"""
     b = BAK_ROOT / backup_id
-    if not b.is_dir() or "/" in backup_id or "\\" in backup_id or ".." in backup_id:
-        return {"ok": False, "error": f"没有这个备份：{backup_id}"}
+    if not backup_id or "/" in backup_id or "\\" in backup_id or ".." in backup_id or not b.is_dir():
+        return None, None, None, None, f"没有这个备份：{backup_id}"
     dirs = [d for a in b.iterdir() if a.is_dir() for d in a.iterdir() if d.is_dir()]
     if len(dirs) != 1:
-        return {"ok": False, "error": "备份目录结构不对（应该正好一个 账号/组织）"}
+        return None, None, None, None, "备份目录结构不对（应该正好一个 账号/组织）"
     src = dirs[0]
     try:
         led = json.loads((b / "ledger.json").read_text(encoding="utf-8"))
@@ -1203,36 +1256,149 @@ def restore(backup_id: str) -> dict:
     if led and str(led.get("key") or "").startswith(API_PREFIX):     # API 模式那边的：按账本记的文件夹还原（得是现在认得的那个）
         hit = next((Path(f["path"]) for f in api_folders() if f["key"] == led["key"]), None)
         if not hit:
-            return {"ok": False, "error": "这次同步写的是 API 模式的会话列表，那个文件夹现在找不到了"}
+            return b, src, led, None, "这次同步写的是 API 模式的会话列表，那个文件夹现在找不到了"
         tdir = hit
+    return b, src, led, tdir, None
+
+
+def _undone(led: dict | None) -> str | None:
+    """同步的账本被撤回过 → 撤回时那份备份的号。（撤回前备份的账本里 restored 是个数，不算）"""
+    return led.get("restored") if led and led.get("what") != "restore" and isinstance(led.get("restored"), str) else None
+
+
+def _mark_restored(b: Path, led: dict, pre: Path) -> None:
+    led = dict(led, restored=pre.name, restored_at=datetime.now().isoformat(timespec="seconds"))
+    tmp = b / ".ledger.tmp"
+    tmp.write_text(json.dumps(led, ensure_ascii=False, indent=1), encoding="utf-8")
+    os.replace(tmp, b / "ledger.json")
+
+
+def restore(backup_id: str) -> dict:
+    """把某次同步撤回去。
+    0.5.0 的账本（v=2）逐个文件记了「同步前 / 同步后」的指纹：同步新建的挪进回收站，同步改过的换回同步前的原样（按指纹核对备份），
+    已经是原样的不动；撤回过的再点一次什么都不做。撤完再核对一遍（verify），有对不上的列出来。
+    更早的账本按名单撤；没账本的老备份：只补回现在缺的登记，不覆盖、不删。"""
+    b, src, led, tdir, err = _bak_ctx(backup_id)
+    if err:
+        return {"ok": False, "error": err}
+    if led and led.get("what") == "restore":
+        return {"ok": False, "error": "这是撤回之前做的备份，不是一次同步；要撤销那次撤回，重新同步一次就行"}
+    if _undone(led):
+        return {"ok": True, "already": True, "removed": 0, "restored": 0, "backup": None, "trash": None,
+                "note": f"这次同步已经撤回过了（{led['restored']}），没再动", "verify": verify(backup_id)}
     pre = _backup(tdir)                       # 还原之前也先备份一次，还原错了还能再还原回来
     trash = paths.HOME / "trash" / f"claude-restore-{datetime.now():%Y%m%d-%H%M%S}"
     removed = restored = 0
-    if led:
-        if led.get("what") in ("sync", "auto-sync") and led.get("added"):
-            _skip_add(led.get("key") or f"{tdir.parent.name}/{tdir.name}", led["added"])   # 撤回过的：自动同步别再补回来
-        for n in led.get("added", []):
+    changed_after, problems = [], []
+    if led and led.get("what") in ("sync", "auto-sync") and led.get("added"):
+        _skip_add(led.get("key") or f"{tdir.parent.name}/{tdir.name}", led["added"])   # 撤回过的：自动同步别再补回来
+    if led and isinstance(led.get("files"), dict):
+        for n, st in led["files"].items():
+            f = tdir / n
+            cur = _sha(f)
+            if cur is not None and cur != st.get("after"):
+                changed_after.append(n)        # 同步以后 Claude 又写过（点开过 / 接着聊过）：照样撤，结果里说一声
+            if st.get("before") is None:
+                if cur is not None:
+                    (trash / n).parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(f), trash / n)
+                    removed += 1
+                continue
+            if cur == st["before"]:
+                continue
+            orig = src / n
+            if _sha(orig) != st["before"]:
+                problems.append(f"{n}：备份里的原文件对不上，没换回")
+                continue
+            f.parent.mkdir(parents=True, exist_ok=True)
+            _atomic_write_bytes(f, orig.read_bytes())
+            restored += 1
+    elif led:
+        for n in led.get("added", []) + led.get("task_files_added", []):
             f = tdir / n
             if f.exists():
                 trash.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(f), trash / n)
-                removed += 1
-        for n in led.get("task_files_added", []):          # 0.4.8：同步时新建的任务文件挪走、改过的换回备份里的
-            f = tdir / n
-            if f.exists():
-                trash.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(f), trash / n)
-        names = led.get("updated", []) + led.get("task_files_updated", [])
+                removed += 1 if n.startswith("local_") else 0
+        for n in led.get("updated", []) + led.get("task_files_updated", []):
+            if (src / n).exists():
+                shutil.copy2(src / n, tdir / n)
+                restored += 1
     else:
         # 没账本的老备份不知道那次改了哪些：只补回现在缺的登记，不覆盖现有的（覆盖会把之后的新进度改回旧的）
-        names = [f.name for f in src.glob("local_*.json") if not (tdir / f.name).exists()]
-    for n in names:
-        if (src / n).exists():
-            shutil.copy2(src / n, tdir / n)
-            restored += 1
+        for f in src.glob("local_*.json"):
+            if not (tdir / f.name).exists():
+                shutil.copy2(f, tdir / f.name)
+                restored += 1
     _write_ledger(pre, tdir, "restore", source=backup_id, removed=removed, restored=restored)
-    return {"ok": True, "removed": removed, "restored": restored, "backup": str(pre),
-            "trash": str(trash) if removed else None}
+    if led:
+        _mark_restored(b, led, pre)
+    v = verify(backup_id)
+    return {"ok": not problems, "removed": removed, "restored": restored, "backup": str(pre),
+            "trash": str(trash) if trash.exists() else None, "changed_after": changed_after, "problems": problems,
+            "error": "；".join(problems) if problems else None, "verify": v}
+
+
+def _atomic_write_bytes(dst: Path, data: bytes) -> None:
+    tmp = dst.with_name(f".ccss-tmp-{os.getpid()}-{dst.name}")
+    tmp.write_bytes(data)
+    os.replace(tmp, dst)
+
+
+def verify(backup_id: str) -> dict:
+    """核对一次同步（或它的撤回）现在是不是到位了。→ {ok, state, total, same, diffs:[{name, title, why}], summary}
+    同步后：账本里每个文件应该还是「同步后」的样子；撤回后：应该回到「同步前」（新建的不在了）。
+    「之后被 Claude 改过」（点开过、接着聊过）单独算，不算没同步上。另外再算一遍同步计划：这次的会话不该还在「要补 / 要刷新」里。"""
+    b, src, led, tdir, err = _bak_ctx(backup_id)
+    if err:
+        return {"ok": False, "error": err}
+    if not led or not isinstance(led.get("files"), dict):
+        return {"ok": True, "state": "unknown", "total": 0, "same": 0, "diffs": [], "touched": [],
+                "summary": "这份备份是旧版本做的，没有逐个文件的记录，核对不了"}
+    undone = bool(_undone(led))
+    diffs, touched, same = [], [], 0
+    for n, st in led["files"].items():
+        cur = _sha(tdir / n)
+        want = st.get("before") if undone else st.get("after")
+        if cur == want:
+            same += 1
+            continue
+        title = st.get("title")
+        try:
+            title = (json.loads((tdir / n).read_text(encoding="utf-8")).get("title") if cur else None) or title
+        except Exception:
+            pass
+        if undone:
+            why = "撤回后还在" if st.get("before") is None else "没换回同步前的版本" if cur else "同步前就有，现在不在了"
+        else:
+            if cur is None:
+                why = ("同步后在 Claude 里删了" if n.startswith("local_") and (tdir / f"deleted_{n[len('local_'):-len('.json')]}").exists()
+                       else "同步后不在了")
+            elif cur == st.get("before"):
+                why = "又变回同步前的样子了（被 Claude 盖回去了？）"
+            else:
+                touched.append({"name": n, "title": title})
+                continue
+        diffs.append({"name": n, "title": title, "why": why})
+    pending = []
+    if not undone:
+        try:
+            p = plan(led.get("key"), "api" if str(led.get("key") or "").startswith(API_PREFIX) else "desktop")
+            names = set(led.get("added", [])) | set(led.get("updated", []))
+            pending = [x["name"] for x in (p.get("add") or []) + (p.get("update") or []) if x["name"] in names] if p.get("ok") else []
+        except Exception:
+            pending = []
+        for n in pending:
+            if not any(d["name"] == n for d in diffs):
+                diffs.append({"name": n, "title": (led["files"].get(n) or {}).get("title"), "why": "再算一遍同步计划，它还在「要补 / 要刷新」里"})
+    total = len(led["files"])
+    state = "undone" if undone else "synced"
+    if diffs:
+        summary = f"{len(diffs)} 个和预期不一样" + (f"；另有 {len(touched)} 个同步后在 Claude 里又用过（正常）" if touched else "")
+    else:
+        summary = (f"撤回干净了：{total} 个文件都回到了同步前" if undone else f"都到位了：{total} 个文件和同步时写的一致") \
+            + (f"（其中 {len(touched)} 个之后在 Claude 里又用过，正常）" if touched else "")
+    return {"ok": not diffs, "state": state, "total": total, "same": same, "diffs": diffs, "touched": touched, "summary": summary}
 
 
 def _acc_line(name: str, a: dict) -> str:
@@ -1297,6 +1463,12 @@ def main(argv: list[str]) -> int:
             print(f"{b['id']}  {b['key'][:17] if b['key'] else '?'}  会话 {b['count']:>3}  {what}")
         return 0
     from . import apps
+    if "--verify" in argv:
+        v = verify(argv[argv.index("--verify") + 1])
+        print(("✓ " if v.get("ok") else "✗ ") + (v.get("summary") or v.get("error") or ""))
+        for d in v.get("diffs", [])[:40]:
+            print(f"  {d['name']}  {d.get('title') or ''}  {d['why']}")
+        return 0 if v.get("ok") else 1
     if "--restore" in argv:
         bid = argv[argv.index("--restore") + 1]
         r = apps.run_or_defer("claude", "claude-restore", {"backup": bid}, f"撤回 Claude 同步 {bid}")

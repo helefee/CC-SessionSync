@@ -345,6 +345,10 @@ def cmd_restore(a) -> int:
     return claude_sync.main(["--restore", a.backup])
 
 
+def cmd_verify(a) -> int:
+    return claude_sync.main(["--verify", a.backup])
+
+
 def cmd_auto(a) -> int:
     print(f"自动同步：Claude 桌面端没开时把别的账号的会话补进当前账号（每 {a.interval:g} 秒看一次，Ctrl+C 停）")
     try:
@@ -481,7 +485,7 @@ def cmd_after_quit(a) -> int:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="cc-sessionsync", description="Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code")
     ap.add_argument("--version", action="version", version=f"cc-sessionsync {__version__}")
-    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,clean-backups,restore,auto,codex,sessions,usage,settings,jobs,diag,selfcheck,ui}")
+    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,clean-backups,restore,verify,auto,codex,sessions,usage,settings,jobs,diag,selfcheck,ui}")
     sub.add_parser("status", help="看当前账号、会话文件夹、Codex 对话数").set_defaults(fn=cmd_status)
     s = sub.add_parser("sync", help="把别的账号下的 Claude 会话补进当前账号的会话列表")
     s.add_argument("--dry-run", action="store_true", help="只演练，不写")
@@ -498,6 +502,9 @@ def build_parser() -> argparse.ArgumentParser:
     r = sub.add_parser("restore", help="撤回某次同步")
     r.add_argument("backup")
     r.set_defaults(fn=cmd_restore)
+    r = sub.add_parser("verify", help="核对某次同步（或它的撤回）是不是到位了")
+    r.add_argument("backup", help="备份号（backups 里列的）")
+    r.set_defaults(fn=cmd_verify)
     au = sub.add_parser("auto", help="前台跑自动同步（桌面端没开时自动补齐）")
     au.add_argument("--interval", type=float, default=30)
     au.add_argument("--once", action="store_true", help="只看一次就退出")

@@ -395,6 +395,8 @@ class H(BaseHTTPRequestHandler):
             return claude_sync.run(q.get("to") or None, True, None, q.get("source") or claude_sync.default_source())
         if p == "/api/backups":
             return claude_sync.list_backups()
+        if p == "/api/sync/verify":                            # 0.5.0：核对一次同步 / 撤回到没到位
+            return claude_sync.verify(q.get("backup") or "")
         if p == "/api/codex/plan":
             return codex_import.run(dry=True, **_codex_kw(q))
         if p == "/api/codex/preview":
