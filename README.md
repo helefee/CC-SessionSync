@@ -1,5 +1,7 @@
 # CC Session Sync
 
+[English](README.en.md) | **中文**
+
 Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、命令行用）。所有改动都先备份、记账本、能撤回，能演练的先演练：
 
 1. **账号同步**：Claude Code 换账号后，旧会话「不见了」→ 补回来。Claude 桌面端的会话列表按「账号 / 组织」分文件夹存，换号后新号的列表是空的，
@@ -353,6 +355,17 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### 中文 / English 界面（0.4.3）
+
+- 界面有**中文和英文**两种。缺省**跟随系统语言**（中文 Windows 是中文，别的语言是英文）；在「设置 → 外观与窗口 → 界面语言 · Language」里能改：
+  跟随系统 / 中文 / English，切换后窗口马上重新载入。托盘菜单、提示和系统通知也跟着变。
+- 只翻程序自己的文字，**你的会话标题和对话内容不会被翻译**。命令行输出还是中文。
+- 英文说明见 [README.en.md](README.en.md)。
+- 开发：界面文字在代码里还是中文写；`cc_sessionsync/i18n/en.json` 是「中文片段 → 英文」对照表（约 2080 条）。
+  `python tools/i18n_extract.py` 把新加的文字补进去（值为 null），`--check` 有没翻的就失败（测试里会跑）。
+
+![英文界面：设置里的界面语言](docs/screenshots/v043-en-settings-language.png)
 
 ### 安装包更小 + 更新失败自动换回（0.4.2）
 
@@ -726,189 +739,8 @@ Windows 安装包：`tools/build_desktop.ps1`（Nuitka 编译 + 隐藏窗口冒�
 发版：改 `cc_sessionsync/__init__.py` 的 `__version__`，打 `v<版本>` 标签，`release` 工作流会出 `CCSessionSync-Setup-<版本>.exe`（+ `.sha256`）、
 wheel、sdist 和 `SHA256SUMS.txt`。
 
-许可：MIT，见 [LICENSE](LICENSE)；第三方声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-
----
-
+许可：MIT，见 [LICENSE](LICENSE)；第三方声明见 [THIRD_PARTY_NOTICES.
 ## English
 
-**CC Session Sync** is a Windows desktop app (also a pip-installable CLI for Windows / Linux / macOS) that manages Claude Code and
-Codex sessions. Everything is backed up, recorded in a ledger and undoable; anything that can be dry-run is.
-
-**Install:** download `CCSessionSync-Setup-<version>.exe` from Releases (per-user install to `%LOCALAPPDATA%\Programs\CCSessionSync`,
-no admin, Start-menu shortcut, uninstaller; uses the system Edge WebView2; unsigned, so SmartScreen may warn; a `.sha256` is published).
-Or `pip install "cc-sessionsync[desktop]"` from the wheel / `pip install git+https://github.com/helefee/CC-SessionSync` (CLI + browser UI).
-
-**Desktop app:** single instance, tray icon (minimize/close to tray, autostart, start hidden), system notifications. The UI listens on
-127.0.0.1:8766 only and every request needs a per-launch token. Since 0.2.2 all pages live in a **top button bar** (since 0.2.9: Timeline & backups, Account sync,
-会话转换 (conversion), Usage, Providers, Diagnostics, Check for updates with a red dot, theme; **settings gear at the top-right**), shown in the
-main area (Usage and Providers are full pages, not dialogs; tray entries open the window on that page). The resizable, collapsible (Ctrl+B)
-**left panel shows only the session list**: search, filters and a group tree whose leaves are the sessions, grouped
-**by account** (every Claude Desktop account/org folder on the PC incl. the MSIX store dir, the CLI account, Codex accounts/providers;
-"未知账号" for sessions not registered anywhere) or **by project**.
-
-- **Reveal accounts (0.2.1):** accounts are masked by default; the eye button in the session list fetches the full email/name/org from the local token-protected
-  API, keeps it in page memory only (never logged or stored); optional "always show full account" setting (off by default). Diagnostics stay masked.
-- **Automatic session backup (0.2.1):** on by default every 10 minutes (min 5 min; minutes/hours/days), incremental (appended-delta + content
-  dedup + zlib), low priority, skips if busy, catches up after sleep, notifies only on failure. Retention: all for 7 days, daily to 90 days,
-  weekly after; the latest version of every session is always kept; manual cleanup.
-- **Timeline (0.2.1):** pick a point in time (slider / date-time) per session or for all sessions, preview the conversation read-only with a
-  diff against now, then **Restore to Claude** (new Claude Code session with a new id and "（恢复 @time）" title, registered in Claude Desktop
-  for the current account, queued while Desktop runs; shows the `claude --resume` command). Also replace-current (backed up first, extra
-  confirmation) and restore-to-Codex. Ledger + undo.
-- **Export / import .md / .html (0.2.1):** readable files with the raw jsonl embedded, so importing back is lossless; import creates a new
-  Claude Code session in the chosen project (dry-run preview first, undoable). `tools/verify_resume.py` checks that restored and imported
-  sessions really resume in Claude Code.
-
-- **Account-switch detection:** polls login files by mtime (cheap), debounces, then shows one notification
-  "检测到 Claude Code/Codex 账号已切换：old → new" plus an in-window banner with Sync now / Open. Only masked emails are shown; tokens are
-  never read. Tray balloons cannot carry buttons, so clicking the notification opens the window where the banner has the actions.
-- **Updates are never installed automatically.** At most every 6 hours the app checks the latest GitHub release. A new version gives one tray
-  notification per version, a red dot on the top-bar / settings "Check for updates" buttons and the tray icon, "● 有新版本 …" in the tray menu, and a banner (Update now / What's new /
-  Later / Ignore this version) until you install or ignore it. Only **Update now** downloads the installer, verifies its SHA-256, installs
-  silently and restarts.
-- **Sessions:** list/search/filter Claude Code and Codex sessions, read-only viewer, rename (alias by default; optionally the tool's own
-  title via `custom-title` / Codex `session_index.jsonl` + state DB), archive, export md/jsonl, resume in a terminal, delete (backed up to
-  the session DB, then moved to `~/.cc-sessionsync/trash`; purging needs typing `DELETE`), restore to the original path only if it is free,
-  otherwise as a new copy. Claude Desktop index edits are queued while Desktop runs.
-- **Close & run, then relaunch (0.2.3):** when an action needs Claude Desktop closed (sync, restore, delete/archive/rename, trash restore,
-  timeline replace), a dialog offers 关闭并同步（完成后重启） / wait until it quits / cancel. It records how Desktop was launched (MSIX AUMID via
-  Get-AppxPackage, or the Squirrel `AnthropicClaude\claude.exe`), asks it to quit gracefully (WM_CLOSE + `taskkill` without `/F`, up to 15 s with
-  progress), force-kills only after a second confirmation (and only Desktop's own process tree), warns about Claude Code sessions started by
-  Desktop that would be interrupted, never touches other CLI `claude` processes, runs the queued jobs, relaunches Desktop the same way, verifies
-  it started and reports the result (dialog + notification).
-- **API mode / 3P (0.2.4):** discovers Claude Desktop's API-mode data dir (`%LOCALAPPDATA%\Claude-3p`, legacy `%APPDATA%\Claude-3p`, MSIX
-  copies, `CLAUDE_USER_DATA_DIR`), groups its sessions as "API / 第三方供应商（3P）" (provider type only, never the key or gateway URL),
-  shows entries whose transcript is missing as "无法打开" with limited actions, and adds an "API 模式" sync target that only writes into the
-  bucket Desktop already created (never creates `ant-did` or folders). Diagnostics show the mode, active dir and candidates.
-- **Usage accuracy (0.2.4):** 5m/1h cache-write pricing, most-complete streaming snapshot per `message.id:requestId`, Codex per-event deltas
-  from `total_token_usage`, long-context tiers per request, fast/priority/flex multipliers, verified price table with dates, local-day
-  buckets, per-row cost breakdown, Cowork / 3P logs, migration of the existing DB. Curve chart style (toggle, remembered) and per-model /
-  per-project distribution charts; timeline grouped by day with a growth sparkline and ←/→ keys.
-- **DeepSeek Harness ⇄ Claude Code (0.2.5):** reads DeepSeek Harness (dsh, MIT) v4 session logs (`$DSH_HOME/sessions/--project--/<id>/session.v4.jsonl[.zstd]`,
-  independent checksummed zstd frames; profile `session-persistence-jsonl` root/compression overrides honoured), lists them read-only in
-  session management (source filter + group), backs them up, and converts both ways with dry-run, ledger + hash-checked undo and idempotency.
-  dsh → Claude Code applies `surfaceOp` (compaction), renders tools as text, drops reasoning (opt-in as text), images as placeholders (opt-in
-  base64 from the attachment store), skips system prompt / runtime context. Claude Code → dsh only ever creates a new session dir (text only,
-  atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
-  Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
-  `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
-- **Smaller installer + automatic rollback (0.4.2):** the build skips unused modules (asyncio, multiprocessing, debugger/profiler tools,
-  the fallback implementations of zstandard and PyYAML), uses LTO, drops asserts and stronger LZMA2 settings. Measured on the same GitHub
-  Actions Windows runner: installer 12.87 MB → 11.94 MB (−7%), installed app 39.4 MB / 64 files → 36.1 MB / 55 files, `CCSessionSync.exe`
-  21.3 MB → 19.1 MB. When you click **Update now**, the installer keeps the current version (`CCSessionSync.prev`), runs a start-up health
-  check of the new one (files intact, modules import, WebView present, local UI server answers) and, if it fails, restores the previous
-  version automatically, fixes the version shown in Apps & features and notifies you; your data is untouched. The Check-for-updates dialog
-  then shows a "rolled back" note for 30 days. Updates are still never installed automatically.
-- **Conversion fidelity (0.4.1):** common tool calls (shell, read/write/edit, grep/glob, web fetch/search) are written as the target's own native tool calls with paired results
-  (Claude Code Bash/Read/…, Codex `exec_command`, dsh `bash`/`read`/…, OpenCode 2.x `shell`/`read`, 1.x `bash`/`read`); tools a target lacks stay as text.
-  Real images (PNG/JPEG/GIF/WebP, ≤5 MB each, ≤30 MB per session) are carried over (dsh attachments store, OpenCode inline files, Cursor images read from their local path).
-  Reasoning becomes native reasoning for dsh/OpenCode. After each write the session is re-read with the target app's own rules (OpenCode via its CLI export) and the result dialog
-  shows "自检通过" or the issues. Verified with the real CLIs against a local mock model; round-trip tests in `tests/scenarios/s_fidelity.py`.
-- **Faster startup, capped memory (0.4.0):** the session list from last time is shown instantly on launch (tagged 上次的列表 · 正在刷新…)
-  and refreshed in the background; only session files whose mtime/size changed are re-read (disk head cache in `~/.cc-sessionsync/cache/`).
-  The list is slim; a session's content and resume command load when you open it. Cache capped at 60k entries and released after 3 min idle.
-  Synthetic data, relaunch: 5,006 sessions 1.17 s → 0.10 s to first list, peak RSS 61 → 53 MB; 15,006 sessions 4.39 s → 0.15 s, 143 → 101 MB.
-- **Backup cleanup (0.3.9):** `~/.cc-sessionsync/backups` (config-file backups from 0.2–0.3.5) can be cleaned by age and/or total size:
-  a manual 清理 dialog in 设置 → 数据 previews exactly which files go and how much space is freed; optional daily auto-clean under 高级
-  (off by default); `cc-sessionsync clean-backups --days N [--mb M] [--yes]`. The newest backup of every original file is never deleted;
-  `index.jsonl` is updated; unknown files, subfolders, `sessions.sqlite` and `claude-sync-bak` are untouched.
-- **Storage format self-check (0.3.8):** read-only probes (table / column names, record types, format versions, counts; never account or
-  credential tables) for Claude Code, Codex, Cursor, DeepSeek Harness, OpenCode and ZCode detect when an app changed how it stores sessions
-  (new OpenCode tables, renamed ZCode columns, a newer Cursor `_v`, unknown Codex rollout records, broken files). Instead of sessions silently
-  missing, a dismissible banner names the apps and how many sessions can't be read, 诊断自检 gets a "存储格式自检" card and per-app self-check
-  items, and the conversion page shows "另有 N 个读不出来". Runs 1 min after start and every 6 h; notifies once per distinct problem.
-- **Cross-app search + batch convert (0.3.7):** a 全部应用 source searches all six apps by keyword, app, project and time range (optionally
-  inside conversation text via an incremental background index, `search-index.sqlite`), and converts / exports many sessions at once with a
-  combined preview, a background job with progress, and one undo ledger per source app. Session lists are cached (stale-while-refresh) and
-  rendered in pages.
-- **Conversion preview (0.3.6):** before writing, shows target paths, message counts and what is lost / changed (images, attachments,
-  reasoning, tool output, model names); "skip preview" lives under 设置 → 高级 (off by default).
-- **Providers removed (0.3.5):** the 供应商 page (Agent / 服务商 / 高级), the model-routing proxy (Anthropic ⇄ OpenAI Responses / Chat
-  conversion, key rotation), the generated Codex model catalogs, config warnings / one-click fixes, the tray entry and the `route` CLI are
-  gone — too heavy. On the first launch of 0.3.5 the app undoes what 0.3.0–0.3.4 wrote, once: Codex `config.toml` and Claude Code
-  `settings.json` are restored byte-identical when untouched since enabling, otherwise only the values still equal to ours are put back
-  (`model_provider`, `model`, `model_catalog_json`, effort, env vars, `apiKeyHelper`); `[model_providers.cc-route]` / `[profiles.cc-route]`,
-  `cc-route.config.toml`, `ccss-models-*.json` and `models_cache.json` are removed; without records only our keys are removed and
-  `model_provider` never stays on cc-route (falls back to Codex's default ChatGPT login). The background proxy is stopped, the
-  "CC Session Sync Route" Run entry and the local `route-token` are deleted. Every file is backed up to `~/.cc-sessionsync/backups` first;
-  the result is logged (`legacy-0.3.5.json/.log`) and shown once in the window. Provider keys you stored and `key get` stay, because
-  v0.2 provider switches / direct cards reference them from your configs.
-- **Timeline & backups (0.2.9):** the Timeline and Backups pages are merged into one top-bar page "时间线与备份" with sub-tabs
-  时间线 (timeline: segment bars, point-in-time picking, preview, restore to Claude, account/project grouping, growth curve) | 备份 (session
-  backup DB: schedule, back up now, retention, location/size, recent versions; recycle bin; export/import .md/.html) | 撤销记录 (queued changes,
-  session-operation log, account-sync backups, Codex/dsh/Cursor import ledgers and conversion ledgers, all with undo). `?page=backups`,
-  `#backups`, the remembered last page, tray, notifications and the 会话转换 undo link open the right sub-tab (`?page=timeline&tab=bk|undo`).
-- **Navigation (0.2.8):** the top bar no longer has per-pair pages; "Codex→Claude" is merged into "会话转换" (Codex → Claude Code
-  embeds the Codex importer with its day/project/state filters, include-subagents, preview, in-place update and the anti-reimport switch).
-  The old Codex / dsh / Cursor pages are only linked at the bottom of 会话转换; tray item, notifications, `?page=codex` deep links and the
-  remembered last page open 会话转换 with the direction preselected.
-- **Any-to-any session conversion + OpenCode / ZCode (0.2.7):** a unified "会话转换" page (and `cc-sessionsync convert …`) converts sessions
-  between Claude Code, Codex, DeepSeek Harness, Cursor, OpenCode and ZCode through a common intermediate model (`ccss-ir/1`). Native
-  targets write a **new** session the target can resume: Claude Code (jsonl, optional desktop registration), Codex (rollout + session index),
-  dsh (new session dir) and OpenCode (imported through OpenCode's own CLI: `opencode session import --standalone` on 2.x, `opencode import`
-  on 1.x, incl. the desktop app's bundled `opencode-cli`). Cursor and ZCode are export-only (Markdown context file + paste prompt), as is
-  OpenCode when no CLI is found. Dry-run, ledgers + undo (sessions continued after conversion are kept), idempotency (same / changed /
-  again), loop protection, origin title prefixes. OpenCode (`~/.local/share/opencode/opencode.db`, 1.x `session/message/part` and 2.x
-  `session_v2/session_message`) and ZCode (`~/.zcode/cli/db/db.sqlite` + `v2/tasks-index.sqlite`) are read from a temp copy (db + wal),
-  listed read-only in session management grouped by project, backed up and shown in the timeline; credential/account tables are never read.
-  CI resumes converted sessions with the real CLIs: `claude --resume`, `codex exec resume`, `dsh --session-id`, `opencode run -s` (1.x and 2.x).
-- **Cursor ⇄ Claude Code (0.2.6):** reads Cursor's editor DB (`User/globalStorage/state.vscdb`: `cursorDiskKV` `composerData:<id>` +
-  `bubbleId:<id>:<bubble>`, `composerHeaders`; `workspaceStorage/<hash>/workspace.json` for grouping), agent transcripts
-  (`~/.cursor/projects/*/agent-transcripts`) and `cursor-agent` CLI stores (`~/.cursor/chats/<md5(cwd)>/<id>/store.db`) strictly read-only
-  (`immutable=1` when Cursor is closed, `mode=ro` otherwise, prefix range queries) into a normalized mirror used for viewing, backups, timeline
-  and import. Cursor → Claude Code: text, tool calls/results as text (clipped), code/diffs as text, reasoning opt-in as text, images as
-  placeholders, injected context dropped; dry-run, ledger + hash-checked undo, idempotent update; verified in CI with `claude --resume`
-  for all three sources (`tools/verify_cursor.py`). Claude Code / Codex / dsh → Cursor is an exported Markdown context file (optionally in
-  `<project>/.cursor/sessionsync/`) that you @-mention in a new Cursor chat — writing into Cursor's DB is not done because the format is
-  undocumented and versioned, a chat spans three stores, new agent chats depend on opaque/encrypted `conversationState`/`agentKv` state,
-  and it cannot be verified without logging in.
-- **Font size & zoom (0.2.6):** larger default text (15px body, ≥12px labels), font size presets, 80–200% UI zoom (Ctrl+= / Ctrl+- / Ctrl+0,
-  Ctrl+wheel), remembered; per-monitor DPI awareness on Windows; top nav collapses to icons when it doesn't fit.
-- **Fix (0.2.6):** dsh → Claude Code with "register in desktop list" crashed (`_desktop_entry() got an unexpected keyword argument 'prefix'`).
-- **Timeline growth curve (0.2.5):** total messages across all backed-up sessions per backup run (with per-app lines), draggable cursor.
-- **Account-switch false positive fixed (0.2.5):** a months-old `000005.ldb` in Claude Desktop's Local Storage still held another account's
-  telemetry; whenever the current account's records were uploaded/compacted away, "newest record wins" picked the stale account and the
-  watcher reported a switch (and later a switch back). Now: last-known desktop account guarded by timestamp, 2 consecutive stable reads,
-  persisted baseline (`watch-state.json`), 3P mode changes reported as mode switches, and a switch is marked handled after a sync or when
-  there is nothing to sync.
-- **Backups** (in 时间线与备份 since 0.2.9)**:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
-  operation ledger with undo.
-- **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code
-  and Codex providers, keys in Windows Credential Manager, `apiKeyHelper` / `model_providers`, model list, mapping, connection test, backups
-  before every config write), **Diagnostics / Self-check** (pass / warn / fail with suggested fixes; runs on first launch).
-
-The original two features:
-
-1. **Bring back Claude Code sessions after switching accounts.** Claude Desktop keeps its session list per account/organization
-   folder (`claude-code-sessions/<account>/<org>/local_*.json`); after an account switch the new folder is empty although the
-   transcripts are still on disk. `cc-sessionsync sync` copies the missing entries into the current account's folder (Desktop or CLI
-   login, MSIX/Store install supported). It never deletes, keeps tombstoned (deleted) sessions deleted, backs up the target folder
-   first, and `restore` undoes a sync.
-2. **Import Codex conversations into Claude Code.** `cc-sessionsync codex import` converts Codex rollouts
-   (`~/.codex/sessions/**/rollout-*.jsonl`) into new Claude Code transcripts (`~/.claude/projects/<slug>/<uuid>.jsonl`) plus,
-   optionally, a Claude Desktop session-list entry, so you can `claude --resume <id>` or open it in Desktop. Codex files are only
-   read. It is a dry run unless you pass `--apply`; every run writes a ledger and `codex undo <ledger>` moves created files to a
-   trash folder and restores updated ones.
-
-**Optional `--mark-codex-imported` (default off):** also records each imported session in Codex's own
-`<CODEX_HOME>/external_agent_session_imports.json` (same schema Codex writes: `records[]` with `source_path` in Rust-canonical form,
-`content_sha256`, `imported_thread_id` = the original Codex thread, `imported_at`, `source_modified_at` in ns, `connector_names`, `title`),
-so Codex Desktop's "import from Claude Code" does not re-import it as a duplicate. Enable per run with the flag, persistently with
-`cc-sessionsync settings --codex-mark-imported on`, or with the toggle in the UI. It is the only Codex file ever written: the original is
-backed up into the import ledger, the write is atomic, existing records and keys are preserved, and a malformed file is left untouched
-(the import is refused with a clear error). `codex undo` restores the file byte-for-byte if it has not changed since, otherwise it reverts
-only our records.
-
-Changes to Claude Desktop's data are deferred while Desktop is running (it would overwrite them on exit): the job is queued,
-a background process waits for Desktop to quit, applies it and relaunches Desktop.
-
-Run `cc-sessionsync` for the desktop window (falls back to the browser without pywebview) or see the command list above.
-
-**Conversion limitations:** tool calls are rendered as text (command + truncated output) rather than native `tool_use` blocks;
-reasoning is dropped by default (mostly encrypted; `--reasoning` keeps plaintext summaries); images become placeholders;
-Codex-injected context (AGENTS.md, environment) is skipped; sub-agent / `codex exec` / imported-from-Claude threads are skipped
-unless `--all`. The Claude Code transcript format is undocumented; CI verifies with the latest Claude Code that an imported
-session opens with `claude --resume` (against a local mock API).
-
-License: MIT.
+See **[README.en.md](README.en.md)** for the full English README. The app itself also has an English UI since 0.4.3
+(设置 / Settings → Language).
