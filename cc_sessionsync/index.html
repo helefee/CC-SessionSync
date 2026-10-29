@@ -2843,6 +2843,10 @@ function updRender(u){
     <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:10px">${u.mode === "installer" ? (u.has_setup ? "点「立即更新」：下载安装包 → 校验 sha256 → 静默安装 → 自动重新打开。不点就不会装。" : "这个版本没有带校验文件的安装包，请到发布页手动下载。")
       : "这是 pip / 源码版：请运行 <code>pip install -U cc-sessionsync</code>，或到发布页下载 Windows 安装版。"}</div>
     ${busy || dl.state === "error" ? `<div style="margin-top:10px;font-size:calc(13.5px*var(--fk))">${{downloading: "下载中", verifying: "校验 sha256", installing: "正在安装，马上重新打开…", error: "出错了：" + esc(dl.error || "")}[dl.state]}${dl.total ? ` ${kb(dl.done)} / ${kb(dl.total)}` : ""}</div><div class="prog"><i style="width:${dl.total ? Math.round(dl.done / dl.total * 100) : busy ? 100 : 0}%"></i></div>` : ""}`;
+  const rb = u.rollback;                    // 0.4.2：上次更新装坏了、自动换回过
+  if (rb) body = `<div class="pvl" style="margin-bottom:10px"><span class="tag warn">换回过</span><b>v${esc(rb.to)} 没成功启动，已经换回 v${esc(rb.from || u.current)}</b>
+      <span class="dim">${rb.time ? esc(when(rb.time)) + " · " : ""}新版本装完后的启动自检没通过，安装程序自动换回了原来的版本，数据没动。可以再试一次，或到发布页手动下载。</span></div>` + body;
+  if (u.mode === "installer") body += `<div class="dim" style="font-size:calc(12.5px*var(--fk));margin-top:8px">更新时会先留着现在的版本；新版本打不开的话自动换回来。</div>`;
   const can = u.newer && u.mode === "installer" && u.has_setup;
   $("#dlgTitle").innerHTML = ic("refresh") + " 检查更新";
   $("#dlgBody").innerHTML = body;

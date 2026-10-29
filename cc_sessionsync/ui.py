@@ -903,6 +903,15 @@ def start_background(auto_sync: bool | None = None) -> None:
         usage.start_background()
     sessions.start_auto(backup_settings)
     update.auto_check_later(lambda: settings.get("update_auto", True))
+    try:                                                    # 0.4.2：上次更新的结果（装坏了自动换回过的话说一声）
+        u = update.after_start()
+        if u and u["kind"] == "rolled_back":
+            events.add("update", f"更新到 {u['to']} 没成功启动，已经换回 {u['from']}",
+                       "新版本的启动自检没通过，安装程序自动换回了原来的版本；你的数据没动。之后可以在「检查更新」里再试", {"page": "update"})
+        elif u and u["kind"] == "updated":
+            events.add("update", f"已更新到 {u['to']}", "", {"page": "update"})
+    except Exception:
+        pass
     if MODE["desktop"] and not settings.get("selfcheck_done") and not os.environ.get("CC_SESSIONSYNC_NO_SELFCHECK"):
         def first():
             time.sleep(5)
