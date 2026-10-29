@@ -505,11 +505,12 @@ def _to_opencode(h, items, opts, led) -> dict:
     r = ocstore.import_session(b["data"], cwd, cli)
     if not r.get("ok"):
         raise RuntimeError(f"{r.get('error')}：{(r.get('out') or '').strip()[-200:]}")
-    if not ocstore.has_session(b["id"]):
+    row = next((x for x in ocstore.refresh("opencode", force=True) if x["id"] == b["id"]), None)
+    if row is None:
         raise RuntimeError("opencode 说导入成功了，但库里没找到这个会话")
     q = f'"{cwd}"' if any(c in cwd for c in " &()") else cwd
     return {"id": b["id"], "file": None, "title": b["title"], "cwd": cwd, "turns": b["turns"], "stats": b["stats"], "cli": cli,
-            "cli_major": major, "msgs": len(b["data"]["messages"]), "resume": f"cd {q} && opencode --session {b['id']}"}
+            "cli_major": major, "msgs": len(b["data"]["messages"]), "base_msgs": row.get("msgs"), "resume": f"cd {q} && opencode --session {b['id']}"}
 
 
 WRITERS = {"claude": _to_claude, "codex": _to_codex, "dsh": _to_dsh, "opencode": _to_opencode}
@@ -930,7 +931,7 @@ def undo(name: str) -> dict:
                 cur = rows.get(c["id"])
                 if cur is None:
                     removed.append(c["id"])
-                elif (cur.get("msgs") or 0) > (c.get("turns") or 0):
+                elif (cur.get("msgs") or 0) > (c.get("base_msgs") if c.get("base_msgs") is not None else c.get("turns") or 0):
                     kept.append({"id": c["id"], "why": "在 OpenCode 里接着聊过，没删"})
                 else:
                     r = ocstore.delete_session(c["id"], c.get("cli"))
