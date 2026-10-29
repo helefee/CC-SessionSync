@@ -212,6 +212,9 @@ def mkrow(id_, app, src, ts, sid, prov, sub, model, t, reasoning, agent, fid, st
             stop, prompt, tier or "", geo or "", proj or "", SCHEMA, *c5, 1 if cp else 0, cp[5] if cp else 0)
 
 
+SCAN_CHUNK = 8 * 1024 * 1024
+
+
 def _claude_lines(lines, st: dict, fid: str, ctx: dict, agent: int, hours: set, rows: list, prof: str = "main", pt=None, mults=None):
     rids = st.setdefault("rid", {})
     for ln in lines:
@@ -456,20 +459,32 @@ def scan(full: bool = False) -> dict:
                         continue
                     off = row[5] if stt.st_size >= row[5] else 0      # 文件变短 = 被重写：从头读，键会去重
                     state = json.loads(row[6] or "{}") if off else {}
-                with open(p, "rb") as f:
+                end = 0
+                with open(p, "rb") as f:                               # 0.4.8：分块读（8 MB），几百 MB 的会话也不整份进内存
                     f.seek(off)
-                    data = f.read()
-                end = data.rfind(b"\n") + 1                            # 只读到最后一个完整行
-                lines = data[:end].decode("utf-8", "replace").splitlines()
-                rows: list = []
-                if kind == "claude":
-                    _claude_lines(lines, state, fid, cctx, 1 if "subagents" in p.parts else 0, hours, rows, prof, pt, mults)
-                else:
-                    _codex_lines(lines, state, fid, xctx, hours, rows, pt, mults)
-                if rows:
-                    c.executemany(UPSERT, rows)
-                    if kind == "claude":
-                        c.executemany("DELETE FROM calls WHERE id=?", [("cl:" + r[0].split(":")[1] + ":ccs",) for r in rows])
+                    carry = b""
+                    while True:
+                        buf = f.read(SCAN_CHUNK)
+                        if not buf:
+                            break
+                        buf = carry + buf
+                        cut = buf.rfind(b"\n") + 1                    # 只读到最后一个完整行
+                        carry = buf[cut:]
+                        if not cut:
+                            continue
+                        lines = buf[:cut].decode("utf-8", "replace").splitlines()
+                        end += cut
+                        del buf
+                        rows: list = []
+                        if kind == "claude":
+                            _claude_lines(lines, state, fid, cctx, 1 if "subagents" in p.parts else 0, hours, rows, prof, pt, mults)
+                        else:
+                            _codex_lines(lines, state, fid, xctx, hours, rows, pt, mults)
+                        del lines
+                        if rows:
+                            c.executemany(UPSERT, rows)
+                            if kind == "claude":
+                                c.executemany("DELETE FROM calls WHERE id=?", [("cl:" + r[0].split(":")[1] + ":ccs",) for r in rows])
                 c.execute("INSERT OR REPLACE INTO files VALUES(?,?,?,?,?,?,?)",
                           (fid, str(p), kind, stt.st_size, stt.st_mtime, off + end, json.dumps(state, separators=(",", ":"))))
                 nfiles += 1

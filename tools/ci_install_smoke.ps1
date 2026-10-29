@@ -28,6 +28,22 @@ $sc = (Run @("selfcheck", "--offline", "--json")) | ConvertFrom-Json
 $inst = $sc.items | Where-Object { $_.id -eq "install" }
 Write-Host "installed selfcheck install: $($inst.status) $($inst.detail)"
 if ($inst.status -ne "pass") { throw "installed integrity check failed" }
+# 0.4.8: the packaged exe imports a ~250 MB fake Claude Code session (streamed; was refused over 200 MB / crashed in 0.4.7)
+$big = Join-Path $env:RUNNER_TEMP "ccss-big"
+New-Item -ItemType Directory -Force $big | Out-Null
+python -c "import sys; sys.path.insert(0, r'$root\tests'); import bigfake; print(bigfake.write(r'$big\claude-big.jsonl', 250 * 1024 * 1024, seed=5)['size'])"
+if ($LASTEXITCODE) { throw "could not write the fake 250 MB session" }
+$env:CLAUDE_CONFIG_DIR = Join-Path $env:RUNNER_TEMP "ccss-claude"
+$t0 = Get-Date
+$imp = (Run @("import", "$big\claude-big.jsonl", "--apply", "--no-desktop", "--json")) | ConvertFrom-Json
+$secs = ((Get-Date) - $t0).TotalSeconds
+Write-Host ("packaged exe imported a {0:N0} MB file in {1:N1}s, peak working set {2} MB, self-check {3}" -f ($imp.rows[0].size / 1MB), $secs, $imp.peak_mb, $imp.made[0].check_ok)
+if ($imp.made.Count -ne 1 -or $imp.errors.Count) { throw "big import failed: $($imp | ConvertTo-Json -Depth 5)" }
+if (-not $imp.made[0].check_ok) { throw "big import: native self-check failed" }
+if ($imp.peak_mb -gt 400) { throw "big import used too much memory: $($imp.peak_mb) MB" }
+if ((Get-Item $imp.made[0].file).Length -lt 250MB) { throw "big import: output truncated" }
+Remove-Item -Recurse -Force $big, $env:CLAUDE_CONFIG_DIR
+Remove-Item Env:CLAUDE_CONFIG_DIR
 # 0.4.2 rollback: install the same setup again over it with a simulated failing health check -> the previous files come back
 $before = (Get-FileHash $exe -Algorithm SHA256).Hash
 $rbf = Join-Path $env:CC_SESSIONSYNC_HOME "update-rollback.json"

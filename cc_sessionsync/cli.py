@@ -442,6 +442,38 @@ def cmd_health(a) -> int:
     return health.run(timeout=a.timeout, out=a.out, fail=a.fail)
 
 
+def cmd_import(a) -> int:
+    """0.4.8：导入 .md / .html / .jsonl（文件或文件夹）成新的 Claude Code 会话；缺省只预览，--apply 才写。"""
+    import time as _t
+    from . import bigimport as BI
+    ps = []
+    for x in a.paths:
+        ps += BI.list_folder(x, a.recursive) if Path(x).is_dir() else [x]
+    uniq = BI.scan(ps)["rows"]                                  # 子会话文件归到主会话下面
+    out = {"rows": [{k: v for k, v in r.items() if k not in ("preview", "children")} for r in uniq]}
+    if a.apply:
+        good = [r for r in uniq if "error" not in r]
+        t0 = _t.time()
+        res = BI.run([r["file"] for r in good], a.cwd, not a.no_desktop, rows={r["file"]: r for r in good})
+        out.update(made=[{k: m.get(k) for k in ("id", "file", "title", "subs", "agent_from")} | {"check_ok": (m.get("check") or {}).get("ok")} for m in res["made"]],
+                   errors=res["errors"], op=res["op"], secs=round(_t.time() - t0, 2))
+    out["peak_mb"] = round(BI.peak_mb(), 1)
+    if a.json:
+        print(json.dumps(out, ensure_ascii=False))
+    else:
+        for r in out["rows"]:
+            print(f"{'✗' if r.get('error') else '·'} {r['name']}  {r.get('size', 0) / 1048576:.1f} MB  {r.get('agent') or ''}  "
+                  f"{r.get('error') or (r.get('title') or '')}{'  （含 %d 个子会话）' % r['subs'] if r.get('subs') else ''}")
+        if a.apply:
+            print(f"导入了 {len(out['made'])} 个，出错 {len(out['errors'])} 个，用时 {out['secs']} 秒，撤回：cc-sessionsync sessions undo {out['op']}"
+                  if out.get("made") is not None else "")
+            for e in out["errors"]:
+                print("  ✗", e)
+        else:
+            print("（只是预览；加 --apply 才导入）")
+    return 1 if a.apply and out.get("errors") else 0
+
+
 def cmd_after_quit(a) -> int:
     return apps.watch(a.kind)
 
@@ -564,6 +596,14 @@ def build_parser() -> argparse.ArgumentParser:
     j.add_argument("--cancel", metavar="ID")
     j.set_defaults(fn=cmd_jobs)
     sub.add_parser("diag", help="打印 Claude / Codex 检测报告").set_defaults(fn=cmd_diag)
+    im = sub.add_parser("import", help="导入 .md / .html / .jsonl（文件或文件夹）成新的 Claude Code 会话（缺省只预览；--apply 才写）")
+    im.add_argument("paths", nargs="+")
+    im.add_argument("--apply", action="store_true")
+    im.add_argument("--recursive", action="store_true", help="文件夹里的子文件夹也看")
+    im.add_argument("--cwd", default=None, help="放进哪个项目（工作目录）")
+    im.add_argument("--no-desktop", action="store_true", help="不登记进 Claude 桌面端的会话列表")
+    im.add_argument("--json", action="store_true")
+    im.set_defaults(fn=cmd_import)
     ui = sub.add_parser("ui", help="打开本地界面（缺省 http://127.0.0.1:8766）")
     ui.add_argument("--port", type=int, default=8766)
     ui.add_argument("--no-browser", action="store_true")

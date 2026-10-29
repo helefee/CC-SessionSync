@@ -2,7 +2,7 @@
 """0.4.8 大文件 / 批量导入 + 子会话：超过 200 MB 的文件能导；选文件夹；17 个一批（后台、进度、一个坏的不影响别的、取消、一笔撤回）；
 内存有上限（子进程里量峰值）；导出原始 jsonl / md / html 带着子代理会话，导回来层级还在（Claude Code、Codex）；标题不加「（导入）」；
 分块上传接口；桌面版选文件 / 文件夹对话框（假的 webview）；页面 / 英文。全在临时目录、假数据。"""
-import json, os, subprocess, sys, tempfile, threading, time, types, urllib.request, re
+import json, os, subprocess, sys, tempfile, threading, time, types, urllib.request, urllib.parse, re
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tests"))
@@ -211,6 +211,12 @@ while off < len(src):
 ok(Path(r["path"]).read_bytes() == src and r["size"] == len(src), f"chunked upload: {len(src)} bytes in {(len(src) + CH - 1) // CH} raw chunks, identical on disk")
 ok("断了" in call(f"/api/import/upload?name=c.jsonl&off=5&up={up}", raw=b"x").get("error", ""), "upload refuses a gap (offset mismatch)")
 ok(".jsonl" in call("/api/import/upload?name=evil.exe&off=0", raw=b"x").get("error", ""), "upload refuses other file types")
+mainx = side.with_name(side.name[:-len(".ccss")])                     # 浏览器里选文件夹：主文件 + 旁边的 .ccss 子会话文件夹一起上传
+r = call(f"/api/import/upload?name={mainx.name}&off=0", raw=mainx.read_bytes()); up2 = r["up"]
+for f in sorted(x for x in side.rglob("*") if x.is_file()):
+    rr = call(f"/api/import/upload?name={urllib.parse.quote(side.name + '/' + f.relative_to(side).as_posix())}&off=0&up={up2}", raw=f.read_bytes())
+ok(rr.get("ok") and BI.scan([r["path"]])["rows"][0]["subs"] == 3, "browser folder upload keeps the .ccss sidecar → 3 subagents found")
+ok("只认" in call(f"/api/import/upload?name={urllib.parse.quote('x/../../evil.jsonl')}&off=0", raw=b"x").get("error", ""), "upload refuses paths outside a .ccss sidecar")
 sc = call("/api/import/scan", {"folder": str(F)})
 ok(len(sc["rows"]) == 18, "API scan of a folder")
 c = call("/api/import/count", {"file": files[0]["path"]})

@@ -2657,10 +2657,11 @@ function madeDlg(title, r){
   const made = r.made || [], dj = r.desktop;
   const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。<button class="ghost" id="mdCr">${ic("power")} 关闭 Claude 并登记（完成后重启）</button>`
     : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
-  openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）：</div>` : ""}
-    ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}${m.subs ? ` <span class="tag acc">含 ${m.subs} 个子会话</span>` : ""}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
+  const many = made.length > 5, okN = made.filter(m => m.check && m.check.ok).length, subN = made.reduce((a, m) => a + (m.subs || 0), 0);
+  openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）${many ? `：自检通过 ${okN}/${made.length}${subN ? ` · 带回 ${subN} 个子会话` : ""}` : "："}</div>` : ""}
+    ${many ? `<details style="margin-top:6px"><summary class="dim">展开看每一个</summary>` : ""}${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}${m.subs ? ` <span class="tag acc">含 ${m.subs} 个子会话</span>` : ""}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
       ${m.check ? `<div class="dim" style="font-size:calc(13px*var(--fk))" title="${esc((m.check.issues || []).join("\n"))}">${m.check.ok ? '<span class="tag ok">自检通过</span> 按 Claude Code 的会话规矩读了一遍' : `<span class="tag warn">自检提示 ${(m.check.issues || []).length} 条</span> ${esc((m.check.issues || [])[0] || "")}`}</div>` : ""}
-      <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}
+      <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}${many ? "</details>" : ""}
     <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:6px">${dnote}</div>
     ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
     `<button id="mdUndo" class="ghost">${ic("undo")} 撤回</button><span style="flex:1"></span><button onclick="closeDlg()">关闭</button><button class="primary" id="mdGo">${ic("list")} 去会话列表看</button>`);
@@ -2800,21 +2801,23 @@ async function imDlg(){
     try { const d = await pywebview.api.pick_import_folder(); if (d) imScan({folder: d}); } catch(e){ toast("❌ " + e.message, 5000); }
   };
   $("#imF").onchange = e => imUpload([...e.target.files]);
-  $("#imD").onchange = e => imUpload([...e.target.files].filter(f => (f.webkitRelativePath || f.name).split("/").length <= 2 && IM_EXT.test(f.name)));  // 文件夹：只要第一层
+  $("#imD").onchange = e => imUpload([...e.target.files].filter(f => { const p = (f.webkitRelativePath || f.name).split("/");   // 文件夹：第一层的文件 + 旁边的 .ccss 子会话文件夹
+    return p.length <= 2 ? IM_EXT.test(f.name) : /\.ccss$/i.test(p[1]); }));
   $("#imGo").onclick = imStart;
 }
 // 浏览器里：一块一块原样上传到本程序的数据目录，再按路径预览（不转 base64、不拼 JSON）
 async function imUpload(files){
-  if (!files.length) return toast("这里面没有 .md / .html / .jsonl 文件");
+  if (!files.some(f => IM_EXT.test(f.name) && !(f.webkitRelativePath || "").split("/").slice(1, -1).length)) return toast("这里面没有 .md / .html / .jsonl 文件");
   const box = $("#imPv"), CH = 8 * 1024 * 1024, paths = [], total = files.reduce((a, f) => a + f.size, 0); let up = null, sent = 0;
+  const rel = f => { const p = (f.webkitRelativePath || f.name).split("/"); return p.length > 2 ? p.slice(1).join("/") : f.name; };
   for (let i = 0; i < files.length; i++) {
-    const f = files[i];
+    const f = files[i], nm = rel(f), side = nm.includes("/");
     for (let off = 0; off < f.size || off === 0; off += CH) {
       box.innerHTML = `<div class="dim" style="margin-top:8px">上传第 ${i + 1}/${files.length} 个：${esc(f.name)}（${kb(sent)} / ${kb(total)}）</div><div class="prog"><i style="width:${total ? Math.round(sent / total * 100) : 0}%"></i></div>`;
-      const r = await fetch(`/api/import/upload?name=${encodeURIComponent(f.name)}&off=${off}${up ? "&up=" + up : ""}`, {method: "POST", headers: {"x-token": TOKEN, "Content-Type": "application/octet-stream"}, body: f.slice(off, off + CH)});
+      const r = await fetch(`/api/import/upload?name=${encodeURIComponent(nm)}&off=${off}${up ? "&up=" + up : ""}`, {method: "POST", headers: {"x-token": TOKEN, "Content-Type": "application/octet-stream"}, body: f.slice(off, off + CH)});
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { box.innerHTML = `<div class="miss">${esc(j.error || "HTTP " + r.status)}</div>`; return; }
-      up = j.up; sent += Math.min(CH, f.size - off); if (off + CH >= f.size) { paths.push(j.path); break; }
+      up = j.up; sent += Math.min(CH, f.size - off); if (off + CH >= f.size) { if (!side) paths.push(j.path); break; }
     }
   }
   imScan({paths});
@@ -2875,6 +2878,7 @@ function imProgress(st){
     <div class="prog"><i style="width:${pct}%"></i></div><div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">${kb(st.done_bytes || 0)} / ${kb(st.total || 0)} · 已做完 ${(st.made || []).length} 个${(st.errors || []).length ? ` · <span style="color:var(--bad)">${st.errors.length} 个出错（不影响别的）</span>` : ""}${st.cancel ? " · 正在停…" : ""}</div>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">在后台一个一个做，可以关掉这个窗口，做完会告诉你。取消的话：已经做完的会留下（能在「撤回」里一次撤掉），正在做的那个不留半截。</div>`;
   if ($("#imProg")) { $("#imProg").innerHTML = body; return; }
+  $("#dlg").classList.remove("wide");
   openDlg("导入中…", `<div id="imProg">${body}</div>`, `<button onclick="closeDlg()">在后台继续</button><button id="imCancel" class="danger">${ic("x")} 取消导入</button>`);
   $("#imCancel").onclick = async () => { try { await api("/api/import/cancel", {id: IM.job}); $("#imCancel").disabled = true; } catch(e){ toast("❌ " + e.message); } };
 }

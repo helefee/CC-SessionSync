@@ -29,6 +29,7 @@ WHOLE_MAX = 16 * 1024 * 1024         # 比这个小的，预览时顺手把条�
 STORE_MAX = 16 * 1024 * 1024         # 导入完顺手进备份库的上限；更大的等下一次自动备份
 WARN_SIZE = 4 * 1024 * 1024 * 1024   # 超过 4 GB 只提醒（会慢），不拦
 CHUNK_LINES = 2000
+SIDE_SUFFIX = ".ccss"
 
 
 class Cancelled(Exception):
@@ -483,21 +484,53 @@ def cancel(jid: str) -> dict:
     return {"ok": True}
 
 
+def peak_mb() -> float:
+    """本进程到现在的内存峰值（MB）：Windows 看 PeakWorkingSetSize，别的看 ru_maxrss。"""
+    import sys
+    try:
+        if os.name == "nt":
+            import ctypes
+            import ctypes.wintypes as w
+
+            class PMC(ctypes.Structure):
+                _fields_ = [("cb", w.DWORD), ("PageFaultCount", w.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                            ("a", ctypes.c_size_t), ("b", ctypes.c_size_t), ("c", ctypes.c_size_t), ("d", ctypes.c_size_t),
+                            ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t)]
+            m = PMC()
+            m.cb = ctypes.sizeof(PMC)
+            k32 = ctypes.windll.kernel32
+            k32.GetCurrentProcess.restype = ctypes.c_void_p
+            ctypes.windll.psapi.GetProcessMemoryInfo(ctypes.c_void_p(k32.GetCurrentProcess()), ctypes.byref(m), m.cb)
+            return m.PeakWorkingSetSize / 2 ** 20
+        import resource
+        r = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return r / 2 ** 20 if sys.platform == "darwin" else r / 1024
+    except Exception:
+        return 0.0
+
+
 # ---------- 浏览器里的分块上传（桌面版用不到） ----------
 
 def upload(up: str | None, name: str, off: int, body) -> dict:
     """把一块原样字节接到 imports/<up>/<name> 后面。up 为空 = 新建一批。body：可以 read(n) 的流 + 长度。"""
     from . import paths
     import re
-    name = Path(str(name or "")).name
-    if not kind(name):
-        raise ValueError(f"只认 .md / .html / .jsonl：{name}")
+    parts = [x for x in str(name or "").replace("\\", "/").split("/") if x not in ("", ".")]
+    if len(parts) > 1:                                         # 导出时旁边的 <文件>.ccss/ 文件夹（子会话），相对路径照原样
+        if not parts[0].endswith(SIDE_SUFFIX) or any(x == ".." or ":" in x for x in parts):
+            raise ValueError(f"只认 .md / .html / .jsonl：{name}")
+        name = "/".join(parts)
+    else:
+        name = parts[0] if parts else ""
+        if not kind(name):
+            raise ValueError(f"只认 .md / .html / .jsonl：{name}")
     if up and not re.fullmatch(r"[0-9A-Za-z-]{6,40}", up):
         raise ValueError("上传批次号不对")
     up = up or time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
     d = paths.HOME / "imports" / up
     d.mkdir(parents=True, exist_ok=True)
     f = d / name
+    f.parent.mkdir(parents=True, exist_ok=True)
     have = f.stat().st_size if f.exists() else 0
     if off == 0 and have:
         f.unlink()
