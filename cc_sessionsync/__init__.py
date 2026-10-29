@@ -5,6 +5,6 @@
 
 最早是 CC Msg（https://github.com/helefee/CCMessage）里的功能，这里单独拿出来。
 """
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 PRODUCT = "CC Session Sync"
 PRODUCT_VERSION = __version__

@@ -25,6 +25,15 @@ from pathlib import Path
 from . import paths
 
 
+def _t(s):
+    """0.4.3：英文界面时托盘菜单 / 提示 / 通知换成英文。"""
+    try:
+        from .i18n import t
+        return t(s) if s else s
+    except Exception:
+        return s
+
+
 def instance() -> str:
     v = os.environ.get("CC_SESSIONSYNC_INSTANCE", "")
     if not v and paths.APP_DIR and (paths.APP_DIR / "instance.txt").exists():
@@ -196,7 +205,7 @@ class Tray:
             t += f" · {d['jobs']} 个活在等桌面端退出"
         if (d.get("update") or {}).get("badge"):
             t += f"\n有新版本 {d['update'].get('latest')}"
-        return t[:127]
+        return _t(t)[:127]
 
     # --- Win32 ---
     def start(self):
@@ -351,7 +360,7 @@ class Tray:
         self.last_note = time.time()
         self.note_target = target
         if self.hwnd:
-            self._shell(1, self._nid(0x10 | 0x80, (title, text or " ")))   # NIF_INFO
+            self._shell(1, self._nid(0x10 | 0x80, (_t(title), _t(text) or " ")))   # NIF_INFO
 
     # --- 消息 ---
     def _wndproc(self, hwnd, msg, wp, lp):
@@ -460,11 +469,11 @@ class Tray:
                 if it[0] == "-":
                     u32.AppendMenuW(hm, 0x800, 0, None)                     # MF_SEPARATOR
                 elif it[0] == "sub":
-                    u32.AppendMenuW(hm, 0x10, build(it[2]), it[1])          # MF_POPUP
+                    u32.AppendMenuW(hm, 0x10, build(it[2]), _t(it[1]))      # MF_POPUP
                 else:
                     i, t, o = it
                     f = (0x8 if o.get("check") else 0) | (0x1 if o.get("gray") else 0)   # MF_CHECKED / MF_GRAYED
-                    u32.AppendMenuW(hm, f, i, t)
+                    u32.AppendMenuW(hm, f, i, _t(t))
                     if o.get("default"):
                         u32.SetMenuDefaultItem(hm, i, 0)
             return hm
