@@ -14,7 +14,7 @@ anything that can be dry-run is dry-run first.
    or in Desktop. **Codex's files are only read** (the only exception is the optional "record in Codex's import ledger", off by default).
 3. **Session management:** Claude Code, Codex, Cursor, dsh, OpenCode and ZCode sessions in one list, grouped by **account** or **project**;
    search (titles / full text), filter, read-only viewer; rename, archive, continue in a terminal, delete (backed up and moved to a recycle
-   bin, never deleted directly); **export to .md / .html and import back** losslessly.
+   bin, never deleted directly); **export to .md / .html / raw .jsonl and import back** losslessly.
 4. **Timeline & backups:** sessions are **backed up incrementally every 10 minutes** by default; pick a point in time, preview that
    version and compare it with now, then **Restore to Claude** as a new session (or replace, or restore to Codex).
 5. **Any-to-any conversion** between all six apps: native targets (Claude Code, Codex, dsh, OpenCode) get a new session they can resume;
@@ -65,6 +65,12 @@ anything that can be dry-run is dry-run first.
   `python tools/i18n_extract.py` adds new fragments (as `null`), `--check` fails when one is missing (run in the tests).
 
 ## What's new in 0.4
+
+- **Import raw .jsonl (0.4.7):** files from *Export raw jsonl* (`.jsonl`, or `.jsonl.zstd` for compressed DeepSeek Harness sessions) can now be
+  imported back with *Import .md / .html / .jsonl*. The app recognises the source automatically: Claude Code sessions come back as-is (only a new
+  session id and title); Codex conversations, DeepSeek Harness sessions and Cursor / OpenCode / ZCode mirrors go through the same converters as
+  *Session conversion* into a new Claude Code session. Same flow as .md / .html: preview first, undoable from the operation log, a native-format
+  self-check after writing; mix .jsonl with .md / .html in one batch; 200 MB per file; an unrecognised .jsonl gets a clear message about what is supported.
 
 - **Faster Usage page (0.4.6):** the matrix view reads a small per-day rollup table (kept up to date incrementally, rebuilt after price changes)
   instead of re-scanning a year of raw request logs, and results are cached per filter until the data changes; the payload is compact per-day arrays.

@@ -4,6 +4,8 @@
 导出的文件里藏一份原始 jsonl（zlib + base64，带 sha256）：
 - .md：末尾一个 HTML 注释块 <!-- ccss-raw:v1 … -->（Markdown 渲染时看不见）；开头有 YAML front-matter（标题、来源、会话号、目录）。
 - .html：<script type="application/json" id="ccss-raw">…</script>；页面本身是自包含的（内联 CSS，跟系统浅色 / 深色）。
+0.4.7：「导出原始 jsonl」得到的文件也能直接导回来（.jsonl / dsh 的 .jsonl.zstd），按内容认出是哪个应用的记录
+（Claude Code 会话 / Codex rollout / DeepSeek Harness / Cursor·OpenCode·ZCode 的镜像），走同一套转换器写成新的 Claude Code 会话。
 导回来：有这份原始数据 → 原样还原（Codex 的走转换器）成一个新的 Claude Code 会话；没有（别处来的聊天记录）→ 尽量按
 「你 / 用户 / User」「Claude / Assistant / ChatGPT …」这样的小标题拆成一问一答的纯文字会话。都先演练，写的时候记账本、能撤回。
 """
@@ -244,13 +246,117 @@ def _records_from_turns(turns: list[tuple[str, str]], cwd: str, title: str) -> b
     return "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in recs).encode("utf-8")
 
 
+IMPORT_EXT = (".md", ".markdown", ".html", ".htm", ".jsonl", ".jsonl.zstd")
+MAX_IMPORT = 200 * 1024 * 1024
+APP_NAME = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}
+CODEX_TYPES = {"session_meta", "response_item", "event_msg", "turn_context", "compacted"}
+JSONL_OK = ("能导入的是本程序「导出原始 jsonl」得到的文件："
+            "Claude Code 会话、Codex 对话（rollout）、DeepSeek Harness 会话（.jsonl / .jsonl.zstd）、Cursor / OpenCode / ZCode 的镜像")
+UNKNOWN_JSONL = "认不出这个 .jsonl 是哪个应用的会话记录。" + JSONL_OK
+
+
+def importable(name: str) -> bool:
+    n = name.lower()
+    return any(n.endswith(x) for x in IMPORT_EXT)
+
+
+def _objs(raw: bytes, limit: int = 400) -> list:
+    out = []
+    for ln in raw.decode("utf-8", "replace").splitlines():
+        if not ln.strip():
+            continue
+        try:
+            out.append(json.loads(ln))
+        except Exception:
+            out.append(None)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def sniff_jsonl(raw: bytes) -> str:
+    """原始 jsonl → 哪个应用的记录：claude / codex / dsh / cursor / opencode / zcode；认不出就报错（中文说明能导什么）。"""
+    if raw[:4] == b"\x28\xb5\x2f\xfd":                    # zstd 帧：只有 dsh 会这样存
+        return "dsh"
+    objs = [o for o in _objs(raw) if isinstance(o, dict)]
+    if not objs:
+        raise ValueError("这个 .jsonl 里没有能读的 JSON 行。" + JSONL_OK)
+    from . import ir
+    h = objs[0]
+    if h.get("type") == "cursor" or h.get("format") == "ccss-cursor/1":
+        return "cursor"
+    if h.get("format") in ir.FORMATS or h.get("type") == "ccss-ir":
+        return "zcode" if h.get("agent") == "zcode" else "opencode"
+    if h.get("type") == "session" and "id" in h and "version" in h and "createdAt" in h:
+        return "dsh"
+    if any(o.get("type") in CODEX_TYPES and isinstance(o.get("payload"), dict) for o in objs):
+        return "codex"
+    if any(o.get("type") in ("user", "assistant") and isinstance(o.get("message"), dict) and ("uuid" in o or "sessionId" in o) for o in objs):
+        return "claude"
+    raise ValueError(UNKNOWN_JSONL)
+
+
+def _jsonl_meta(agent: str, raw: bytes, es: list[dict]) -> tuple[str | None, str | None]:
+    """→ (标题, 工作目录)，尽量从记录里拿。"""
+    title = cwd = None
+    try:
+        if agent == "claude":
+            for o in _objs(raw, 10 ** 7):
+                if not isinstance(o, dict):
+                    continue
+                cwd = cwd or o.get("cwd")
+                if o.get("type") == "custom-title" and o.get("customTitle"):
+                    title = o["customTitle"]
+                elif o.get("type") == "summary" and o.get("summary") and not title:
+                    title = o["summary"]
+        elif agent == "codex":
+            for o in _objs(raw, 50):
+                if isinstance(o, dict) and o.get("type") == "session_meta":
+                    cwd = (o.get("payload") or {}).get("cwd")
+                    break
+        elif agent in ("cursor", "opencode", "zcode"):
+            from . import ir
+            h, _ = ir.load(raw)
+            title, cwd = h.get("title") or h.get("name"), h.get("cwd")
+        elif agent == "dsh":
+            from . import dsh
+            d = dsh.load_bytes(raw, dsh.sniff(raw))["header"]
+            title, cwd = d.get("title"), d.get("cwd")
+    except Exception:
+        pass
+    if not title:
+        u = next((e["text"] for e in es if e["role"] == "user" and e.get("text")), "")
+        title = " ".join(u.split())[:40] or None
+    return title, cwd
+
+
+def parse_jsonl(p: Path, raw: bytes) -> dict:
+    agent = sniff_jsonl(raw)
+    try:
+        es = _entries(agent, raw)
+    except Exception as e:
+        raise ValueError(f"看着像 {APP_NAME[agent]} 的记录，但读不出来：{type(e).__name__}: {e}") from None
+    if not any(e["role"] in ("user", "assistant") for e in es):
+        if agent == "dsh" and raw[:4] == b"\x28\xb5\x2f\xfd":
+            from . import dsh
+            if not dsh._zstd_ok():
+                raise ValueError("这是压缩的 DeepSeek Harness 会话（.zstd），缺 zstandard 模块解不开")
+        raise ValueError(f"看着像 {APP_NAME[agent]} 的记录，但里面一条对话消息都没有")
+    title, cwd = _jsonl_meta(agent, raw, es)
+    return {"how": "lossless", "agent": agent, "raw": raw, "title": title or p.name.split(".")[0], "cwd": cwd, "file": str(p),
+            "format": "jsonl", "messages": sum(1 for e in es if e["role"] != "tool"),
+            "preview": [dict(e, text=e["text"][:600]) for e in es[:12]], "size": len(raw)}
+
+
 def parse_file(path: str) -> dict:
-    """读一个 .md / .html：→ {how: lossless|plain, agent, raw(bytes), title, cwd, messages, preview[]}"""
+    """读一个 .md / .html / .jsonl：→ {how: lossless|plain, agent, raw(bytes), title, cwd, messages, preview[]}"""
     p = Path(path)
-    if p.suffix.lower() not in (".md", ".markdown", ".html", ".htm"):
-        raise ValueError("只认 .md / .html")
-    if p.stat().st_size > 200 * 1024 * 1024:
+    if not importable(p.name):
+        raise ValueError("只认 .md / .html / .jsonl")
+    if p.stat().st_size > MAX_IMPORT:
         raise ValueError("文件太大（超过 200 MB）")
+    if p.name.lower().endswith((".jsonl", ".jsonl.zstd")):
+        return parse_jsonl(p, p.read_bytes())
     text = p.read_text(encoding="utf-8", errors="replace")
     is_html = p.suffix.lower() in (".html", ".htm")
     title, cwd, agent, raw, how = None, None, "claude", None, "plain"
@@ -299,7 +405,7 @@ def import_files(paths_: list[str], cwd: str | None = None, desktop: bool = True
             rows.append({"file": f, "error": f"{type(e).__name__}: {e}"})
     if dry:
         return {"ok": all("error" not in r for r in rows), "dry": True, "rows": [{k: v for k, v in r.items() if k != "_raw"} for r in rows]}
-    od, led = S._new_op("import", items=[], summary=f"导入 {len(rows)} 个 .md / .html 成 Claude Code 会话")
+    od, led = S._new_op("import", items=[], summary=f"导入 {len(rows)} 个 .md / .html / .jsonl 成 Claude Code 会话")
     made, errors = [], []
     for r in rows:
         if "error" in r:
@@ -308,7 +414,12 @@ def import_files(paths_: list[str], cwd: str | None = None, desktop: bool = True
         try:
             res = timeline.write_claude_session(r["agent"], r["_raw"], f"{r['title']}（导入）", cwd or r.get("cwd"), led, od, desktop)
             led["items"].append({"agent": "claude", "id": res["id"]})
-            made.append(dict(res, file_from=r["file"], how=r["how"]))
+            try:                                               # 写好后按 Claude Code 自己的规矩读一遍（只读）
+                from . import nativecheck as NC
+                res["check"] = NC.check_claude(Path(res["file"]))
+            except Exception as e:
+                res["check"] = {"ok": False, "issues": [f"自检出错：{type(e).__name__}: {e}"]}
+            made.append(dict(res, file_from=r["file"], how=r["how"], agent_from=r["agent"]))
         except Exception as e:
             errors.append(f"{r['file']}: {type(e).__name__}: {e}")
     led.update(made=made, errors=errors)

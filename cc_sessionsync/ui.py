@@ -815,17 +815,22 @@ class H(BaseHTTPRequestHandler):
 
 
 def _import(b: dict) -> dict:
-    """导入 .md / .html：页面把文件内容传过来（浏览器拿不到路径），先存进 ~/.cc-sessionsync/imports/ 再读。"""
+    """导入 .md / .html / .jsonl：页面把文件内容传过来（浏览器拿不到路径），先存进 ~/.cc-sessionsync/imports/ 再读。
+    文字文件传 text；二进制的（dsh 的 .jsonl.zstd）传 b64。"""
+    import base64
     from . import exports
     d = paths.HOME / "imports" / time.strftime("%Y%m%d-%H%M%S")
     files = []
     for i, f in enumerate(b.get("files") or []):
         name = Path(str(f.get("name") or f"file{i}.md")).name
-        if Path(name).suffix.lower() not in (".md", ".markdown", ".html", ".htm"):
-            raise ValueError(f"只认 .md / .html：{name}")
+        if not exports.importable(name):
+            raise ValueError(f"只认 .md / .html / .jsonl：{name}")
+        data = base64.b64decode(f["b64"]) if f.get("b64") is not None else str(f.get("text") or "").encode("utf-8")
+        if len(data) > exports.MAX_IMPORT:
+            raise ValueError(f"文件太大（超过 200 MB）：{name}")
         d.mkdir(parents=True, exist_ok=True)
         p = d / f"{i:02d}-{name}"
-        p.write_text(str(f.get("text") or ""), encoding="utf-8")
+        p.write_bytes(data)
         files.append(str(p))
     if not files:
         raise ValueError("没选文件")
