@@ -137,6 +137,77 @@ table.t td.n{text-align:right;white-space:nowrap}
 .msg.assistant{background:transparent;border:1px solid var(--line2)}
 .msg.tool{font:calc(13px*var(--fk))/1.45 var(--mono);color:var(--muted);padding:2px 6px;border:0}
 .msg .who{font-size:calc(12px*var(--fk));color:var(--faint);margin-bottom:2px;font-family:var(--sans)}
+/* 0.4.9：对话样式（照 CC Msg / Claude 桌面端） */
+:root{--serif:"Tiempos Text","Copernicus",Charter,"Iowan Old Style",Georgia,Cambria,"PingFang SC","Microsoft YaHei",serif;--codemuted:#a6a39b}
+.chat{display:flex;flex-direction:column;gap:4px;padding:4px 2px 10px;font-size:calc(14.5px*var(--fk))}
+.chat>*{content-visibility:auto;contain-intrinsic-size:auto 40px}
+.cday{align-self:center;font-size:calc(11.5px*var(--fk));color:var(--faint);margin:12px 0 4px;letter-spacing:.3px}
+.cm{position:relative;max-width:100%}
+.cm.u{align-self:flex-end;max-width:min(600px,85%);margin-top:12px;display:flex;flex-direction:column;align-items:flex-end}
+.cbub{background:var(--bubble);border-radius:16px;padding:8px 14px;white-space:pre-wrap;word-break:break-word;line-height:1.6}
+.cbub.clamp{max-height:16em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
+.cmore{font-size:calc(12.5px*var(--fk));color:var(--accent);cursor:pointer;margin-top:2px}
+.cmeta{display:flex;align-items:center;gap:6px;font-size:calc(11px*var(--fk));color:var(--faint);min-height:22px;opacity:0;transition:opacity .15s}
+.cm:hover .cmeta,.cm:hover .cacts{opacity:1}
+.cm.a{align-self:stretch;margin-top:6px;font-family:var(--serif);line-height:1.7;font-size:calc(15px*var(--fk))}
+.chd{display:flex;align-items:center;gap:6px;font:calc(12.5px*var(--fk)) var(--sans);color:var(--muted);margin-bottom:2px}
+.chd .logo{width:15px;height:15px}.chd b{font-weight:600;color:var(--text)}.chd span{color:var(--faint);font-size:calc(11.5px*var(--fk))}
+.cacts{display:flex;gap:4px;min-height:22px;opacity:0;transition:opacity .15s}
+.ccp{background:transparent;border:0;padding:2px 5px;border-radius:6px;color:var(--faint);cursor:pointer;display:inline-flex;align-items:center}
+.ccp:hover{background:var(--hover);color:var(--text)}.ccp .ic{width:13px;height:13px}.ccp.done{color:var(--ok)}
+.cnote{text-align:center;font-size:calc(12.5px*var(--fk));color:var(--faint);padding:4px 0 8px}
+.chat .md{white-space:normal;word-break:break-word}
+.md p{margin:0 0 .7em}
+.md>:last-child,.md li>:last-child,.md blockquote>:last-child{margin-bottom:0}
+.md>:first-child{margin-top:0}
+.md h2,.md h3,.md h4,.md h5,.md h6{font-weight:600;line-height:1.35;margin:1em 0 .4em}
+.md h2{font-size:1.28em}.md h3{font-size:1.14em}.md h4{font-size:1.04em}.md h5,.md h6{font-size:1em}
+.md ul,.md ol{margin:0 0 .7em;padding-left:1.45em}.md li{margin:.2em 0}.md li::marker{color:var(--muted)}
+.md strong{font-weight:650}
+.md a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.md code{font-family:var(--mono);font-size:.84em;background:var(--hover);color:var(--text);padding:.12em .38em;border-radius:5px}
+.md blockquote{margin:0 0 .7em;padding:1px 0 1px 14px;border-left:3px solid var(--line);color:var(--muted)}
+.md hr{border:0;border-top:1px solid var(--line);margin:1em 0}
+.md .cb{margin:.4em 0 .9em;border-radius:10px;overflow:hidden;background:var(--codebg);border:1px solid var(--line);font-family:var(--sans)}
+.md .cbh{display:flex;align-items:center;justify-content:space-between;padding:3px 6px 3px 12px;font-size:12px;color:var(--codemuted);background:rgba(255,255,255,.04);min-height:26px}
+.md .cpy{background:transparent;border:0;color:var(--codemuted);padding:2px 8px;font-size:12px;border-radius:6px;display:inline-flex;gap:4px;align-items:center;cursor:pointer}
+.md .cpy:hover{background:rgba(255,255,255,.09);color:#faf9f5}.md .cpy .ic{width:12px;height:12px}
+.md pre{margin:0;padding:9px 13px 11px;overflow:auto;max-height:480px;font:calc(12.5px*var(--fk))/1.6 var(--mono);color:var(--codefg);white-space:pre}
+.md pre code{background:none;padding:0;font-size:inherit;color:inherit;border-radius:0}
+.md i.hk{color:#e0a07c;font-style:normal}.md i.hs{color:#a9c98b;font-style:normal}.md i.hn{color:#d7a6e3;font-style:normal}.md i.hc{color:#8c897f;font-style:italic}
+.md .tbw{overflow-x:auto;margin:.4em 0 .9em}
+.md table{border-collapse:collapse;font:calc(13.5px*var(--fk))/1.5 var(--sans);min-width:50%}
+.md th,.md td{border-bottom:1px solid var(--line);padding:5px 11px;text-align:left;vertical-align:top}
+.md th{font-weight:600;color:var(--muted);border-bottom-color:var(--hover2)}.md tr:last-child td{border-bottom:0}
+.ctools{align-self:stretch;max-width:100%;margin:1px 0;font:calc(12.5px*var(--fk))/1.5 var(--sans);color:var(--muted)}
+.ctools>summary{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 4px;border-radius:8px;cursor:pointer;list-style:none;width:fit-content;max-width:100%;white-space:nowrap}
+.ctools>summary::-webkit-details-marker{display:none}
+.ctools>summary:hover{background:var(--hover);color:var(--text)}
+.ctools .tsum{overflow:hidden;text-overflow:ellipsis;min-width:0;display:flex;align-items:center}
+.ctools .tsum .terr{flex:none}
+.ctools .tgc{flex:none;display:inline-flex;transition:transform .15s;color:var(--faint)}.ctools .tgc .ic{width:12px;height:12px}
+.ctools[open]>summary .tgc{transform:rotate(90deg)}
+.ctools .tlist{margin:2px 0 4px 11px;padding-left:8px;border-left:1px solid var(--line)}
+.tcall .tsm{display:flex;align-items:center;gap:7px;padding:3px 8px;border-radius:7px;cursor:pointer;list-style:none;min-width:0}
+.tcall.flat .tsm{cursor:default}
+.tcall>summary::-webkit-details-marker{display:none}
+.tcall>summary:hover{background:var(--hover)}
+.tcall .tic{color:var(--faint);display:inline-flex;flex:none}.tcall .tic .ic{width:13px;height:13px}
+.tcall .tnm{font-family:var(--mono);font-size:calc(12px*var(--fk));color:var(--text);flex:none;font-weight:500}
+.tcall .ta{font-family:var(--mono);font-size:calc(11.8px*var(--fk));color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.terr{color:var(--bad);font-size:11px;flex:none;background:var(--bad-weak);border-radius:999px;padding:0 7px;margin-left:6px;font-family:var(--sans)}
+.tsub{flex:none;font-size:11.5px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--accent);cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.tsub .ic{width:12px;height:12px}
+.tcall .tio{margin:2px 0 6px 27px}
+.tcall .tlb{font-size:11px;color:var(--faint);margin:4px 0 2px;display:flex;align-items:center;gap:4px}
+.tcall pre,.cthink .tbody{margin:0;padding:8px 11px;background:var(--codebg);color:var(--codefg);border-radius:8px;font:calc(11.8px*var(--fk))/1.55 var(--mono);max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.tcall pre.err{color:#f2a493}
+.cthink{align-self:stretch;font:calc(12.5px*var(--fk))/1.5 var(--sans);color:var(--muted);margin:2px 0}
+.cthink>summary{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 4px;border-radius:8px;cursor:pointer;list-style:none;width:fit-content}
+.cthink>summary::-webkit-details-marker{display:none}.cthink>summary:hover{background:var(--hover)}.cthink>summary .ic{width:13px;height:13px}
+.cthink .tbody{background:transparent;color:var(--muted);border-left:2px solid var(--line);border-radius:0;font-family:var(--sans);margin:2px 0 4px 10px;max-height:360px}
+.cthink .tbody .md{font-size:calc(13px*var(--fk))}
+.chatpv{gap:0}
 .empty{color:var(--faint);text-align:center;padding:28px 10px;font-size:calc(14px*var(--fk))}
 .kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:calc(13.5px*var(--fk))}.kv>div:nth-child(odd){color:var(--muted)}
 .batch{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line2);font-size:calc(13.5px*var(--fk))}
@@ -414,6 +485,19 @@ button.sm{padding:2px 5px}button.sm .ic{width:14px;height:14px}
 .tn.leaf .lb{font-weight:400}
 .tn.leaf .n{font-size:calc(12px*var(--fk))}
 .tn.more{color:var(--faint);font-size:calc(12.5px*var(--fk));padding-left:22px}
+/* 0.4.9：主会话 / 子会话（像 Claude 桌面端那样缩进，左边一条细竖线） */
+.tkid{margin-left:14px;padding-left:5px;border-left:1px solid var(--line)}
+.tn.leaf.ctx,tr.ctx td{opacity:.5}
+.kc{display:inline-flex;align-items:center;gap:1px;flex:none;color:var(--faint);font-size:calc(11.5px*var(--fk));padding:0 3px;border-radius:5px;cursor:pointer}
+.kc:hover{background:var(--hover);color:var(--text)}
+.kc .ic{width:11px;height:11px;transform:rotate(90deg);transition:transform .15s}
+.kc.fold .ic{transform:none}
+.ktag{flex:none;font-size:calc(11px*var(--fk));line-height:calc(14px*var(--fk));padding:0 4px;border-radius:5px;border:1px solid var(--line);color:var(--faint)}
+.kd{display:inline-block;flex:none;align-self:stretch;width:calc(var(--d)*16px);margin-right:2px;
+  background:repeating-linear-gradient(to right,transparent 0 6px,var(--line) 6px 7px,transparent 7px 16px)}
+td.tl .tlr{display:flex;align-items:center;gap:4px;min-width:0}
+td.tl .tlr .ell{flex:1;min-width:0}
+td.tl .tlr .kc{order:2}
 .pgv h2{margin-bottom:4px}
 .pgv>.card{padding:14px 16px}
 .pvhd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -928,6 +1012,46 @@ function rvPaint(){
 }
 document.addEventListener("click", e => { const b = e.target.closest("[data-eye],#trEye"); if (!b) return; e.stopPropagation(); e.preventDefault(); rvSet(!RV.on); }, true);
 
+// ---------- 0.4.9：主会话 / 子会话 ----------
+// item.parent = "<agent>:<父会话 id>"（Claude 桌面端登记里的 spawnedFrom / Codex 的父线程）。
+// ssNest(xs)：xs 里能找到父会话的挂到父会话下面，找不到的（父会话不在、被筛掉了）照常放顶层，标「子会话」。
+// opt.ctx：搜索命中子会话时把父会话也带出来（淡色，不算进数目），opt.ok(父会话) 决定能不能带。
+// 顶层按「自己和子会话里最近的时间」排，子会话按自己的时间排；有环的（数据坏了）从 key 最小的那个断开。
+const FOLD = new Set(JSON.parse(store.get("ccss.fold") || "[]"));
+const foldSave = () => store.set("ccss.fold", JSON.stringify([...FOLD].slice(-500)));
+const REL = {side: "侧边会话", task: "任务派生", spawned: "派生会话", thread: "子线程"};
+function ssIdx(){ if (!SS.d) return new Map(); if (SS.d._idx) return SS.d._idx; const m = new Map(SS.d.items.map(x => [skey(x), x])); Object.defineProperty(SS.d, "_idx", {value: m, enumerable: false}); return m; }
+function ssNest(xs, opt = {}){
+  const by = new Map(xs.map(x => [skey(x), x])), ctx = new Set(), all = opt.all || ssIdx();
+  if (opt.ctx) for (const x of xs) { let p = x, hop = 0;
+    while (p && p.parent && hop++ < 50) { const q = all.get(p.parent); if (!q || (!by.has(p.parent) && opt.ok && !opt.ok(q))) break;
+      if (!by.has(p.parent)) { by.set(p.parent, q); ctx.add(p.parent); } p = q; } }
+  const par = new Map();
+  for (const [k, x] of by) if (x.parent && x.parent !== k && by.has(x.parent)) par.set(k, x.parent);
+  for (const k of [...par.keys()]) { const seen = [k]; let c = par.get(k);
+    while (c !== undefined && !seen.includes(c)) { seen.push(c); c = par.get(c); }
+    if (c !== undefined) { const cut = seen.slice(seen.indexOf(c)).sort()[0]; par.delete(cut); } }
+  const nodes = new Map([...by].map(([k, x]) => [k, {k, x, kids: [], n: 0, t: x.last || 0, ctx: ctx.has(k), lone: !!(x.parent || x.parent_missing) && !par.has(k)}]));
+  for (const [k, p] of par) nodes.get(p).kids.push(nodes.get(k));
+  const fill = nd => { for (const c of nd.kids) { fill(c); nd.n += 1 + c.n; nd.t = Math.max(nd.t, c.t); } nd.kids.sort((a, b) => (b.x.last || 0) - (a.x.last || 0)); };
+  const roots = [...nodes.values()].filter(nd => !par.has(nd.k));
+  roots.forEach(fill); roots.sort((a, b) => b.t - a.t);
+  return roots;
+}
+function ssFlat(roots, d = 0, out = []){
+  for (const nd of roots) { out.push(Object.assign(nd, {d})); if (nd.kids.length && !FOLD.has(nd.k)) ssFlat(nd.kids, d + 1, out); }
+  return out;
+}
+const kcHtml = nd => nd.kids.length ? `<span class="kc${FOLD.has(nd.k) ? " fold" : ""}" data-fold="${esc(nd.k)}" title="${FOLD.has(nd.k) ? "展开" : "收起"} ${nd.n} 个子会话">${ic("chev")}${nd.n}</span>` : "";
+const ktagHtml = nd => nd.lone ? `<span class="ktag" title="${esc((REL[nd.x.rel] || "子会话") + (nd.x.parent_title ? "，父会话「" + nd.x.parent_title + "」" : "") + "：父会话不在当前列表里")}">子会话</span>` : "";
+const relTip = (x, all) => { if (!x.parent && !x.parent_missing) return ""; const p = x.parent && (all || ssIdx()).get(x.parent);
+  return "\n" + (REL[x.rel] || "子会话") + " · 父会话：" + (p ? p.title || "（无标题）" : x.parent_title || "（不在）"); };
+function foldBind(root, redraw){
+  root.querySelectorAll("[data-fold]").forEach(t => t.onclick = e => { e.stopPropagation(); const k = t.dataset.fold; FOLD.has(k) ? FOLD.delete(k) : FOLD.add(k); foldSave(); redraw(); });
+}
+const ssCtxOn = () => !!(SS.q.trim() || SS.hits);
+const ssCtxOk = (p, sel) => trMatch(p, sel) && (!SS.agent || p.agent === SS.agent) && (SS.status === "all" || (SS.status === "archived") === !!p.archived);
+
 // ---------- 左侧分组树：按账号 / 按项目 ----------
 const TR = {mode: store.get("ccss.trmode") === "proj" ? "proj" : "acct", sel: null, open: new Set(JSON.parse(store.get("ccss.tropen") || "[]"))};
 const trSave = () => store.set("ccss.tropen", JSON.stringify([...TR.open].slice(-200)));
@@ -967,9 +1091,11 @@ function treeRender(){
   };
   // 最里层：会话本身（点了在右边打开）
   const LIM = 80;
-  const leaves = (xs, sel) => xs.slice().sort((a, b) => (b.last || 0) - (a.last || 0)).slice(0, LIM).map(x => { const k = skey(x);
-    return `<div class="tn leaf${SS.cur && skey(SS.cur) === k ? " on" : ""}" data-sk="${esc(k)}" title="${esc((x.title || "（无标题）") + "\n" + (x.cwd || ""))}">${logo(x.agent)}<span class="lb">${esc(x.title || "（无标题）")}</span><span class="n">${when(x.last)}</span></div>`; }).join("") +
-    (xs.length > LIM ? `<div class="tn more" data-sel="${esc(JSON.stringify(sel))}">还有 ${xs.length - LIM} 个：在右边列表里看…</div>` : "");
+  const leaf = nd => { const x = nd.x, k = nd.k;
+    return `<div class="tn leaf${SS.cur && skey(SS.cur) === k ? " on" : ""}${nd.ctx ? " ctx" : ""}" data-sk="${esc(k)}" title="${esc((x.title || "（无标题）") + "\n" + (x.cwd || "") + relTip(x))}">${logo(x.agent)}<span class="lb">${esc(x.title || "（无标题）")}</span>${kcHtml(nd)}${ktagHtml(nd)}<span class="n">${when(x.last)}</span></div>` +
+      (nd.kids.length && !FOLD.has(k) ? `<div class="tkid">${nd.kids.map(leaf).join("")}</div>` : ""); };
+  const leaves = (xs, sel) => { const roots = ssNest(xs, {ctx: ssCtxOn(), ok: p => ssCtxOk(p, sel)}), more = roots.length - LIM;
+    return roots.slice(0, LIM).map(leaf).join("") + (more > 0 ? `<div class="tn more" data-sel="${esc(JSON.stringify(sel))}">还有 ${more} 个：在右边列表里看…</div>` : ""); };
   const gLabel = g => g.kind === "unknown" ? `<span title="${esc(g.hint || "")}">未知账号</span>` : g.kind === "api" || g.kind === "dsh" || g.kind === "cursor" ? `<span title="${esc(g.hint || "")}">${esc(g.masked)}</span>` : acm(g.rid, g.masked, true);
   const gIcon = g => g.kind === "opencode" ? ic("opencode", "logo lg occ") : g.kind === "zcode" ? ic("zcode", "logo lg zcc") : g.kind === "cursor" ? ic("cursor", "logo lg curc") : g.kind === "dsh" ? ic("dsh", "logo lg dshc") : g.kind === "codex" ? ic("codex", "logo lg") : g.kind === "claude" ? ic("claude", "logo lg") : g.kind === "api" ? ic("key", "lg") : ic("user", "lg");
   const gTags = g => g.current ? `<span class="cur" title="${esc((g.tags || []).join("、"))}">当前</span>` : "";
@@ -995,6 +1121,7 @@ function treeRender(){
   }
   if (!items.length) html += `<div class="hint">${SS.d.items.length ? "没有符合筛选的会话" : "还没有会话"}</div>`;
   box.innerHTML = html;
+  foldBind(box, () => { treeRender(); ssList(); });
   $$("#tree [data-tw]").forEach(t => t.onclick = e => { e.stopPropagation(); const id = t.dataset.tw; TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id); trSave(); treeRender(); });
   $$("#tree .tn[data-sel]").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel); if (TR.sel && t.dataset.id) { TR.open.add(t.dataset.id); trSave(); } treeRender(); trApply(); });
   $$("#tree .tn[data-sk]").forEach(t => t.onclick = () => { const [a, ...i] = t.dataset.sk.split(":"); SS.cur = {agent: a, id: i.join(":")};
@@ -2306,28 +2433,38 @@ function ssVisible(noTree){
 }
 function ssList(){
   if (!$("#ssList")) return;
-  const rows = ssVisible();
-  $("#ssList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="ssAllSel"></th><th>会话</th><th>项目</th><th>最近</th><th class="n">大小</th><th></th></tr>
-    ${rows.map(x => `<tr class="click${SS.cur && skey(SS.cur) === skey(x) ? " sel" : ""}" data-k="${esc(skey(x))}"><td><input type="checkbox" data-c="${esc(skey(x))}" ${SS.sel.has(skey(x)) ? "checked" : ""}></td>
-      <td class="tl"><div class="ell">${logo(x.agent)} ${esc(x.title || "（无标题）")}${x.alias ? ' <span class="tag" title="只在本程序里改的名字">别名</span>' : ""}</div><span class="s">${esc(x.first || "")}</span></td>
+  const vis = ssVisible(), flat = ssFlat(ssNest(vis, {ctx: ssCtxOn(), ok: p => ssCtxOk(p)})), rows = flat.filter(nd => !nd.ctx).map(nd => nd.x);
+  $("#ssList").innerHTML = flat.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="ssAllSel"></th><th>会话</th><th>项目</th><th>最近</th><th class="n">大小</th><th></th></tr>
+    ${flat.map(nd => { const x = nd.x; return `<tr class="click${SS.cur && skey(SS.cur) === skey(x) ? " sel" : ""}${nd.ctx ? " ctx" : ""}" data-k="${esc(skey(x))}"${nd.ctx ? ' title="搜到的是它的子会话；这个是父会话，带出来看上下文"' : ""}><td><input type="checkbox" data-c="${esc(skey(x))}" ${SS.sel.has(skey(x)) ? "checked" : ""}></td>
+      <td class="tl"><div class="tlr">${nd.d ? `<span class="kd" style="--d:${nd.d}"></span>` : ""}<div class="ell" title="${esc((x.title || "（无标题）") + relTip(x))}">${logo(x.agent)} ${esc(x.title || "（无标题）")}${x.alias ? ' <span class="tag" title="只在本程序里改的名字">别名</span>' : ""}</div>${kcHtml(nd)}${ktagHtml(nd)}</div><span class="s"${nd.d ? ` style="padding-left:${nd.d * 16 + 2}px"` : ""}>${esc(x.first || "")}</span></td>
       <td class="ell" title="${esc(x.cwd)}">${esc(projName(x.cwd))}</td><td class="n">${when(x.last)}</td><td class="n">${kb(x.size)}</td>
-      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? (x.agent === "dsh" ? '<span class="tag claude">从 Claude Code 导入</span> ' : '<span class="tag codex">Codex 导入</span> ') : ""}${x.agent === "dsh" ? '<span class="tag dsh">只读</span> ' : x.agent === "cursor" ? `<span class="tag cursor" title="${esc(x.source_name || "Cursor")}">只读</span> ` : x.agent === "opencode" || x.agent === "zcode" ? `<span class="tag ${x.agent}" title="${esc(x.source_name || "")}">只读</span> ` : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数（点开看时间线）" data-tl="${esc(skey(x))}" style="cursor:pointer">${ic("history")}${x.backups}</span>` : ""}</td></tr>`).join("")}</table>`
+      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? (x.agent === "dsh" ? '<span class="tag claude">从 Claude Code 导入</span> ' : '<span class="tag codex">Codex 导入</span> ') : ""}${x.agent === "dsh" ? '<span class="tag dsh">只读</span> ' : x.agent === "cursor" ? `<span class="tag cursor" title="${esc(x.source_name || "Cursor")}">只读</span> ` : x.agent === "opencode" || x.agent === "zcode" ? `<span class="tag ${x.agent}" title="${esc(x.source_name || "")}">只读</span> ` : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数（点开看时间线）" data-tl="${esc(skey(x))}" style="cursor:pointer">${ic("history")}${x.backups}</span>` : ""}</td></tr>`; }).join("")}</table>`
     : `<div class="emp">${ic("search")}${SS.d.items.length ? "没有符合筛选的会话" + (TR.sel || SS.q ? "<div><button id='ssClr'>清除筛选</button></div>" : "") : "还没有 Claude Code / Codex 会话"}</div>`;
   $$("#ssList [data-c]").forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { c.checked ? SS.sel.add(c.dataset.c) : SS.sel.delete(c.dataset.c); ssBatch(); }; });
   $$("#ssList tr[data-k]").forEach(tr => tr.onclick = () => { const [a, ...i] = tr.dataset.k.split(":"); ssView(a, i.join(":")); treeRender(); });
+  foldBind($("#ssList"), () => { ssList(); treeRender(); });
   $$("#ssList [data-tl]").forEach(t => t.onclick = e => { e.stopPropagation(); const [a, ...i] = t.dataset.tl.split(":"); tlOpen(a, i.join(":")); });
   const cl = $("#ssClr"); if (cl) cl.onclick = () => { TR.sel = null; SS.q = ""; $("#gQ").value = ""; treeRender(); ssList(); ssChip(); };
   const a = $("#ssAllSel"); if (a) { a.checked = rows.length && rows.every(x => SS.sel.has(skey(x))); a.onchange = () => { rows.forEach(x => a.checked ? SS.sel.add(skey(x)) : SS.sel.delete(skey(x))); ssList(); }; }
   ssBatch();
 }
+// 勾上的会话下面（任意层）还没勾上的子会话
+function ssMissingKids(){
+  if (!SS.sel.size || !SS.d) return [];
+  const kids = new Map(); for (const x of SS.d.items) if (x.parent) (kids.get(x.parent) || kids.set(x.parent, []).get(x.parent)).push(skey(x));
+  const out = new Set(), todo = [...SS.sel], seen = new Set(todo);
+  while (todo.length) { const k = todo.pop(); for (const c of kids.get(k) || []) if (!seen.has(c)) { seen.add(c); todo.push(c); if (!SS.sel.has(c)) out.add(c); } }
+  return [...out];
+}
 const ssItems = () => [...SS.sel].map(k => { const [agent, ...i] = k.split(":"); return {agent, id: i.join(":")}; });
 function ssBatch(){
   const n = SS.sel.size, b = $("#ssBatch"); if (!b) return;
   const vis = ssVisible();
-  const nd = [...SS.sel].filter(k => k.startsWith("dsh:")).length;
-  b.innerHTML = n ? `<span>已选 ${n} 个${nd ? `<span class="dim" title="DeepSeek Harness 的会话本程序只读：归档 / 删除会跳过它们，导出可以">（${nd} 个 dsh 只能导出）</span>` : ""}</span><span style="flex:1"></span><button data-b="archive">${ic("archive")} 归档</button><button data-b="unarchive">取消归档</button><button data-b="export">${ic("file")} 导出</button><button class="danger" data-b="delete">${ic("trash")} 删除</button><button class="ghost" data-b="clear">${ic("x")}</button>`
+  const nd = [...SS.sel].filter(k => k.startsWith("dsh:")).length, mk = ssMissingKids();
+  b.innerHTML = n ? `<span>已选 ${n} 个${nd ? `<span class="dim" title="DeepSeek Harness 的会话本程序只读：归档 / 删除会跳过它们，导出可以">（${nd} 个 dsh 只能导出）</span>` : ""}</span>${mk.length ? `<button class="ghost" id="ssAddKids" title="选中的主会话下面还有没勾上的子会话">＋ 加上 ${mk.length} 个子会话</button>` : ""}<span style="flex:1"></span><button data-b="archive">${ic("archive")} 归档</button><button data-b="unarchive">取消归档</button><button data-b="export">${ic("file")} 导出</button><button class="danger" data-b="delete">${ic("trash")} 删除</button><button class="ghost" data-b="clear">${ic("x")}</button>`
     : `<span class="dim">勾选多个可以批量归档 / 导出 / 删除</span><span style="flex:1"></span>${TR.sel && vis.length ? `<button id="ssGrpEx" title="把左侧选中的这一组全部导出">${ic("file")} 导出这一组（${vis.length}）</button>` : ""}<span class="dim">${vis.length} / ${SS.d.items.length} 个</span>`;
   $$("#ssBatch [data-b]").forEach(x => x.onclick = () => ssAct(x.dataset.b, ssItems()));
+  const ak = $("#ssAddKids"); if (ak) ak.onclick = () => { mk.forEach(k => SS.sel.add(k)); ssList(); };
   const g = $("#ssGrpEx"); if (g) g.onclick = () => exDlg(vis.map(x => ({agent: x.agent, id: x.id})), trLabel());
 }
 async function ssFulltext(){
@@ -2336,16 +2473,198 @@ async function ssFulltext(){
   try { const r = await api("/api/sessions/fulltext", {q}); SS.hits = {q, set: new Set(r.hits.map(skey)), partial: r.partial}; SS.q = ""; $("#gQ").value = ""; R.sessions(); toast(`找到 ${r.hits.length} 个`); }
   catch(e){ toast("❌ " + e.message); }
 }
-// 聊天样式的只读记录
-const chatHtml = (entries, agent) => entries.length ? entries.map(m => `<div class="msg ${m.role === "user" ? "user" : m.role === "tool" ? "tool" : "assistant"}">${m.role !== "tool" ? `<div class="who">${m.role === "user" ? "你" : agent === "codex" ? "Codex" : agent === "dsh" ? "DeepSeek Harness" + (m.model ? " · " + esc(m.model) : "") : agent === "cursor" ? "Cursor" : agent === "opencode" ? "OpenCode" + (m.model ? " · " + esc(m.model) : "") : agent === "zcode" ? "ZCode" + (m.model ? " · " + esc(m.model) : "") : "Claude"}${m.ts ? " · " + when(m.ts) : ""}</div>` : ""}${esc(m.text)}</div>`).join("") : '<div class="empty">（没有对话内容）</div>';
-async function ssView(agent, id){
+// ---------- 0.4.9：对话样式（照 CC Msg / Claude 桌面端）：你的话是右边的气泡，回复按 Markdown 排版，
+// 工具调用收成一行（小图标 + 工具名 + 摘要，点开看完整输入和结果），连着的几个工具合成一组；思考过程收起来。
+// 展开的内容点开时才画（大会话也不卡）；只读，不改任何应用的数据。
+const CHAT = {seq: 0, data: {}};
+const APN = {claude: "Claude", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor", opencode: "OpenCode", zcode: "ZCode"};
+// 小号 Markdown：先整段转义再认格式，不放任何原始 HTML；链接只认 http(s)
+function mdInline(s){
+  const codes = [];
+  s = s.replace(/`([^`\n]+)`/g, (m, c) => { codes.push(c); return "\u0000" + (codes.length - 1) + "\u0000"; });
+  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  s = s.replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*\w])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?![*\w])/g, "$1<em>$2</em>");
+  s = s.replace(/~~([^~\n]+)~~/g, "<del>$1</del>");
+  return s.replace(/\u0000(\d+)\u0000/g, (m, i) => `<code>${codes[+i]}</code>`);
+}
+const HL_KW = new Set(("abstract and as async await break case catch class const continue def default del delete do elif else enum export extends false final finally fn for from func function go if impl import in interface is lambda let match mod mut new nil none not null or package pass private protected pub public raise return self static struct super switch this throw true try type typeof use var void while with yield None True False " +
+  "local end then elseif repeat until foreach param begin fi esac done echo require include unsigned int char float double bool string auto print println").split(" "));
+const HL2 = /(--[^\n]*|\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d[\d_.xXa-fA-F]*\b)|([A-Za-z_$][\w$]*)/g;
+const HASH_C = /^(py|sh|rb|yaml|toml|ps1|ini)$/, DASH_C = /^(lua|sql)$/, SLASH_C = /^(js|ts|json|c|go|rs|css|html)$/;
+const FENCE = {python: "py", py: "py", javascript: "js", js: "js", jsx: "js", mjs: "js", typescript: "ts", ts: "ts", tsx: "ts", json: "json", jsonc: "json",
+  bash: "sh", sh: "sh", shell: "sh", zsh: "sh", console: "sh", powershell: "ps1", ps1: "ps1", pwsh: "ps1", yaml: "yaml", yml: "yaml", toml: "toml", ini: "ini",
+  go: "go", rust: "rs", rs: "rs", c: "c", h: "c", cpp: "c", "c++": "c", cs: "c", csharp: "c", java: "c", kotlin: "c", swift: "c", php: "c",
+  css: "css", scss: "css", html: "html", xml: "html", vue: "html", sql: "sql", lua: "lua", ruby: "rb", rb: "rb"};
+function hl2(s, lang){
+  if (!lang || s.length > 3000) return esc(s);
+  let out = "", last = 0, m; HL2.lastIndex = 0;
+  while ((m = HL2.exec(s))) {
+    if (m[1]) { const c = m[1];
+      const ok = c.startsWith("--") ? DASH_C.test(lang) : c.startsWith("//") ? SLASH_C.test(lang) && !/:$/.test(s.slice(0, m.index)) : c.startsWith("#") ? HASH_C.test(lang) : true;
+      if (!ok) { out += esc(s.slice(last, m.index + 1)); last = m.index + 1; HL2.lastIndex = m.index + 1; continue; } }
+    out += esc(s.slice(last, m.index));
+    const t = esc(m[0]);
+    out += m[1] ? `<i class="hc">${t}</i>` : m[2] ? `<i class="hs">${t}</i>` : m[3] ? `<i class="hn">${t}</i>` : HL_KW.has(m[4]) ? `<i class="hk">${t}</i>` : t;
+    last = m.index + m[0].length;
+  }
+  return out + esc(s.slice(last));
+}
+function mdCode(code, lang){
+  const L = FENCE[String(lang || "").toLowerCase()] || "", body = code.length > 60000 ? esc(code) : code.split("\n").map(l => hl2(l, L)).join("\n");
+  return `<div class="cb"><div class="cbh"><span>${esc(lang || "代码")}</span><button class="cpy" data-cpcode title="复制代码">${ic("clipboard")}复制</button></div><pre><code>${body}</code></pre></div>`;
+}
+const mdInd = l => l.match(/^\s*/)[0].replace(/\t/g, "    ").length;
+const MD_ITEM = /^(\s*)([-*+]|\d{1,3}[.)])\s+(.*)$/;
+function mdList(L, i){
+  const first = L[i].match(MD_ITEM), base = mdInd(L[i]), ordered = /\d/.test(first[2]);
+  let html = "";
+  while (i < L.length) {
+    const m = L[i].match(MD_ITEM);
+    if (!m || mdInd(L[i]) > base + 1 || mdInd(L[i]) < base || /\d/.test(m[2]) !== ordered) break;
+    const body = [m[3]]; i++;
+    while (i < L.length) {
+      const l = L[i];
+      if (!l.trim()) { let j = i + 1; while (j < L.length && !L[j].trim()) j++;
+        if (j < L.length && mdInd(L[j]) > base && !(MD_ITEM.test(L[j]) && mdInd(L[j]) <= base + 1)) { body.push(""); i++; continue; } break; }
+      if (mdInd(l) > base + 1 || (mdInd(l) > base && !MD_ITEM.test(l))) { body.push(l.replace(new RegExp("^\\s{0," + (base + 4) + "}"), "")); i++; continue; }
+      if (!MD_ITEM.test(l) && !/^\s*(#{1,6}\s|```|~~~|>|\|)/.test(l) && L[i - 1].trim()) { body.push(l.trim()); i++; continue; }
+      break;
+    }
+    html += `<li>${body.length === 1 ? mdInline(esc(body[0])) : mdHtml(body.join("\n"))}</li>`;
+  }
+  const start = ordered && parseInt(first[2]) !== 1 ? ` start="${parseInt(first[2])}"` : "";
+  return [ordered ? `<ol${start}>${html}</ol>` : `<ul>${html}</ul>`, i];
+}
+function mdHtml(src){
+  const L = String(src || "").replace(/\r/g, "").split("\n"), para = [];
+  let out = "", i = 0, m;
+  const flushP = () => { if (para.length) { out += `<p>${para.map(x => mdInline(esc(x))).join("<br>")}</p>`; para.length = 0; } };
+  const cells = r => r.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(c => mdInline(esc(c.trim())));
+  while (i < L.length) {
+    const l = L[i];
+    if ((m = l.match(/^\s*(```+|~~~+)\s*([\w+#.-]*)/))) { flushP(); const fence = m[1]; const buf = []; i++;
+      while (i < L.length && !L[i].trim().startsWith(fence)) buf.push(L[i++]);
+      i++; out += mdCode(buf.join("\n"), m[2]); continue; }
+    if (!l.trim()) { flushP(); i++; continue; }
+    if ((m = l.match(/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/))) { flushP(); const lv = Math.min(m[1].length + 1, 6);
+      out += `<h${lv}>${mdInline(esc(m[2]))}</h${lv}>`; i++; continue; }
+    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(l)) { flushP(); out += "<hr>"; i++; continue; }
+    if (/^\s*\|.*\|/.test(l) && i + 1 < L.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(L[i + 1])) {
+      flushP(); const head = cells(l); i += 2; let rows = "";
+      while (i < L.length && /^\s*\|/.test(L[i])) { rows += `<tr>${cells(L[i]).map(c => `<td>${c}</td>`).join("")}</tr>`; i++; }
+      out += `<div class="tbw"><table><thead><tr>${head.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`; continue; }
+    if (/^\s{0,3}>/.test(l)) { flushP(); const buf = [];
+      while (i < L.length && /^\s{0,3}>/.test(L[i])) buf.push(L[i++].replace(/^\s{0,3}>\s?/, ""));
+      out += `<blockquote>${mdHtml(buf.join("\n"))}</blockquote>`; continue; }
+    if (MD_ITEM.test(l) && !para.length) { const [h, j] = mdList(L, i); out += h; i = j; continue; }
+    if (MD_ITEM.test(l) && para.length) { flushP(); continue; }
+    para.push(l.trim()); i++;
+  }
+  flushP();
+  return out;
+}
+// 工具调用：小图标 + 名字 + 摘要
+function toolIcon(n){ n = (n || "").toLowerCase();
+  return /bash|shell|powershell|exec|command|terminal/.test(n) ? "term" : /edit|write|patch|notebook/.test(n) ? "pencil"
+    : /read|view|cat/.test(n) ? "file" : /grep|glob|search|find|ls$|list/.test(n) ? "search" : /web|fetch|url|browse/.test(n) ? "globe"
+    : /^(task|agent)$/.test(n) ? "subtask" : /todo|plan/.test(n) ? "list" : "tool"; }
+function toolKind(t){ const n = (t.name || "").toLowerCase();
+  return /^(bash|bashoutput|powershell|shell|exec_command|local_shell|killshell|killbash)$/.test(n) || /shell|exec/.test(n) ? "run" : /^(edit|multiedit|write|notebookedit|apply_patch)$/.test(n) ? "edit"
+    : /^(read|view|notebookread)$/.test(n) ? "read" : /^(grep|glob|ls|search|find)$/.test(n) ? "search" : /web|fetch/.test(n) ? "web"
+    : /^(task|agent)$/.test(n) ? "task" : /todo|update_plan/.test(n) ? "plan" : "other"; }
+function toolGroupSum(tools){
+  const c = {}; let fail = 0; for (const t of tools) { const k = toolKind(t); c[k] = (c[k] || 0) + 1; if (t.err) fail++; }
+  const p = [];
+  if (c.run) p.push(`运行了 ${c.run} 个命令`);
+  if (c.read) p.push(`读了 ${c.read} 个文件`);
+  if (c.edit) p.push(`改了 ${c.edit} 个文件`);
+  if (c.search) p.push(`搜索了 ${c.search} 次`);
+  if (c.web) p.push(`上网查了 ${c.web} 次`);
+  if (c.task) p.push(`派了 ${c.task} 个子代理`);
+  if (c.plan) p.push(`更新了 ${c.plan} 次计划`);
+  if (c.other) p.push(`调用了 ${c.other} 次工具`);
+  return p.join("，") + (fail ? `<span class="terr">${fail} 个出错</span>` : "");
+}
+function chatNorm(e){
+  if (e.role !== "tool" || e.name) return e;
+  const s = String(e.text || ""), i = s.indexOf("  ");
+  return Object.assign({}, e, {name: i > 0 ? s.slice(0, i) : s.split(" ")[0], brief: i > 0 ? s.slice(i + 2) : s.split(" ").slice(1).join(" ")});
+}
+function toolRowHtml(t, i){
+  const sub = t.sub && t.sub.agent_id ? `<button class="tsub" data-csub="${esc(t.sub.agent_id)}" data-cdesc="${esc(t.sub.desc || t.sub.type || "")}" title="看这个子代理自己的记录">${ic("subtask")} 子代理记录</button>` : "";
+  const brief = t.sub && (t.sub.type || t.sub.desc) ? [t.sub.type, t.sub.desc].filter(Boolean).join(" · ") : t.brief || "";
+  const head = `<span class="tic">${ic(toolIcon(t.name))}</span><span class="tnm">${esc(t.name || "tool")}</span><span class="ta" title="${esc(brief)}">${esc(brief)}</span>${t.err ? '<span class="terr">出错</span>' : ""}${sub}`;
+  if (t.input == null && t.out == null) return `<div class="tcall flat"><div class="tsm">${head}</div></div>`;
+  return `<details class="tcall" data-ci="${i}"><summary class="tsm">${head}</summary><div class="tbody"></div></details>`;
+}
+const cpBtn = (i, tip) => `<button class="ccp" data-ccp="${i}" title="${tip || "复制"}">${ic("clipboard")}</button>`;
+function chatHtml(entries, agent, opt = {}){
+  if (!entries || !entries.length) return '<div class="empty">（没有对话内容）</div>';
+  const key = "c" + (++CHAT.seq), es = entries.map(chatNorm); CHAT.data[key] = {es, agent};
+  const ks = Object.keys(CHAT.data); if (ks.length > 12) delete CHAT.data[ks[0]];
+  const name = APN[agent] || "Claude";
+  let html = "", tools = [], lastDay = "", head = true;
+  const flush = () => { if (!tools.length) return;
+    html += tools.length === 1 ? `<div class="ctools one">${toolRowHtml(tools[0].e, tools[0].i)}</div>`
+      : `<details class="ctools"><summary><span class="tgc">${ic("chev")}</span><span class="tsum">${toolGroupSum(tools.map(x => x.e))}</span></summary><div class="tlist">${tools.map(x => toolRowHtml(x.e, x.i)).join("")}</div></details>`;
+    tools = []; };
+  es.forEach((e, i) => {
+    const d = e.ts ? new Date(e.ts * 1000).toLocaleDateString("zh-CN", {month: "long", day: "numeric", weekday: "short"}) : "";
+    if (d && d !== lastDay && !opt.noDay) { flush(); html += `<div class="cday">${esc(d)}</div>`; lastDay = d; }
+    if (e.role === "tool") { tools.push({e, i}); return; }
+    flush();
+    if (e.role === "user") { head = true;
+      const long = e.text.length > 1500 || e.text.split("\n").length > 24;
+      html += `<div class="cm u"><div class="cbub${long ? " clamp" : ""}">${esc(e.text)}</div>${long ? `<a class="cmore" data-cmore>展开全文</a>` : ""}<div class="cmeta">${e.ts ? `<span>${when(e.ts)}</span>` : ""}${cpBtn(i)}</div></div>`; return; }
+    if (e.role === "thinking") { html += `<details class="cthink" data-ci="${i}"><summary>${ic("sparkles")}<span>思考过程</span><span class="dim">${(e.text || "").length} 字</span></summary><div class="tbody"></div></details>`; return; }
+    const who = head ? `<div class="chd">${logo(agent || "claude")}<b>${esc(name + (e.model ? " · " + e.model : ""))}</b>${e.ts ? `<span>${when(e.ts)}</span>` : ""}</div>` : "";
+    head = false;
+    html += `<div class="cm a">${who}<div class="md">${mdHtml(e.text)}</div><div class="cacts">${cpBtn(i)}</div></div>`;
+  });
+  flush();
+  return `<div class="chat" data-chat="${key}">${html}</div>`;
+}
+function chatFill(det){
+  const box = det.closest("[data-chat]"), C = box && CHAT.data[box.dataset.chat], b = det.querySelector(":scope > .tbody");
+  if (!C || !b || b.dataset.done) return; b.dataset.done = 1;
+  const e = C.es[+det.dataset.ci];
+  if (e.role === "thinking") { b.innerHTML = `<div class="md">${mdHtml(e.text)}</div>`; return; }
+  b.innerHTML = (e.input != null ? `<div class="tio"><div class="tlb">输入<button class="ccp" data-ccp="${det.dataset.ci}" data-cpk="input" title="复制输入">${ic("clipboard")}</button></div><pre>${esc(e.input)}</pre></div>` : "") +
+    (e.out != null ? `<div class="tio"><div class="tlb">${e.err ? "出错" : "结果"}<button class="ccp" data-ccp="${det.dataset.ci}" data-cpk="out" title="复制结果">${ic("clipboard")}</button></div><pre class="${e.err ? "err" : ""}">${esc(e.out || "（没有输出）")}</pre></div>` : `<div class="tio"><div class="tlb">（记录里没有结果）</div></div>`);
+}
+document.addEventListener("toggle", e => { const t = e.target; if (t && t.open && t.matches && t.matches("[data-chat] details[data-ci]")) chatFill(t); }, true);
+document.addEventListener("click", e => {
+  const t = e.target.closest && e.target.closest("[data-ccp],[data-cpcode],[data-cmore],[data-csub]"); if (!t || !t.closest("[data-chat]")) return;
+  e.preventDefault(); e.stopPropagation();
+  const box = t.closest("[data-chat]"), C = CHAT.data[box.dataset.chat];
+  const done = () => { const o = t.innerHTML; t.innerHTML = ic("check"); t.classList.add("done"); setTimeout(() => { t.innerHTML = o; t.classList.remove("done"); }, 1200); };
+  if (t.dataset.cpcode != null) { copyText(t.closest(".cb").querySelector("pre").innerText); return done(); }
+  if (t.dataset.cmore != null) { const b = t.previousElementSibling; b.classList.toggle("clamp"); t.textContent = b.classList.contains("clamp") ? "展开全文" : "收起"; return; }
+  if (t.dataset.csub != null) return chatSub(t.dataset.csub, t.dataset.cdesc);
+  if (!C) return;
+  const en = C.es[+t.dataset.ccp]; copyText(String((t.dataset.cpk ? en[t.dataset.cpk] : en.text) || "")); done();
+});
+// 子代理（Task / Agent）自己的记录：弹窗里只读看
+async function chatSub(aid, desc){
+  const cur = SS.cur; if (!cur) return;
+  openDlg("子代理记录" + (desc ? "：" + desc : ""), '<div class="empty">读取…</div>', `<button onclick="closeDlg()">关闭</button>`);
+  try { const r = await api(`/api/sessions/read?agent=${cur.agent}&id=${encodeURIComponent(cur.id)}&sub=${encodeURIComponent(aid)}&rich=1&limit=600`);
+    const html = `<div class="pv chatpv" style="max-height:calc(calc(100*var(--vh)) - 260px)">${r.cut ? `<div class="dim cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条</div>` : ""}${chatHtml(r.entries, cur.agent)}</div>`;
+    openDlg("子代理记录" + (desc ? "：" + desc : ""), html, `<button onclick="closeDlg()">关闭</button>`); $("#dlg").classList.add("wide");
+    const pv = $("#dlgBody .chatpv"); if (pv) pv.scrollTop = pv.scrollHeight;
+  } catch(e){ openDlg("子代理记录", `<div class="miss">${esc(e.message)}</div>`, `<button onclick="closeDlg()">关闭</button>`); }
+}
+async function ssView(agent, id, lim){
+  lim = lim || 300;
+  const same = SS.cur && SS.cur.agent === agent && SS.cur.id === id;
   SS.cur = {agent, id};
   $$("#ssList tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === agent + ":" + id));
   let x = SS.d.items.find(i => i.agent === agent && i.id === id) || {};
-  const box = $("#ssView"); box.innerHTML = '<div class="empty">读取…</div>';
+  const box = $("#ssView"); if (!(same && lim > 300)) box.innerHTML = '<div class="empty">读取…</div>';
   if (x.orphan) return ssOrphan(agent, id, x, box);
   let r, dt;                          // 0.4.0：列表里省掉的（继续命令等）点开时再要
-  try { [r, dt] = await Promise.all([api(`/api/sessions/read?agent=${agent}&id=${encodeURIComponent(id)}&limit=300`),
+  try { [r, dt] = await Promise.all([api(`/api/sessions/read?agent=${agent}&id=${encodeURIComponent(id)}&limit=${lim}&rich=1`),
     api(`/api/sessions/item?agent=${agent}&id=${encodeURIComponent(id)}`).catch(() => null)]); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
   if (SS.cur.agent !== agent || SS.cur.id !== id) return;
   if (dt && dt.item) x = Object.assign({}, dt.item, x, {resume: dt.item.resume, file: dt.item.file});
@@ -2365,8 +2684,10 @@ async function ssView(agent, id){
         agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
         agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；也可以导进 Claude Code 接着聊">${ic("claude", "logo")} 导进 Claude Code…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : agent === "opencode" || agent === "zcode" ? `<span class="tag ${agent}">${esc(x.source_name || APPN[agent])} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
-    <div class="pv">${chatHtml(r.entries, agent)}
-      ${r.cut ? `<div class="dim" style="text-align:center;font-size:calc(13px*var(--fk))">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条（导出能看全部）</div>` : ""}</div>`;
+    <div class="pv chatpv" id="svPv">${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
+  { const pv = $("#svPv"), old = SS.pvKeep; SS.pvKeep = null;
+    pv.scrollTop = old != null ? pv.scrollHeight - old : pv.scrollHeight;
+    const me = $("#svMoreE"); if (me) me.onclick = () => { SS.pvKeep = pv.scrollHeight - pv.scrollTop; me.disabled = true; ssView(agent, id, Math.min(5000, lim * 3)); }; }
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
   if (agent === "opencode" || agent === "zcode") $("#svOpen").onclick = () => cvOpen(agent, [id]);

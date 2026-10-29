@@ -287,6 +287,7 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
     except Exception:
         cur = None
     reg = _claude_registry()
+    rid = _reg_ids(reg)
     out, seen = [], set()
     for f in (claude_home() / "projects").glob("*/*.jsonl"):
         sid = f.stem
@@ -312,6 +313,7 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
                     "accounts": sorted({_acct_tag(r["key"]) for r in regs}), "visible": bool(mine) and not d.get("_archived"),
                     "why": why, "file": str(f), "imported": (ctitle or "").startswith("（Codex）"),
                     "resume": (f"cd {_q(cwd)} && " if cwd else "") + f"claude --resume {sid}"})
+        _set_parent(out[-1], regs, mine, rid)
     for sid, regs in reg.items():          # 登记了但记录文件已经不在
         if sid in seen:
             continue
@@ -320,7 +322,44 @@ def claude_sessions(names: dict | None = None) -> list[dict]:
                     "cwd": d.get("cwd"), "last": d.get("lastActivityAt", 0) / 1000, "size": 0, "archived": bool(d.get("_archived")),
                     "registered": True, "accounts": sorted({_acct_tag(r["key"]) for r in regs}), "visible": False,
                     "why": ORPHAN_WHY, "file": None, "resume": None, "orphan": True, "model": d.get("model")})
+        _set_parent(out[-1], regs, None, rid)
     return out
+
+
+# ---------- 0.4.9：主会话 / 子会话（列表里按隶属关系缩进显示）----------
+# Claude 桌面端：登记里 spawnedFrom.sessionId 指父会话的登记号（local_…，就是登记文件名）；
+# 保险起见也认不带 local_ 的写法和直接写 cliSessionId 的。列表里的会话按 cliSessionId 认，所以要换算一下。
+# Codex：子线程 rollout 第一行 session_meta.payload.source 里写着 parent_thread_id。
+# 结果：item["parent"] = "<agent>:<父会话 id>"、item["rel"] = side / task / spawned / thread。父会话找不到的：parent_missing。
+
+def _reg_ids(reg: dict) -> dict:
+    """登记号（local_… / 去掉 local_ 的）/ cliSessionId → 列表里用的会话 id。cliSessionId 优先。"""
+    out = {sid: sid for sid in reg}
+    for sid, regs in reg.items():
+        for r in regs:
+            for k in (r["data"].get("sessionId"), Path(r["path"]).stem):
+                if isinstance(k, str) and k:
+                    out.setdefault(k, sid)
+                    out.setdefault(k.removeprefix("local_"), sid)
+    return out
+
+
+def _set_parent(x: dict, regs: list, mine: dict | None, rid: dict) -> None:
+    from . import claude_sync
+    for r in ([mine] if mine else []) + sorted(regs, key=lambda r: -(r["data"].get("lastActivityAt") or 0)):
+        sf = claude_sync._spawn(r["data"])
+        if not sf:
+            continue
+        ps = sf["sessionId"]
+        p = rid.get(ps) or rid.get(ps.removeprefix("local_")) or rid.get("local_" + ps)
+        x["rel"] = claude_sync._rel_kind(sf)
+        if p and p != x["id"]:
+            x["parent"] = "claude:" + p
+        else:
+            x["parent_missing"] = True
+        if sf.get("title") or sf.get("name"):
+            x["parent_title"] = str(sf.get("title") or sf.get("name"))[:120]
+        return
 
 
 # ---------- Codex ----------
@@ -359,7 +398,7 @@ def _codex_meta(f: Path) -> dict:
     except OSError:
         return {}
     sig = (st.st_mtime, st.st_size)
-    c = listcache.head_get("codexmeta", str(f), sig)
+    c = listcache.head_get("codexmeta2", str(f), sig)
     if c is not None:
         return c
     try:
@@ -368,9 +407,43 @@ def _codex_meta(f: Path) -> dict:
         p = (m.get("payload") or {}) if m.get("type") == "session_meta" else {}
     except Exception:
         p = {}
+    par = _codex_parent(p)
     p = {k: p[k] for k in META_KEYS if k in p and isinstance(p[k], (str, int, float, bool))}
-    listcache.head_put("codexmeta", str(f), sig, p)
+    if par:
+        p["parent_thread_id"] = par
+    listcache.head_put("codexmeta2", str(f), sig, p)
     return p
+
+
+def _codex_parent(m: dict) -> str | None:
+    """session_meta.payload（或 state 库里 source 列）里的父线程号。"""
+    src = m.get("source") if isinstance(m, dict) else None
+    if isinstance(src, str) and src[:1] in "{[":
+        try:
+            src = json.loads(src)
+        except Exception:
+            return None
+    seen = 0
+
+    def walk(x):
+        nonlocal seen
+        seen += 1
+        if seen > 200:
+            return None
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k in ("parent_thread_id", "parentThreadId", "parent_id") and isinstance(v, str) and v:
+                    return v
+                r = walk(v)
+                if r:
+                    return r
+        elif isinstance(x, list):
+            for v in x:
+                r = walk(v)
+                if r:
+                    return r
+        return None
+    return walk(src) if isinstance(src, (dict, list)) else None
 
 
 def codex_titles() -> dict:
@@ -414,7 +487,7 @@ def codex_sessions(names: dict | None = None) -> list[dict]:
             conn = _ro(db)
             cols = _cols(conn)
             want = [c for c in ("id", "title", "cwd", "updated_at", "archived", "model_provider", "rollout_path",
-                                "first_user_message", "thread_source", "name") if c in cols]
+                                "first_user_message", "thread_source", "name", "source") if c in cols]
             for r in conn.execute(f"select {', '.join(want)} from threads"):
                 r = dict(zip(want, r))
                 rows[r["id"]] = r
@@ -446,6 +519,13 @@ def codex_sessions(names: dict | None = None) -> list[dict]:
                     "provider": r.get("model_provider"), "visible": exists and not r.get("archived"),
                     "why": None if exists else ORPHAN_WHY, "file": str(f) if exists else None, "orphan": not exists,
                     "resume": (f"cd {_q(r['cwd'])} && " if r.get("cwd") else "") + f"codex resume {tid}"})
+        par = _codex_parent(r) or (_codex_meta(f).get("parent_thread_id") if exists else None)
+        if par and par != tid:
+            out[-1]["rel"] = "thread"
+            if par in rows:
+                out[-1]["parent"] = "codex:" + par
+            else:
+                out[-1]["parent_missing"] = True
     return out
 
 
@@ -513,7 +593,7 @@ def item(agent: str, sid: str) -> dict:
 
 def _sig(res: dict) -> int:
     return hash((tuple((x["agent"], x["id"], x.get("title"), x.get("last"), x.get("size"), x.get("archived"), x.get("visible"),
-                        x.get("alias"), x.get("backups"), x.get("why"), x.get("gacct"), x.get("first"), x.get("cwd"),
+                        x.get("alias"), x.get("backups"), x.get("why"), x.get("gacct"), x.get("first"), x.get("cwd"), x.get("parent"),
                         tuple(x.get("accounts") or ())) for x in res["items"]),
                  json.dumps([res.get("groups"), res.get("account_labels"), res.get("projects")], sort_keys=True, ensure_ascii=False, default=str)))
 
