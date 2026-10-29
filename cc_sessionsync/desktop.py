@@ -21,6 +21,7 @@ import threading
 import time
 import urllib.request
 import webbrowser
+from pathlib import Path
 
 from . import paths
 
@@ -169,6 +170,37 @@ class Api:
 
     def __init__(self, url: str):
         self._url = url
+        self._win = None                    # 下划线开头：pywebview 不会把它暴露给页面
+
+    # 0.4.8：导入用系统的选文件 / 选文件夹对话框，页面只拿到路径（文件内容不经过页面，几百 MB 也不会撑爆 WebView）
+    _IMPORT_TYPES = ("Sessions (*.jsonl;*.zstd;*.md;*.markdown;*.html;*.htm)", "All files (*.*)")
+
+    def _dialog(self, folder: bool, multiple: bool = True):
+        import webview
+        win = self._win or (webview.windows[0] if webview.windows else None)
+        if win is None:
+            return []
+        fd = getattr(webview, "FileDialog", None)
+        kind = (fd.FOLDER if folder else fd.OPEN) if fd else (webview.FOLDER_DIALOG if folder else webview.OPEN_DIALOG)
+        start = paths.HOME / "exports"
+        kw = {"directory": str(start if start.is_dir() else Path.home())}
+        if not folder:
+            kw.update(allow_multiple=multiple, file_types=self._IMPORT_TYPES)
+        try:
+            r = win.create_file_dialog(kind, **kw)
+        except Exception:
+            kw.pop("file_types", None)                  # 老版本 / 个别平台不认过滤器：不要过滤器再试一次
+            r = win.create_file_dialog(kind, **kw)
+        return [str(x) for x in (r if isinstance(r, (list, tuple)) else [r] if r else [])]
+
+    def pick_import_files(self):
+        """→ 选中的文件路径列表（取消 = 空列表）。"""
+        return self._dialog(False, True)
+
+    def pick_import_folder(self):
+        """→ 选中的文件夹路径（取消 = 空字符串）。"""
+        r = self._dialog(True)
+        return r[0] if r else ""
 
     def open_browser(self, path: str = "/"):
         webbrowser.open(self._url.rstrip("/") + (path or "/"))
@@ -370,9 +402,11 @@ def main(argv=None) -> int:
     settings = _st.load()
     app = App(a.port, url, srv)
     start_hidden = os.name == "nt" and (a.minimized or bool(settings.get("start_min")))
-    win = webview.create_window(TITLE, url, js_api=Api(url), width=st.get("width", 1360), height=st.get("height", 880),
+    api = Api(url)
+    win = webview.create_window(TITLE, url, js_api=api, width=st.get("width", 1360), height=st.get("height", 880),
                                 x=st.get("x"), y=st.get("y"), min_size=(720, 480), text_select=True, hidden=start_hidden)
     app.win, app.hidden = win, start_hidden
+    api._win = win
 
     def on_closing():
         _save_state(win)

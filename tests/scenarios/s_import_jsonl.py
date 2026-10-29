@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """0.4.7 导入 .jsonl：「导出原始 jsonl」得到的文件能导回来（自动认出 Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode），
-变成新的 Claude Code 会话；先预览、记账本能撤回、写完自检；认不出的给中文说明；混着 .md 一起导；200 MB 上限；页面 / 接口 / 英文。全在临时目录、假数据。"""
+变成新的 Claude Code 会话；先预览、记账本能撤回、写完自检；认不出的给中文说明；混着 .md 一起导；（0.4.8 起不限大小）；页面 / 接口 / 英文。全在临时目录、假数据。"""
 import base64, json, os, sys, tempfile
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
@@ -104,8 +104,7 @@ ok("没有能读的 JSON" in err(junk), "non-JSON lines → error")
 empty = T / "x" / "noturns.jsonl"; empty.write_text(json.dumps({"type": "session_meta", "payload": {"id": "x"}}) + "\n", encoding="utf-8")
 ok("一条对话消息都没有" in err(empty), "recognised but no messages → error")
 ok("只认" in err(T / "x" / "a.txt") if (T / "x" / "a.txt").write_text("x") else False, "other suffixes refused")
-old = EX.MAX_IMPORT; EX.MAX_IMPORT = 10
-ok("太大" in err(fd), "size limit (200 MB) enforced for .jsonl"); EX.MAX_IMPORT = old
+ok(EX.MAX_IMPORT is None and err(fd) == "", "0.4.8: no 200 MB size limit any more")
 
 # ---------- 混在一起导 ----------
 md = EX.export_many([{"agent": "claude", "id": cl.stem}], "md")["files"][0]

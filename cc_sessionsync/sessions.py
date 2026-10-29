@@ -858,7 +858,16 @@ def export(agent: str, sid: str, fmt: str = "md") -> dict:
     if fmt == "jsonl":
         out = EXPORTS / (f"{agent}-{sid[:16]}-{stamp}.jsonl" + (".zstd" if f.name.endswith(".zstd") else ""))
         shutil.copy2(f, out)
-        return {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size}
+        r = {"ok": True, "path": str(out), "name": out.name, "size": out.stat().st_size, "subs": 0}
+        try:                                                   # 0.4.8：子代理会话等放进旁边的 <文件名>.ccss/ 文件夹
+            from . import bundle
+            m = find(agent, sid) or {}
+            b = bundle.export_sidecar(agent, sid, f, out, m.get("title"), m.get("cwd"))
+            if b:
+                r.update(subs=b["subs"], sidecar=b["dir"], sidecar_files=b["files"])
+        except Exception as e:
+            r["warn"] = f"子会话没导出：{type(e).__name__}: {e}"
+        return r
     from . import exports
     r = exports.export_many([{"agent": agent, "id": sid}], "html" if fmt == "html" else "md")
     if not r["ok"]:
