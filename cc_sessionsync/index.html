@@ -224,7 +224,7 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .us svg.ucv line.hl{stroke:var(--faint);stroke-dasharray:3 3;vector-effect:non-scaling-stroke}
 .us .uheat .ct select{max-width:220px;padding:3px 6px;font-size:calc(12.5px*var(--fk))}
 .us .hm-scroll{overflow-x:auto;overflow-y:hidden;padding:4px 0 2px;scrollbar-width:thin}
-.us .hm{display:block;width:auto;height:auto;margin:0 auto}
+.us .uchart svg.hm{display:block;width:auto;height:auto;max-width:none;margin:0 auto}
 .us .hm text{fill:var(--muted);font-size:calc(11px*var(--fk))}
 .us .hc{fill:var(--hm0);background:var(--hm0);outline:1px solid var(--hm-ln);outline-offset:-1px}
 .us rect.hc{outline:none;stroke:var(--hm-ln);stroke-width:1}
@@ -232,6 +232,7 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .us .hc.l3{fill:var(--hm3);background:var(--hm3)}.us .hc.l4{fill:var(--hm4);background:var(--hm4)}
 .us rect.hc:hover{stroke:var(--text);stroke-width:1.2}
 .us .hm-ft{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:calc(12.5px*var(--fk));color:var(--muted)}
+.us .hm-top{display:flex;justify-content:space-between;gap:14px}.us .hm-top .m{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .us .hm-leg{display:inline-flex;align-items:center;gap:3px}
 .us .hm-leg i{display:inline-block;width:11px;height:11px;border-radius:2.5px}
 .us .hm-leg i:first-child{margin-left:4px}.us .hm-leg i:last-child{margin-right:4px}
@@ -1357,7 +1358,7 @@ function hmDraw(){
   const lv = hmLevels(cells.map(c => hmVal(c.day, m)));
   const sc = box.querySelector(".hm-scroll"), avail = Math.max(300, (sc.clientWidth || 700) - 34);
   const gap = 3, cs = Math.max(10, Math.min(15, Math.floor(avail / weeks) - gap)), st = cs + gap, L = 30, T = 18;
-  const W = L + weeks * st, H = T + 7 * st;
+  const W = L + weeks * st + 22, H = T + 7 * st;   // 右边留一点给最后一个月份名
   const MON = en ? ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"] : Array.from({length: 12}, (_, i) => (i + 1) + "月");
   const WD = en ? ["Mon", "", "Wed", "", "Fri", "", ""] : ["一", "", "三", "", "五", "", ""];
   let months = "", lastW = -9;
@@ -1380,7 +1381,7 @@ function hmDraw(){
     const r = e.target.closest("rect.hc"); if (!r) { tip.style.display = "none"; return; }
     const c = cells[+r.dataset.i], d = c.day;
     tip.innerHTML = `<b translate="no">${esc(dfmt(c.date))}</b>` + (d ? `<div>Tokens ${fmtFull(d.tok)} · 请求 ${fmtFull(d.n)} · 费用 ${d.unpriced === d.n ? "—" : fmtCF(d.cost)}${d.unpriced && d.unpriced < d.n ? "（部分）" : ""}</div>` +
-      (d.top && d.top.length ? `<div class="s">用得最多：${d.top.map(([k, , t]) => `<span class="m" translate="no">${esc(k)}</span> ${fmtN(t)}`).join(" · ")}</div>` : "") : `<div class="s">没有用量</div>`);
+      (d.top && d.top.length ? `<div class="s" style="margin-top:4px">用得最多：</div>` + d.top.map(([k, n, t]) => `<div class="s hm-top"><span class="m" translate="no">${esc(k)}</span><span>${fmtN(t)}</span></div>`).join("") : "") : `<div class="s">没有用量</div>`);
     tip.style.display = "block";
     const bb = box.getBoundingClientRect(), rr = r.getBoundingClientRect();
     let x = rr.left - bb.left + cs / 2 - tip.offsetWidth / 2, y = rr.top - bb.top - tip.offsetHeight - 8;
