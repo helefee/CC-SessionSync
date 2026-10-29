@@ -59,7 +59,7 @@ try {
         "--output-dir=build\nuitka-app" "--output-filename=CCSessionSync.exe" `
         "--windows-console-mode=attach" "--file-description=CC Session Sync" `
         "--include-package=cc_sessionsync" "--include-package-data=cc_sessionsync" "--include-package=zstandard" "--include-package=yaml" `
-        "--nofollow-import-to=unittest,pydoc,test" `
+        "--nofollow-import-to=unittest,pydoc,test" "--report=build\nuitka-report.xml" `
         "tools\nuitka\CCSessionSync.py"
     Check "nuitka"
 } finally { Pop-Location; Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue }
@@ -82,6 +82,15 @@ $lines = Get-ChildItem $out -Recurse -File | Where-Object { $_.Name -ne "files.s
 [IO.File]::WriteAllLines((Join-Path $out "files.sha256"), $lines, (New-Object Text.UTF8Encoding $false))
 $size = (Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum
 Write-Host ("    {0:N1} MB, {1} files, no .py files" -f ($size / 1MB), $lines.Count)
+# size report: biggest files (to see what the installer is made of)
+Get-ChildItem $out -Recurse -File | Sort-Object Length -Descending | Select-Object -First 40 | ForEach-Object {
+    Write-Host ("    {0,10:N0}  {1}" -f $_.Length, $_.FullName.Substring($out.Length + 1)) }
+$rep = Join-Path $build "nuitka-report.xml"
+if (Test-Path $rep) {
+    $mods = ([xml](Get-Content $rep -Raw)).SelectNodes("//module") | ForEach-Object { $_.name } | Sort-Object
+    Write-Host "    compiled modules: $($mods.Count)"
+    [IO.File]::WriteAllLines((Join-Path $build "nuitka-modules.txt"), [string[]]$mods, (New-Object Text.UTF8Encoding $false))
+}
 
 if (-not $NoTest) {
     Step "smoke test (hidden, temp data dirs, port 8799, no Python on PATH)"
