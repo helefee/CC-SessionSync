@@ -71,7 +71,13 @@ def run(timeout: float = 40, out: str | None = None, fail: bool = False) -> int:
     def webview():
         if os.name != "nt":
             return "（不是 Windows，跳过）"
-        import webview                          # noqa: F401  窗口要用的库能加载
+        from . import paths
+        try:
+            import webview                      # noqa: F401  窗口要用的库能加载
+        except ImportError:
+            if paths.FROZEN:                    # 安装版必须带着它；源码版没装 pywebview 时用浏览器界面
+                raise
+            return "（源码版没装 pywebview，跳过）"
         return "pywebview " + str(getattr(webview, "__version__", ""))
     good &= step("webview", webview)
 
