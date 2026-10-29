@@ -490,6 +490,48 @@ td.nw,th.nw{white-space:nowrap}
 <script>
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const TOKEN = "__TOKEN__", VERSION = "__VERSION__";
+// 0.4.3 界面语言：英文界面时按对照表（中文片段 → 英文）换掉界面上的中文。只换「整段都认识」的文字：
+// 换完还剩中文的（多半是你自己的会话内容、标题）原样不动。设置 → 界面语言 可以切换（缺省跟随系统）。
+const I18N = "__I18N__", LANG = "__LANG__";
+const tr = (() => {
+  if (!I18N || !I18N.dict) return s => s;
+  const D = I18N.dict, CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/;
+  const keys = Object.keys(D).filter(k => k).sort((a, b) => b.length - a.length);
+  const RX = new RegExp(keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "g");
+  const cache = new Map();
+  return s => {
+    if (!s || !CJK.test(s)) return s;
+    let r = cache.get(s);
+    if (r !== undefined) return r;
+    const k = s.trim();
+    if (D[k]) r = s.replace(k, D[k]);
+    else { r = s.replace(RX, m => D[m] ?? m).replace(/[ \t]{2,}/g, " "); if (CJK.test(r)) r = s; }
+    if (cache.size > 20000) cache.clear();
+    cache.set(s, r);
+    return r;
+  };
+})();
+if (I18N && I18N.dict) {
+  document.documentElement.lang = "en";
+  const SKIP = "script,style,textarea,code,pre.raw,[translate=no],[contenteditable]";
+  const ATTRS = ["title", "placeholder", "aria-label", "data-tip"];
+  const node = n => {
+    if (n.nodeType === 3) { const p = n.parentElement; if (p && !p.closest(SKIP)) { const v = tr(n.nodeValue); if (v !== n.nodeValue) n.nodeValue = v; } return; }
+    if (n.nodeType !== 1 || n.closest(SKIP)) return;
+    for (const a of ATTRS) { const v = n.getAttribute(a); if (v) { const w = tr(v); if (w !== v) n.setAttribute(a, w); } }
+    if ((n.tagName === "INPUT" && /^(button|submit)$/i.test(n.type)) && n.value) n.value = tr(n.value);
+    const w = document.createTreeWalker(n, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let c = w.nextNode(); c; c = w.nextNode()) {
+      if (c.nodeType === 1) { if (c.closest(SKIP)) continue; for (const a of ATTRS) { const v = c.getAttribute(a); if (v) { const x = tr(v); if (x !== v) c.setAttribute(a, x); } } }
+      else node(c);
+    }
+  };
+  const run = () => node(document.body);
+  new MutationObserver(ms => { for (const m of ms) { if (m.type === "characterData") node(m.target); else if (m.type === "attributes") node(m.target); else m.addedNodes.forEach(node); } })
+    .observe(document.documentElement, {subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS});
+  document.addEventListener("DOMContentLoaded", run); run();
+  for (const f of ["alert", "confirm", "prompt"]) { const o = window[f].bind(window); window[f] = (m, ...a) => o(tr(String(m ?? "")), ...a); }
+}
 // ---------- SVG 图标（Lucide，ISC 许可；Claude / Codex 用官方 logo；从 CC Msg 搬来）----------
 const ICON = {
   gitpr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
@@ -2661,6 +2703,7 @@ R.settings = async () => {
   const win = s.tray_supported, dis = win ? "" : "disabled";
   pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。</p>
     <div class="card"><h3>外观与窗口</h3><div class="setlist">
+      ${setRow("globe", "界面语言 · Language", `缺省跟随系统（现在系统是${s.lang_system === "en" ? "英文" : "中文"}）。切换后界面马上重新载入；你的会话内容不会被翻译`, `<span class="seg" id="stLang" translate="no">${[["auto", s.lang_now === "en" ? "System" : "跟随系统"], ["zh", "中文"], ["en", "English"]].map(([v, t]) => `<button data-v="${v}" class="${(s.lang || "auto") === v ? "on" : ""}">${t}</button>`).join("")}</span>`)}
       ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
       ${setRow("type", "字号", "整个界面的文字大小（缺省「标准」）", `<span class="seg" id="stFont">${FKS.map(([v, t]) => `<button data-v="${v}" class="${Math.abs(+v - fontK()) < 0.005 ? "on" : ""}">${t}</button>`).join("")}</span>`)}
       ${setRow("zoom", "界面缩放", "整体放大 / 缩小（80%–200%）。快捷键 <kbd>Ctrl</kbd>+<kbd>=</kbd> 放大、<kbd>Ctrl</kbd>+<kbd>-</kbd> 缩小、<kbd>Ctrl</kbd>+<kbd>0</kbd> 还原，也可以按住 Ctrl 滚滚轮。会记住；Windows 的显示缩放（125% / 150%）另外照常生效",
@@ -2689,6 +2732,7 @@ R.settings = async () => {
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
   $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
+  $$("#stLang button").forEach(b => b.onclick = async () => { await saveSetting({lang: b.dataset.v}); location.reload(); });
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");

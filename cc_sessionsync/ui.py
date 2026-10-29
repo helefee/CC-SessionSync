@@ -105,6 +105,12 @@ def settings_view() -> dict:
         s["autostart"] = False
     s["autostart_supported"] = os.name == "nt"
     s["tray_supported"] = os.name == "nt"
+    try:
+        from . import i18n
+        s["lang_system"] = i18n.system_lang()
+        s["lang_now"] = i18n.lang()
+    except Exception:
+        pass
     return s
 
 
@@ -343,7 +349,9 @@ class H(BaseHTTPRequestHandler):
         p = u.path
         try:
             if p in ("/", "/index.html"):
-                b = PAGE.read_text(encoding="utf-8").replace("__TOKEN__", TOKEN).replace("__VERSION__", __version__).encode()
+                from . import i18n
+                b = (PAGE.read_text(encoding="utf-8").replace("__TOKEN__", TOKEN).replace("__VERSION__", __version__)
+                     .replace('"__I18N__"', i18n.page_payload()).replace("__LANG__", i18n.lang())).encode()
                 self.send_response(200)
                 self.send_header("content-type", "text/html; charset=utf-8")
                 self.send_header("cache-control", "no-store")
@@ -666,6 +674,10 @@ class H(BaseHTTPRequestHandler):
                         ch[k] = round(min(hi, max(lo, float(b[k]))), 3)
                     except (TypeError, ValueError):
                         raise ValueError(f"{k} 应该是数字")
+            if "lang" in b:                                                       # 界面语言（0.4.3）
+                if b["lang"] not in ("auto", "zh", "en"):
+                    raise ValueError("界面语言只能是 auto / zh / en")
+                ch["lang"] = b["lang"]
             _check_backup_settings(ch)
             if ch:
                 settings.update(**ch)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """0.4.3：把界面里的中文片段抽出来（index.html 的文字 / 模板字符串里不变的部分，加上后端会显示在界面上的提示），
-和 cc_sessionsync/i18n/en.json 对一下：新的片段加进去（值为空 = 还没翻），已经没用的列出来。
+和 cc_sessionsync/i18n/en.json 对一下：新的片段加进去（值为 null = 还没翻；"" = 英文里不要这个词，比如量词「个」），已经没用的列出来。
 python tools/i18n_extract.py [--check]   --check：有没翻的就退出码 1（CI 用）"""
 import json, re, sys
 from pathlib import Path
@@ -58,12 +58,12 @@ def main() -> int:
     cur = json.loads(EN.read_text(encoding="utf-8")) if EN.exists() else {}
     new = sorted(fr - set(cur))
     gone = sorted(set(cur) - fr)
-    todo = [k for k, v in cur.items() if not v and k in fr]
+    todo = [k for k, v in cur.items() if v is None and k in fr]
     if "--check" in sys.argv:
         print(f"{len(fr)} fragments, {len(new)} not in en.json, {len(todo)} empty, {len(gone)} unused")
         return 1 if new or todo else 0
     for k in new:
-        cur[k] = ""
+        cur[k] = None
     EN.parent.mkdir(parents=True, exist_ok=True)
     EN.write_text(json.dumps(dict(sorted(cur.items())), ensure_ascii=False, indent=0) + "\n", encoding="utf-8")
     print(f"{len(fr)} fragments; added {len(new)}; empty {len(todo) + len(new)}; unused {len(gone)}")
