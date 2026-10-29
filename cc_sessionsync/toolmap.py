@@ -13,9 +13,10 @@
                edit{file_path, old_string, new_string, replace_all} grep{pattern, path, include} glob{pattern, path}
                web_fetch{url} web_search{queries[]}
   Codex：      exec_command{cmd, workdir}（老版本是 shell{command[]}）——别的工具 Codex 没有对应的
-  OpenCode：   2.x shell{command, description, workdir}；1.x bash{command, description}；两版都有
-               read{filePath, offset, limit} write{filePath, content} edit{filePath, oldString, newString, replaceAll}
-               grep{pattern, path, include} glob{pattern, path} webfetch{url, format}
+  OpenCode 2.x：shell{command, workdir} read{path, offset, limit} write{path, content} edit{path, oldString, newString, replaceAll}
+               grep{pattern, path, include} glob{pattern, path} webfetch{url, format} websearch{query}
+  OpenCode 1.x：bash{command, workdir} read{filePath, offset, limit} write{filePath, content}
+               edit{filePath, oldString, newString, replaceAll} grep{pattern, path, include} glob{pattern, path} webfetch{url, format}
 """
 from __future__ import annotations
 
@@ -205,21 +206,24 @@ def emit(target: str, kind: str, a: dict, opencode_major: int = 2) -> tuple[str,
         if kind == "shell":
             return "exec_command", _put({"cmd": a["command"]}, workdir=a.get("workdir"))
     elif target == "opencode":
+        v2 = opencode_major >= 2
+        fp = "path" if v2 else "filePath"
         if kind == "shell":
-            return ("shell" if opencode_major >= 2 else "bash"), _put({"command": a["command"], "description": a.get("description") or
-                                                                      " ".join(a["command"].split())[:60]}, workdir=a.get("workdir") if opencode_major >= 2 else None)
+            return ("shell" if v2 else "bash"), _put({"command": a["command"]}, workdir=a.get("workdir"))
         if kind == "read":
-            return "read", _put({"filePath": a["path"]}, offset=a.get("offset"), limit=a.get("limit"))
+            return "read", _put({fp: a["path"]}, offset=a.get("offset"), limit=a.get("limit"))
         if kind == "write":
-            return "write", {"filePath": a["path"], "content": a["content"]}
+            return "write", {fp: a["path"], "content": a["content"]}
         if kind == "edit":
-            return "edit", _put({"filePath": a["path"], "oldString": a["old"], "newString": a["new"]}, replaceAll=a.get("all"))
+            return "edit", _put({fp: a["path"], "oldString": a["old"], "newString": a["new"]}, replaceAll=a.get("all"))
         if kind == "grep":
             return "grep", _put({"pattern": a["pattern"]}, path=a.get("path"), include=a.get("include"))
         if kind == "glob":
             return "glob", _put({"pattern": a["pattern"]}, path=a.get("path"))
         if kind == "fetch":
             return "webfetch", {"url": a["url"], "format": "text"}
+        if kind == "search" and v2:
+            return "websearch", {"query": a["query"]}
     return None
 
 
