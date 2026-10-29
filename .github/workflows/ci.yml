@@ -65,7 +65,8 @@ jobs:
           DSH_BIN: dsh
         run: python tools/verify_convert.py "" 8794
       - name: install Codex CLI (Apache-2.0)
-        run: npm install -g @openai/codex
+        # 0.166.0 起 resume 会拒绝「记录里的 provider 和当前配置不同」的会话（mock ≠ openai）；先钉在 0.165.0，导入时写当前 provider 另外跟进
+        run: npm install -g @openai/codex@0.165.0
       - name: verify any → Codex (codex exec resume against a local Responses-API mock)
         run: python tools/verify_codex.py "" 8792
       - name: install OpenCode CLI 2.x (MIT) and 1.x (separate prefix)

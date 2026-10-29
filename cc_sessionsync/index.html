@@ -1746,7 +1746,7 @@ R.sync = async () => {
           <td class="ell" title="${esc(r.cwd)}">${esc(projName(r.cwd))}</td><td class="n">${when(r.last)}</td>
           <td>${r.k === "add" ? '<span class="tag ok">补进来</span>' : '<span class="tag warn">刷新</span>'}${r.archived ? ' <span class="tag">已归档</span>' : ""}</td></tr>`).join("")}</table></div>`
         : '<div class="okbox">都齐了：当前账号已经能看到所有会话。</div>'}
-      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:calc(13px*var(--fk))">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${pl.children ? ` · ${pl.children} 个子会话会跟着父会话一起补` : ""}${pl.rel_warns ? ` · <span style="color:var(--warn)">${pl.rel_warns} 个子会话的父会话带不过来（会显示为独立会话）</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
+      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:calc(13px*var(--fk))">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${pl.children ? ` · ${pl.children} 个子会话会跟着父会话一起补` : ""}${pl.skip_gone ? ` · ${pl.skip_gone} 个在别的号里删过，不会带回来` : ""}${pl.rel_warns ? ` · <span style="color:var(--warn)">${pl.rel_warns} 个子会话的父会话带不过来（会显示为独立会话）</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
         <button class="primary" id="syGo" ${SY.sel.size ? "" : "disabled"}>${ic("sync")} 同步选中的 ${SY.sel.size} 个</button></div></div>
     <div class="card"><h3>各账号的会话文件夹</h3><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
       ${(pl.folders || st.folders || []).map(f => `<tr><td>${f.profile === "3p" ? '<span class="tag acc">API 模式（所有供应商共用）</span> ' : ""}<code>${esc(f.key)}</code></td><td class="n">${f.count}</td><td>${when(f.latest)}</td>
@@ -1769,9 +1769,21 @@ async function syncSelected(all){
   try {
     const only = all ? null : [...SY.sel];
     const r = await api("/api/sync", {source: SY.source, only});
-    if (r.note) toast(r.note); else doneOrQueued(r, `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个${(r.auto_parents || []).length ? `（含自动带上的 ${r.auto_parents.length} 个父会话）` : ""}${r.tasks && r.tasks.merged ? `，合并了 ${r.tasks.merged} 条任务记录` : ""}（备份 ${r.backup || ""}）`);
+    if (r.note) toast(r.note); else if (doneOrQueued(r, r.verify && !r.verify.ok ? null : `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个${(r.auto_parents || []).length ? `（含自动带上的 ${r.auto_parents.length} 个父会话）` : ""}${r.tasks && r.tasks.merged ? `，合并了 ${r.tasks.merged} 条任务记录` : ""}。核对：${r.verify ? r.verify.summary : "—"}`) && r.verify && !r.verify.ok) syVerifyDlg(r.verify, "同步完了，但核对时有对不上的");
     SY.touched = false; R.sync();
   } catch(e){ toast("❌ " + e.message, 5000); }
+}
+// 0.5.0：同步 / 撤回之后核对一遍（逐个文件对指纹），有对不上的列出来
+function syVerifyDlg(v, head){
+  const rows = (v.diffs || []).map(d => `<tr><td class="ell" style="max-width:320px">${esc(d.title || d.name)}</td><td><span class="tag warn">${esc(d.why)}</span></td></tr>`).join("");
+  openDlg(v.ok ? "✅ 核对" : "⚠ 核对", `<div style="margin-bottom:8px">${esc(head || "")}</div><div class="${v.ok ? "okbox" : "miss"}">${esc(v.summary || v.error || "")}</div>
+    ${rows ? `<div class="scroll" style="max-height:300px;margin-top:8px"><table class="t"><tr><th>会话 / 文件</th><th>哪里不一样</th></tr>${rows}</table></div>` : ""}
+    ${(v.touched || []).length ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">${v.touched.length} 个同步后在 Claude 里又点开 / 接着聊过，Claude 改了登记，这是正常的。</div>` : ""}
+    ${!v.ok ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">Claude 桌面端开着的话，它可能还拿着旧的列表；退出桌面端再打开，然后在「时间线与备份 → 撤销记录」里再点一次「核对」。</div>` : ""}`);
+}
+async function syVerify(id){
+  try { const v = await api("/api/sync/verify?backup=" + encodeURIComponent(id)); syVerifyDlg(v, v.state === "undone" ? "这次同步已经撤回，核对撤回得干不干净：" : v.state === "synced" ? "核对这次同步写的文件现在还在不在、是不是原样：" : ""); }
+  catch(e){ toast("❌ " + e.message, 5000); }
 }
 async function saveSetting(ch){
   try { const s = await api("/api/settings", ch); toast("✅ 已保存"); return s; } catch(e){ toast("❌ " + e.message); }
@@ -3238,7 +3250,7 @@ async function bkRender(pg, tab){
       ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
         <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}</div>
     <div class="grid2"><div class="card"><h3>${ic("users")}Claude 账号同步备份</h3>
-      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td>${b.ledger && b.ledger.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。</div>'}</div>
+      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td class="nw">${b.what === "restore" ? '<span class="tag">撤回前的备份</span>' : b.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}${b.verifiable ? ` <button class="ghost" data-bkv="${esc(b.id)}" title="逐个文件核对：同步的还在不在 / 撤回干不干净">核对</button>` : ""}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。</div>'}</div>
       <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
       ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}</div></div>
     <div class="card"><h3>${ic("dsh", "logo dshc")}DeepSeek Harness 导入账本</h3>
@@ -3304,8 +3316,12 @@ async function bkRender(pg, tab){
   });
   $$("[data-op]").forEach(b => b.onclick = () => confirmDlg("撤回", "按账本把这次操作撤回去（改过的文件换回备份；新建的挪进回收站，不直接删）。", "撤回", async () => {
     const r = await api("/api/sessions/undo", {op: b.dataset.op}); closeDlg(); doneOrQueued(r, "已撤回"); R.timeline(); }));
-  $$("[data-bk]").forEach(b => b.onclick = () => confirmDlg("撤回同步", `撤回 <code>${esc(b.dataset.bk)}</code>：删掉那次补进来的登记、换回刷新前的版本（会话记录本身不动）。`, "撤回", async () => {
-    const r = await api("/api/restore", {backup: b.dataset.bk}); closeDlg(); doneOrQueued(r, "已撤回"); R.timeline(); }));
+  $$("[data-bk]").forEach(b => b.onclick = () => confirmDlg("撤回同步", `撤回 <code>${esc(b.dataset.bk)}</code>：那次补进来的登记挪进回收站、刷新过的换回同步前的原样（按文件指纹核对）；会话记录本身不动。撤完会再核对一遍。`, "撤回", async () => {
+    const r = await api("/api/restore", {backup: b.dataset.bk}); closeDlg();
+    const v = r.verify;
+    if (doneOrQueued(r, r.already ? r.note : v && !v.ok ? null : `已撤回：挪走 ${r.removed || 0} 个、换回 ${r.restored || 0} 个。核对：${v ? v.summary : "—"}`) && v && !v.ok) syVerifyDlg(v, "撤回做完了，但核对时有对不上的");
+    R.timeline(); }));
+  $$("[data-bkv]").forEach(b => b.onclick = () => syVerify(b.dataset.bkv));
   $$("[data-led]").forEach(b => b.onclick = () => confirmDlg("撤回导入", `撤回 Codex 导入 <code>${esc(b.dataset.led)}</code>：新建的会话挪进回收站，更新过的换回原来的版本；导过来之后在 Claude 里接着聊过的不动。`, "撤回", async () => {
     const r = await api("/api/codex/undo", {ledger: b.dataset.led}); closeDlg(); doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}）`); R.timeline(); }));
 };
