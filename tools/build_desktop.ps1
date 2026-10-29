@@ -106,6 +106,8 @@ if (-not $NoTest) {
         Native $exe status | Out-Null; Check "status"
         Native $exe codex list --days 0 | Out-Null; Check "codex list"
         Native $exe sessions list | Out-Null; Check "sessions list"
+        $hc = Native $exe health --timeout 60; if ($LASTEXITCODE) { throw "health: $hc" }
+        Write-Host "    health: $(("$hc" | ConvertFrom-Json).checks | ForEach-Object { $_.id + '=' + $_.ok })"
         $sc = Native $exe selfcheck --offline --json
         $scj = ($sc -join "`n") | ConvertFrom-Json
         $inst = $scj.items | Where-Object { $_.id -eq "install" }

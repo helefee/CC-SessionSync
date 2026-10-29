@@ -28,6 +28,28 @@ $sc = (Run @("selfcheck", "--offline", "--json")) | ConvertFrom-Json
 $inst = $sc.items | Where-Object { $_.id -eq "install" }
 Write-Host "installed selfcheck install: $($inst.status) $($inst.detail)"
 if ($inst.status -ne "pass") { throw "installed integrity check failed" }
+# 0.4.2 rollback: install the same setup again over it with a simulated failing health check -> the previous files come back
+$before = (Get-FileHash $exe -Algorithm SHA256).Hash
+$rbf = Join-Path $env:CC_SESSIONSYNC_HOME "update-rollback.json"
+Remove-Item $rbf -ErrorAction SilentlyContinue
+$p = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=`"$dir`"", "/FAILHEALTH=1" -Wait -PassThru
+if ($p.ExitCode) { throw "setup (FAILHEALTH) exit $($p.ExitCode)" }
+if (-not (Test-Path $exe)) { throw "rollback: exe missing after a failed health check" }
+if (Test-Path "$dir.prev") { throw "rollback: $dir.prev left behind" }
+if (-not (Test-Path $rbf)) { throw "rollback: no update-rollback.json" }
+$rb = Get-Content $rbf -Raw -Encoding utf8 | ConvertFrom-Json
+if ($rb.to -ne $ver -or -not $rb.from) { throw "rollback note: $(Get-Content $rbf -Raw)" }
+if ((Get-FileHash $exe -Algorithm SHA256).Hash -ne $before) { throw "rollback: exe differs from the previous one" }
+$v = Run @("--version"); if ("$v" -notmatch [regex]::Escape($ver)) { throw "after rollback --version: [$v]" }
+$inst = ((Run @("selfcheck", "--offline", "--json")) | ConvertFrom-Json).items | Where-Object { $_.id -eq "install" }
+if ($inst.status -ne "pass") { throw "after rollback integrity: $($inst.detail)" }
+Write-Host "rollback after a failed health check OK: $(Get-Content $rbf -Raw)"
+# normal upgrade (health passes): no .prev left, no new note
+Remove-Item $rbf
+$p = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/DIR=`"$dir`"" -Wait -PassThru
+if ($p.ExitCode) { throw "setup (upgrade) exit $($p.ExitCode)" }
+if ((Test-Path "$dir.prev") -or (Test-Path $rbf)) { throw "upgrade with passing health check left .prev or a rollback note" }
+Write-Host "upgrade with passing health check OK"
 $p = Start-Process (Join-Path $dir "unins000.exe") -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
 Start-Sleep 3
 if (Test-Path $exe) { throw "uninstall left the exe" }

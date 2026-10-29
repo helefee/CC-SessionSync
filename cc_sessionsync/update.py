@@ -126,6 +126,12 @@ def last_rollback() -> dict | None:
     if not d or not d.get("to"):
         return None
     t = d.get("time")
+    if not isinstance(t, (int, float)) and d.get("when"):      # 安装程序写的是本地时间 yyyy-mm-ddThh:nn:ss
+        try:
+            from datetime import datetime
+            t = datetime.fromisoformat(str(d["when"])).timestamp()
+        except ValueError:
+            t = None
     if isinstance(t, (int, float)) and time.time() - t > 30 * 86400:
         return None
     return {"from": str(d.get("from") or ""), "to": str(d.get("to")), "time": t, "reason": str(d.get("reason") or "")[:300]}
