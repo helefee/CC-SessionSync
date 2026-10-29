@@ -66,11 +66,25 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.4
 
+- **Big files, batches, folders; child sessions come along (0.4.8):** no more 200 MB limit. The desktop app uses the native *open files / open folder*
+  dialogs, so only paths reach the page (0.4.7 read whole files into the page, and a dozen 100+ MB files crashed the window); in a browser files are
+  uploaded in raw 8 MB chunks. *Import folder…* lists the importable files (size, app, title, type, child sessions; message counts fill in lazily),
+  select all / none, then imports one file at a time in the background with progress (“3/17”) and Cancel; one failure does not stop the others;
+  the whole batch is one undo entry. Claude Code → Claude Code is a streamed line-by-line copy: 17 fake sessions totalling 989 MB imported in 13 s
+  with ~90 MB peak memory. CLI: `cc-sessionsync import <files or folder> [--apply]`.
+  *Export raw jsonl* now also bundles the session's subagent transcripts (`<sid>/subagents/agent-*.jsonl`, meta, tool-results) in a sidecar folder
+  `<export>.ccss/` with a `manifest.json` (type main / subagent, parent id, agentId, title, cwd); .md / .html exports embed them too. Importing writes
+  them under the new session's `subagents/` with the new sessionId and the same agentIds, so Claude Code still shows the hierarchy; in batch / folder
+  imports subagent files are grouped under their main session instead of becoming standalone sessions. Codex subagent threads are bundled and come back
+  as Claude Code subagent transcripts. Titles are kept as-is (no more “(imported)”).
+  **Account sync keeps relationships:** desktop entries with `spawnedFrom` (side sessions / task-spawned sessions) bring their parent along, also when you
+  pick only the child; if the parent can't come (missing, or deleted in the target account) the child is still synced with a “will show as a standalone
+  session” warning; task records referenced by `taskId` (`tasks.json` / `scheduled-tasks.json`) are merged by id, backed up and undone with the rest.
 - **Import raw .jsonl (0.4.7):** files from *Export raw jsonl* (`.jsonl`, or `.jsonl.zstd` for compressed DeepSeek Harness sessions) can now be
   imported back with *Import .md / .html / .jsonl*. The app recognises the source automatically: Claude Code sessions come back as-is (only a new
   session id and title); Codex conversations, DeepSeek Harness sessions and Cursor / OpenCode / ZCode mirrors go through the same converters as
   *Session conversion* into a new Claude Code session. Same flow as .md / .html: preview first, undoable from the operation log, a native-format
-  self-check after writing; mix .jsonl with .md / .html in one batch; 200 MB per file; an unrecognised .jsonl gets a clear message about what is supported.
+  self-check after writing; mix .jsonl with .md / .html in one batch; an unrecognised .jsonl gets a clear message about what is supported.
 
 - **Faster Usage page (0.4.6):** the matrix view reads a small per-day rollup table (kept up to date incrementally, rebuilt after price changes)
   instead of re-scanning a year of raw request logs, and results are cached per filter until the data changes; the payload is compact per-day arrays.

@@ -179,7 +179,7 @@ def to_html(agent: str, raw: bytes, meta: dict) -> str:
             + "".join(body) +
             f'<footer>CC Session Sync {__version__} 导出 · 文件里带着原始记录，能用 CC Session Sync 原样导回去</footer></main>'
             f'<script type="application/json" id="ccss-raw">{raw_json}</script>'
-            + "".join(f'<script type="application/json" class="ccss-sub">{json.dumps(dict(h, data=b), ensure_ascii=False).replace("</", "<\\/")}</script>' for h, b in _kids_payload(meta))
+            + "".join('<script type="application/json" class="ccss-sub">' + json.dumps(dict(h, data=b), ensure_ascii=False).replace("</", "<\\/") + '</script>' for h, b in _kids_payload(meta))
             + '</body></html>')
 
 
