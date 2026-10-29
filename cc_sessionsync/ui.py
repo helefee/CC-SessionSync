@@ -520,6 +520,9 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/sessions/item":
                 return sessions.item(q["agent"], q["id"])
             if p == "/api/sessions/read":
+                if q.get("rich") or q.get("sub"):                 # 0.4.9：对话样式
+                    from . import chatview
+                    return chatview.read(q["agent"], q["id"], int(q.get("limit") or 300), q.get("sub") or None)
                 return sessions.read(q["agent"], q["id"], int(q.get("limit") or 400))
             if p == "/api/sessions/snapshots":
                 return {"items": sessions.snapshots(q.get("agent") or None, q.get("id") or None)}

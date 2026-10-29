@@ -66,6 +66,13 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.4
 
+- **Parent / child sessions and a chat-style transcript (0.4.9):** the session list nests side sessions and task-spawned sessions
+  (`spawnedFrom` in the Claude desktop registry) and Codex child threads under their parent, with a thin guide line, a child count and a
+  collapse caret (remembered), in both the sidebar groups and the list. A child whose parent is missing or filtered out stays at the top level
+  with a *Child session* tag; a search hit on a child also shows its parent, dimmed. Counts, selection, batch actions and rename are unchanged.
+  The detail pane now looks like CC Msg / the Claude desktop app: your messages as bubbles, replies rendered as Markdown (highlighted code,
+  lists, tables), tool calls as compact one-line rows grouped (“Ran 2 commands, Read 1 file…”) and expandable to the full input and result,
+  thinking collapsed, subagent calls open their own transcript, hover copy buttons; big sessions show the latest 300 entries with *Load earlier*.
 - **Big files, batches, folders; child sessions come along (0.4.8):** no more 200 MB limit. The desktop app uses the native *open files / open folder*
   dialogs, so only paths reach the page (0.4.7 read whole files into the page, and a dozen 100+ MB files crashed the window); in a browser files are
   uploaded in raw 8 MB chunks. *Import folder…* lists the importable files (size, app, title, type, child sessions; message counts fill in lazily),
