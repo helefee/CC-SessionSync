@@ -472,7 +472,7 @@ td.nw,th.nw{white-space:nowrap}
     <aside class="side" id="side">
       <div class="sh">
         <div class="sht" id="sdHead" title="回到会话"><i data-ic="list"></i><b>会话</b><em id="nvSess"></em><span class="sp"></span>
-          <button class="ghost sm" id="sdImp" title="导入 .md / .html，变成新的 Claude Code 会话"><i data-ic="upload"></i></button>
+          <button class="ghost sm" id="sdImp" title="导入 .md / .html / .jsonl，变成新的 Claude Code 会话"><i data-ic="upload"></i></button>
           <button class="ghost sm" id="sdRef" title="刷新"><i data-ic="refresh"></i></button></div>
         <label class="gsearch" title="搜标题 / 第一句 / 目录 / id；Ctrl+Enter 在内容里搜"><i data-ic="search"></i><input type="search" id="gQ" placeholder="搜会话（Ctrl+K）"><button class="ghost sm" id="sdFt" title="在全部会话内容里搜（Ctrl+Enter）"><i data-ic="text"></i></button></label>
         <div class="sfl"><select id="sdAg" title="应用"><option value="">全部应用</option><option value="claude">Claude</option><option value="codex">Codex</option><option value="dsh">DeepSeek</option><option value="cursor">Cursor</option><option value="opencode">OpenCode</option><option value="zcode">ZCode</option></select>
@@ -2269,7 +2269,7 @@ R.sessions = async (keep) => {
   const live = new Set(SS.d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
   pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
       <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
-      <button id="ssImp" title="把导出的 .md / .html 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html</button>
+      <button id="ssImp" title="把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html / .jsonl</button>
       <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
     ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
     <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
@@ -2406,14 +2406,14 @@ async function ssExport(items, fmt, label){
   }
   if (!out.length) return toast("❌ " + (errs[0] || "没导出来"), 5000);
   openDlg("✅ 已导出", `<div>导出了 ${out.length} 个${dir ? `，在 <code>${esc(dir)}</code>` : ""}：</div><div class="dgls">${out.slice(0, 30).map(p => `<div>${esc(p)}</div>`).join("")}${out.length > 30 ? `<div>…还有 ${out.length - 30} 个</div>` : ""}</div>
-    ${fmt !== "jsonl" ? '<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">文件里带着完整的原始记录：用「导入 .md / .html」能一模一样地导回来。</div>' : ""}
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">${fmt !== "jsonl" ? "文件里带着完整的原始记录：用「导入 .md / .html / .jsonl」能一模一样地导回来。" : "原始 jsonl 也能用「导入 .md / .html / .jsonl」导回来，变成新的 Claude Code 会话。"}</div>
     ${errs.length ? `<div class="miss">${errs.length} 个没导出来：${esc(errs[0])}</div>` : ""}`,
     `<button onclick="closeDlg()">关闭</button><button class="primary" id="exRev">${ic("folder")} 打开文件夹</button>`);
   $("#exRev").onclick = () => api("/api/reveal", {path: dir || out[0]}).catch(e => toast("❌ " + e.message));
 }
 function exDlg(items, label){
   openDlg("导出", `导出 ${items.length} 个会话到 <code>${esc((SY.st || {}).home || "~/.cc-sessionsync")}/exports</code>${items.length > 1 ? "（放进一个文件夹）" : ""}
-    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:8px">Markdown / HTML：好读（角色、时间、代码块；HTML 里工具调用折叠、自带浅色 / 深色样式，单个文件就能打开），并且内嵌完整原始记录，可以无损导回来。原始 jsonl：原样复制。</div>`,
+    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:8px">Markdown / HTML：好读（角色、时间、代码块；HTML 里工具调用折叠、自带浅色 / 深色样式，单个文件就能打开），并且内嵌完整原始记录，可以无损导回来。原始 jsonl：原样复制，也能导回来。</div>`,
     `<button onclick="closeDlg()">取消</button><button id="ex1">原始 jsonl</button><button id="ex3">HTML</button><button class="primary" id="ex2">Markdown</button>`);
   $("#ex1").onclick = () => ssExport(items, "jsonl", label); $("#ex2").onclick = () => ssExport(items, "md", label); $("#ex3").onclick = () => ssExport(items, "html", label);
 }
@@ -2649,6 +2649,7 @@ function madeDlg(title, r){
     : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
   openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）：</div>` : ""}
     ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
+      ${m.check ? `<div class="dim" style="font-size:calc(13px*var(--fk))" title="${esc((m.check.issues || []).join("\n"))}">${m.check.ok ? '<span class="tag ok">自检通过</span> 按 Claude Code 的会话规矩读了一遍' : `<span class="tag warn">自检提示 ${(m.check.issues || []).length} 条</span> ${esc((m.check.issues || [])[0] || "")}`}</div>` : ""}
       <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}
     <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:6px">${dnote}</div>
     ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
@@ -2760,19 +2761,23 @@ function tlBatch(){
   const rp = $("#tlRep"); if (rp) rp.onclick = () => tlReplaceDlg([...TL.sel], "claude-or-codex");
 }
 
-// ---------- 导入 .md / .html ----------
+// ---------- 导入 .md / .html / .jsonl ----------
 const IM = {files: [], plan: null};
 async function imDlg(){
   IM.files = []; IM.plan = null;
   if (!SY.st) { try { SY.st = await api("/api/status"); } catch(e){} }
   const projs = (SS.d && SS.d.projects) || [];
-  openDlg("导入 .md / .html", `<div class="dim" style="font-size:calc(13.5px*var(--fk))">把导出的 .md / .html 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。</div>
-    <input type="file" id="imF" accept=".md,.markdown,.html,.htm" multiple style="margin-top:10px;width:100%">
+  openDlg("导入 .md / .html / .jsonl", `<div class="dim" style="font-size:calc(13.5px*var(--fk))">把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；「导出原始 jsonl」得到的文件会自动认出是 Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 的记录；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。</div>
+    <input type="file" id="imF" accept=".md,.markdown,.html,.htm,.jsonl,.zstd" multiple style="margin-top:10px;width:100%">
     <div class="setrow"><div class="sl"><div><b>放进哪个项目</b><div class="sd">留空 = 用文件里记的工作目录（没有就放家目录）</div></div></div><input id="imCwd" list="imProj" placeholder="（用文件里记的）" style="width:300px"><datalist id="imProj">${projs.map(p => `<option value="${esc(p)}">`).join("")}</datalist></div>
     <div class="setrow" style="border:0"><div class="sl"><div><b>登记进 Claude 桌面端</b><div class="sd">登记进当前账号 ${acm((SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).rid, (SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).email_masked || "")} 的会话列表；桌面端开着会排队</div></div></div>${sw("imDesk", true)}</div>
     <div id="imPv"></div>`, `<button onclick="closeDlg()">取消</button><button id="imDry" disabled>预览</button><button class="primary" id="imGo" disabled>导入</button>`);
   $("#imF").onchange = async e => {
-    IM.files = await Promise.all([...e.target.files].map(f => f.text().then(text => ({name: f.name, text}))));
+    const big = [...e.target.files].filter(f => f.size > 200 * 1024 * 1024);
+    if (big.length) toast("❌ 文件太大（超过 200 MB）：" + big.map(f => f.name).join("、"), 6000);
+    IM.files = await Promise.all([...e.target.files].filter(f => f.size <= 200 * 1024 * 1024).map(f => /\.zstd$/i.test(f.name)
+      ? f.arrayBuffer().then(b => ({name: f.name, b64: b64Bytes(new Uint8Array(b))}))           // dsh 的压缩会话是二进制
+      : f.text().then(text => ({name: f.name, text}))));
     IM.plan = null; $("#imGo").disabled = true; $("#imDry").disabled = !IM.files.length; if (IM.files.length) imDry();
   };
   $("#imDry").onclick = imDry;
@@ -2783,13 +2788,15 @@ async function imDlg(){
     catch(e){ toast("❌ " + e.message, 6000); $("#imGo").disabled = false; }
   };
 }
+function b64Bytes(u){ let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
+const IM_APP = {claude: "Claude Code", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor", opencode: "OpenCode", zcode: "ZCode"};
 async function imDry(){
   const box = $("#imPv"); box.innerHTML = '<div class="empty">读取…</div>';
   try { IM.plan = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), dry: true}); }
   catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
   const rows = IM.plan.rows || [];
-  box.innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop())}：${esc(r.error)}</div>`
-    : `<div class="mk"><div class="tl">${esc(r.title)} ${r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>'} ${r.agent === "codex" ? '<span class="tag codex">原来是 Codex</span>' : ""}</div>
+  box.innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop().replace(/^\d\d-/, ""))}：${esc(r.error)}</div>`
+    : `<div class="mk"><div class="tl">${esc(r.title)} ${r.format === "jsonl" ? `<span class="tag ok">原始 jsonl · ${esc(IM_APP[r.agent] || r.agent)}</span>` : r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>'} ${r.agent !== "claude" && r.format !== "jsonl" ? `<span class="tag codex">原来是 ${esc(IM_APP[r.agent] || r.agent)}</span>` : ""}</div>
       <div class="dim" style="font-size:calc(13px*var(--fk))">${r.messages} 条消息 · ${kb(r.size)} · 放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div>
       <div class="pv" style="max-height:160px;margin-top:6px">${chatHtml((r.preview || []).slice(0, 6), r.agent)}</div></div>`).join("")}`;
   $("#imGo").disabled = !rows.some(r => !r.error);
@@ -2847,9 +2854,9 @@ async function bkRender(pg, tab){
       ${trash.items.length ? `<table class="t">${trash.items.map(t => `<tr><td><code>${esc(t.id)}</code></td><td>${when(t.time)}</td><td>${t.items.length} 个会话（${t.items.filter(i => i.agent === "claude").length} Claude / ${t.items.filter(i => i.agent === "codex").length} Codex）</td>
         <td>${t.restored ? `<span class="tag ok">已还原</span>` : ""}</td><td style="white-space:nowrap">${t.restored ? "" : `<button data-tr="${esc(t.id)}">${ic("undo")} 还原</button> `}<button class="ghost danger" data-tp="${esc(t.id)}">彻底删除</button></td></tr>`).join("")}</table>`
         : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">空的。在会话管理里删除的会话会先放在这里。</div>'}</div>
-    <div class="card"><h3>${ic("upload")}导出 / 导入 .md / .html</h3>
-      <div class="dim" style="font-size:calc(13.5px*var(--fk))">导出：在「时间线」分栏勾选会话（那个时间点的版本）→ 底部「导出 .md / .html」；或者在会话详情的「…」菜单里导出现在的版本。导入：把以前导出的 .md / .html 变成一个新的 Claude Code 会话。</div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button id="bkImp">${ic("upload")} 导入 .md / .html…</button><button id="bkToTl">${ic("history")} 去时间线选会话导出</button></div></div>
+    <div class="card"><h3>${ic("upload")}导出 / 导入 .md / .html / .jsonl</h3>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">导出：在「时间线」分栏勾选会话（那个时间点的版本）→ 底部「导出 .md / .html」；或者在会话详情的「…」菜单里导出现在的版本。导入：把以前导出的 .md / .html / 原始 jsonl 变成一个新的 Claude Code 会话。</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button id="bkImp">${ic("upload")} 导入 .md / .html / .jsonl…</button><button id="bkToTl">${ic("history")} 去时间线选会话导出</button></div></div>
     </div>`;
   $$("[data-cled]").forEach(b => b.onclick = () => confirmDlg("撤回", `撤回账本 <code>${esc(b.dataset.cled)}</code>：新建的文件挪进回收站，更新过的换回原来的。之后又改过的不动。`, "撤回", async () => {
     try { const r = await api("/api/cursor/undo", {ledger: b.dataset.cled}); closeDlg();
