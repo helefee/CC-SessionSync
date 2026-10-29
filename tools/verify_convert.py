@@ -85,9 +85,10 @@ def main() -> int:
     try:
         wait_port(port)
         print("claude", run([claude, "--version"], timeout=60).stdout.strip())
-        cases = (("opencode", oc["v1"], "OC1-MARK", ["调用了 bash", "OC1-TOOL-OUT", "OC1-ANSWER"], ["OC1-THINK", "<system-reminder>x<"]),
-                 ("opencode", oc["v2"], "OC2-MARK", ["调用了 shell", "OC2-TOOL-OUT", "OC2-ANSWER"], ["OC2-THINK"]),
-                 ("zcode", zc["main"], "ZC-MARK", ["调用了 Bash", "ZC-TOOL-OUT", "ZC-ANSWER"], ["ZC-THINK", "ZC-REMINDER", "ZC-NOTIFY"]))
+        # 0.4.1：命令行调用按 Claude Code 自己的 Bash 工具写（tool_use + tool_result），不再是「调用了 bash」文字
+        cases = (("opencode", oc["v1"], "OC1-MARK", ["OC1-TOOL-OUT", "OC1-ANSWER"], ["OC1-THINK", "<system-reminder>x<"]),
+                 ("opencode", oc["v2"], "OC2-MARK", ["OC2-TOOL-OUT", "OC2-ANSWER"], ["OC2-THINK"]),
+                 ("zcode", zc["main"], "ZC-MARK", ["ZC-TOOL-OUT", "ZC-ANSWER"], ["ZC-THINK", "ZC-REMINDER", "ZC-NOTIFY"]))
         made = {}
         for src, sid, mark, want, bad in cases:
             r = run([sys.executable, "-m", "cc_sessionsync", "convert", "run", "--from", src, "--to", "claude", "--id", sid, "--apply", "--no-desktop"])
@@ -110,7 +111,14 @@ def main() -> int:
                 blob = json.dumps(hit[-1]["body"]["messages"], ensure_ascii=False)
                 miss = [w for w in want if w not in blob]
                 extra = [b for b in bad if b in blob]
-                ok(not miss and not extra, f"{mark}: tools as text, thinking / reminders dropped (missing {miss}, extra {extra})")
+                ok(not miss and not extra, f"{mark}: history complete, thinking / reminders dropped (missing {miss}, extra {extra})")
+                msgs = hit[-1]["body"]["messages"]
+                uses = [b for m in msgs if isinstance(m.get("content"), list) for b in m["content"] if b.get("type") == "tool_use"]
+                res = [b for m in msgs if isinstance(m.get("content"), list) for b in m["content"] if b.get("type") == "tool_result"]
+                out = mark.split("-")[0] + "-TOOL-OUT"
+                ok(any(u.get("name") == "Bash" and isinstance(u.get("input"), dict) and u["input"].get("command") for u in uses)
+                   and any(out in json.dumps(r.get("content"), ensure_ascii=False) and r.get("tool_use_id") in {u.get("id") for u in uses} for r in res),
+                   f"{mark}: shell call sent as a native Bash tool_use + tool_result ({len(uses)} tool_use)")
             n1 = len(jf.read_text(encoding="utf-8").splitlines())
             ok(n1 > n0, f"{mark}: new turn appended to the same session ({n0} → {n1})")
         if "OC2-MARK" in made:
@@ -138,7 +146,8 @@ def main() -> int:
         ok(r.returncode == 0 and m is not None, f"opencode → dsh applied {r.stdout[-300:]}")
         if m:
             olog = T / "openai.log"
-            om = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_openai.py"), str(oport), str(olog)], creationflags=nw)
+            om = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_openai.py"), str(oport), str(olog)], creationflags=nw,
+                                  env=dict(os.environ, MOCK_RAW="1"))
             try:
                 wait_port(oport)
                 d = run([dsh_bin, "--profile", "headless", "--session-id", m.group(1), "接着说：下一步做什么？"], cwd=proj, timeout=240,
@@ -147,6 +156,10 @@ def main() -> int:
                 reqs = [json.loads(l) for l in olog.read_text(encoding="utf-8").splitlines()] if olog.exists() else []
                 blob = json.dumps([q.get("msgs") for q in reqs], ensure_ascii=False)
                 ok("OC2-MARK" in blob and "OC2-TOOL-OUT" in blob and "OC2-THINK" not in blob, "dsh model received the imported history")
+                raw = [m for q in reqs for m in (q.get("raw") or [])]
+                tcs = [tc for m in raw if m.get("role") == "assistant" for tc in m.get("tool_calls") or []]
+                ok(any((tc.get("function") or {}).get("name") == "bash" for tc in tcs) and any(m.get("role") == "tool" and "OC2-TOOL-OUT" in json.dumps(m, ensure_ascii=False) for m in raw),
+                   f"dsh sent the shell call as a native bash tool call + tool result ({len(tcs)} tool calls)")
             finally:
                 om.kill()
     after = tree(T / "oc") | {"~" + k: v for k, v in tree(H / ".zcode").items()}

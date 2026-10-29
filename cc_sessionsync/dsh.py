@@ -1288,6 +1288,154 @@ def build_dsh(cc_file: Path, title: str | None = None, out_lines: int = 20, out_
             "claude": csid or cc_file.stem}
 
 
+# ---------- 任意来源（中间格式）→ dsh（0.4.1：工具调用 / 图片 / 思考按 dsh 自己的样子写） ----------
+
+def put_attachment(data: bytes) -> tuple[dict, Path, bool]:
+    """图片放进 dsh 的附件库（$DSH_HOME/attachments/v1/objects/<前两位>/<sha256>，按内容寻址，和 dsh 自己存的一样）。
+    → (引用, 文件, 是不是这次新建的)。已经有同样内容的就不动它。"""
+    h = hashlib.sha256(data).hexdigest()
+    f = home() / "attachments" / "v1" / "objects" / h[:2] / h
+    new = not f.exists()
+    if new:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        tmp = f.with_name(f.name + ".ccss-tmp")
+        tmp.write_bytes(data)
+        os.replace(tmp, f)
+    return {"attachmentId": "sha256:" + h}, f, new
+
+
+def _img_size(data: bytes) -> tuple[int | None, int | None]:
+    try:
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+        if data[:6] in (b"GIF87a", b"GIF89a"):
+            return int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:10], "little")
+    except Exception:
+        pass
+    return None, None
+
+
+def build_from_ir(h: dict, items: list[dict], reasoning: bool = False, prefix: str | None = None, title: str | None = None,
+                  native: bool = True) -> dict:
+    """中间格式 → dsh 第 4 版会话（只算，不写；图片只算出要放进附件库的内容）。结构照 dsh 自己写的：
+    每轮 turn/start → step/start → user/message → assistant/message（文字 / 思考 / tool-call）→ 每个调用一个 tool/call + tool/result
+    → step/end；调用之后还有话就开下一步（step/start …）→ turn/end。助手消息记成 claude-code-import 提供的、来源应用的模型名。"""
+    from . import codex_import as CI
+    from . import ir
+    T, st = ir.turns(h, items, reasoning, target="dsh", native=native)
+    if not any(t[0] == "user" for t in T):
+        raise DshError("这个会话里没有你说的话")
+    cwd = CI.norm_cwd(h.get("cwd")) or None
+    if cwd and not (cwd.startswith("/") or re.match(r"^[A-Za-z]:[\\/]", cwd) or cwd.startswith("\\\\")):
+        cwd = None
+    cwd = long_path(cwd) if cwd else None
+    src = h.get("agent") or "claude"
+    title = (title or h.get("title") or ir.title_of(items) or "对话").strip()
+    created = int(ir.to_ms(T[0][2]) or h.get("created") or time.time() * 1000)
+    sid = f"session-{uuid.uuid4()}"
+    header = {"type": "session", "version": FORMAT, "id": sid, "createdAt": created}
+    if cwd:
+        header["cwd"] = cwd
+    header.update(isSeeded=False, delegationDepth=0)
+    evs: list[dict] = []
+    clock = [created]
+    blobs: list[bytes] = []
+
+    def add(t, data, surf=False, ts=None, src_seqs=None):
+        clock[0] = max(clock[0], int(ir.to_ms(ts) or clock[0]))
+        e = {"type": t, "seq": len(evs), "time": clock[0], "data": data}
+        if surf:
+            e["surfaceOp"] = "append"
+        if src_seqs:
+            e["sourceEventSeqs"] = src_seqs
+        evs.append(e)
+        return e["seq"]
+
+    turn, i, titled = 0, 0, False
+    model_of = lambda m: m if isinstance(m, str) and m else f"{src}-import"
+    while i < len(T):
+        role, parts, ts, _m = T[i]
+        if role != "user":
+            i += 1
+            continue
+        turn += 1
+        a = T[i + 1] if i + 1 < len(T) and T[i + 1][0] == "assistant" else None
+        add("turn/start", {"turn": turn}, ts=ts)
+        step = 1
+        add("step/start", {"turn": turn, "step": step}, ts=ts)
+        if turn == 1:                                    # 放一条空的系统提示：dsh 接着聊时把它换成自己的（不然系统提示会排到历史后面）
+            add("system/message", {"turn": 1, "step": 1, "message": {"role": "system", "id": str(uuid.uuid4()), "content": [],
+                                                                     "source": {"kind": "system-prompt"}}}, True, ts)
+        content = []
+        for p in parts:
+            if isinstance(p, str):
+                if content and content[-1]["type"] == "text":
+                    content[-1]["text"] += "\n\n" + p
+                else:
+                    content.append({"type": "text", "text": p})
+            elif p.get("type") == "image":
+                raw = base64.b64decode(p["b64"])
+                w, hh = _img_size(raw)
+                ref = {"attachmentId": "sha256:" + hashlib.sha256(raw).hexdigest(), "mediaType": p["mt"],
+                       "name": f"image-{len(blobs) + 1}.{p['mt'].split('/')[-1]}", "bytes": len(raw)}
+                if w and hh:
+                    ref.update(width=w, height=hh)
+                blobs.append(raw)
+                content.append({"type": "image", "attachment": ref})
+        us = add("user/message", {"role": "user", "id": str(uuid.uuid4()), "content": content, "source": {"kind": "user"}}, True, ts)
+        if not titled:
+            titled = True
+            add("session/title", {"title": (TO_DSH_PREFIX if prefix is None else prefix) + title, "messageSeqs": [us],
+                                  "source": {"kind": "fallback"}}, ts=ts)
+        if a:
+            ats, mdl = a[2] or ts, model_of(a[3])
+            blocks, calls = [], []
+
+            def flush_step(last: bool):
+                nonlocal step, blocks, calls
+                if blocks:
+                    add("assistant/message", {"turn": turn, "step": step,
+                                              "message": {"role": "assistant", "id": str(uuid.uuid4()), "content": blocks,
+                                                          "source": {"kind": "model", "provider": IMPORT_PROVIDER, "model": mdl}},
+                                              "stream": []}, True, ats)
+                for c in calls:
+                    cs = add("tool/call", {"turn": turn, "step": step, "callId": c["id"], "name": c["name"], "arguments": c["arguments"]}, ts=ats)
+                    add("tool/result", {"turn": turn, "step": step, "message": {
+                        "role": "tool", "source": {"kind": "tool", "callId": c["id"]}, "toolCallId": c["id"],
+                        "content": [{"type": "text", "text": c["output"]}], "isError": c["error"], "id": str(uuid.uuid4())}}, True, ats, [cs])
+                add("step/end", {"turn": turn, "step": step})
+                if not last:
+                    step += 1
+                    add("step/start", {"turn": turn, "step": step}, ts=ats)
+                blocks, calls = [], []
+
+            for p in a[1]:
+                if isinstance(p, str) or p.get("type") == "reasoning":
+                    if calls:
+                        flush_step(False)
+                    if isinstance(p, str):
+                        if blocks and blocks[-1]["type"] == "text":
+                            blocks[-1]["text"] += "\n\n" + p
+                        else:
+                            blocks.append({"type": "text", "text": p})
+                    else:
+                        blocks.append({"type": "reasoning", "text": p["text"]})
+                elif p.get("type") == "tool":
+                    cid = "call_imp" + uuid.uuid4().hex[:16]
+                    blocks.append({"type": "tool-call", "id": cid, "name": p["name"], "arguments": json.dumps(p["input"], ensure_ascii=False)})
+                    calls.append({"id": cid, "name": p["name"], "arguments": json.dumps(p["input"], ensure_ascii=False),
+                                  "output": p.get("output") or ("（出错，没有输出）" if p.get("error") else "（没有输出）"), "error": bool(p.get("error"))})
+            flush_step(True)
+        else:
+            add("assistant/message", {"turn": turn, "step": step, "message": {"role": "assistant", "id": str(uuid.uuid4()),
+                                      "content": [{"type": "text", "text": f"（{ir.LABEL.get(src, src)} 那边到这里还没有回复。导入到此为止。）"}],
+                                      "source": {"kind": "model", "provider": IMPORT_PROVIDER, "model": f"{src}-import"}}, "stream": []}, True, ts)
+            add("step/end", {"turn": turn, "step": step})
+        add("turn/end", {"turn": turn, "reason": {"kind": "completed"}})
+        i += 2 if a else 1
+    return {"header": header, "events": evs, "id": sid, "cwd": cwd, "title": title, "turns": turn, "stats": st, "attachments": blobs}
+
+
 def encode_session(header: dict, events: list[dict], compression: str) -> bytes:
     """和 dsh 新建会话时一样：头一行单独一帧，第一批事件一帧（不压缩时就是纯文本）。"""
     h = json.dumps(header, ensure_ascii=False, separators=(",", ":")) + "\n"

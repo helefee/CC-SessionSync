@@ -3,7 +3,8 @@
   --version → 2.1.1（FAKE_OC_MAJOR=1 → 1.19.3）
   session import --standalone [--directory d] <file>   照 2.x 的规矩检查（info.projectID、id 前缀），写进 session_v2 / session_message
   import <file>                                         1.x：写进 session / message / part
-  session delete [--standalone] <id>"""
+  session delete [--standalone] <id>
+  session export --standalone <id> / export <id>         从库里读回来，照各版的导出格式打印（转换后自检用）"""
 import json, os, sqlite3, sys
 from pathlib import Path
 
@@ -52,4 +53,21 @@ if a[:2] == ["session", "delete"]:
         try: c.execute(f"delete from {t} where {k}=?", (sid,))
         except sqlite3.OperationalError: pass
     c.commit(); sys.exit(0)
+if a[:2] == ["session", "export"] or a[:1] == ["export"]:
+    sid = a[-1]
+    c.row_factory = sqlite3.Row
+    if a[0] == "session":
+        s = c.execute("select * from session_v2 where id=?", (sid,)).fetchone()
+        if not s:
+            print("Session not found", file=sys.stderr); sys.exit(1)
+        ms = [dict(json.loads(r["data"]), id=r["id"], type=r["type"]) for r in c.execute("select * from session_message where session_id=? order by seq", (sid,))]
+        print(json.dumps({"info": {"id": sid, "title": s["title"], "projectID": s["project_id"]}, "messages": ms})); sys.exit(0)
+    s = c.execute("select * from session where id=?", (sid,)).fetchone()
+    if not s:
+        print("Session not found", file=sys.stderr); sys.exit(1)
+    out = []
+    for m in c.execute("select * from message where session_id=? order by time_created, id", (sid,)).fetchall():
+        parts = [dict(json.loads(p["data"]), id=p["id"]) for p in c.execute("select * from part where message_id=?", (m["id"],))]
+        out.append({"info": dict(json.loads(m["data"]), id=m["id"], sessionID=sid), "parts": parts})
+    print("Exporting session: " + sid); print(json.dumps({"info": {"id": sid, "title": s["title"]}, "messages": out})); sys.exit(0)
 print("unknown", a, file=sys.stderr); sys.exit(2)

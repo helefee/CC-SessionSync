@@ -130,8 +130,8 @@ def main() -> int:
         if req:
             txt = " ".join(m.get("text") or "" for m in req["msgs"])
             roles = [m["role"] for m in req["msgs"]]
-            ok("IMPORT-MARK" in txt and "ANSWER-MARK" in txt and "TOOL-RESULT-MARK" in txt, "imported history (incl. tool output as text) was sent to the model")
-            ok("assistant" in roles and roles[-1] == "user", f"history roles {roles}")
+            ok("IMPORT-MARK" in txt and "ANSWER-MARK" in txt and "TOOL-RESULT-MARK" in txt, "imported history was sent to the model")
+            ok("assistant" in roles and "tool" in roles and roles[-1] == "user", f"history roles {roles} (tool result sent natively)")
         r = ccss("convert", "list", "opencode")
         ok(new[0] in r.stdout, "cc-sessionsync lists the resumed session")
         sys.path.insert(0, str(ROOT))

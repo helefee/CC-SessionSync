@@ -67,7 +67,7 @@ env_key = "MOCK_API_KEY"
                CC_SESSIONSYNC_OPENCODE_DATA=str(T / "oc" / "opencode"), CC_SESSIONSYNC_ZCODE_HOME=str(H / ".zcode"),
                CC_SESSIONSYNC_NO_WATCH="1", CC_SESSIONSYNC_NO_WATCHER="1", PYTHONIOENCODING="utf-8", PYTHONUTF8="1", RUST_LOG="error")
     log = T / "mock.jsonl"
-    mock = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_openai.py"), str(port), str(log)])
+    mock = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_openai.py"), str(port), str(log)], env=dict(os.environ, MOCK_RAW="1"))
     wait_port(port)
     fails = []
 
@@ -103,7 +103,14 @@ env_key = "MOCK_API_KEY"
         ok(req is not None and req["path"].endswith("/responses"), "mock model received the resumed turn (Responses API)")
         if req:
             txt = " ".join(m.get("text") or "" for m in req["msgs"])
-            ok("OC2-MARK" in txt and "OC2-ANSWER" in txt and "OC2-TOOL-OUT" in txt, "imported history (incl. tool output as text) was sent to the model")
+            ok("OC2-MARK" in txt and "OC2-ANSWER" in txt, "imported history was sent to the model")
+            raw = req.get("raw") or []
+            fc = [m for m in raw if m.get("type") == "function_call"]
+            fo = [m for m in raw if m.get("type") == "function_call_output"]
+            # 0.4.1：命令行调用按 Codex 自己的样子写成 function_call exec_command + function_call_output
+            ok(any(m.get("name") == "exec_command" and "cmd" in json.loads(m.get("arguments") or "{}") for m in fc)
+               and any("OC2-TOOL-OUT" in json.dumps(m.get("output"), ensure_ascii=False) and m.get("call_id") in {x.get("call_id") for x in fc} for m in fo),
+               f"shell call sent as a native function_call + function_call_output ({len(fc)} calls)")
             ok("OC2-THINK" not in txt, "thinking not carried over by default")
         f = next(CH.glob(f"sessions/**/rollout-*{new[0]}.jsonl"), None)
         body = f.read_text(encoding="utf-8") if f else ""

@@ -75,7 +75,7 @@ L = {x["what"].split(" ")[0]: x for x in r["losses"]}
 ok(L["图片"]["level"] == "lost" and L["附件"]["level"] == "lost" and L["思考"]["level"] == "lost", "losses: image / attachment / thinking lost")
 ok(L["工具调用"]["level"] == "changed" and "截短" in L["工具调用"]["detail"] and L["出错的工具调用"]["level"] == "changed", "losses: tools become text, long output truncated, errors flagged")
 ok(L["模型名和"]["level"] == "changed" and "claude-import" in L["模型名和"]["detail"], "losses: model / usage not carried")
-ok(p["total"] == {"sessions": 1, "msgs": 2, "user": 1, "assistant": 1, "tools": 1, "thinking": 1, "images": 1, "files": 1, "long_out": 1}, f"total: {p['total']}")
+ok(p["total"] == {"sessions": 1, "msgs": 2, "user": 1, "assistant": 1, "tools": 1, "thinking": 1, "images": 1, "files": 1, "long_out": 1, "images_data": 0, "tools_native": {"claude": 1, "codex": 1, "dsh": 1, "opencode": 1}}, f"total: {p['total']}")
 ok(p["summary"] and p["dirs"] and "facts" not in r, "summary + dirs, internal facts not leaked")
 pr = CV.preview("claude", [CSID], "codex", reasoning=True)
 ok({x["what"].split(" ")[0]: x for x in pr["rows"][0]["losses"]}["思考"]["level"] == "changed", "reasoning=True → thinking changed (kept as text)")

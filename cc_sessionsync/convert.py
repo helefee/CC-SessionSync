@@ -13,13 +13,13 @@
   不会把从 X 导过来的会话再导回 X（loop）。来源的数据只读。"""
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
 import random
 import re
 import shutil
-import tempfile
 import time
 import uuid
 from datetime import datetime
@@ -137,7 +137,7 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                 if c.strip() and not c.lstrip().startswith(SKIP):
                     items.append({"role": "user", "kind": "text", "text": c, "ts": ts})
                 continue
-            texts, imgs, fls = [], 0, 0
+            texts, imgs, fls, data = [], 0, 0, []
             for b in c or []:
                 if not isinstance(b, dict):
                     continue
@@ -145,6 +145,10 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                     texts.append(b["text"])
                 elif b.get("type") == "image":
                     imgs += 1
+                    srcb = b.get("source") or {}
+                    im = ir.img(srcb.get("media_type"), srcb.get("data")) if srcb.get("type") == "base64" else None
+                    if im:
+                        data.append(im)
                 elif b.get("type") == "document":
                     fls += 1
                 elif b.get("type") == "tool_result":
@@ -156,7 +160,8 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
                         if b.get("is_error"):
                             it["status"] = "error"
             if texts or imgs or fls:
-                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None})
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None,
+                              "image_data": data or None})
         else:
             mdl = m.get("model") if m.get("model") not in (None, "<synthetic>") else None
             for b in c if isinstance(c, list) else [{"type": "text", "text": c}] if isinstance(c, str) else []:
@@ -176,7 +181,7 @@ def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
 
 def _codex_ir(f: Path) -> tuple[dict, list[dict]]:
     from . import codex_import as CI
-    p = CI.parse(f, reasoning=True)
+    p = CI.parse(f, reasoning=True, images=True)
     meta = p["meta"] or {}
     h = {"agent": "codex", "id": meta.get("id") or f.stem[-36:], "cwd": CI.norm_cwd(meta.get("cwd")) or None,
          "created": ir.to_ms(meta.get("timestamp"))}
@@ -184,7 +189,8 @@ def _codex_ir(f: Path) -> tuple[dict, list[dict]]:
     for x in p["items"]:
         ts = ir.to_ms(x.get("ts"))
         if x["role"] == "user":
-            items.append({"role": "user", "kind": "text", "text": x["text"], "ts": ts})
+            items.append({"role": "user", "kind": "text", "text": x["text"], "ts": ts, "images": len(x.get("images") or []) or None,
+                          "image_data": [im for im in (ir.img_url(u) for u in x.get("images") or []) if im] or None})
         elif x["role"] == "assistant":
             items.append({"role": "assistant", "kind": "text", "text": x["text"], "ts": ts})
         elif x["role"] == "reasoning":
@@ -210,9 +216,16 @@ def _dsh_ir(f: Path) -> tuple[dict, list[dict]]:
             if (m.get("source") or {}).get("kind") != "user":
                 continue
             texts = [b["text"] for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "text" and b.get("text")]
-            imgs = sum(1 for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "image")
+            imgs = [b for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "image"]
+            data = []
+            for b in imgs:
+                raw, mt = dsh._attachment(b.get("attachment") or {})
+                im = ir.img(mt, raw) if raw is not None else None
+                if im:
+                    data.append(im)
             if texts or imgs:
-                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None})
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": len(imgs) or None,
+                              "image_data": data or None})
         elif t == "assistant/message":
             mdl = m.get("model") if isinstance(m.get("model"), str) else None
             for b in m.get("content") or []:
@@ -237,6 +250,32 @@ def _dsh_ir(f: Path) -> tuple[dict, list[dict]]:
     return h, items
 
 
+def _cursor_images(it: dict) -> list[dict]:
+    """Cursor 镜像里记的原图（本机路径 / 内嵌 base64）→ 能带过去的图片；文件没了、太大、不是图片的跳过（只读）。"""
+    out = []
+    for x in it.get("image_inline") or []:
+        im = ir.img(x.get("mt") or "image/png", x.get("b64"))
+        if not im and x.get("b64"):         # 标的类型不对：按内容再认一次
+            try:
+                raw = base64.b64decode(x["b64"], validate=True)
+                im = ir.img(ir.sniff_img(raw), raw)
+            except Exception:
+                im = None
+        if im:
+            out.append(im)
+    for p in it.get("image_paths") or []:
+        try:
+            f = Path(p).expanduser()
+            if f.is_file() and f.stat().st_size <= ir.IMG_MAX:
+                raw = f.read_bytes()
+                im = ir.img(ir.sniff_img(raw), raw)
+                if im:
+                    out.append(im)
+        except Exception:
+            pass
+    return out
+
+
 def load_ir(agent: str, sid: str, row: dict | None = None) -> tuple[dict, list[dict]]:
     """→ (头, 条目)。来源只读。"""
     if row is None:
@@ -253,6 +292,19 @@ def load_ir(agent: str, sid: str, row: dict | None = None) -> tuple[dict, list[d
     else:                                   # cursor / opencode / zcode：本程序的镜像就是中间格式
         h, items = ir.load(f.read_bytes())
         h["agent"] = agent
+        if agent == "cursor":
+            for it in items:
+                if it["role"] == "user" and (it.get("image_paths") or it.get("image_inline")):
+                    it["image_data"] = _cursor_images(it) or None
+        if agent in ("opencode", "zcode") and any(it.get("images") for it in items):
+            try:                            # 镜像里只记了张数；原图现从库里（只读快照）拿
+                per = ocstore.images(agent, h.get("id") or sid)
+                users = [it for it in items if it["role"] == "user" and it.get("images")]
+                if len(per) == len(users):
+                    for it, ims in zip(users, per):
+                        it["image_data"] = [im for im in (ir.img(x.get("mt"), x.get("b64")) for x in ims) if im] or None
+            except Exception:
+                pass
     h["id"] = h.get("id") or sid
     h["title"] = row.get("tool_title") or row.get("title") or h.get("title") or ir.title_of(items)
     h["cwd"] = h.get("cwd") or row.get("cwd")
@@ -456,24 +508,21 @@ def _to_codex(h, items, opts, led) -> dict:
 
 
 def _to_dsh(h, items, opts, led) -> dict:
+    """0.4.1：直接从中间格式拼 dsh 会话（工具调用 / 图片 / 思考按 dsh 自己的样子写）；图片放进 dsh 的附件库，这次新放进去的记在账本里，撤回时一起删。"""
     from . import codex_import as CI
     from . import dsh
     wr = dsh.write_root()
-    tmp = Path(tempfile.mkdtemp(prefix="ccss-conv-"))
-    try:
-        cwd = CI.norm_cwd(h.get("cwd")) or str(Path.home())
-        b = ir.build_claude(h, items, str(uuid.uuid4()), CI.claude_version(), reasoning=opts.get("reasoning", False), cwd=cwd)
-        b["records"] = [r for r in b["records"] if r.get("type") != "custom-title"]
-        cf = tmp / "x.jsonl"
-        cf.write_text(CI._dump(b["records"]), encoding="utf-8")
-        pre = ir.PREFIX.get(h.get("agent"), "")
-        d = dsh.build_dsh(cf, title=h.get("title") or ir.title_of(items) or "对话", note=False, prefix=pre)
-        title = pre + d["title"]
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+    h = dict(h, cwd=CI.norm_cwd(h.get("cwd")) or str(Path.home()))
+    pre = ir.PREFIX.get(h.get("agent"), "")
+    d = dsh.build_from_ir(h, items, reasoning=opts.get("reasoning", False), prefix=pre, title=h.get("title") or ir.title_of(items) or "对话")
     f = dsh.write_session(Path(wr["root"]), wr["compression"], d["header"], d["events"])
-    return {"id": d["id"], "file": str(f), "dir": str(f.parent), "sha": _sha(f), "title": title, "cwd": d["cwd"], "turns": d["turns"],
-            "stats": d["stats"], "resume": dsh.resume_cmd(d["cwd"], d["id"])}
+    att = []
+    for raw in d.get("attachments") or []:
+        _ref, af, new = dsh.put_attachment(raw)
+        if new:
+            att.append({"file": str(af), "sha": _sha(af)})
+    return {"id": d["id"], "file": str(f), "dir": str(f.parent), "sha": _sha(f), "title": pre + d["title"], "cwd": d["cwd"], "turns": d["turns"],
+            "stats": d["stats"], "resume": dsh.resume_cmd(d["cwd"], d["id"]), "attachments": att}
 
 
 def _to_opencode(h, items, opts, led) -> dict:
@@ -487,14 +536,39 @@ def _to_opencode(h, items, opts, led) -> dict:
     r = ocstore.import_session(b["data"], cwd, cli)
     if not r.get("ok"):
         raise RuntimeError(f"{r.get('error')}：{(r.get('out') or '').strip()[-200:]}")
-    if not ocstore.has_session(b["id"]):
+    row = next((x for x in ocstore.refresh("opencode", force=True) if x["id"] == b["id"]), None)
+    if row is None:
         raise RuntimeError("opencode 说导入成功了，但库里没找到这个会话")
     q = f'"{cwd}"' if any(c in cwd for c in " &()") else cwd
     return {"id": b["id"], "file": None, "title": b["title"], "cwd": cwd, "turns": b["turns"], "stats": b["stats"], "cli": cli,
-            "cli_major": major, "msgs": len(b["data"]["messages"]), "resume": f"cd {q} && opencode --session {b['id']}"}
+            "cli_major": major, "msgs": len(b["data"]["messages"]), "base_msgs": row.get("msgs"), "resume": f"cd {q} && opencode --session {b['id']}"}
 
 
 WRITERS = {"claude": _to_claude, "codex": _to_codex, "dsh": _to_dsh, "opencode": _to_opencode}
+
+
+def check_written(dst: str, out: dict) -> dict:
+    """转换后自检（0.4.1）：按目标应用读会话的规矩把刚写的再读一遍（nativecheck）。出错不影响已经写好的会话，只报出来。"""
+    from . import nativecheck as NC
+    want = NC.expect(out.get("stats") or {})
+    try:
+        if dst == "claude":
+            return NC.check_claude(Path(out["file"]), want)
+        if dst == "codex":
+            return NC.check_codex(Path(out["file"]), want, Path(out["index"]) if out.get("index") else None)
+        if dst == "dsh":
+            return NC.check_dsh(Path(out["file"]), want)
+        if dst == "opencode":
+            return NC.check_opencode(out["id"], out.get("cli"), out.get("cli_major") or 2, want, out.get("cwd"))
+    except Exception as e:
+        return {"ok": False, "issues": [f"自检本身出错：{type(e).__name__}: {e}"], "by": "自检"}
+    return {"ok": True, "issues": [], "by": "（这个目标不查）", "skipped": True}
+
+
+def _kept(st: dict) -> dict:
+    """结果里给人看的：工具调用多少按原样写、多少当文字；图片带过去几张；思考按原样几段。"""
+    return {"tools": st.get("tools", 0), "tools_native": st.get("tools_native", 0), "images": st.get("images", 0),
+            "images_kept": st.get("images_kept", 0), "reasoning_native": st.get("reasoning_native", 0)}
 
 
 def _safe(s: str) -> str:
@@ -525,8 +599,9 @@ def _long(v, lines: int, chars: int) -> bool:
 
 def _facts(items: list[dict]) -> dict:
     """预览用的计数（不含正文）。"""
+    from . import toolmap
     f = {"user": 0, "assistant": 0, "tools": 0, "tool_errors": 0, "long_out": 0, "long_in": 0, "thinking": 0, "images": 0, "files": 0,
-         "models": [], "first": None, "last": None}
+         "models": [], "first": None, "last": None, "images_data": 0, "tools_native": {d: 0 for d in NATIVE}}
     ms = set()
     for it in items:
         ts = it.get("ts")
@@ -539,12 +614,17 @@ def _facts(items: list[dict]) -> dict:
             f["user"] += 1
             f["images"] += int(it.get("images") or 0)
             f["files"] += int(it.get("files") or 0)
+            f["images_data"] += sum(1 for im in it.get("image_data") or [] if isinstance(im, dict) and ir.img(im.get("mt"), im.get("b64")))
         elif it.get("kind") == "text":
             f["assistant"] += 1
         elif it.get("kind") == "thinking":
             f["thinking"] += 1
         elif it.get("kind") == "tool":
             f["tools"] += 1
+            c = toolmap.canon(it.get("tool"), it.get("input"))
+            for d in NATIVE:
+                if c and toolmap.emit(d, c[0], c[1]):
+                    f["tools_native"][d] += 1
             if it.get("status") == "error" or it.get("error"):
                 f["tool_errors"] += 1
             if _long(it.get("output") or it.get("error") or "", OUT_LINES, OUT_CHARS):
@@ -559,12 +639,18 @@ def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> l
     """→ [{level: lost | changed | kept, what, detail}]：这个会话转过去以后，哪些没了、哪些变了样、哪些照旧。"""
     L, app, to = [], ir.LABEL.get(src, "来源应用"), ir.LABEL.get(dst, dst)
     exp = mode == "export"
-    if f.get("images"):
-        L.append({"level": "lost", "what": f"图片 {f['images']} 张", "detail": "不带过去，原位置换成「[图片 ×N，没有带过来]」"})
+    img_ok = 0 if exp or dst not in NATIVE else min(f.get("images_data") or 0, f.get("images") or 0)
+    if img_ok:
+        L.append({"level": "kept", "what": f"图片 {img_ok} 张", "detail": f"原图带过去（{to} 里能看到），单张超过 5 MB 的除外"})
+    if (f.get("images") or 0) - img_ok > 0:
+        n = f["images"] - img_ok
+        L.append({"level": "lost", "what": f"图片 {n} 张", "detail": "没有原图数据（只记了路径 / 网址，或格式不认识 / 太大），原位置换成「[图片 ×N，没有带过来]」"})
     if f.get("files"):
         L.append({"level": "lost", "what": f"附件 {f['files']} 个", "detail": "文件附件不带过去，只剩对话里提到它的文字"})
     if f.get("thinking"):
-        if reasoning and not exp:
+        if reasoning and not exp and dst in ir.NATIVE_REASONING:
+            L.append({"level": "kept", "what": f"思考 {f['thinking']} 段", "detail": f"写成 {to} 自己的思考块（只有文字，原来的签名 / 加密内容带不过去）"})
+        elif reasoning and not exp:
             L.append({"level": "changed", "what": f"思考 {f['thinking']} 段", "detail": f"当普通文字放进回复里（标「{app} 里的思考」）；{to} 不会把它当思考"})
         else:
             L.append({"level": "lost", "what": f"思考 {f['thinking']} 段", "detail": "不带（各家的思考格式互相不认）" + ("" if exp else "；要带上就打开「带上思考内容」")})
@@ -573,12 +659,19 @@ def losses(f: dict, src: str, dst: str, mode: str, reasoning: bool = False) -> l
             L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次", "detail": "只留一行摘要（工具名 + 主要参数），参数全文和输出都不带"})
         else:
             cut = []
+            nat = (f.get("tools_native") or {}).get(dst, 0)
             if f.get("long_out"):
                 cut.append(f"{f['long_out']} 个输出超过 {OUT_LINES} 行 / {OUT_CHARS} 字被截短")
             if f.get("long_in"):
                 cut.append(f"{f['long_in']} 个参数超过 {IN_LINES} 行被截短")
-            L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
-                      "detail": f"变成文字摘要（工具名 + 参数 + 输出），{to} 里不能重放 / 展开" + ("；" + "，".join(cut) if cut else "")})
+            if nat:
+                L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
+                          "detail": f"{nat} 次按 {to} 自己的工具（命令行 / 读写文件 / 搜索这类）原样记成工具调用，在 {to} 里能展开看"
+                                    + (f"；另外 {f['tools'] - nat} 次 {to} 没有对应的工具，变成文字摘要" if f["tools"] > nat else "")
+                                    + "；输出" + ("：" + "，".join(cut) if cut else "照旧（太长的会截短）")})
+            else:
+                L.append({"level": "changed", "what": f"工具调用 {f['tools']} 次",
+                          "detail": f"变成文字摘要（工具名 + 参数 + 输出），{to} 里不能重放 / 展开" + ("；" + "，".join(cut) if cut else "")})
         if f.get("tool_errors"):
             L.append({"level": "changed", "what": f"出错的工具调用 {f['tool_errors']} 次", "detail": "标成「（出错）」，错误信息当文字留着"})
     if exp:
@@ -638,7 +731,8 @@ def preview(src: str, ids: list[str], dst: str, again: bool = False, reasoning: 
             if r["state"] in ("same", "changed", "loop"):
                 r["state"] = "new"
     opts = {"project": project, "desktop": desktop}
-    tot = {"sessions": 0, "msgs": 0, "user": 0, "assistant": 0, "tools": 0, "thinking": 0, "images": 0, "files": 0, "long_out": 0}
+    tot = {"sessions": 0, "msgs": 0, "user": 0, "assistant": 0, "tools": 0, "thinking": 0, "images": 0, "files": 0, "long_out": 0,
+           "images_data": 0, "tools_native": {d: 0 for d in NATIVE}}
     agg: dict = {}
     for r in p["rows"]:
         f = r.pop("facts", None)
@@ -650,8 +744,10 @@ def preview(src: str, ids: list[str], dst: str, again: bool = False, reasoning: 
         r["span"] = [f["first"], f["last"]]
         tot["sessions"] += 1
         tot["msgs"] += r["msgs"]
-        for k in ("user", "assistant", "tools", "thinking", "images", "files", "long_out"):
+        for k in ("user", "assistant", "tools", "thinking", "images", "files", "long_out", "images_data"):
             tot[k] += f.get(k) or 0
+        for d in NATIVE:
+            tot["tools_native"][d] += (f.get("tools_native") or {}).get(d, 0)
         for x in r["losses"]:
             a = agg.setdefault((x["level"], x["what"].split(" ")[0]), {"level": x["level"], "what": x["what"].split(" ")[0], "n": 0, "detail": x["detail"]})
             a["n"] += 1
@@ -701,14 +797,16 @@ def run(src: str, ids: list[str], dst: str, dry: bool = True, again: bool = Fals
             h, items = load_ir(src, r["id"])
             out = _export(h, items, dst, opts) if p["mode"] == "export" else WRITERS[dst](h, items, opts, led)
             out.update(agent=dst, src_id=r["id"])
+            if p["mode"] == "native":
+                out["check"] = check_written(dst, out)
             led["created"].append(out)
             if p["mode"] == "native":
                 led["map_before"][k] = mp.get(k)
                 mp[k] = {"id": out["id"], "file": out.get("file"), "sha": out.get("sha"), "src_sig": r.get("sig"), "title": out["title"],
                          "cwd": out.get("cwd"), "time": time.time(), "ledger": led_dir.name}
                 _save(MAP, mp)
-            r.update({x: out.get(x) for x in ("id", "file", "title", "resume", "paste", "turns")}, id=r["id"], target_id=out.get("id"),
-                     done=True)
+            r.update({x: out.get(x) for x in ("id", "file", "title", "resume", "paste", "turns", "check")}, id=r["id"], target_id=out.get("id"),
+                     done=True, kept=_kept(out.get("stats") or {}))
             done += 1
         except Exception as e:
             led["errors"].append(f"{r['id']}：{type(e).__name__}: {e}")
@@ -760,7 +858,10 @@ def batch_preview(items: list[dict], dst: str, again: bool = False, reasoning: b
             r["src"] = src
         rows += p["rows"]
         for k, v in p["total"].items():
-            tot[k] = tot.get(k, 0) + v
+            if isinstance(v, dict):
+                tot[k] = {d: tot.get(k, {}).get(d, 0) + n for d, n in v.items()}
+            else:
+                tot[k] = tot.get(k, 0) + v
         dirs |= set(p["dirs"])
         out.update(mode=out["mode"] or p["mode"], why=out["why"] or p["why"], paste=out["paste"] or p["paste"], running=out["running"] or p["running"])
     if not g:
@@ -886,7 +987,7 @@ def undo(name: str) -> dict:
                 cur = rows.get(c["id"])
                 if cur is None:
                     removed.append(c["id"])
-                elif (cur.get("msgs") or 0) > (c.get("turns") or 0):
+                elif (cur.get("msgs") or 0) > (c.get("base_msgs") if c.get("base_msgs") is not None else c.get("turns") or 0):
                     kept.append({"id": c["id"], "why": "在 OpenCode 里接着聊过，没删"})
                 else:
                     r = ocstore.delete_session(c["id"], c.get("cli"))
@@ -905,6 +1006,10 @@ def undo(name: str) -> dict:
             ef = Path(c["desktop_file"]) if c.get("desktop_file") else None
             if ef and ef.exists() and _sha(ef) == c.get("desktop_sha"):
                 ef.unlink()
+            for at in c.get("attachments") or []:          # 这次放进 dsh 附件库的图片（当时新建的才记）
+                af = Path(at["file"])
+                if af.exists() and _sha(af) == at.get("sha"):
+                    af.unlink()
         except Exception as e:
             errs.append(f"{c.get('id')}：{type(e).__name__}: {e}")
     mp = _load(MAP, {})

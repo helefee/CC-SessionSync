@@ -170,7 +170,9 @@ r = CV.run("codex", [TID], "opencode", dry=False)
 ok(r["done"] == 1, f"codex→opencode {r.get('errors')}")
 oid = r["rows"][0]["target_id"]
 lg = [json.loads(l) for l in (T / "oc.log").read_text().splitlines()]
-ok(lg[-1]["args"][:3] == ["session", "import", "--standalone"] and "--directory" in lg[-1]["args"] and lg[-1]["cwd"] == CWD, "opencode CLI: session import --standalone --directory <cwd>")
+imp = [x for x in lg if x["args"][:2] == ["session", "import"]][-1]
+ok(imp["args"][:3] == ["session", "import", "--standalone"] and "--directory" in imp["args"] and imp["cwd"] == CWD, "opencode CLI: session import --standalone --directory <cwd>")
+ok(lg[-1]["args"][:3] == ["session", "export", "--standalone"] and r["rows"][0]["check"]["ok"], f"after import: checked with `opencode session export` {r['rows'][0].get('check')}")
 orow = {x["id"]: x for x in O.refresh("opencode")}
 ok(oid in orow and orow[oid]["title"].startswith("（Codex）") and orow[oid]["cwd"] == CWD, "imported session listed in OpenCode (as read back from its db)")
 ok(r["rows"][0]["resume"].endswith(f"opencode --session {oid}"), "resume command")
@@ -184,7 +186,8 @@ ok(CV.needs_close("opencode") == "opencode" and CV.needs_close("zcode") is None 
 os.environ["FAKE_OC_MAJOR"] = "1"
 r = CV.run("claude", [CSID], "opencode", dry=False)
 os.environ.pop("FAKE_OC_MAJOR")
-ok(r["done"] == 1 and json.loads((T / "oc.log").read_text().splitlines()[-1])["args"][0] == "import", f"opencode 1.x CLI: `opencode import` {r.get('errors')}")
+lg1 = [json.loads(l)["args"] for l in (T / "oc.log").read_text().splitlines()]
+ok(r["done"] == 1 and lg1[-2][0] == "import" and lg1[-1][0] == "export" and r["rows"][0]["check"]["ok"], f"opencode 1.x CLI: `opencode import`, checked with `opencode export` {r.get('errors')} {r['rows'][0].get('check')}")
 o1 = r["rows"][0]["target_id"]
 ok(any(x["id"] == o1 and x["source"] == "opencode1" and x["msgs"] >= 2 for x in O.refresh("opencode")), "1.x import read back")
 
