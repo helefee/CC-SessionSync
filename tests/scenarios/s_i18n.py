@@ -29,8 +29,11 @@ user = "帮我把登录页的白屏问题修一下"
 ok(tr(user) == user, "user text that is not fully known stays untouched")
 ok(tr("hello") == "hello" and tr("") == "", "non-Chinese passes through")
 
-os.environ["LANG"] = "zh_CN.UTF-8"; ok(i18n.system_lang() == "zh" and i18n.lang() == "zh", "system zh → zh (default auto)")
-os.environ["LANG"] = "en_US.UTF-8"; ok(i18n.system_lang() == "en" and i18n.lang() == "en", "system en → en")
+if sys.platform != "win32":                       # Windows 看系统界面语言（GetUserDefaultUILanguage），不看 LANG
+    os.environ["LANG"] = "zh_CN.UTF-8"; ok(i18n.system_lang() == "zh", "LANG zh → zh")
+    os.environ["LANG"] = "en_US.UTF-8"; ok(i18n.system_lang() == "en", "LANG en → en")
+os.environ["CC_SESSIONSYNC_LANG"] = "zh"; ok(i18n.system_lang() == "zh" and i18n.lang() == "zh", "system zh → zh (default auto)")
+os.environ["CC_SESSIONSYNC_LANG"] = "en"; ok(i18n.system_lang() == "en" and i18n.lang() == "en", "system en → en")
 ok(settings.get("lang") == "auto", "default setting is auto (follow system)")
 settings.update(lang="zh"); ok(i18n.lang() == "zh" and i18n.page_payload() == "null", "forced 中文 → no dictionary in page")
 settings.update(lang="en"); pl = json.loads(i18n.page_payload()); ok(pl["lang"] == "en" and pl["dict"]["检查更新"] == "Check for updates", "forced English → dictionary in page")
@@ -41,7 +44,7 @@ os.environ["CC_SESSIONSYNC_LANG"] = "en"
 ok(tray._t("立即同步 Claude 会话") == "Sync Claude sessions now" and tray._t("退出") == "Quit", "tray menu text in English: " + tray._t("立即同步 Claude 会话"))
 os.environ["CC_SESSIONSYNC_LANG"] = "zh"
 ok(tray._t("退出") == "退出", "tray menu stays Chinese in zh")
-os.environ.pop("CC_SESSIONSYNC_LANG")
+os.environ["CC_SESSIONSYNC_LANG"] = "en"            # 下面当作系统是英文
 
 # 网页：设置接口 + 页面里的对照表
 import threading
