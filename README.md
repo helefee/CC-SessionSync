@@ -85,9 +85,30 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 - **0.4.7：原始 jsonl 也能导回来。**「导出原始 jsonl」得到的文件（`.jsonl`，DeepSeek Harness 压缩的是 `.jsonl.zstd`）用「导入 .md / .html / .jsonl」
   直接导入，自动认出是哪个应用的记录：Claude Code 会话原样还原（只换新会话号和标题）；Codex 对话、DeepSeek Harness 会话、Cursor / OpenCode / ZCode
   的镜像走和「会话转换」同一套转换器，变成新的 Claude Code 会话。一样先预览、记进操作记录能撤回，写完按 Claude Code 的会话规矩自检一遍；
-  可以和 .md / .html 混在一起选；单个文件最大 200 MB；认不出的 jsonl 会说明能导什么。
+  可以和 .md / .html 混在一起选；认不出的 jsonl 会说明能导什么。
 
 ![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
+
+### 大文件、批量、文件夹导入；子会话跟着走（0.4.8）
+
+- **不再限制 200 MB**，几百 MB 的会话也能导：桌面版用系统的「选文件 / 选文件夹」对话框，页面只拿到路径，文件内容不经过页面；
+  浏览器里退回到分块上传（8 MB 一块，原样字节）。0.4.7 是页面把整份文件读成字符串再发过去，十几个上百 MB 的文件一起选会把窗口撑崩。
+- **批量 / 文件夹**：「导入文件夹…」列出文件夹第一层能导的文件（大小、哪个应用、标题、类型、含几个子会话；消息条数后台慢慢数），
+  全选 / 全不选；导入在后台一个一个做，显示「正在导入第 3/17 个」、能取消（做完的留下，正在做的不留半截）；一个出错不影响别的；整批一笔账，一次撤回。
+- **省内存**：Claude Code → Claude Code 是一行一行流式复制（只换会话号），一次一个文件；17 个共 989 MB 的假会话，本机测导入 13 秒、
+  本程序内存峰值约 90 MB（窗口里约 240 MB）。命令行也能导：`cc-sessionsync import <文件或文件夹> [--apply]`。
+- **子会话（子代理）**：「导出原始 jsonl」会把会话的子代理记录（`<会话号>/subagents/agent-*.jsonl`、meta、tool-results）一起放进旁边同名的
+  `<导出文件>.ccss/` 文件夹（带 `manifest.json`：类型 主会话 / 子会话、父会话号、agentId、标题、工作目录）；.md / .html 导出把它们也藏进文件里。
+  导入时写到新会话的 `<新会话号>/subagents/` 下，sessionId 换成新的、agentId 不动，Claude Code 里照样是主会话 + 子代理；
+  批量 / 文件夹导入时子会话文件归到主会话下面，不会被当成单独的会话。Codex 的子代理线程（rollout 里记着父线程）也一起导出、导回成 Claude Code 的子代理记录。
+- **标题保持原样**，不再加「（导入）」。
+- **账号同步带上会话关系**：桌面端登记里的 `spawnedFrom`（侧边会话 / 任务派生的子会话）——同步子会话时父会话一起补，只挑子会话也会自动带上父会话；
+  父会话带不过来（不在 / 在当前号里删过）的照样补，但预览里写明「会显示为独立会话」；子会话引用的任务记录（`tasks.json` / `scheduled-tasks.json`）
+  按 id 合并过去，先备份、撤回时一起还原。
+
+![批量导入：17 个大文件 + 一个带 3 个子会话的会话](docs/screenshots/v048-import-batch.png)
+
+![账号同步：子会话排在父会话下面](docs/screenshots/v048-sync-relations.png)
 
 ### 检测到换号
 

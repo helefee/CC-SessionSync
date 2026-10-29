@@ -45,86 +45,96 @@ def _cmp(issues: list, got: dict, want: dict | None) -> None:
 
 # ---------- Claude Code ----------
 
+READBACK_MAX = 16 * 1024 * 1024        # 0.4.8：大于这个的只按行流式检查，不整份读回来（省内存）
+
+
 def check_claude(f: Path, want: dict | None = None) -> dict:
     issues: list[str] = []
-    recs = []
-    for i, ln in enumerate(Path(f).read_bytes().splitlines()):
-        if not ln.strip():
-            continue
-        try:
-            d = json.loads(ln)
-        except Exception:
-            issues.append(f"第 {i + 1} 行不是 JSON")
-            continue
-        if not isinstance(d, dict):
-            issues.append(f"第 {i + 1} 行不是对象")
-            continue
-        recs.append(d)
     sid = Path(f).stem
     seen, prev_tools = set(), None
-    msgs = [r for r in recs if r.get("type") in ("user", "assistant")]
-    if not msgs:
-        issues.append("一条消息都没有")
-    for n, r in enumerate(msgs):
-        where = f"第 {n + 1} 条消息"
-        if r.get("sessionId") != sid:
-            issues.append(f"{where}：sessionId 和文件名不一致")
-        u = r.get("uuid")
-        if not isinstance(u, str) or u in seen:
-            issues.append(f"{where}：uuid 缺了或重复")
-        p = r.get("parentUuid")
-        if (n == 0 and p is not None) or (n > 0 and p not in seen):
-            issues.append(f"{where}：parentUuid 接不上前一条")
-        seen.add(u)
-        if ir.to_ms(r.get("timestamp")) is None:
-            issues.append(f"{where}：时间解不开")
-        m = r.get("message") or {}
-        if m.get("role") != r["type"]:
-            issues.append(f"{where}：message.role 和 type 不一致")
-        c = m.get("content")
-        blocks = [{"type": "text", "text": c}] if isinstance(c, str) else c if isinstance(c, list) else None
-        if blocks is None:
-            issues.append(f"{where}：content 既不是文字也不是列表")
-            blocks = []
-        ok_types = {"text", "image", "tool_result", "document"} if r["type"] == "user" else {"text", "tool_use", "thinking", "redacted_thinking"}
-        results, uses = set(), set()
-        for b in blocks:
-            t = b.get("type") if isinstance(b, dict) else None
-            if t not in ok_types:
-                issues.append(f"{where}：内容块类型 {t} 不该出现在 {r['type']} 消息里")
+    n, last_type, has_title = 0, None, False
+    with open(f, "rb") as fh:                                  # 0.4.8：一行一行读，几百 MB 的会话也不整份进内存
+        for i, ln in enumerate(fh):
+            if not ln.strip():
                 continue
-            if t == "text" and not (isinstance(b.get("text"), str) and b["text"].strip()):
-                issues.append(f"{where}：有空的文字块（Claude 接口会拒绝）")
-            if t == "image":
-                s = b.get("source") or {}
-                e = "图片不是 base64" if s.get("type") != "base64" else _b64_ok(s.get("data"), s.get("media_type"))
-                if e:
-                    issues.append(f"{where}：{e}")
-            if t == "tool_use":
-                if not (isinstance(b.get("id"), str) and b["id"] and isinstance(b.get("name"), str) and isinstance(b.get("input"), dict)):
-                    issues.append(f"{where}：tool_use 缺 id / name / input")
-                uses.add(b.get("id"))
-            if t == "tool_result":
-                results.add(b.get("tool_use_id"))
-                rc = b.get("content")
-                if not (isinstance(rc, str) and rc.strip() or isinstance(rc, list) and rc):
-                    issues.append(f"{where}：tool_result 是空的")
-        if r["type"] == "user":
-            if prev_tools and not prev_tools <= results:
-                issues.append(f"{where}：前一条的工具调用没有全部在这里给结果")
-            if results - (prev_tools or set()):
-                issues.append(f"{where}：有 tool_result 对不上前一条的工具调用")
-            prev_tools = None
-        else:
-            if prev_tools:
-                issues.append(f"{where}：工具调用后面没有紧跟结果")
-            prev_tools = uses or None
+            try:
+                r = json.loads(ln)
+            except Exception:
+                issues.append(f"第 {i + 1} 行不是 JSON")
+                continue
+            if not isinstance(r, dict):
+                issues.append(f"第 {i + 1} 行不是对象")
+                continue
+            if r.get("type") == "custom-title":
+                has_title = True
+            if r.get("type") not in ("user", "assistant"):
+                continue
+            where = f"第 {n + 1} 条消息"
+            if r.get("sessionId") != sid:
+                issues.append(f"{where}：sessionId 和文件名不一致")
+            u = r.get("uuid")
+            if not isinstance(u, str) or u in seen:
+                issues.append(f"{where}：uuid 缺了或重复")
+            p = r.get("parentUuid")
+            if (n == 0 and p is not None) or (n > 0 and p not in seen):
+                issues.append(f"{where}：parentUuid 接不上前一条")
+            seen.add(u)
+            if ir.to_ms(r.get("timestamp")) is None:
+                issues.append(f"{where}：时间解不开")
+            m = r.get("message") or {}
+            if m.get("role") != r["type"]:
+                issues.append(f"{where}：message.role 和 type 不一致")
+            c = m.get("content")
+            blocks = [{"type": "text", "text": c}] if isinstance(c, str) else c if isinstance(c, list) else None
+            if blocks is None:
+                issues.append(f"{where}：content 既不是文字也不是列表")
+                blocks = []
+            ok_types = {"text", "image", "tool_result", "document"} if r["type"] == "user" else {"text", "tool_use", "thinking", "redacted_thinking"}
+            results, uses = set(), set()
+            for b in blocks:
+                t = b.get("type") if isinstance(b, dict) else None
+                if t not in ok_types:
+                    issues.append(f"{where}：内容块类型 {t} 不该出现在 {r['type']} 消息里")
+                    continue
+                if t == "text" and not (isinstance(b.get("text"), str) and b["text"].strip()):
+                    issues.append(f"{where}：有空的文字块（Claude 接口会拒绝）")
+                if t == "image":
+                    s_ = b.get("source") or {}
+                    e = "图片不是 base64" if s_.get("type") != "base64" else _b64_ok(s_.get("data"), s_.get("media_type"))
+                    if e:
+                        issues.append(f"{where}：{e}")
+                if t == "tool_use":
+                    if not (isinstance(b.get("id"), str) and b["id"] and isinstance(b.get("name"), str) and isinstance(b.get("input"), dict)):
+                        issues.append(f"{where}：tool_use 缺 id / name / input")
+                    uses.add(b.get("id"))
+                if t == "tool_result":
+                    results.add(b.get("tool_use_id"))
+                    rc = b.get("content")
+                    if not (isinstance(rc, str) and rc.strip() or isinstance(rc, list) and rc):
+                        issues.append(f"{where}：tool_result 是空的")
+            if r["type"] == "user":
+                if prev_tools and not prev_tools <= results:
+                    issues.append(f"{where}：前一条的工具调用没有全部在这里给结果")
+                if results - (prev_tools or set()):
+                    issues.append(f"{where}：有 tool_result 对不上前一条的工具调用")
+                prev_tools = None
+            else:
+                if prev_tools:
+                    issues.append(f"{where}：工具调用后面没有紧跟结果")
+                prev_tools = uses or None
+            n, last_type = n + 1, r["type"]
+            if len(issues) > 200:
+                break
+    if not n:
+        issues.append("一条消息都没有")
     if prev_tools:
         issues.append("最后停在工具调用上，没有结果")
-    if msgs and msgs[-1].get("type") != "assistant":
+    if n and last_type != "assistant":
         issues.append("最后一条不是助手的回复（接着聊时历史会接不上）")
-    if not any(r.get("type") == "custom-title" for r in recs):
+    if not has_title:
         issues.append("没有标题记录")
+    if want is None and Path(f).stat().st_size > READBACK_MAX:
+        return {"ok": not issues, "issues": issues[:30], "by": "按 Claude Code 的会话规矩", "streamed": True}
     from . import convert
     try:
         _h, items = convert._claude_ir(Path(f))

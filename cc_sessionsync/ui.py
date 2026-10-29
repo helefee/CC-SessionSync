@@ -387,6 +387,9 @@ class H(BaseHTTPRequestHandler):
     def _get(self, p: str, q: dict):
         if p == "/api/status":
             return _status()
+        if p == "/api/import/job":                             # 0.4.8：批量导入的进度（GET，轮询不打扰会话缓存）
+            from . import bigimport
+            return bigimport.job(q.get("id") or "")
         if p == "/api/sync/plan":
             claude_sync.forget()
             return claude_sync.run(q.get("to") or None, True, None, q.get("source") or claude_sync.default_source())
@@ -544,6 +547,13 @@ class H(BaseHTTPRequestHandler):
         if not self._host_ok() or not self._tok_ok():
             return self._json({"ok": False, "error": "口令不对（页面过期了？刷新一下）"}, 403)
         n = int(self.headers.get("content-length") or 0)
+        if urlparse(self.path).path == "/api/import/upload":     # 0.4.8：浏览器里分块上传，原样字节直接写盘，不进 JSON
+            q = {k: v[-1] for k, v in parse_qs(urlparse(self.path).query).items()}
+            try:
+                from . import bigimport
+                return self._json(bigimport.upload(q.get("up") or None, q.get("name") or "", int(q.get("off") or 0), (self.rfile, n)))
+            except Exception as e:
+                return self._err(e)
         try:
             b = json.loads(self.rfile.read(n) or b"{}")
         except Exception:
@@ -758,6 +768,16 @@ class H(BaseHTTPRequestHandler):
         if p == "/api/export":
             from . import exports
             return exports.export_many(list(b.get("items") or []), b.get("fmt") or "md", str(b.get("label") or ""))
+        if p.startswith("/api/import/"):                      # 0.4.8：按路径导入（桌面版选文件 / 文件夹）、后台批量、进度、取消
+            from . import bigimport
+            if p == "/api/import/scan":
+                return bigimport.scan(b.get("paths") or [], b.get("folder") or None, bool(b.get("recursive")))
+            if p == "/api/import/count":
+                return bigimport.count(str(b.get("file") or ""), b.get("agent") or "claude")
+            if p == "/api/import/start":
+                return bigimport.start(b.get("files") or [], b.get("cwd") or None, b.get("desktop", True) is not False, b.get("rows") or None)
+            if p == "/api/import/cancel":
+                return bigimport.cancel(str(b.get("id") or ""))
         if p == "/api/import":
             return _import(b)
         return None
@@ -826,8 +846,6 @@ def _import(b: dict) -> dict:
         if not exports.importable(name):
             raise ValueError(f"只认 .md / .html / .jsonl：{name}")
         data = base64.b64decode(f["b64"]) if f.get("b64") is not None else str(f.get("text") or "").encode("utf-8")
-        if len(data) > exports.MAX_IMPORT:
-            raise ValueError(f"文件太大（超过 200 MB）：{name}")
         d.mkdir(parents=True, exist_ok=True)
         p = d / f"{i:02d}-{name}"
         p.write_bytes(data)

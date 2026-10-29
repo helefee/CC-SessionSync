@@ -27,6 +27,31 @@ from . import sessions as S
 
 RAW_MD = re.compile(r"<!--\s*ccss-raw:v1\s+(\{.*?\})\s*\n([A-Za-z0-9+/=\s]+?)\s*-->", re.S)
 RAW_HTML = re.compile(r'<script type="application/json" id="ccss-raw">(.*?)</script>', re.S)
+SUB_MD = re.compile(r"<!--\s*ccss-sub:v1\s+(\{.*?\})\s*\n([A-Za-z0-9+/=\s]+?)\s*-->", re.S)       # 0.4.8：子会话的原始记录
+SUB_HTML = re.compile(r'<script type="application/json" class="ccss-sub">(.*?)</script>', re.S)
+
+
+def _kids_payload(meta: dict) -> list[tuple[dict, str]]:
+    """meta["kids"]=[(文件, 相对路径)] → [(头, 压缩后的 base64)]"""
+    out = []
+    for f, rel in meta.get("kids") or []:
+        b = Path(f).read_bytes()
+        out.append(({"path": rel, "sha256": hashlib.sha256(b).hexdigest(), "size": len(b)}, _pack(b)))
+    return out
+
+
+def read_kids(text: str, is_html: bool) -> list[tuple[bytes, str]]:
+    """导出的 .md / .html 里藏的子会话 → [(原始字节, 相对路径)]"""
+    out = []
+    if is_html:
+        for m in SUB_HTML.finditer(text):
+            j = json.loads(m.group(1).replace("<\\/", "</"))
+            out.append((_unpack(j["data"], j["sha256"]), j["path"]))
+    else:
+        for m in SUB_MD.finditer(text):
+            j = json.loads(m.group(1))
+            out.append((_unpack(m.group(2), j["sha256"]), j["path"]))
+    return [(b, r) for b, r in out if ".." not in r.split("/") and not r.startswith("/")]
 
 
 def _pack(raw: bytes) -> str:
@@ -85,6 +110,8 @@ def to_md(agent: str, raw: bytes, meta: dict) -> str:
     head = json.dumps({"agent": agent, "id": meta.get("id"), "sha256": sha, "size": len(raw)}, ensure_ascii=False)
     b64 = _pack(raw)
     out += ["", f"<!-- ccss-raw:v1 {head}", "\n".join(b64[i:i + 100] for i in range(0, len(b64), 100)), "-->", ""]
+    for h, b in _kids_payload(meta):                           # 0.4.8：子会话也带上
+        out += [f"<!-- ccss-sub:v1 {json.dumps(h, ensure_ascii=False)}", "\n".join(b[i:i + 100] for i in range(0, len(b), 100)), "-->", ""]
     return "\n".join(out)
 
 
@@ -151,7 +178,9 @@ def to_html(agent: str, raw: bytes, meta: dict) -> str:
             f'{sum(1 for e in es if e["role"] != "tool")} 条消息 · 导出于 {datetime.now():%Y-%m-%d %H:%M}</div>'
             + "".join(body) +
             f'<footer>CC Session Sync {__version__} 导出 · 文件里带着原始记录，能用 CC Session Sync 原样导回去</footer></main>'
-            f'<script type="application/json" id="ccss-raw">{raw_json}</script></body></html>')
+            f'<script type="application/json" id="ccss-raw">{raw_json}</script>'
+            + "".join('<script type="application/json" class="ccss-sub">' + json.dumps(dict(h, data=b), ensure_ascii=False).replace("</", "<\\/") + '</script>' for h, b in _kids_payload(meta))
+            + '</body></html>')
 
 
 def _safe(name: str) -> str:
@@ -183,6 +212,8 @@ def export_many(items: list[dict], fmt: str = "md", label: str = "") -> dict:
                 raw = f.read_bytes()
                 m = S.find(agent, sid) or {}
                 meta = {"id": sid, "title": m.get("title"), "cwd": m.get("cwd")}
+                from . import bundle
+                meta["kids"] = bundle.children(agent, sid, f)          # 0.4.8：子代理会话一起带上
             text = to_md(agent, raw, meta) if fmt == "md" else to_html(agent, raw, meta)
             p = out_dir / f"{stamp}-{_safe(meta.get('title') or sid)}-{sid[:8]}.{fmt}"
             p.write_text(text, encoding="utf-8", newline="\n")
@@ -247,7 +278,7 @@ def _records_from_turns(turns: list[tuple[str, str]], cwd: str, title: str) -> b
 
 
 IMPORT_EXT = (".md", ".markdown", ".html", ".htm", ".jsonl", ".jsonl.zstd")
-MAX_IMPORT = 200 * 1024 * 1024
+MAX_IMPORT = None                     # 0.4.8：不再限制大小（大文件流式处理，见 bigimport）
 APP_NAME = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}
 CODEX_TYPES = {"session_meta", "response_item", "event_msg", "turn_context", "compacted"}
 JSONL_OK = ("能导入的是本程序「导出原始 jsonl」得到的文件："
@@ -353,13 +384,13 @@ def parse_file(path: str) -> dict:
     p = Path(path)
     if not importable(p.name):
         raise ValueError("只认 .md / .html / .jsonl")
-    if p.stat().st_size > MAX_IMPORT:
-        raise ValueError("文件太大（超过 200 MB）")
+    if MAX_IMPORT and p.stat().st_size > MAX_IMPORT:
+        raise ValueError(f"文件太大（超过 {MAX_IMPORT // 1048576} MB）")
     if p.name.lower().endswith((".jsonl", ".jsonl.zstd")):
         return parse_jsonl(p, p.read_bytes())
     text = p.read_text(encoding="utf-8", errors="replace")
     is_html = p.suffix.lower() in (".html", ".htm")
-    title, cwd, agent, raw, how = None, None, "claude", None, "plain"
+    title, cwd, agent, raw, how, j = None, None, "claude", None, "plain", None
     m = RAW_HTML.search(text) if is_html else RAW_MD.search(text)
     if m:
         if is_html:
@@ -388,42 +419,23 @@ def parse_file(path: str) -> dict:
         raw = _records_from_turns(turns, cwd or str(Path.home()), title)
         agent = "claude"
     es = _entries(agent, raw)
+    kids = read_kids(text, is_html) if how == "lossless" else []     # 0.4.8：带着的子会话
     return {"how": how, "agent": agent, "raw": raw, "title": title or p.stem, "cwd": cwd, "file": str(p),
-            "messages": sum(1 for e in es if e["role"] != "tool"),
+            "messages": sum(1 for e in es if e["role"] != "tool"), "sid": (j or {}).get("id") if how == "lossless" else None,
+            "kids": kids, "subs": sum(1 for _, r in kids if r.endswith(".jsonl") and r.startswith("subagents/")), "type": "main",
             "preview": [dict(e, text=e["text"][:600]) for e in es[:12]], "size": len(raw)}
 
 
 def import_files(paths_: list[str], cwd: str | None = None, desktop: bool = True, dry: bool = True) -> dict:
-    """导入成新的 Claude Code 会话。cwd：放进哪个项目（工作目录），不填用文件里记的 / 家目录。dry=True 只看不写。"""
-    from . import timeline
-    rows = []
-    for f in paths_:
-        try:
-            r = parse_file(f)
-            rows.append({k: v for k, v in r.items() if k != "raw"} | {"_raw": r["raw"]})
-        except ValueError as e:                                # 认不出 / 太大 / 没消息：中文说明本身就够了
-            rows.append({"file": f, "error": str(e)})
-        except Exception as e:
-            rows.append({"file": f, "error": f"{type(e).__name__}: {e}"})
+    """导入成新的 Claude Code 会话。cwd：放进哪个项目（工作目录），不填用文件里记的 / 家目录。dry=True 只看不写。
+    0.4.8：一个文件一个文件来（大的 Claude Code jsonl 流式复制），不再把整批内容同时留在内存里。"""
+    from . import bigimport as BI
+    rows = BI.scan(paths_)["rows"]                             # 子会话文件归到主会话下面
     if dry:
-        return {"ok": all("error" not in r for r in rows), "dry": True, "rows": [{k: v for k, v in r.items() if k != "_raw"} for r in rows]}
-    od, led = S._new_op("import", items=[], summary=f"导入 {len(rows)} 个 .md / .html / .jsonl 成 Claude Code 会话")
-    made, errors = [], []
-    for r in rows:
-        if "error" in r:
-            errors.append(f"{r['file']}: {r['error']}")
-            continue
-        try:
-            res = timeline.write_claude_session(r["agent"], r["_raw"], f"{r['title']}（导入）", cwd or r.get("cwd"), led, od, desktop)
-            led["items"].append({"agent": "claude", "id": res["id"]})
-            try:                                               # 写好后按 Claude Code 自己的规矩读一遍（只读）
-                from . import nativecheck as NC
-                res["check"] = NC.check_claude(Path(res["file"]))
-            except Exception as e:
-                res["check"] = {"ok": False, "issues": [f"自检出错：{type(e).__name__}: {e}"]}
-            made.append(dict(res, file_from=r["file"], how=r["how"], agent_from=r["agent"]))
-        except Exception as e:
-            errors.append(f"{r['file']}: {type(e).__name__}: {e}")
-    led.update(made=made, errors=errors)
-    job = timeline._finish_regs(od, led) if desktop else (S._save_led(od, led) or None)
-    return {"ok": not errors, "dry": False, "made": made, "errors": errors, "op": od.name, "desktop": job}
+        return {"ok": all("error" not in r for r in rows), "dry": True, "rows": rows}
+    good = [r for r in rows if "error" not in r]
+    res = BI.run([r["file"] for r in good], cwd, desktop, rows={r["file"]: r for r in good})
+    bad = [f"{r['file']}: {r['error']}" for r in rows if "error" in r]
+    res["errors"] = bad + res["errors"]
+    res["ok"] = not res["errors"]
+    return res
