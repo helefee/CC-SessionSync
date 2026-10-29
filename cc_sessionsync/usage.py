@@ -877,6 +877,53 @@ def summary(f: dict) -> dict:
             "options": options(), "tz": time.strftime("%z")}
 
 
+def heatmap(f: dict, weeks: int = 53, now: float | None = None) -> dict:
+    """0.4.4「每天用量」日历热力图：最近 weeks 周（按本机日历日），每天的请求数 / tokens / 费用 + 当天用得最多的模型。
+    不看界面上选的时间段（总是最近一年）；app / provider / model 照样筛。dim=model|project + key：只算这一个模型 / 项目。"""
+    now = time.time() if now is None else now
+    lt = time.localtime(now)
+    today = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
+    import datetime as _dt
+    d0 = _dt.date(lt.tm_year, lt.tm_mon, lt.tm_mday) - _dt.timedelta(days=lt.tm_wday + (weeks - 1) * 7)   # 星期一开始，最后一列是这周
+    start = time.mktime((d0.year, d0.month, d0.day, 0, 0, 0, 0, 0, -1))
+    g = {k: f.get(k) for k in ("app", "provider", "model")}
+    dim, key = f.get("dim") or "model", f.get("key")
+    if key is not None and key != "":
+        g["proj" if dim == "project" else "model"] = key
+    w, a = _where(dict(g, **{"from": start}))
+    c = _conn()
+    rows = c.execute("SELECT date(ts, 'unixepoch', 'localtime') d, model, coalesce(proj,''), count(*), "
+                     "sum(inp)+sum(cr)+sum(cw5)+sum(cw1h)+sum(out), "
+                     "sum(coalesce(c_in,0)+coalesce(c_cr,0)+coalesce(c_cw5,0)+coalesce(c_cw1h,0)+coalesce(c_out,0)), "
+                     f"sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END) FROM calls{w} GROUP BY 1,2,3", a).fetchall()
+    w2, a2 = _where(dict({k: f.get(k) for k in ("app", "provider", "model")}, **{"from": start}))
+    keys = {"model": {}, "project": {}}
+    for m, pj, n in c.execute(f"SELECT model, coalesce(proj,''), count(*) FROM calls{w2} GROUP BY 1,2", a2):
+        keys["model"][m] = keys["model"].get(m, 0) + n
+        if pj:
+            keys["project"][pj] = keys["project"].get(pj, 0) + n
+    c.close()
+    days: dict = {}
+    for d, model, proj, n, tok, cost, unp in rows:
+        e = days.setdefault(d, {"d": d, "n": 0, "tok": 0, "cost": 0.0, "unpriced": 0, "models": {}})
+        e["n"] += n
+        e["tok"] += tok or 0
+        e["cost"] += cost or 0.0
+        e["unpriced"] += unp or 0
+        m = e["models"].setdefault(model, [0, 0, 0.0])
+        m[0] += n
+        m[1] += tok or 0
+        m[2] += cost or 0.0
+    out = []
+    for d in sorted(days):
+        e = days[d]
+        top = sorted(e.pop("models").items(), key=lambda kv: -kv[1][1])[:3]
+        out.append(dict(e, cost=round(e["cost"], 6), top=[[k, v[0], v[1], round(v[2], 6)] for k, v in top]))
+    srt = lambda m: [k for k, _ in sorted(m.items(), key=lambda kv: -kv[1])][:50]
+    return {"from": time.strftime("%Y-%m-%d", time.localtime(start)), "to": time.strftime("%Y-%m-%d", time.localtime(today)),
+            "weeks": weeks, "days": out, "keys": {"model": srt(keys["model"]), "project": srt(keys["project"])}}
+
+
 def options() -> dict:
     c = _conn()
     r = {k: [x[0] for x in c.execute(f"SELECT DISTINCT {k} FROM calls WHERE coalesce({k},'')<>'' ORDER BY 1")] for k in ("app", "provider", "model")}

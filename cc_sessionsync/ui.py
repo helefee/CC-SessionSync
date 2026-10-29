@@ -497,6 +497,8 @@ class H(BaseHTTPRequestHandler):
             f = {k: q.get(k) for k in ("app", "provider", "model", "from", "to")}
             if p == "/api/usage/summary":
                 return usage.summary(f)
+            if p == "/api/usage/heatmap":                # 0.4.4：每天用量（日历热力图，最近一年）
+                return usage.heatmap(dict(f, dim=q.get("dim"), key=q.get("key")))
             if p == "/api/usage/logs":
                 return usage.logs(f, int(q.get("offset") or 0), min(500, int(q.get("limit") or 100)))
             if p == "/api/usage/prices":
