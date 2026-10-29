@@ -354,6 +354,29 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
 
+### 打开更快、内存更省（0.4.0）
+
+- **一打开就有列表**：先显示上次的会话列表（标「上次的列表 · 正在刷新…」），后台再看有没有新的 / 改过的会话，看完悄悄换成新的。
+- **只重读改过的**：每个会话文件记下修改时间和大小（`~/.cc-sessionsync/cache/`），没变的不再打开读标题，只读改过的和新的。
+- **点开才读详情**：列表只带标题、项目、时间这些；点开一个会话时才去读它的内容和「继续」命令。很长的会话只留最后要看的那几条在内存里。
+- **内存有上限**：缓存最多记 6 万个会话；空闲 3 分钟后把列表缓存放掉，下次用时再从磁盘缓存拿。
+- 缓存坏了、被删了都没关系，会自动重建；缓存里不存账号邮箱这类原文（和界面一样先遮住）。
+
+在测试机上用脚本生成的假数据（6 个应用）量的，「再次启动」= 第二次打开：
+
+| 场景 | 启动到列表出来 | 再要一次列表 | 内存峰值 |
+|---|---|---|---|
+| 5 006 个会话，0.3.9 再次启动 | 1.17 秒 | 0.217 秒 | 61 MB |
+| 5 006 个会话，0.4.0 再次启动 | **0.10 秒**（先显示上次的列表） | **0.022 秒** | **53 MB** |
+| 15 006 个会话，0.3.9 再次启动 | 4.39 秒 | 0.696 秒 | 143 MB |
+| 15 006 个会话，0.4.0 再次启动 | **0.15 秒**（先显示上次的列表） | **0.064 秒** | **101 MB** |
+
+| 再次打开：先显示上次的列表 | 点开才读详情 |
+|---|---|
+| ![](docs/screenshots/v040-relaunch-cached-list.png) | ![](docs/screenshots/v040-open-session-lazy-detail.png) |
+
+![](docs/screenshots/v040-startup-memory-numbers.png)
+
 ### 清理配置备份（0.3.9）
 
 `~/.cc-sessionsync/backups` 里放的是改配置文件之前留的备份，来自 0.2–0.3.4 改 Codex / Claude Code 配置时，以及 0.3.5 收拾旧改动时。
@@ -727,6 +750,10 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Faster startup, capped memory (0.4.0):** the session list from last time is shown instantly on launch (tagged 上次的列表 · 正在刷新…)
+  and refreshed in the background; only session files whose mtime/size changed are re-read (disk head cache in `~/.cc-sessionsync/cache/`).
+  The list is slim; a session's content and resume command load when you open it. Cache capped at 60k entries and released after 3 min idle.
+  Synthetic data, relaunch: 5,006 sessions 1.17 s → 0.10 s to first list, peak RSS 61 → 53 MB; 15,006 sessions 4.39 s → 0.15 s, 143 → 101 MB.
 - **Backup cleanup (0.3.9):** `~/.cc-sessionsync/backups` (config-file backups from 0.2–0.3.5) can be cleaned by age and/or total size:
   a manual 清理 dialog in 设置 → 数据 previews exactly which files go and how much space is freed; optional daily auto-clean under 高级
   (off by default); `cc-sessionsync clean-backups --days N [--mb M] [--yes]`. The newest backup of every original file is never deleted;

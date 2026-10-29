@@ -244,6 +244,30 @@ def _clean(o, reveal: bool = False):
     return o if reveal else _scrub(o)
 
 
+def _has_email(o, depth: int = 0) -> bool:
+    if isinstance(o, dict):
+        return "email" in o or (depth < 4 and any(_has_email(v, depth + 1) for v in o.values() if isinstance(v, (dict, list))))
+    if isinstance(o, list):
+        return depth < 4 and any(_has_email(v, depth + 1) for v in o if isinstance(v, (dict, list)))
+    return False
+
+
+def _ser_list(o) -> bytes:
+    """会话列表：账号信息（groups 等）照常打码；几千行 items 里没有账号字典，就不整个来回转一遍（省一倍的峰值内存）。"""
+    items = o.get("items")
+    out = _clean({k: v for k, v in o.items() if k != "items"})
+    out["items"] = _clean(items) if items is None or _has_email(items) else items
+    return json.dumps(out, ensure_ascii=False, default=str).encode("utf-8")
+
+
+def _hook_sessions() -> None:
+    from . import sessions
+    sessions.SERIALIZE = _ser_list                # 会话列表在 sessions 里序列化好、打好码，存成快照（0.4.0）
+
+
+_hook_sessions()
+
+
 def reveal_accounts() -> dict:
     """完整账号：{rid: {email, name, org, label}}。只在页面点了「显示完整账号」（或开了「总是显示完整账号」）时来取；
     只从本机文件读，不联网；不写日志、不进诊断报告。"""
@@ -284,7 +308,10 @@ class H(BaseHTTPRequestHandler):
         pass
 
     def _json(self, obj, code=200, reveal=False):
-        b = json.dumps(_clean(obj, reveal), ensure_ascii=False).encode("utf-8")
+        if isinstance(obj, dict) and isinstance(obj.get("_raw"), bytes) and len(obj) == 1:
+            b = obj["_raw"]                                    # 0.4.0：会话列表已经序列化好了（并且打过码）
+        else:
+            b = json.dumps(_clean(obj, reveal), ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("content-type", "application/json; charset=utf-8")
         self.send_header("cache-control", "no-store")
@@ -471,7 +498,11 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/sessions"):
             from . import sessions
             if p == "/api/sessions":
-                return sessions.list_all(q.get("agent") or None)
+                return sessions.list_view(q.get("agent") or None)
+            if p == "/api/sessions/gen":                       # 0.4.0：后台刷新好了没有
+                return sessions.list_gen()
+            if p == "/api/sessions/item":
+                return sessions.item(q["agent"], q["id"])
             if p == "/api/sessions/read":
                 return sessions.read(q["agent"], q["id"], int(q.get("limit") or 400))
             if p == "/api/sessions/snapshots":
@@ -506,7 +537,11 @@ class H(BaseHTTPRequestHandler):
             b = {}
         p = urlparse(self.path).path
         try:
-            r = self._post(p, b)
+            try:
+                r = self._post(p, b)
+            finally:
+                from . import sessions as _ss
+                _ss.invalidate()
             if r is not None:
                 code = 200
                 if isinstance(r, tuple):
@@ -517,6 +552,11 @@ class H(BaseHTTPRequestHandler):
         self._json({"error": "not found"}, 404)
 
     def _post(self, p: str, b: dict):
+        try:                                                   # 0.4.0：改东西之后，下次要会话列表一定重新看
+            from . import sessions as _ss
+            _ss.invalidate()
+        except Exception:
+            pass
         if p == "/api/sync":
             return sync_now(b.get("to") or None, b.get("only"), b.get("source") or None)
         if p == "/api/restore":
@@ -841,6 +881,11 @@ def start_background(auto_sync: bool | None = None) -> None:
                     fmt_at = time.time()
                     from . import formats
                     formats.check_all(force=True)
+                try:                                            # 0.4.0：几分钟没人看会话列表就放掉内存里的缓存
+                    from . import sessions as _ss
+                    _ss.release_idle()
+                except Exception:
+                    pass
                 try:                                            # 自动清理配置备份（0.3.9，缺省关，一天最多一次）
                     from . import bakclean
                     bakclean.auto_tick()

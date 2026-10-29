@@ -496,9 +496,16 @@ def summary(sf: dict) -> dict:
     except OSError:
         return {}
     k = str(f)
+    from . import listcache                     # 0.4.0：摘要也缓存在磁盘上（见下）
     c = _CACHE.get(k)
     if c and c[0] == (st.st_mtime, st.st_size):
+        listcache.head_get("dsh", k, (st.st_mtime, st.st_size))      # 标记「还在用」，整理磁盘缓存时不删
         return c[1]
+    # 0.4.0：摘要缓存在磁盘上，重开程序时没改过的会话不用再解压读
+    d = listcache.head_get("dsh", k, (st.st_mtime, st.st_size))
+    if isinstance(d, dict) and d.get("id"):
+        _CACHE[k] = ((st.st_mtime, st.st_size), d)
+        return d
     s = {"id": sf["dir"].name, "format": sf["version"], "size": st.st_size, "mtime": st.st_mtime}
     if sf["version"] != FORMAT:
         s["error"] = f"第 {sf['version']} 版格式（只认第 {FORMAT} 版；用 dsh 打开一次会自动升级）"
@@ -538,6 +545,11 @@ def summary(sf: dict) -> dict:
         except Exception as e:
             s["error"] = f"读不了：{e}"
     _CACHE[k] = ((st.st_mtime, st.st_size), s)
+    try:
+        json.dumps(s)
+        listcache.head_put("dsh", k, (st.st_mtime, st.st_size), s)
+    except (TypeError, ValueError):
+        pass
     return s
 
 
