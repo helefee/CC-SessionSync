@@ -863,6 +863,121 @@ def _model_warn(model: str | None, to_profile: str, from_profile: str) -> str | 
     return f"这个会话记的模型 {model} 在{where}那边可能没有，打开后可能要换个模型"
 
 
+# ---------- 0.4.8：会话之间的关系（spawnedFrom：侧边会话 / 任务派生的子会话）----------
+# 桌面端登记里 spawnedFrom = {sessionId(父会话的 local_…), taskId?, title?, name?, sideSession?, sharedFolder?}。
+# 同步子会话时把父会话一起带上；父会话带不过来的（不在 / 在当前号里删过）照样同步，但预览里说清楚「会显示为独立会话」。
+# spawnedFrom.taskId 指向同一文件夹里 tasks.json / scheduled-tasks.json 的记录：一起合并过去（先备份、能撤回）。
+
+REL_KIND = {"side": "侧边会话", "task": "任务派生", "spawned": "派生会话"}
+TASK_FILES = ("tasks.json", "scheduled-tasks.json")
+
+
+def _spawn(d: dict) -> dict | None:
+    sf = d.get("spawnedFrom")
+    return sf if isinstance(sf, dict) and isinstance(sf.get("sessionId"), str) and sf["sessionId"] else None
+
+
+def _rel_kind(sf: dict) -> str:
+    return "side" if sf.get("sideSession") else "task" if sf.get("taskId") else "spawned"
+
+
+def _parent_name(psid: str) -> str:
+    return (psid if psid.startswith("local_") else f"local_{psid}") + ".json"
+
+
+def _task_recs(data, ids: set) -> tuple[str | None, list]:
+    """tasks.json 的几种样子：[{id…}] / {"tasks": [{id…}]} / {id: {…}} → (样子, 命中的记录)。认不出 → (None, [])"""
+    def hit(r, k=None):
+        return isinstance(r, dict) and (r.get("id") in ids or r.get("taskId") in ids or (k is not None and k in ids))
+    if isinstance(data, list):
+        return "list", [r for r in data if hit(r)]
+    if isinstance(data, dict):
+        for key in ("tasks", "scheduledTasks", "items"):
+            if isinstance(data.get(key), list):
+                return "key:" + key, [r for r in data[key] if hit(r)]
+        if data and all(isinstance(v, dict) for v in data.values()):
+            return "map", [(k, v) for k, v in data.items() if hit(v, k)]
+    return None, []
+
+
+def _merge_tasks(tdir: Path, src_dirs: dict[str, set], dry: bool = False) -> dict:
+    """把子会话引用的任务记录（按 id）从来源文件夹合并进目标文件夹的同名文件。→ {merged, files_added, files_updated, warn}"""
+    out = {"merged": 0, "files_added": [], "files_updated": [], "warn": []}
+    for fname in TASK_FILES:
+        add_recs, shape = [], None
+        for sdir, ids in src_dirs.items():
+            f = Path(sdir) / fname
+            if not ids or not f.exists():
+                continue
+            try:
+                sh, recs = _task_recs(json.loads(f.read_text(encoding="utf-8")), ids)
+            except Exception:
+                sh, recs = None, []
+            if sh is None:
+                out["warn"].append(f"{fname} 的格式认不出，相关的任务记录没带过去")
+                continue
+            if shape and sh != shape:
+                continue
+            shape = sh
+            add_recs += recs
+        if not add_recs:
+            continue
+        dst = tdir / fname
+        if dst.exists():
+            try:
+                cur = json.loads(dst.read_text(encoding="utf-8"))
+            except Exception:
+                out["warn"].append(f"目标文件夹里的 {fname} 读不出来，任务记录没合并")
+                continue
+            sh, _ = _task_recs(cur, set())
+            if sh != shape:
+                out["warn"].append(f"目标文件夹里的 {fname} 和来源的格式不一样，任务记录没合并")
+                continue
+        else:
+            cur = [] if shape == "list" else {} if shape == "map" else {shape[4:]: []}
+        if shape == "map":
+            new = [(k, v) for k, v in add_recs if k not in cur]
+            for k, v in new:
+                cur[k] = v
+        else:
+            lst = cur if shape == "list" else cur[shape[4:]]
+            have = {r.get("id") or r.get("taskId") for r in lst if isinstance(r, dict)}
+            new = [r for r in add_recs if (r.get("id") or r.get("taskId")) not in have]
+            lst += new
+        if not new:
+            continue
+        out["merged"] += len(new)
+        (out["files_updated"] if dst.exists() else out["files_added"]).append(fname)
+        if not dry:
+            _atomic_write(dst, json.dumps(cur, ensure_ascii=False))
+    return out
+
+
+def _relations(items: list[dict], tdir: Path, have: set, have_cli: set, tomb: set, best: dict, have_sid: set) -> None:
+    """给每个要补 / 刷新的条目标上父会话的情况（rel）。父会话按登记里的 sessionId 找（一般就是文件名）。"""
+    names = {x["name"] for x in items}
+    by_sid = {d.get("sessionId"): n for n, (_src, d, _frm) in best.items() if d.get("sessionId")}
+    for x in items:
+        sf = x.pop("_spawn", None)
+        if not sf:
+            continue
+        psid = sf["sessionId"]
+        pn = by_sid.get(psid) or _parent_name(psid)
+        r = {"parent_sid": psid, "parent": pn, "kind": _rel_kind(sf), "kind_label": REL_KIND[_rel_kind(sf)],
+             "parent_title": sf.get("title") or sf.get("name"), "task": sf.get("taskId")}
+        if pn in have or psid in have_sid or psid in have_cli:
+            r["state"] = "in_target"
+        elif pn in names:
+            r["state"] = "with"
+        elif psid in tomb or psid.removeprefix("local_") in tomb or pn[len("local_"):-len(".json")] in tomb:
+            r["state"], r["warn"] = "tomb", "父会话在这个号里删过，不会带回来；这个会显示为独立会话"
+        elif pn in best:
+            r["state"], r["warn"] = "unavailable", "父会话的记录文件不在本机，带不过来；这个会显示为独立会话"
+        else:
+            r["state"], r["warn"] = "missing", "父会话不在，会显示为独立会话"
+        x["rel"] = r
+
+
 def plan(target: str | None = None, source: str = "desktop") -> dict:
     if source not in SOURCES:
         return {"ok": False, "error": f"不认识的来源：{source}（只能是 desktop / cli / api）", "source": source}
@@ -890,10 +1005,12 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
     have = {f.name for f in tdir.glob("local_*.json")}
     # 在当前账号里删过的（桌面端留 deleted_<会话号> 墓碑）不复活
     tomb = {f.name[len("deleted_"):] for f in tdir.glob("deleted_*")}
-    have_cli = set()
+    have_cli, have_sid = set(), set()
     for f in tdir.glob("local_*.json"):
         try:
-            have_cli.add(json.loads(f.read_text(encoding="utf-8")).get("cliSessionId"))
+            j = json.loads(f.read_text(encoding="utf-8"))
+            have_cli.add(j.get("cliSessionId"))
+            have_sid.add(j.get("sessionId"))
         except Exception:
             pass
     # 同一个会话可能在好几个旧账号文件夹里都有登记（换过不止一次号），挑 lastActivityAt 最新的那份；
@@ -921,7 +1038,8 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
         item = {"src": str(src), "name": name, "title": d.get("title") or "（无标题）",
                 "cwd": d.get("cwd"), "from": frm, "archived": bool(d.get("isArchived")),
                 "last": d.get("lastActivityAt", 0) / 1000, "from_profile": prof.get(frm, "1p"),
-                "model": d.get("model"), "warn": _model_warn(d.get("model"), tgt.get("profile", "1p"), prof.get(frm, "1p"))}
+                "model": d.get("model"), "warn": _model_warn(d.get("model"), tgt.get("profile", "1p"), prof.get(frm, "1p")),
+                "_spawn": _spawn(d), "from_dir": str(src.parent)}
         if name in have:
             try:
                 cur = json.loads((tdir / name).read_text(encoding="utf-8"))
@@ -942,10 +1060,13 @@ def plan(target: str | None = None, source: str = "desktop") -> dict:
         add.append(item)
     update.sort(key=lambda x: -x["last"])
     add.sort(key=lambda x: -x["last"])
+    _relations(add + update, tdir, have, have_cli, tomb, best, have_sid)
+    rel_warns = sum(1 for x in add + update if (x.get("rel") or {}).get("warn"))
     tgt = dict(tgt, label=("API 模式（所有供应商共用）" + (f" · {acc.get('provider')}" if acc.get("provider") else ""))
                if tgt.get("profile") == "3p" else None)
     return dict(base, ok=True, target=tgt, folders=fs, add=add, update=update, skip_missing=skip_missing,
-                skip_tomb=skip_tomb, skip_have=skip_have, tombstones=len(tomb), warns=sum(1 for x in add + update if x.get("warn")))
+                skip_tomb=skip_tomb, skip_have=skip_have, tombstones=len(tomb), warns=sum(1 for x in add + update if x.get("warn")),
+                children=sum(1 for x in add + update if x.get("rel")), rel_warns=rel_warns)
 
 
 def _atomic_write(dst: Path, text: str) -> None:
@@ -961,7 +1082,23 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
     p = plan(target, source)
     if p.get("ok") and only is not None:
         keep = set(only)
+        byname = {a["name"]: a for a in p["add"]}
+        auto = []
+        for n in list(keep):                     # 0.4.8：只挑了子会话，也把它的父会话（还没在这个号里的）带上
+            seen = set()
+            while n in byname and (byname[n].get("rel") or {}).get("state") == "with" and n not in seen:
+                seen.add(n)
+                pn = byname[n]["rel"]["parent"]
+                if pn not in keep:
+                    keep.add(pn)
+                    auto.append(pn)
+                n = pn
         p["add"] = [a for a in p["add"] if a["name"] in keep]
+        p["auto_parents"] = auto
+        for a in p["add"]:                       # 父会话这次没一起补（没选上）→ 它的状态要改
+            r = a.get("rel")
+            if r and r["state"] == "with" and r["parent"] not in keep:
+                r.update(state="missing", warn="父会话这次没一起同步，会先显示为独立会话")
     if not p["ok"] or dry or not (p["add"] or p["update"]):
         if p.get("ok") and not dry and only is None:
             _switch_handled(p)
@@ -985,10 +1122,17 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
                 new[k] = cur[k]
         _atomic_write(dst, json.dumps(new, ensure_ascii=False))
         updated += 1
-    _write_ledger(bak, tdir, what, source=source, added=[a["name"] for a in p["add"]], updated=[a["name"] for a in p["update"]])
+    srcs: dict[str, set] = {}
+    for a in p["add"] + p["update"]:            # 0.4.8：子会话引用的任务记录一起合并
+        t = (a.get("rel") or {}).get("task")
+        if t:
+            srcs.setdefault(a["from_dir"], set()).add(t)
+    tasks = _merge_tasks(tdir, srcs) if srcs else {"merged": 0, "files_added": [], "files_updated": [], "warn": []}
+    _write_ledger(bak, tdir, what, source=source, added=[a["name"] for a in p["add"]], updated=[a["name"] for a in p["update"]],
+                  task_files_added=tasks["files_added"], task_files_updated=tasks["files_updated"], tasks_merged=tasks["merged"])
     if only is None or not [x for x in plan(target, source).get("add", [])]:
         _switch_handled(p)
-    return dict(p, done=done, updated=updated, dry=False, backup=str(bak))
+    return dict(p, done=done, updated=updated, dry=False, backup=str(bak), tasks=tasks)
 
 
 def _switch_handled(p: dict) -> None:
@@ -1073,7 +1217,12 @@ def restore(backup_id: str) -> dict:
                 trash.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(f), trash / n)
                 removed += 1
-        names = led.get("updated", [])
+        for n in led.get("task_files_added", []):          # 0.4.8：同步时新建的任务文件挪走、改过的换回备份里的
+            f = tdir / n
+            if f.exists():
+                trash.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(f), trash / n)
+        names = led.get("updated", []) + led.get("task_files_updated", [])
     else:
         # 没账本的老备份不知道那次改了哪些：只补回现在缺的登记，不覆盖现有的（覆盖会把之后的新进度改回旧的）
         names = [f.name for f in src.glob("local_*.json") if not (tdir / f.name).exists()]

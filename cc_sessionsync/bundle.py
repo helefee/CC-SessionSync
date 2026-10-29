@@ -77,6 +77,16 @@ def claude_children(main: Path, sid: str) -> list[tuple[Path, str]]:
     return out
 
 
+def codex_head(f: Path) -> dict:
+    """rollout 第一行 session_meta 的 payload（整份，含 source 里的父线程）。"""
+    try:
+        with open(f, "rb") as fh:
+            m = json.loads(fh.readline())
+        return (m.get("payload") or {}) if isinstance(m, dict) and m.get("type") == "session_meta" else {}
+    except Exception:
+        return {}
+
+
 def _parent_of_codex(m: dict) -> str | None:
     def walk(x):
         if isinstance(x, dict):
@@ -93,8 +103,7 @@ def _parent_of_codex(m: dict) -> str | None:
 def codex_children(sid: str) -> list[tuple[Path, str]]:
     out = []
     for f in S.rollouts():
-        m = S._codex_meta(f)
-        if _parent_of_codex(m) == sid:
+        if _parent_of_codex(codex_head(f)) == sid:
             out.append((f, f"subagents/{f.name}"))
     return sorted(out, key=lambda x: x[1])
 
@@ -115,7 +124,7 @@ def manifest(agent: str, sid: str, kids: list[tuple[Path, str]], title: str | No
     for f, rel in kids:
         if f.name.endswith(".jsonl") and (rel.startswith("subagents/") or agent == "codex"):
             subs.append(_sub_info(f, rel, sid) if agent == "claude" else
-                        {"path": rel, "type": "subagent", "agentId": (S._codex_meta(f).get("id") or f.stem[-36:]), "parent": sid,
+                        {"path": rel, "type": "subagent", "agentId": (codex_head(f).get("id") or f.stem[-36:]), "parent": sid,
                          "size": f.stat().st_size, "title": None})
         else:
             extra.append({"path": rel, "size": f.stat().st_size})
@@ -226,7 +235,7 @@ def _codex_kid(src, new_sid: str, t: Path) -> None:
             fh.write(src)
         src = Path(tmp)
     try:
-        aid = (S._codex_meta(Path(src)).get("id") or Path(src).stem[-36:]).replace("-", "")[:16]
+        aid = (codex_head(Path(src)).get("id") or Path(src).stem[-36:]).replace("-", "")[:16]
         b = CI.build(Path(src), new_sid, CI.claude_version())
         with open(t.with_name(f"agent-{aid}.jsonl"), "wb") as fo:
             for r in b["records"]:

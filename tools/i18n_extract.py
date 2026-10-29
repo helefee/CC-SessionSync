@@ -12,7 +12,8 @@ CJK = re.compile(r"[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]")
 FRAG = re.compile(r"[^`'\"<>{}$\n\\]*[\u4e00-\u9fff][^`'\"<>{}$\n\\]*")
 PY = ["convert.py", "update.py", "sessions.py", "selfcheck.py", "ui.py", "bakclean.py", "formats.py", "timeline.py", "events.py",
       "exports.py", "settings.py", "apps.py", "claude_sync.py", "codex_import.py", "dsh.py", "cursor.py", "ocstore.py", "xsearch.py",
-      "usage.py", "watch.py", "appclose.py", "tray.py", "desktop.py", "keystore.py", "detect.py", "legacy.py", "launch.py", "health.py", "nativecheck.py"]
+      "usage.py", "watch.py", "appclose.py", "tray.py", "desktop.py", "keystore.py", "detect.py", "legacy.py", "launch.py", "health.py", "nativecheck.py",
+      "bigimport.py", "bundle.py"]
 
 
 def clean(f: str) -> str:

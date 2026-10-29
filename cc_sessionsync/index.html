@@ -680,7 +680,7 @@ function when(ts){
   const y = new Date(n - 864e5); if (d.toDateString() === y.toDateString()) return "昨天 " + hm(ts);
   return (d.getFullYear() === n.getFullYear() ? "" : d.getFullYear() + "-") + `${d.getMonth()+1}-${d.getDate()} ${hm(ts)}`;
 }
-const kb = n => n == null ? "—" : n < 1024 ? n + " B" : n < 1048576 ? (n/1024).toFixed(1) + " KB" : (n/1048576).toFixed(1) + " MB";
+const kb = n => n == null ? "—" : n < 1024 ? n + " B" : n < 1048576 ? (n/1024).toFixed(1) + " KB" : n < 1073741824 ? (n/1048576).toFixed(1) + " MB" : (n/1073741824).toFixed(2) + " GB";
 const short = k => String(k || "").split("/")[0].slice(0, 8);
 const projName = p => p ? String(p).replace(/[\\/]+$/, "").split(/[\\/]/).pop() : "—";
 const sw = (id, on, attrs = "") => `<label class="switch"><input type="checkbox" id="${id}" ${on ? "checked" : ""} ${attrs}><i></i></label>`;
@@ -1597,7 +1597,13 @@ R.sync = async () => {
     [st, pl] = await Promise.all([api("/api/status"), api("/api/sync/plan?source=" + SY.source)]); }
   catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   SY.st = st; SY.plan = pl;
-  const rows = pl.ok ? [...(pl.add || []).map(x => Object.assign({k: "add"}, x)), ...(pl.update || []).map(x => Object.assign({k: "update"}, x))] : [];
+  const flat = pl.ok ? [...(pl.add || []).map(x => Object.assign({k: "add"}, x)), ...(pl.update || []).map(x => Object.assign({k: "update"}, x))] : [];
+  // 0.4.8：子会话（spawnedFrom：侧边会话 / 任务派生）排在父会话下面
+  const byN = new Map(flat.map(r => [r.name, r])), kids = new Map(), rows = [];
+  flat.forEach(r => { const pn = r.rel && r.rel.parent; if (pn && byN.has(pn) && pn !== r.name) { if (!kids.has(pn)) kids.set(pn, []); kids.get(pn).push(r); } });
+  const put = (r, d) => { if (rows.includes(r)) return; r.depth = d; rows.push(r); (kids.get(r.name) || []).forEach(c => put(c, d + 1)); };
+  flat.filter(r => !(r.rel && byN.has(r.rel.parent) && r.rel.parent !== r.name)).forEach(r => put(r, 0)); flat.forEach(r => put(r, 0));
+  SY.byN = byN;
   const live = new Set(rows.map(r => r.name)); for (const n of [...SY.sel]) if (!live.has(n)) SY.sel.delete(n);
   if (!SY.touched) rows.forEach(r => SY.sel.add(r.name));
   const cur = (pl.target || {}).key;
@@ -1609,11 +1615,11 @@ R.sync = async () => {
       <button class="ghost" id="syRef" title="重新看一遍">${ic("refresh")}</button></h3>
       ${!pl.ok ? `<div class="miss">${esc(pl.error || "认不出当前账号")}</div>` : rows.length ? `<div class="scroll" style="max-height:340px"><table class="t"><tr><th style="width:28px"><input type="checkbox" id="syAll" ${SY.sel.size === rows.length ? "checked" : ""}></th><th>会话</th><th>来自账号</th><th>项目</th><th>最近</th><th></th></tr>
         ${rows.map(r => `<tr><td><input type="checkbox" data-n="${esc(r.name)}" ${SY.sel.has(r.name) ? "checked" : ""}></td>
-          <td class="tl"><div class="ell">${esc(r.title || "（无标题）")}</div>${r.warn ? `<div class="s" style="color:var(--warn)" title="${esc(r.warn)}">⚠ ${esc(r.warn)}</div>` : ""}</td><td>${r.from_profile === "3p" ? '<span class="tag">API 模式</span>' : `<code>${esc(short(r.from))}</code>`}</td>
+          <td class="tl"><div class="ell" style="padding-left:${(r.depth || 0) * 18}px">${r.depth ? '<span class="dim">↳ </span>' : ""}${esc(r.title || "（无标题）")}${r.rel ? ` <span class="tag acc" title="${esc(r.rel.parent_title ? "父会话：" + r.rel.parent_title : "")}">子会话 · ${esc(r.rel.kind_label)}</span>` : ""}${kids.has(r.name) ? ` <span class="tag">${kids.get(r.name).length} 个子会话</span>` : ""}</div>${r.warn ? `<div class="s" style="color:var(--warn)" title="${esc(r.warn)}">⚠ ${esc(r.warn)}</div>` : ""}${r.rel && r.rel.warn ? `<div class="s" style="color:var(--warn);padding-left:${(r.depth || 0) * 18}px">⚠ ${esc(r.rel.warn)}${r.rel.parent_title ? `（${esc(r.rel.parent_title)}）` : ""}</div>` : ""}</td><td>${r.from_profile === "3p" ? '<span class="tag">API 模式</span>' : `<code>${esc(short(r.from))}</code>`}</td>
           <td class="ell" title="${esc(r.cwd)}">${esc(projName(r.cwd))}</td><td class="n">${when(r.last)}</td>
           <td>${r.k === "add" ? '<span class="tag ok">补进来</span>' : '<span class="tag warn">刷新</span>'}${r.archived ? ' <span class="tag">已归档</span>' : ""}</td></tr>`).join("")}</table></div>`
         : '<div class="okbox">都齐了：当前账号已经能看到所有会话。</div>'}
-      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:calc(13px*var(--fk))">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
+      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:calc(13px*var(--fk))">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${pl.children ? ` · ${pl.children} 个子会话会跟着父会话一起补` : ""}${pl.rel_warns ? ` · <span style="color:var(--warn)">${pl.rel_warns} 个子会话的父会话带不过来（会显示为独立会话）</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
         <button class="primary" id="syGo" ${SY.sel.size ? "" : "disabled"}>${ic("sync")} 同步选中的 ${SY.sel.size} 个</button></div></div>
     <div class="card"><h3>各账号的会话文件夹</h3><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
       ${(pl.folders || st.folders || []).map(f => `<tr><td>${f.profile === "3p" ? '<span class="tag acc">API 模式（所有供应商共用）</span> ' : ""}<code>${esc(f.key)}</code></td><td class="n">${f.count}</td><td>${when(f.latest)}</td>
@@ -1622,7 +1628,11 @@ R.sync = async () => {
       ${st.auto && st.auto.last ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:4px">上次自动同步：${when(st.auto.last.time)} · 补 ${st.auto.last.added} / 刷新 ${st.auto.last.updated}</div>` : ""}</div>`;
   $$("#sySrc button").forEach(b => b.onclick = () => { SY.source = b.dataset.s; SY.touched = false; R.sync(); });
   $("#syRef").onclick = () => { SY.touched = false; R.sync(); };
-  $$("#pg-sync [data-n]").forEach(c => c.onchange = () => { SY.touched = true; c.checked ? SY.sel.add(c.dataset.n) : SY.sel.delete(c.dataset.n); syBtn(); });
+  $$("#pg-sync [data-n]").forEach(c => c.onchange = () => { SY.touched = true; c.checked ? SY.sel.add(c.dataset.n) : SY.sel.delete(c.dataset.n);
+    if (c.checked) { let r = byN.get(c.dataset.n), n = 0; while (r && r.rel && r.rel.state === "with" && byN.has(r.rel.parent) && !SY.sel.has(r.rel.parent)) {   // 选子会话：父会话一起选上
+      SY.sel.add(r.rel.parent); const pc = $(`#pg-sync [data-n="${CSS.escape(r.rel.parent)}"]`); if (pc) pc.checked = true; n++; r = byN.get(r.rel.parent); }
+      if (n) toast(`父会话也一起选上了（子会话要挂在它下面）`); }
+    syBtn(); });
   const all = $("#syAll"); if (all) all.onchange = () => { SY.touched = true; rows.forEach(r => all.checked ? SY.sel.add(r.name) : SY.sel.delete(r.name)); $$("#pg-sync [data-n]").forEach(c => c.checked = all.checked); syBtn(); };
   const g = $("#syGo"); if (g) g.onclick = () => syncSelected(false);
   $("#syAuto").onchange = e => saveSetting({auto_sync: e.target.checked});
@@ -1632,7 +1642,7 @@ async function syncSelected(all){
   try {
     const only = all ? null : [...SY.sel];
     const r = await api("/api/sync", {source: SY.source, only});
-    if (r.note) toast(r.note); else doneOrQueued(r, `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个（备份 ${r.backup || ""}）`);
+    if (r.note) toast(r.note); else doneOrQueued(r, `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个${(r.auto_parents || []).length ? `（含自动带上的 ${r.auto_parents.length} 个父会话）` : ""}${r.tasks && r.tasks.merged ? `，合并了 ${r.tasks.merged} 条任务记录` : ""}（备份 ${r.backup || ""}）`);
     SY.touched = false; R.sync();
   } catch(e){ toast("❌ " + e.message, 5000); }
 }
@@ -2406,7 +2416,7 @@ async function ssExport(items, fmt, label){
   }
   if (!out.length) return toast("❌ " + (errs[0] || "没导出来"), 5000);
   openDlg("✅ 已导出", `<div>导出了 ${out.length} 个${dir ? `，在 <code>${esc(dir)}</code>` : ""}：</div><div class="dgls">${out.slice(0, 30).map(p => `<div>${esc(p)}</div>`).join("")}${out.length > 30 ? `<div>…还有 ${out.length - 30} 个</div>` : ""}</div>
-    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">${fmt !== "jsonl" ? "文件里带着完整的原始记录：用「导入 .md / .html / .jsonl」能一模一样地导回来。" : "原始 jsonl 也能用「导入 .md / .html / .jsonl」导回来，变成新的 Claude Code 会话。"}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">${fmt !== "jsonl" ? "文件里带着完整的原始记录：用「导入 .md / .html / .jsonl」能一模一样地导回来。" : "原始 jsonl 也能用「导入 .md / .html / .jsonl」导回来，变成新的 Claude Code 会话。有子代理（子会话）的，旁边多一个同名的 .ccss 文件夹，要和 .jsonl 放在一起。"}</div>
     ${errs.length ? `<div class="miss">${errs.length} 个没导出来：${esc(errs[0])}</div>` : ""}`,
     `<button onclick="closeDlg()">关闭</button><button class="primary" id="exRev">${ic("folder")} 打开文件夹</button>`);
   $("#exRev").onclick = () => api("/api/reveal", {path: dir || out[0]}).catch(e => toast("❌ " + e.message));
@@ -2648,7 +2658,7 @@ function madeDlg(title, r){
   const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。<button class="ghost" id="mdCr">${ic("power")} 关闭 Claude 并登记（完成后重启）</button>`
     : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
   openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）：</div>` : ""}
-    ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
+    ${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}${m.subs ? ` <span class="tag acc">含 ${m.subs} 个子会话</span>` : ""}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
       ${m.check ? `<div class="dim" style="font-size:calc(13px*var(--fk))" title="${esc((m.check.issues || []).join("\n"))}">${m.check.ok ? '<span class="tag ok">自检通过</span> 按 Claude Code 的会话规矩读了一遍' : `<span class="tag warn">自检提示 ${(m.check.issues || []).length} 条</span> ${esc((m.check.issues || [])[0] || "")}`}</div>` : ""}
       <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}
     <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:6px">${dnote}</div>
@@ -2762,44 +2772,122 @@ function tlBatch(){
 }
 
 // ---------- 导入 .md / .html / .jsonl ----------
-const IM = {files: [], plan: null};
+// 0.4.8：桌面版用系统的选文件 / 选文件夹对话框，页面只拿路径（文件内容不经过页面）；浏览器里分块上传（原样字节，8 MB 一块）。
+// 预览只读开头，条数慢慢补；导入在后台一个一个做，有进度、能取消；子代理（子会话）跟着主会话走。
+const IM = {rows: [], sel: new Set(), job: null, busy: false, cnt: 0};
+const IM_APP = {claude: "Claude Code", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor", opencode: "OpenCode", zcode: "ZCode"};
+const IM_EXT = /\.(md|markdown|html?|jsonl|jsonl\.zstd)$/i;
+const imDesk = () => !!(window.pywebview && window.pywebview.api && window.pywebview.api.pick_import_files);
 async function imDlg(){
-  IM.files = []; IM.plan = null;
+  if (IM.job) return imProgress();                                   // 还在导：回到进度
+  IM.rows = []; IM.sel = new Set(); IM.cnt++;
   if (!SY.st) { try { SY.st = await api("/api/status"); } catch(e){} }
   const projs = (SS.d && SS.d.projects) || [];
-  openDlg("导入 .md / .html / .jsonl", `<div class="dim" style="font-size:calc(13.5px*var(--fk))">把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；「导出原始 jsonl」得到的文件会自动认出是 Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 的记录；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。</div>
-    <input type="file" id="imF" accept=".md,.markdown,.html,.htm,.jsonl,.zstd" multiple style="margin-top:10px;width:100%">
+  openDlg("导入 .md / .html / .jsonl", `<div class="dim" style="font-size:calc(13.5px*var(--fk))">把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话（新 id，不覆盖任何东西，可以撤回）。本程序导出的文件里带着原始记录，导回来一模一样；「导出原始 jsonl」得到的文件会自动认出是 Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode 的记录；别处来的 Markdown 按「## 你 / ## Claude」这样的标题尽量解析。不限大小，可以一次选很多个或整个文件夹；子代理（子会话）跟着主会话一起导。</div>
+    <div class="bar" style="margin:10px 0 0"><button id="imPick">${ic("file")} 选文件…</button><button id="imFold">${ic("folder")} 导入文件夹…</button>
+      <input type="file" id="imF" multiple hidden accept=".md,.markdown,.html,.htm,.jsonl,.zstd"><input type="file" id="imD" hidden webkitdirectory>
+      <span class="sp"></span><span class="dim" id="imSum" style="font-size:calc(13px*var(--fk))"></span></div>
     <div class="setrow"><div class="sl"><div><b>放进哪个项目</b><div class="sd">留空 = 用文件里记的工作目录（没有就放家目录）</div></div></div><input id="imCwd" list="imProj" placeholder="（用文件里记的）" style="width:300px"><datalist id="imProj">${projs.map(p => `<option value="${esc(p)}">`).join("")}</datalist></div>
     <div class="setrow" style="border:0"><div class="sl"><div><b>登记进 Claude 桌面端</b><div class="sd">登记进当前账号 ${acm((SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).rid, (SY.st && SY.st.accounts && SY.st.accounts.desktop || {}).email_masked || "")} 的会话列表；桌面端开着会排队</div></div></div>${sw("imDesk", true)}</div>
-    <div id="imPv"></div>`, `<button onclick="closeDlg()">取消</button><button id="imDry" disabled>预览</button><button class="primary" id="imGo" disabled>导入</button>`);
-  $("#imF").onchange = async e => {
-    const big = [...e.target.files].filter(f => f.size > 200 * 1024 * 1024);
-    if (big.length) toast("❌ 文件太大（超过 200 MB）：" + big.map(f => f.name).join("、"), 6000);
-    IM.files = await Promise.all([...e.target.files].filter(f => f.size <= 200 * 1024 * 1024).map(f => /\.zstd$/i.test(f.name)
-      ? f.arrayBuffer().then(b => ({name: f.name, b64: b64Bytes(new Uint8Array(b))}))           // dsh 的压缩会话是二进制
-      : f.text().then(text => ({name: f.name, text}))));
-    IM.plan = null; $("#imGo").disabled = true; $("#imDry").disabled = !IM.files.length; if (IM.files.length) imDry();
+    <div id="imPv"></div>`, `<button onclick="closeDlg()">取消</button><button class="primary" id="imGo" disabled>导入</button>`);
+  $("#dlg").classList.add("wide");
+  $("#imPick").onclick = async () => {
+    if (!imDesk()) return $("#imF").click();
+    try { const ps = await pywebview.api.pick_import_files(); if (ps && ps.length) imScan({paths: ps}); } catch(e){ toast("❌ " + e.message, 5000); }
   };
-  $("#imDry").onclick = imDry;
-  $("#imGo").onclick = async () => {
-    $("#imGo").disabled = true;
-    try { const r = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), desktop: $("#imDesk").checked, dry: false});
-      madeDlg(r.ok ? "✅ 已导入" : "⚠ 导入完成（有错）", r); SS.d = null; treeLoad(); if (PAGE === "sessions") R.sessions(); }
-    catch(e){ toast("❌ " + e.message, 6000); $("#imGo").disabled = false; }
+  $("#imFold").onclick = async () => {
+    if (!imDesk()) return $("#imD").click();
+    try { const d = await pywebview.api.pick_import_folder(); if (d) imScan({folder: d}); } catch(e){ toast("❌ " + e.message, 5000); }
   };
+  $("#imF").onchange = e => imUpload([...e.target.files]);
+  $("#imD").onchange = e => imUpload([...e.target.files].filter(f => (f.webkitRelativePath || f.name).split("/").length <= 2 && IM_EXT.test(f.name)));  // 文件夹：只要第一层
+  $("#imGo").onclick = imStart;
 }
-function b64Bytes(u){ let s = ""; for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
-const IM_APP = {claude: "Claude Code", codex: "Codex", dsh: "DeepSeek Harness", cursor: "Cursor", opencode: "OpenCode", zcode: "ZCode"};
-async function imDry(){
+// 浏览器里：一块一块原样上传到本程序的数据目录，再按路径预览（不转 base64、不拼 JSON）
+async function imUpload(files){
+  if (!files.length) return toast("这里面没有 .md / .html / .jsonl 文件");
+  const box = $("#imPv"), CH = 8 * 1024 * 1024, paths = [], total = files.reduce((a, f) => a + f.size, 0); let up = null, sent = 0;
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    for (let off = 0; off < f.size || off === 0; off += CH) {
+      box.innerHTML = `<div class="dim" style="margin-top:8px">上传第 ${i + 1}/${files.length} 个：${esc(f.name)}（${kb(sent)} / ${kb(total)}）</div><div class="prog"><i style="width:${total ? Math.round(sent / total * 100) : 0}%"></i></div>`;
+      const r = await fetch(`/api/import/upload?name=${encodeURIComponent(f.name)}&off=${off}${up ? "&up=" + up : ""}`, {method: "POST", headers: {"x-token": TOKEN, "Content-Type": "application/octet-stream"}, body: f.slice(off, off + CH)});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { box.innerHTML = `<div class="miss">${esc(j.error || "HTTP " + r.status)}</div>`; return; }
+      up = j.up; sent += Math.min(CH, f.size - off); if (off + CH >= f.size) { paths.push(j.path); break; }
+    }
+  }
+  imScan({paths});
+}
+async function imScan(q){
   const box = $("#imPv"); box.innerHTML = '<div class="empty">读取…</div>';
-  try { IM.plan = await api("/api/import", {files: IM.files, cwd: $("#imCwd").value.trim(), dry: true}); }
-  catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
-  const rows = IM.plan.rows || [];
-  box.innerHTML = `<div class="dim" style="font-size:calc(13.5px*var(--fk));margin:8px 0 4px">预览（还没写任何东西）：</div>${rows.map(r => r.error ? `<div class="miss">${esc(String(r.file).split(/[\\/]/).pop().replace(/^\d\d-/, ""))}：${esc(r.error)}</div>`
-    : `<div class="mk"><div class="tl">${esc(r.title)} ${r.format === "jsonl" ? `<span class="tag ok">原始 jsonl · ${esc(IM_APP[r.agent] || r.agent)}</span>` : r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>'} ${r.agent !== "claude" && r.format !== "jsonl" ? `<span class="tag codex">原来是 ${esc(IM_APP[r.agent] || r.agent)}</span>` : ""}</div>
-      <div class="dim" style="font-size:calc(13px*var(--fk))">${r.messages} 条消息 · ${kb(r.size)} · 放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div>
-      <div class="pv" style="max-height:160px;margin-top:6px">${chatHtml((r.preview || []).slice(0, 6), r.agent)}</div></div>`).join("")}`;
-  $("#imGo").disabled = !rows.some(r => !r.error);
+  let r; try { r = await api("/api/import/scan", q); } catch(e){ box.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  const have = new Set(IM.rows.map(x => x.file));
+  for (const x of r.rows) if (!have.has(x.file)) { IM.rows.push(x); if (!x.error) IM.sel.add(x.file); }
+  if (r.grouped) toast(`${r.grouped} 个子代理（子会话）文件已归到主会话下面`);
+  imRender(); imCount(IM.cnt);
+}
+const imTag = r => r.format === "jsonl" ? `<span class="tag ok">原始 jsonl · ${esc(IM_APP[r.agent] || r.agent)}</span>` : r.how === "lossless" ? '<span class="tag ok">无损（文件里带原始记录）</span>' : '<span class="tag warn">按标题解析（尽力而为）</span>';
+const imMsgs = r => r.messages == null ? '<span class="dim">数…</span>' : r.messages + (r.approx ? "+" : "");
+function imRender(){
+  const box = $("#imPv"); if (!box) return;
+  const rows = IM.rows, ok = rows.filter(r => !r.error), n = ok.filter(r => IM.sel.has(r.file)).length;
+  const size = ok.filter(r => IM.sel.has(r.file)).reduce((a, r) => a + (r.size || 0), 0);
+  $("#imSum").textContent = rows.length ? `${rows.length} 个文件 · 选了 ${n} 个 · ${kb(size)}` : "";
+  if (!rows.length) { box.innerHTML = ""; $("#imGo").disabled = true; return; }
+  box.innerHTML = `<div class="bar" style="margin:8px 0 4px"><span class="dim" style="font-size:calc(13.5px*var(--fk))">预览（还没写任何东西）：</span><span class="sp"></span><button class="ghost" id="imAll">全选</button><button class="ghost" id="imNone">全不选</button><button class="ghost" id="imClr">清空列表</button></div>
+    <div style="max-height:46vh;overflow:auto"><table class="t"><tr><th style="width:28px"></th><th>文件 / 标题</th><th>类型</th><th class="n">大小</th><th class="n">消息</th><th></th></tr>
+    ${rows.map((r, i) => r.error ? `<tr><td></td><td class="tl"><div class="ell">${esc(String(r.name || r.file).replace(/^\d\d-/, ""))}</div></td><td colspan="4"><span class="miss" style="margin:0;padding:2px 6px">${esc(r.error)}</span></td></tr>`
+      : `<tr><td><input type="checkbox" data-i="${i}" ${IM.sel.has(r.file) ? "checked" : ""}></td>
+        <td class="tl"><div class="ell" title="${esc(r.file)}">${esc(r.title || r.name)}</div><div class="dim ell" style="font-size:calc(12.5px*var(--fk))">${esc(r.name)}${r.warn ? ` · <span style="color:var(--warn)">${esc(r.warn)}</span>` : ""}</div></td>
+        <td>${imTag(r)}${r.subs ? ` <span class="tag acc" title="${esc((r.children || []).map(c => (c.title || c.agentId || "") + (c.agentType ? " · " + c.agentType : "")).join("\n"))}">含 ${r.subs} 个子会话</span>` : ""}</td>
+        <td class="n">${kb(r.size)}</td><td class="n" data-cnt="${i}">${imMsgs(r)}</td><td><button class="ghost" data-pv="${i}" title="看前几条">${ic("eye")}</button></td></tr>
+        <tr hidden data-pvr="${i}"><td></td><td colspan="5"><div class="pv" style="max-height:160px">${chatHtml((r.preview || []).slice(0, 6), r.agent)}</div><div class="dim" style="font-size:calc(13px*var(--fk))">放进 <code>${esc($("#imCwd").value.trim() || r.cwd || "家目录")}</code></div></td></tr>`).join("")}</table></div>`;
+  $$("#imPv [data-i]").forEach(cb => cb.onchange = () => { const r = IM.rows[+cb.dataset.i]; cb.checked ? IM.sel.add(r.file) : IM.sel.delete(r.file); imRender(); });
+  $$("#imPv [data-pv]").forEach(b => b.onclick = () => { const t = $(`#imPv [data-pvr="${b.dataset.pv}"]`); t.hidden = !t.hidden; });
+  $("#imAll").onclick = () => { IM.rows.forEach(r => !r.error && IM.sel.add(r.file)); imRender(); };
+  $("#imNone").onclick = () => { IM.sel.clear(); imRender(); };
+  $("#imClr").onclick = () => { IM.rows = []; IM.sel.clear(); IM.cnt++; imRender(); };
+  $("#imGo").disabled = !n; $("#imGo").textContent = n ? `导入（${n}）` : "导入";
+}
+// 消息条数：大的文件一个一个流式数（不急，不挡操作）；开始导入就不数了
+async function imCount(gen){
+  for (const r of IM.rows) {
+    if (gen !== IM.cnt || IM.job) return;
+    if (r.error || r.messages != null || !r.format) continue;
+    try { const c = await api("/api/import/count", {file: r.file, agent: r.agent}); r.messages = c.messages; if (c.title) { r.title = c.title; const t = $(`#imPv [data-i="${IM.rows.indexOf(r)}"]`); if (t) t.closest("tr").querySelector(".tl .ell").textContent = c.title; } }
+    catch(e){ r.messages = "?"; }
+    const cell = $(`#imPv [data-cnt="${IM.rows.indexOf(r)}"]`); if (cell) cell.innerHTML = imMsgs(r);
+  }
+}
+async function imStart(){
+  const pick = IM.rows.filter(r => !r.error && IM.sel.has(r.file));
+  if (!pick.length) return;
+  const slim = pick.map(r => ({file: r.file, agent: r.agent, sid: r.sid, cwd: r.cwd, title: r.title, type: r.type, attach: r.attach}));
+  try { const j = await api("/api/import/start", {files: pick.map(r => r.file), rows: slim, cwd: $("#imCwd").value.trim(), desktop: $("#imDesk").checked});
+    IM.job = j.job; IM.cnt++; imProgress(); imPoll(); }
+  catch(e){ toast("❌ " + e.message, 6000); }
+}
+function imProgress(st){
+  st = st || IM.last || {i: 0, n: IM.sel.size};
+  const pct = st.total ? Math.min(100, Math.round((st.done_bytes || 0) / st.total * 100)) : 0;
+  const body = `<div style="margin:6px 0">正在导入第 <b>${st.i || 1}/${st.n || "?"}</b> 个${st.cur ? `：<code>${esc(st.cur)}</code>` : ""}${st.cur_size ? `（${kb(st.cur_done || 0)} / ${kb(st.cur_size)}）` : ""}</div>
+    <div class="prog"><i style="width:${pct}%"></i></div><div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">${kb(st.done_bytes || 0)} / ${kb(st.total || 0)} · 已做完 ${(st.made || []).length} 个${(st.errors || []).length ? ` · <span style="color:var(--bad)">${st.errors.length} 个出错（不影响别的）</span>` : ""}${st.cancel ? " · 正在停…" : ""}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">在后台一个一个做，可以关掉这个窗口，做完会告诉你。取消的话：已经做完的会留下（能在「撤回」里一次撤掉），正在做的那个不留半截。</div>`;
+  if ($("#imProg")) { $("#imProg").innerHTML = body; return; }
+  openDlg("导入中…", `<div id="imProg">${body}</div>`, `<button onclick="closeDlg()">在后台继续</button><button id="imCancel" class="danger">${ic("x")} 取消导入</button>`);
+  $("#imCancel").onclick = async () => { try { await api("/api/import/cancel", {id: IM.job}); $("#imCancel").disabled = true; } catch(e){ toast("❌ " + e.message); } };
+}
+async function imPoll(){
+  while (IM.job) {
+    let st; try { st = await api("/api/import/job?id=" + IM.job); } catch(e){ await new Promise(r => setTimeout(r, 1500)); continue; }
+    IM.last = st;
+    if (st.state === "running" || st.state === "starting") { if ($("#imProg")) imProgress(st); await new Promise(r => setTimeout(r, 600)); continue; }
+    IM.job = null; IM.last = null;
+    const r = st.result || {made: st.made || [], errors: [st.error || "失败"], op: st.op};
+    madeDlg(r.cancelled ? `⏹ 已取消（做完 ${r.made.length} 个）` : r.ok ? "✅ 已导入" : "⚠ 导入完成（有错）", r);
+    SS.d = null; treeLoad(); if (PAGE === "sessions") R.sessions();
+  }
 }
 
 // ---------- 备份与还原 ----------

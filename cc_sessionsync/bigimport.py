@@ -134,7 +134,7 @@ def _relation(p: Path, row: dict) -> dict:
         if o.get("isSidechain") and o.get("agentId"):
             parent, aid = sid, o["agentId"]
     else:
-        m = S._codex_meta(p)
+        m = bundle.codex_head(p)
         sid = m.get("id")
         parent = bundle._parent_of_codex(m)
         aid = sid
@@ -145,6 +145,15 @@ def _relation(p: Path, row: dict) -> dict:
 
 
 def scan_one(path: str) -> dict:
+    p = Path(path)
+    if kind(p.name) == "jsonl" and p.is_file():                 # 子代理的记录：里面全是 isSidechain，按普通会话读会是空的
+        from . import bundle
+        o = bundle._first_obj(p)
+        if o.get("isSidechain") and o.get("agentId") and o.get("type") in ("user", "assistant"):
+            info = bundle._sub_info(p, "subagents/" + p.name, o.get("sessionId"))
+            return {"file": str(p), "name": p.name, "size": p.stat().st_size, "agent": "claude", "format": "jsonl", "how": "lossless",
+                    "type": "subagent", "parent": o.get("sessionId"), "agentId": info["agentId"], "title": info.get("title") or p.stem,
+                    "cwd": o.get("cwd"), "messages": None, "preview": []}
     r = _scan_one(path)
     if "error" in r:
         r.pop("kids", None)
@@ -354,7 +363,7 @@ def import_one(path: str, row: dict | None, cwd: str | None, led: dict, od: Path
     if r["agent"] in ("claude", "codex"):
         kids = r.get("kids") or []
         if not kids and k == "jsonl":
-            old = row.get("sid") or (S._codex_meta(p).get("id") if r["agent"] == "codex" else bundle._first_obj(p).get("sessionId"))
+            old = row.get("sid") or (bundle.codex_head(p).get("id") if r["agent"] == "codex" else bundle._first_obj(p).get("sessionId"))
             kids = _kids_for(p, row, r["agent"], old)
         else:
             old = r.get("sid")

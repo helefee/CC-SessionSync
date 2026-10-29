@@ -130,7 +130,7 @@ except ValueError as e:
 # ---------- 页面 / 英文 ----------
 html = (ROOT / "cc_sessionsync" / "index.html").read_text(encoding="utf-8")
 ok('accept=".md,.markdown,.html,.htm,.jsonl,.zstd"' in html and "导入 .md / .html / .jsonl" in html, "page: picker accepts .jsonl, button renamed")
-ok("原始 jsonl 也能用「导入 .md / .html / .jsonl」导回来" in html and "b64Bytes" in html and "自检通过" in html, "page: export hint, binary upload, self-check shown")
+ok("原始 jsonl 也能用「导入 .md / .html / .jsonl」导回来" in html and "/api/import/upload" in html and "自检通过" in html, "page: export hint, binary (chunked raw) upload, self-check shown")
 en = json.loads((ROOT / "cc_sessionsync" / "i18n" / "en.json").read_text(encoding="utf-8"))
 ok(all(en.get(k) for k in ("导入 .md / .html / .jsonl", "原始 jsonl ·", "自检通过", "自检提示", "看着像")), "English strings for the import dialog")
 

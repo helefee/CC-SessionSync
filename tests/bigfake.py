@@ -76,3 +76,56 @@ if __name__ == "__main__":
     t = time.time()
     r = write_set(sys.argv[1], float(sys.argv[2]) if len(sys.argv) > 2 else 1.0)
     print(len(r), "files", sum(x["size"] for x in r) / 2**20, "MB", round(time.time() - t, 1), "s")
+
+
+def add_subagents(main, n: int = 2, legacy: int = 0, tool_results: bool = True) -> list[str]:
+    """给一个假 Claude 主会话加子代理记录（新布局 <会话号>/subagents/agent-<id>.jsonl + .meta.json；legacy 个老布局的顶层 agent-*.jsonl）。
+    主会话里也追加 Task 调用和带 agentId 的结果，像真的一样。→ agentId 列表"""
+    main = Path(main)
+    lines = main.read_text(encoding="utf-8").splitlines()
+    recs = [json.loads(x) for x in lines]
+    sid = next(r["sessionId"] for r in recs if r.get("sessionId"))
+    cwd = next((r["cwd"] for r in recs if r.get("cwd")), "/home/demo")
+    tail = [r for r in recs if r.get("type") == "custom-title"]
+    body = [r for r in recs if r.get("type") != "custom-title"]
+    parent = next(r["uuid"] for r in reversed(body) if r.get("uuid"))
+    ids = []
+    for j in range(n + legacy):
+        aid = f"a{j:03d}{uuid.uuid4().hex[:12]}"
+        ids.append(aid)
+        tid = f"toolu_task{j}"
+        u1, u2 = str(uuid.uuid4()), str(uuid.uuid4())
+        base = {"isSidechain": False, "userType": "external", "cwd": cwd, "sessionId": sid, "version": "2.0.0", "timestamp": "2026-10-28T09:00:00.000Z"}
+        body.append(dict(base, parentUuid=parent, uuid=u1, type="assistant", message={"role": "assistant", "type": "message", "model": "claude-sonnet-4-5",
+                         "content": [{"type": "text", "text": f"派一个子代理去查第 {j} 件事"}, {"type": "tool_use", "id": tid, "name": "Task",
+                         "input": {"description": f"查第 {j} 件事", "prompt": f"去查第 {j} 件事", "subagent_type": "general-purpose"}}]}))
+        body.append(dict(base, parentUuid=u1, uuid=u2, type="user", message={"role": "user", "content": [{"type": "tool_result", "tool_use_id": tid,
+                         "content": [{"type": "text", "text": f"子代理 {j} 查完了"}]}]}, toolUseResult={"agentId": aid, "status": "completed", "totalTokens": 1234}))
+        u3 = str(uuid.uuid4())
+        body.append(dict(base, parentUuid=u2, uuid=u3, type="assistant", message={"role": "assistant", "type": "message", "model": "claude-sonnet-4-5",
+                         "content": [{"type": "text", "text": f"子代理 {j} 的结论收到了。"}]}))
+        parent = u3
+        sub = []
+        p = None
+        for k in range(3):
+            u = str(uuid.uuid4())
+            role = "user" if k % 2 == 0 else "assistant"
+            sub.append({"parentUuid": p, "isSidechain": True, "userType": "external", "cwd": cwd, "sessionId": sid, "version": "2.0.0",
+                        "agentId": aid, "type": role, "uuid": u, "timestamp": f"2026-10-28T09:00:0{k}.000Z",
+                        "message": {"role": role, "content": f"子代理 {j} 第 {k} 条：{'去查第 %d 件事' % j if k == 0 else '查到了'}"}
+                        if role == "user" else {"role": role, "type": "message", "model": "claude-haiku-4-5", "content": [{"type": "text", "text": f"子代理 {j} 第 {k} 条：查到了"}]}})
+            p = u
+        text = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in sub)
+        if j < n:
+            d = main.parent / sid / "subagents"
+            d.mkdir(parents=True, exist_ok=True)
+            (d / f"agent-{aid}.jsonl").write_text(text, encoding="utf-8")
+            (d / f"agent-{aid}.meta.json").write_text(json.dumps({"agentType": "general-purpose", "description": f"查第 {j} 件事"}, ensure_ascii=False), encoding="utf-8")
+        else:
+            (main.parent / f"agent-{aid}.jsonl").write_text(text, encoding="utf-8")
+    if tool_results:
+        tr = main.parent / sid / "tool-results"
+        tr.mkdir(parents=True, exist_ok=True)
+        (tr / "toolu_big.txt").write_text("很长的工具输出\n" * 50, encoding="utf-8")
+    main.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in body + tail), encoding="utf-8")
+    return ids
