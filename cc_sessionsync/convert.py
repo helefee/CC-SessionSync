@@ -827,7 +827,10 @@ def batch_preview(items: list[dict], dst: str, again: bool = False, reasoning: b
             r["src"] = src
         rows += p["rows"]
         for k, v in p["total"].items():
-            tot[k] = tot.get(k, 0) + v
+            if isinstance(v, dict):
+                tot[k] = {d: tot.get(k, {}).get(d, 0) + n for d, n in v.items()}
+            else:
+                tot[k] = tot.get(k, 0) + v
         dirs |= set(p["dirs"])
         out.update(mode=out["mode"] or p["mode"], why=out["why"] or p["why"], paste=out["paste"] or p["paste"], running=out["running"] or p["running"])
     if not g:
