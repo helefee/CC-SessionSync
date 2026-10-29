@@ -309,7 +309,7 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
   （写好自动复制）；可以写进项目里的 `.cc-sessionsync/`。原生方向也可以勾「只导出上下文文件」。
 - 先**预览**（0.3.6 起写明写到哪、多少条、会丢 / 会变什么，见下文）；每次一本账，在「转换记录」里撤回（只删这次新建的；转过去以后又接着聊过的保留）。转过且没变的跳过，来源有新内容时标出来，
   勾「再转一份」才新建；从 A 转来的会话不会被原生转回 A（防止来回导）。标题带来源前缀，比如「（OpenCode）」。
-- 工具调用变成文字摘要（输出截短），思考缺省不带（可以当文字带上），图片 / 附件换成占位。
+- 工具调用变成文字摘要（输出截短），思考缺省不带（可以当文字带上），图片 / 附件换成占位。（0.4.1 起：常见工具、图片、思考尽量按原样，见下面「转换更像原样」。）
 - **OpenCode**（开源终端 / 桌面编码代理）：会话在 `~/.local/share/opencode/opencode.db`（Windows 也是 `%USERPROFILE%\.local\share\opencode`；
   `XDG_DATA_HOME` 优先），1.x 的 `session/message/part` 和 2.x 的 `session_v2/session_message` 都读。
   **ZCode**（智谱 Z.ai 的 GLM 编码桌面端，引擎是 OpenCode 的分支）：`~/.zcode/cli/db/db.sqlite`，标题 / 删除标记合并
@@ -353,6 +353,27 @@ ZCode 任意两个之间都能转。中间先转成统一的格式（`ccss-ir/1`
 | ![](docs/screenshots/v029-after-01-timeline.png) | ![](docs/screenshots/v029-after-02-backup.png) |
 | **之后：撤销记录** | **之后：特大字号 + 150% 缩放** |
 | ![](docs/screenshots/v029-after-03-undo.png) | ![](docs/screenshots/v029-after-05-xl-backup.png) |
+
+### 转换更像原样：工具调用、图片、思考（0.4.1）
+
+- **工具调用按目标自己的样子写**：跑命令、读 / 写 / 改文件、搜索、抓网页这些常见工具，转过去用目标应用自己的工具名和参数
+  （Claude Code 的 Bash / Read / Edit…，Codex 的 exec_command，dsh 的 bash / read…，OpenCode 2.x 的 shell / read、1.x 的 bash / read），
+  调用和输出成对写好，目标应用接着聊时模型看到的就是正常的工具记录。目标没有对应工具的（比如 Codex 只有命令行）、或者不认识的工具，还是写成文字，内容不丢。
+- **图片带过去**：截图等图片（PNG / JPEG / GIF / WebP，单张 ≤ 5 MB、一个会话共 ≤ 30 MB）原样带过去：Claude Code / Codex 写进会话，
+  dsh 放进它的附件库，OpenCode 写进消息。Cursor 的图片按它记下的本机路径去读（文件还在的话）。超限或坏掉的图片还是换成占位。
+- **思考**：dsh / OpenCode 能接的写成它们自己的思考块；Claude Code / Codex 的思考带签名 / 加密，带不过去，勾「带上思考内容」时当文字带上。
+- **写完自检**：每个会话写完，按目标应用读会话的规矩再读一遍（消息链、工具调用和结果是否成对、图片能不能解开、条数对不对；OpenCode 用它自己的命令行导出来查），
+  结果框里显示「自检通过」或具体问题。自检有问题的也已经写好了，可以先打开看看，不行就撤回。
+- 预览里多了「照旧」：哪些会按原样带过去（图片 N 张、工具调用 N 次…）一目了然。
+
+已用真的命令行验证过（本机假模型，不连真服务）：Claude Code 2.1.310、Codex 0.164.0、dsh 0.2.0-rc.2、OpenCode 2.1.1 / 1.19.3 都能接着聊转过去的会话，
+并把工具调用当正常工具记录发给模型。六个来源 → 四个目标的来回转换有自动测试（`tests/scenarios/s_fidelity.py`）。
+
+| 预览：哪些照旧 | 转换结果：自检通过 |
+|---|---|
+| ![](docs/screenshots/v041-preview-kept.png) | ![](docs/screenshots/v041-result-selfcheck.png) |
+
+![](docs/screenshots/v041-result-codex-dark.png)
 
 ### 打开更快、内存更省（0.4.0）
 
@@ -750,6 +771,11 @@ main area (Usage and Providers are full pages, not dialogs; tray entries open th
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
   Verified end-to-end in CI: `claude --resume` on the imported session and the real dsh CLI resuming the written session in a scratch
   `DSH_HOME` against a local mock model. dsh usage is counted with DeepSeek's price table (peak rates; unknown models show "—").
+- **Conversion fidelity (0.4.1):** common tool calls (shell, read/write/edit, grep/glob, web fetch/search) are written as the target's own native tool calls with paired results
+  (Claude Code Bash/Read/…, Codex `exec_command`, dsh `bash`/`read`/…, OpenCode 2.x `shell`/`read`, 1.x `bash`/`read`); tools a target lacks stay as text.
+  Real images (PNG/JPEG/GIF/WebP, ≤5 MB each, ≤30 MB per session) are carried over (dsh attachments store, OpenCode inline files, Cursor images read from their local path).
+  Reasoning becomes native reasoning for dsh/OpenCode. After each write the session is re-read with the target app's own rules (OpenCode via its CLI export) and the result dialog
+  shows "自检通过" or the issues. Verified with the real CLIs against a local mock model; round-trip tests in `tests/scenarios/s_fidelity.py`.
 - **Faster startup, capped memory (0.4.0):** the session list from last time is shown instantly on launch (tagged 上次的列表 · 正在刷新…)
   and refreshed in the background; only session files whose mtime/size changed are re-read (disk head cache in `~/.cc-sessionsync/cache/`).
   The list is slim; a session's content and resume command load when you open it. Cache capped at 60k entries and released after 3 min idle.
