@@ -879,7 +879,8 @@ def summary(f: dict) -> dict:
 
 def heatmap(f: dict, weeks: int = 53, now: float | None = None) -> dict:
     """0.4.4「每天用量」日历热力图：最近 weeks 周（按本机日历日），每天的请求数 / tokens / 费用 + 当天用得最多的模型。
-    不看界面上选的时间段（总是最近一年）；app / provider / model 照样筛。dim=model|project + key：只算这一个模型 / 项目。"""
+    不看界面上选的时间段（总是最近一年）；app / provider / model 照样筛；happ：再只看一个应用；dim=model|project + key：只算这一个模型 / 项目。
+    每天还给各种 token（inp / out / cr / cw）和对应费用（c_inp / c_out / c_cr / c_cw），界面「按类型」用。"""
     now = time.time() if now is None else now
     lt = time.localtime(now)
     today = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
@@ -891,11 +892,17 @@ def heatmap(f: dict, weeks: int = 53, now: float | None = None) -> dict:
     if key is not None and key != "":
         g["proj" if dim == "project" else "model"] = key
     w, a = _where(dict(g, **{"from": start}))
+    if f.get("happ"):                                   # 卡片里「Claude / Codex」再选一个应用
+        apps = {"claude": ("claude-code", "claude-desktop")}.get(f["happ"], (f["happ"],))
+        w += f" AND app IN ({','.join('?' * len(apps))})"
+        a += list(apps)
     c = _conn()
     rows = c.execute("SELECT date(ts, 'unixepoch', 'localtime') d, model, coalesce(proj,''), count(*), "
                      "sum(inp)+sum(cr)+sum(cw5)+sum(cw1h)+sum(out), "
                      "sum(coalesce(c_in,0)+coalesce(c_cr,0)+coalesce(c_cw5,0)+coalesce(c_cw1h,0)+coalesce(c_out,0)), "
-                     f"sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END) FROM calls{w} GROUP BY 1,2,3", a).fetchall()
+                     "sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END), sum(inp), sum(out), sum(cr), sum(cw5)+sum(cw1h), "
+                     "sum(coalesce(c_in,0)), sum(coalesce(c_out,0)), sum(coalesce(c_cr,0)), sum(coalesce(c_cw5,0)+coalesce(c_cw1h,0)) "
+                     f"FROM calls{w} GROUP BY 1,2,3", a).fetchall()
     w2, a2 = _where(dict({k: f.get(k) for k in ("app", "provider", "model")}, **{"from": start}))
     keys = {"model": {}, "project": {}}
     for m, pj, n in c.execute(f"SELECT model, coalesce(proj,''), count(*) FROM calls{w2} GROUP BY 1,2", a2):
@@ -904,8 +911,11 @@ def heatmap(f: dict, weeks: int = 53, now: float | None = None) -> dict:
             keys["project"][pj] = keys["project"].get(pj, 0) + n
     c.close()
     days: dict = {}
-    for d, model, proj, n, tok, cost, unp in rows:
-        e = days.setdefault(d, {"d": d, "n": 0, "tok": 0, "cost": 0.0, "unpriced": 0, "models": {}})
+    KS = ("inp", "out", "cr", "cw", "c_inp", "c_out", "c_cr", "c_cw")
+    for d, model, proj, n, tok, cost, unp, *ks in rows:
+        e = days.setdefault(d, {"d": d, "n": 0, "tok": 0, "cost": 0.0, "unpriced": 0, **{k: 0 for k in KS}, "models": {}})
+        for k, v in zip(KS, ks):
+            e[k] += v or 0
         e["n"] += n
         e["tok"] += tok or 0
         e["cost"] += cost or 0.0
@@ -918,7 +928,7 @@ def heatmap(f: dict, weeks: int = 53, now: float | None = None) -> dict:
     for d in sorted(days):
         e = days[d]
         top = sorted(e.pop("models").items(), key=lambda kv: -kv[1][1])[:3]
-        out.append(dict(e, cost=round(e["cost"], 6), top=[[k, v[0], v[1], round(v[2], 6)] for k, v in top]))
+        out.append(dict(e, cost=round(e["cost"], 6), **{k: round(e[k], 6) for k in KS[4:]}, top=[[k, v[0], v[1], round(v[2], 6)] for k, v in top]))
     srt = lambda m: [k for k, _ in sorted(m.items(), key=lambda kv: -kv[1])][:50]
     return {"from": time.strftime("%Y-%m-%d", time.localtime(start)), "to": time.strftime("%Y-%m-%d", time.localtime(today)),
             "weeks": weeks, "days": out, "keys": {"model": srt(keys["model"]), "project": srt(keys["project"])}}

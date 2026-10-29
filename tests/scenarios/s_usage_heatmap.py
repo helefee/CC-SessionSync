@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""0.4.4 用量页「每天用量」日历热力图：/api/usage/heatmap 按本机日历日汇总最近 53 周（星期一开始），
+"""0.4.4 用量页「按天分布」的矩阵图（日历热力图）：/api/usage/heatmap 按本机日历日汇总最近 53 周（星期一开始），
 按模型 / 项目筛、跟着应用 / 供应商 / 模型筛选走、当天用得最多的模型；页面里第二张图换成了热力图。全在临时目录、假数据。"""
 import json, os, re, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -39,16 +39,21 @@ h2 = usage.heatmap({"dim": "model", "key": "gpt-5.1-codex"}, now=now)
 ok([d["d"] for d in h2["days"]] == ["2026-10-27"], "filter: one model")
 h3 = usage.heatmap({"dim": "project", "key": "D:/w/web"}, now=now)
 ok({d["d"] for d in h3["days"]} == {"2026-10-29", "2025-11-03"} and all(d["n"] == 1 for d in h3["days"]), "filter: one project")
+ok(d29["inp"] == 110 and d29["out"] == 55 and d29["cr"] == 1000 and d29["cw"] == 0 and d29["c_out"] > 0, "per-kind tokens and costs for 按类型")
+h5 = usage.heatmap({"happ": "claude"}, now=now)
+ok("2026-10-27" not in {d["d"] for d in h5["days"]} and "2026-10-29" in {d["d"] for d in h5["days"]}, "card's Claude / Codex choice narrows to one app")
+ok(usage.heatmap({"app": "codex", "happ": "claude"}, now=now)["days"] == [], "page app filter and card app choice both apply")
 h4 = usage.heatmap({"app": "codex"}, now=now)
 ok([d["d"] for d in h4["days"]] == ["2026-10-27"] and h4["keys"]["model"] == ["gpt-5.1-codex"], "follows the page's app filter")
 
 html = (ROOT / "cc_sessionsync" / "index.html").read_text(encoding="utf-8")
-ok('id="usHeat"' in html and "/api/usage/heatmap" in html and 'styleSeg("dist")' not in html and 'id="usDist"' not in html,
-   "page: second chart is the heatmap, its 原样式/曲线图 switch is gone")
-ok('styleSeg("trend")' in html, "page: the first chart keeps its style switch")
-ok(all(x in html for x in ('"一", "", "三", "", "五"', '"Mon", "", "Wed", "", "Fri"', "hm-leg", "--hm4")), "page: weekday labels (zh / en), legend, colour ramp")
+ok('id="usDist"' in html and 'styleSeg("dist")' in html, "page: 按模型分布 card kept with its own style switch")
+ok(html.index('id="usDist"') < html.index('id="usTrend"'), "page: 按模型分布 on top, the daily card below")
+ok('<button data-v="heat"' in html and "矩阵图" in html and 'trend:"heat"' in html and "o.v044" in html, "page: daily card has 原样式 / 曲线图 / 矩阵图, 矩阵图 is the default (once, then remembered)")
+ok("/api/usage/heatmap" in html and "按天分布 · 最近一年" in html, "page: matrix view loads the year heatmap")
+ok(all(x in html for x in ('"一", "", "三", "", "五"', '"Mon", "", "Wed", "", "Fri"', "hm-leg", "--hm4", "hmKind", "hmApp", "hmModel")), "page: weekday labels (zh / en), legend, colour ramp, card filters")
 en = json.loads((ROOT / "cc_sessionsync" / "i18n" / "en.json").read_text(encoding="utf-8"))
-ok(all(en.get(k) for k in ("每天用量 · 最近一年", "少", "多", "用得最多：", "没有用量")), "English strings for the heatmap")
+ok(all(en.get(k) for k in ("按天分布 · 最近一年", "矩阵图", "少", "多", "用得最多：", "没有用量", "全部应用")), "English strings for the heatmap")
 
 print("FAILS:", FAILS) if FAILS else print("ALL OK")
 sys.exit(1 if FAILS else 0)
