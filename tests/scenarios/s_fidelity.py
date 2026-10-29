@@ -3,7 +3,6 @@
 工具调用按目标自己的工具名 / 参数写、真图片带过去（字节不变）、思考按目标能接的样子；写完自检（nativecheck，OpenCode 用它的命令行导出）；
 再用本程序读回来比：文字、工具（种类 + 输出）、图片（sha256）都对得上。再转第二跳（A → B → C）也不走样。只在临时目录里跑，不调模型。"""
 import base64, hashlib, json, os, pathlib, sys, tempfile, uuid
-from datetime import datetime, timezone
 from pathlib import Path
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tests"))

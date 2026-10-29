@@ -1899,9 +1899,9 @@ async function cvBatchRun(items, opts){
     const res = st.result || {}, done = (res.rows || []).filter(r => r.done);
     if (res.paste) copyText(res.paste);
     if (!$("#dlg").classList.contains("open")) return toast(`✅ 批量${verb}好了 ${res.done || 0} 个${(res.errors || []).length ? `，${res.errors.length} 个出错` : ""}`, 8000);
-    openDlg(`批量${verb}完成`, `<div class="kv"><div>完成</div><div><b>${res.done || 0}</b> 个${(res.errors || []).length ? `，<span style="color:var(--bad)">${res.errors.length} 个出错</span>` : ""}</div>
+    openDlg(`批量${verb}完成`, `<div class="kv"><div>完成</div><div><b>${res.done || 0}</b> 个${(res.errors || []).length ? `，<span style="color:var(--bad)">${res.errors.length} 个出错</span>` : ""}${done.filter(r => r.check && r.check.ok === false).length ? `，<span class="tag warn">${done.filter(r => r.check && r.check.ok === false).length} 个自检有问题</span>` : ""}</div>
         <div>账本</div><div>${(res.ledgers || []).map(l => `<code>${esc(l)}</code>`).join(" ")} <span class="dim">（每个来源应用一本，在下面「转换记录」里撤回）</span></div></div>
-      <div class="diff updn" style="margin-top:10px;max-height:220px;overflow:auto">${(res.rows || []).filter(r => r.done || r.error).map(r => `<div class="${r.error ? "d" : "a"}">${r.error ? "✗" : "+"} ${esc(CV_N[r.src])} · ${esc(r.title || r.id)}${r.error ? "  " + esc(r.error) : r.file ? "  → " + esc(r.file) : ""}</div>`).join("")}</div>
+      <div class="diff updn" style="margin-top:10px;max-height:220px;overflow:auto">${(res.rows || []).filter(r => r.done || r.error).map(r => `<div class="${r.error ? "d" : "a"}">${r.error ? "✗" : r.check && r.check.ok === false ? "!" : "+"} ${esc(CV_N[r.src])} · ${esc(r.title || r.id)}${r.error ? "  " + esc(r.error) : (cvKept(r.kept) ? "  · " + esc(cvKept(r.kept)) : "") + (r.check && r.check.ok === false ? "  · 自检：" + esc((r.check.issues || []).slice(0, 2).join("；")) : "") + (r.file ? "  → " + esc(r.file) : "")}</div>`).join("")}</div>
       ${res.mode === "export" && res.paste ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">在 ${CV_N[CV.dst]} 里新开对话，粘贴下面这句（已经复制好了），把文件 @ 进去：</div><pre class="rep" style="margin-top:6px">${esc(res.paste)}</pre>` : ""}
       ${(res.errors || []).length ? `<pre class="rep" style="margin-top:6px">${esc(res.errors.join("\n"))}</pre>` : ""}`, `<button class="primary" onclick="closeDlg();R.convert()">好</button>`);
   };
@@ -1923,8 +1923,28 @@ async function cvRun(ids, b){
     if (x.ok === false) return toast("❌ " + (x.error || "没做成"), 6000);
     CV.sel.clear(); CV.rows = null; SS.d = null; treeLoad(); R.convert();
     if (x.mode === "export") cvPaste(x);
-    else toast(`✅ 转好了 ${x.done || 0} 个${(x.errors || []).length ? `，${x.errors.length} 个出错` : ""}（账本 ${x.ledger}，可撤回）`, 7000);
+    else cvDone(x);
   } catch(e){ if (b) b.disabled = false; toast("❌ " + e.message, 6000); }
+}
+function cvKept(k){                         // 0.4.1：工具 / 图片 / 思考 带过去了多少
+  if (!k) return "";
+  const t = k.tools || 0, tn = k.tools_native || 0;
+  return [t ? (tn === t ? `工具 ${t} 个按原样` : tn ? `工具 ${tn} 个按原样、${t - tn} 个写成文字` : `工具 ${t} 个写成文字`) : "",
+          k.images ? (k.images_kept ? `图片 ${k.images_kept}/${k.images} 张带过去` : `图片 ${k.images} 张换成占位`) : "",
+          k.reasoning_native ? `思考 ${k.reasoning_native} 段` : ""].filter(Boolean).join(" · ");
+}
+function cvDone(x){                         // 0.4.1：转完给个结果：每个会话写好没、自检过没、带过去了什么
+  const done = (x.rows || []).filter(r => r.done), bad = done.filter(r => r.check && r.check.ok === false), errs = x.errors || [];
+  if (!done.length && !errs.length) return toast("没有要转的", 4000);
+  const row = r => `<div class="pvl"><span class="tag ${r.check && r.check.ok === false ? "warn" : "ok"}">${r.check && r.check.ok === false ? "要看看" : "好了"}</span><b>${esc(r.title || r.id)}</b>
+      <span class="dim">${esc(cvKept(r.kept))}${r.check && !r.check.skipped ? ` · ${r.check.ok ? "自检通过" : "自检发现问题"}` : ""}</span>
+      ${r.check && (r.check.issues || []).length ? `<div class="diff updn" style="margin:4px 0 0 18px">${r.check.issues.slice(0, 6).map(i => `<div class="d">${esc(i)}</div>`).join("")}</div>` : ""}</div>`;
+  const html = `<div class="kv"><div>结果</div><div><b>${done.length}</b> 个转好了${bad.length ? `，<span class="tag warn">${bad.length} 个自检有问题</span>` : ""}${errs.length ? `，<span class="tag bad">${errs.length} 个出错</span>` : ""}</div>
+      <div>账本</div><div><code>${esc(x.ledger || "")}</code> <span class="dim">（在「会话转换」页的记录里能撤回）</span></div></div>
+    <div class="scroll" style="max-height:280px;margin-top:8px">${done.map(row).join("")}${errs.map(e => `<div class="pvl"><span class="tag bad">出错</span><span class="dim">${esc(e)}</span></div>`).join("")}</div>
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">写完后按${esc(CV_N[x.dst] || "目标应用")}读会话的规矩又读了一遍（自检）。自检有问题的会话也已经写好了，可以先打开看看，不行就撤回。</div>`;
+  $("#dlg").classList.add("pvw");
+  openDlg("转换结果", html, `<button class="primary" onclick="closeDlg()">知道了</button>`);
 }
 async function cvDry(thenApply){
   const ids = [...CV.sel];
