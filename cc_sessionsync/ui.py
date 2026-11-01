@@ -538,6 +538,13 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/sessions/tokenflow":                 # 0.5.1：Token 流转（逐次调用的真实用量，只读）
                 from . import tokenflow
                 return tokenflow.flow(q["agent"], q["id"])
+            if p == "/api/sessions/tokenflow/live":            # 0.5.1：实时——只回新增 / 变过的调用；wait 秒长轮询
+                from . import tokenflow
+                return tokenflow.live(q["agent"], q["id"], q.get("gen") or "", int(q.get("v") or 0), int(q.get("nt") or 0),
+                                      float(q.get("wait") or 0))
+            if p == "/api/sessions/tokenflow/active":          # 0.5.1：最近在动的那个会话（全局「实时」）
+                from . import tokenflow
+                return tokenflow.active()
             if p == "/api/sessions/read":
                 if q.get("rich") or q.get("sub"):                 # 0.4.9：对话样式
                     from . import chatview

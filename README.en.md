@@ -76,11 +76,20 @@ anything that can be dry-run is dry-run first.
   click the timeline (one bar per call, lines at your turns, subagent calls marked), 0.5×–8× speed, running totals up to the playhead
   (input, cache, output, reasoning, total, hit rate, tool calls, cost) and the current call's model, time, gap, turn and tools. Follows
   light / dark and Chinese / English, doesn't autoplay with reduced motion, works offline with no new dependencies.
+  **Live:** if the session is still running (record written in the last 2 minutes), the view turns on *● Live* with a pulsing dot.
+  Each new model call is animated as it lands, the timeline grows a bar, and the totals, cost and cache hit rate update. When idle it
+  shows *Waiting for the next call…* and when the last call was. Scrubbing back or pausing stops following, and *Back to live* jumps to
+  the newest call. *● Live* in the sessions bar opens the most recently active Claude Code / Codex / DeepSeek Harness session. Under the
+  hood it is a token-authenticated long-poll on the local server (up to 15 s) that reads only the bytes appended to the record, Claude
+  subagent `agent-*.jsonl` files included. Half-written lines wait for the next read, and a truncated or replaced file triggers a full
+  resend.
   The new **About** page (ⓘ in the top bar, a link in Settings, *About…* in the tray) shows the version, author
   [helefee](https://github.com/helefee), the repository [helefee/CC-SessionSync](https://github.com/helefee/CC-SessionSync), the MIT
   license, issue / release links, system and data folder.
 
   ![Token flow](docs/screenshots/v051-tokenflow-en.png)
+
+  ![Token flow, live](docs/screenshots/v051-live-en-light-panel.png)
 
   ![About](docs/screenshots/v051-about-en.png)
 - **Account sync: deleted sessions stay deleted, undo restores byte-for-byte, and every sync / undo is verified (0.5.0):**

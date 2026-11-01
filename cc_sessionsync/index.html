@@ -557,6 +557,17 @@ td.nw,th.nw{white-space:nowrap}
 .tfchip .ic{width:12px;height:12px}
 .tfturn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tfleg{font-size:calc(12.5px*var(--fk));line-height:1.6}
+.tflive{display:inline-flex;align-items:center;gap:6px}
+.tfdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.tflive.on .tfdot{background:#e5484d;box-shadow:0 0 0 0 color-mix(in srgb,#e5484d 55%,transparent)}
+.tflive.on.fol .tfdot{animation:tfpulse 1.6s ease-out infinite}
+.tflive.on{color:#e5484d;border-color:color-mix(in srgb,#e5484d 45%,var(--line))}
+#ssLive .tfdot{background:#e5484d}
+@keyframes tfpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,#e5484d 55%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.tflive.on.fol .tfdot{animation:none}}
+.tfls{display:inline-flex;align-items:center;gap:8px;font-size:calc(12.5px*var(--fk));color:var(--muted);white-space:nowrap}
+.tfls #tfBack{display:inline-flex;align-items:center;gap:4px;padding:2px 8px}
+.tfwarn{color:var(--warn,#c27c0e)}
 .ab{max-width:760px}
 .abhd{display:flex;align-items:center;gap:16px;margin:6px 0 14px}.abhd img{width:64px;height:64px}
 .abhd h2{margin:0}.abhd .ver{font-family:var(--mono);color:var(--muted)}
@@ -2454,6 +2465,7 @@ R.sessions = async (keep) => {
   pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
       <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
       <button id="ssImp" title="把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html / .jsonl</button>
+      <button class="ghost tflive" id="ssLive" title="实时：打开最近在进行的 Claude Code / Codex / DeepSeek Harness 会话，跟着看它的 token 流转"><i class="tfdot"></i><span>实时</span></button>
       <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
     ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
     <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
@@ -2463,6 +2475,7 @@ R.sessions = async (keep) => {
   $("#ssImp").onclick = () => imDlg();
   const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
   $("#ssRef").onclick = () => R.sessions();
+  $("#ssLive").onclick = () => tfGlobalLive();
   dragGrip($("#ssGrip"), () => $("#pg-sessions .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-sessions .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
   if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else SS.cur = null;
 };
@@ -2708,7 +2721,7 @@ async function chatSub(aid, desc){
 // 带子的宽度、粒子的个数都按真实 token 数线性换算：输入侧每个粒子 = uIn 个 token；输出通常小两三个数量级，输出侧整体放大 k 倍
 // （每个粒子 = uIn / k 个 token），图例里写明。粒子按「累计取整」发：放完整个会话，每一路的粒子总数 = 这一路 token 总数 ÷ 每粒 token 数（取整）。
 const TF_AG = ["claude", "codex", "dsh"];
-const TF = {d: null, m: null, k: 0, t: 0, play: false, speed: 1, raf: 0, last: 0, key: "", parts: null, strip: null, col: null, drag: false};
+const TF = {d: null, m: null, k: 0, t: 0, play: false, speed: 1, raf: 0, last: 0, key: "", parts: null, strip: null, col: null, drag: false, lv: null, lvOff: new Set(), sv: 0};
 const TF_PH = {inS: 0, inE: .42, inT: .3, outS: .5, outE: .8, outT: .2, tlS: .6, tlE: .84, tlT: .16, lpT: .26};
 const TF_SPAN = 2.4;                                    // 1x 时每次调用放 2.4 秒
 function tfNice(x){ if (!(x > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(x) + 1e-9)); for (const n of [1, 2, 5]) if (n * p >= x * (1 - 1e-12)) return n * p; return 10 * p; }
@@ -2783,7 +2796,7 @@ function tfBand(x, x1, y1, h1, x2, y2, h2, col, a){
 }
 const tfBx = (x1, x2, p) => { const xm = (x1 + x2) / 2, q = 1 - p; return q * q * q * x1 + 3 * q * q * p * xm + 3 * q * p * p * xm + p * p * p * x2; };
 function tfStrip(cv, m, g, C){                         // 底下的时间轴（每次调用一根柱：缓存读 / 缓存写 / 新输入叠起来，上面一小截是输出 ×k）：画一次缓存起来
-  const key = [cv.width, cv.height, m.calls.length, C.cr, C.panel].join("|");
+  const key = [cv.width, cv.height, m.calls.length, TF.sv, C.cr, C.panel].join("|");
   if (TF.strip && TF.strip.key === key) return TF.strip.c;
   const dpr = cv.width / g.W, o = document.createElement("canvas"); o.width = cv.width; o.height = Math.ceil((g.sh + 8) * dpr);
   const x = o.getContext("2d"); x.scale(dpr, dpr);
@@ -2881,11 +2894,19 @@ function tfLoop(ts){
   const cv = $("#tfCv");
   if (!cv || !cv.isConnected || PAGE !== "sessions" || !TF.play) { if (TF.play && !cv) TF.play = false; return; }
   const dt = TF.last ? Math.min(.1, (ts - TF.last) / 1000) : 0; TF.last = ts;
-  TF.t += dt * TF.speed / TF_SPAN * (TF.m.calls.length > 600 ? Math.min(8, TF.m.calls.length / 600) : 1);
+  const back = TF.lv && TF.lv.on && TF.lv.follow ? TF.m.calls.length - 1 - TF.k : 0;     // 实时跟随时积了好几次没放：加快追上
+  TF.t += dt * TF.speed / TF_SPAN * (TF.m.calls.length > 600 ? Math.min(8, TF.m.calls.length / 600) : 1) * (back > 2 ? Math.min(8, back / 2) : 1);
   if (TF.t >= 1.08) { if (TF.k < TF.m.calls.length - 1) { TF.k++; TF.t = 0; } else { TF.t = 1; tfDraw(); tfStats(); tfSetPlay(false); return; } }
   tfDraw(); tfStats();
   TF.raf = requestAnimationFrame(tfLoop);
 }
+function tfLegend(){
+  const d = TF.d, m = TF.m, T = d.totals || {}, agent = d.agent;
+  return `累计到播放位置为止；整个会话：${(T.calls ?? m.calls.length).toLocaleString()} 次调用、合计 ${fmtN(T.tot)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${d.cut ? `（只回放最后 ${m.calls.length} 次，前面还有 ${d.cut} 次）` : ""}。
+      带子宽度和粒子个数按真实 token 数换算：输入侧每个粒子 ≈ <b>${m.uIn.toLocaleString()}</b> tokens${m.k > 1 ? `；输出侧放大 ${m.k} 倍，每个粒子 ≈ <b>${(+m.uOut.toPrecision(3)).toLocaleString()}</b> tokens` : ""}。
+      数据和「用量」页同一套口径（${agent === "codex" ? "Codex 的 token_count / token_usage_record" : agent === "dsh" ? "DeepSeek Harness 记录里的 usage" : "Claude Code 记录里每次回复的 message.usage，含子代理"}）；底部时间轴每根柱是一次调用，竖线是你说话的轮次。`;
+}
+const TF_LVBTN = `<button class="ghost tflive" id="tfLive"><i class="tfdot"></i><span>实时</span></button><span class="tfls" id="tfLs"></span>`;
 async function tfView(agent, id, host){
   const key = agent + ":" + id;
   host.innerHTML = '<div class="empty">读取用量…</div>';
@@ -2893,10 +2914,22 @@ async function tfView(agent, id, host){
   try { d = await api(`/api/sessions/tokenflow?agent=${agent}&id=${encodeURIComponent(id)}`); } catch(e){ host.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
   if (!SS.cur || SS.cur.agent + ":" + SS.cur.id !== key || !host.isConnected) return;
   if (d.ok === false) { host.innerHTML = `<div class="miss">${esc(d.error || "读不了")}</div>`; return; }
-  if (!d.calls.length) { host.innerHTML = `<div class="emp">${ic("activity")}<b>没有可回放的 token 用量</b><div style="max-width:440px">${esc(d.reason || "")}</div></div>`; return; }
-  const m = tfModel(d), T = d.totals || {}, same = TF.key === key;
-  Object.assign(TF, {d, m, key, parts: null, strip: null, col: null, cur: -1});
+  const same = TF.key === key;
+  if (TF.lv) { TF.lv.on = false; if (TF.lv.ac) TF.lv.ac.abort(); }
+  Object.assign(TF, {d, m: tfModel(d), key, parts: null, strip: null, col: null, cur: -1});
   if (!same) { TF.k = 0; TF.t = 0; }
+  // 实时：记录文件最近改过（会话还在进行）就默认打开；自己关掉的这次打开期间不再自动开
+  const can = !!d.gen, auto = can && !TF.lvOff.has(key) && d.age != null && d.age < (d.live_s || 120);
+  TF.lv = can ? {key, agent, id, on: false, follow: false, ac: null, err: "", busy: false} : null;
+  tfRender(host, same);
+  if (auto) tfLiveOn(true, true);
+}
+function tfRender(host, same){
+  const d = TF.d, m = TF.m;
+  if (!m.calls.length) {
+    host.innerHTML = `${TF.lv ? `<div class="tfbar">${TF_LVBTN}</div>` : ""}<div class="emp">${ic("activity")}<b>没有可回放的 token 用量</b><div style="max-width:440px">${esc(d.reason || "")}</div></div>`;
+    tfLiveWire(); tfLiveUI(); return;
+  }
   TF.k = Math.min(TF.k, m.calls.length - 1);
   const sp = +(store.get("ccss.tfspeed") || 1);
   TF.speed = [.5, 1, 2, 4, 8, 16].includes(sp) ? sp : 1;
@@ -2905,7 +2938,7 @@ async function tfView(agent, id, host){
       <button class="ghost" id="tfPrev" title="上一次调用（←）"><span class="flip">${ic("chev")}</span></button><button class="ghost" id="tfNext" title="下一次调用（→）">${ic("chev")}</button>
       <input type="range" id="tfSl" min="0" max="${m.calls.length - 1}" value="${TF.k}" title="拖动到某一次调用">
       <select id="tfSp" title="播放速度">${[.5, 1, 2, 4, 8, 16].map(v => `<option value="${v}" ${v === TF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
-      <span class="tfpos">调用 <b id="tfK"></b> · 轮次 <b id="tfTn"></b></span></div>
+      <span class="tfpos">调用 <b id="tfK"></b> · 轮次 <b id="tfTn"></b></span>${TF.lv ? TF_LVBTN : ""}</div>
     <div class="tfcv"><canvas id="tfCv"></canvas></div>
     <div class="tfacc">
       <div><span><i style="background:var(--u2)"></i>新输入</span><b id="tfAi"></b></div><div><span><i style="background:var(--u1)"></i>缓存读</span><b id="tfAcr"></b></div>
@@ -2913,22 +2946,20 @@ async function tfView(agent, id, host){
       <div><span><i style="background:var(--u5)"></i>其中思考</span><b id="tfArs"></b></div><div><span>合计</span><b id="tfAt"></b></div>
       <div><span>缓存命中率</span><b id="tfAh"></b></div><div><span>工具调用</span><b id="tfAtl"></b></div><div><span>费用</span><b id="tfAc"></b></div></div>
     <div class="tfcur" id="tfCur"></div>
-    <div class="dim tfleg">累计到播放位置为止；整个会话：${(T.calls ?? m.calls.length).toLocaleString()} 次调用、合计 ${fmtN(T.tot)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${d.cut ? `（只回放最后 ${m.calls.length} 次，前面还有 ${d.cut} 次）` : ""}。
-      带子宽度和粒子个数按真实 token 数换算：输入侧每个粒子 ≈ <b>${m.uIn.toLocaleString()}</b> tokens${m.k > 1 ? `；输出侧放大 ${m.k} 倍，每个粒子 ≈ <b>${(+m.uOut.toPrecision(3)).toLocaleString()}</b> tokens` : ""}。
-      数据和「用量」页同一套口径（${agent === "codex" ? "Codex 的 token_count / token_usage_record" : agent === "dsh" ? "DeepSeek Harness 记录里的 usage" : "Claude Code 记录里每次回复的 message.usage，含子代理"}）；底部时间轴每根柱是一次调用，竖线是你说话的轮次。</div>
+    <div class="dim tfleg" id="tfLeg">${tfLegend()}</div>
   </div>`;
   tfSetPlay(false);
-  $("#tfPlay").onclick = () => tfSetPlay(!TF.play);
-  $("#tfPrev").onclick = () => { tfSetPlay(false); tfSeek(TF.k - 1, 1); };
-  $("#tfNext").onclick = () => { tfSetPlay(false); tfSeek(TF.k + 1, 1); };
+  $("#tfPlay").onclick = () => { tfSetPlay(!TF.play); tfUser(!TF.play); };
+  $("#tfPrev").onclick = () => { tfSetPlay(false); tfSeek(TF.k - 1, 1); tfUser(); };
+  $("#tfNext").onclick = () => { tfSetPlay(false); tfSeek(TF.k + 1, 1); tfUser(); };
   $("#tfSp").onchange = e => { TF.speed = +e.target.value; store.set("ccss.tfspeed", String(TF.speed)); };
   const sl = $("#tfSl");
-  sl.oninput = () => { TF.drag = true; tfSeek(+sl.value, TF.play ? 0 : 1); };
+  sl.oninput = () => { TF.drag = true; tfSeek(+sl.value, TF.play ? 0 : 1); tfUser(); };
   sl.onchange = () => { TF.drag = false; };
-  const cv = $("#tfCv"), seekAt = e => { const r = cv.getBoundingClientRect(), g = tfGeo(r.width, r.height, m, m.calls[TF.k]), z = r.width / cv.clientWidth;
+  const cv = $("#tfCv"), seekAt = e => { const m = TF.m, r = cv.getBoundingClientRect(), g = tfGeo(r.width, r.height, m, m.calls[TF.k]), z = r.width / cv.clientWidth;
     const px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
     if (py < g.sy - 8 && !TF.drag) return false;
-    tfSeek(Math.floor((px - g.sx) / (g.sw / m.calls.length)), TF.play ? 0 : 1); return true; };
+    tfSeek(Math.floor((px - g.sx) / (g.sw / m.calls.length)), TF.play ? 0 : 1); tfUser(); return true; };
   cv.onmousedown = e => { if (!seekAt(e)) return; TF.drag = true; const mv = ev => seekAt(ev), up = () => { TF.drag = false; document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
     document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up); };
   host.tabIndex = -1;
@@ -2937,9 +2968,119 @@ async function tfView(agent, id, host){
   if (!TF.rs) { TF.rs = 1; window.addEventListener("resize", () => { TF.strip = null; if ($("#tfCv")) tfDraw(); });
     new MutationObserver(() => { TF.col = null; TF.strip = null; if ($("#tfCv") && !TF.play) tfDraw(); }).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { TF.col = null; TF.strip = null; if ($("#tfCv")) tfDraw(); }); }
-  if (!same) TF.t = matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
-  tfDraw(); tfStats();
+  if (!same) TF.t = tfRM() ? 1 : 0;
+  tfLiveWire();
+  tfDraw(); tfStats(); tfLiveUI();
   if (!same && TF.t === 0) tfSetPlay(true);         // 打开就开始放（系统设置了「减少动态效果」时停在第一次调用）
+}
+const tfRM = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+// ---------- 0.5.1 实时：会话还在进行时跟着它走 ----------
+// 后端按字节偏移往后读记录文件（Claude 含子代理 agent-*.jsonl；还在写的半行留到下次），只回 v 之后新增 / 变过的调用；
+// 这里长轮询：每次最多等 TF_WAIT 秒，有新调用马上回。新调用到了：时间轴多一根柱、累计 / 费用 / 命中率跟着变，跟随时接着放这一次。
+// 往回拖 / 暂停 = 不再跟随（时间轴照样长），点「回到实时」跳到最新那次。
+const TF_WAIT = 15, TF_MAX = 4000;
+function tfLiveWire(){
+  const b = $("#tfLive"), s = $("#tfLs"); if (!b) return;
+  b.onclick = () => tfLiveOn(!(TF.lv && TF.lv.on));
+  s.onclick = e => { if (e.target.closest("#tfBack")) tfFollow(); };
+}
+function tfLiveOn(on, auto){
+  const L = TF.lv; if (!L) return;
+  L.on = on; L.err = "";
+  if (on) { TF.lvOff.delete(L.key); tfFollow(auto); tfLivePoll(L); if (!L.iv) L.iv = setInterval(() => { if (TF.lv !== L || !L.on || !$("#tfLive")) { clearInterval(L.iv); L.iv = 0; return; } tfLiveUI(); }, 1000); }
+  else { TF.lvOff.add(L.key); L.follow = false; if (L.ac) L.ac.abort(); }
+  tfLiveUI();
+}
+// 跟到最新那次调用（刚打开时如果已经在从头放，就让它放完再跟上）
+function tfFollow(auto){
+  const L = TF.lv, m = TF.m; if (!L || !m) return;
+  L.follow = true;
+  const last = m.calls.length - 1;
+  if (last >= 0 && TF.k !== last) { if (tfRM()) tfSeek(last, 1); else { tfSetPlay(false); TF.k = last; TF.t = 0; TF.parts = null; tfSetPlay(true); } }
+  else if (last >= 0 && !auto && !TF.play && TF.t >= 1) tfSeek(last, 1);
+  tfLiveUI();
+}
+function tfUser(paused){                              // 自己动了播放位置：停在最新那次上才算还在跟随
+  const L = TF.lv; if (!L || !L.on || !TF.m) return;
+  L.follow = !paused && TF.k >= TF.m.calls.length - 1;
+  tfLiveUI();
+}
+function tfAgo(ts){ const s = Math.max(0, Date.now() / 1000 - ts); return s < 60 ? `${Math.round(s)} 秒前` : s < 3600 ? `${Math.round(s / 60)} 分钟前` : `${(s / 3600).toFixed(1)} 小时前`; }
+function tfLiveUI(){
+  const L = TF.lv, b = $("#tfLive"), s = $("#tfLs"); if (!b || !s) return;
+  const on = !!(L && L.on), m = TF.m, n = m ? m.calls.length : 0;
+  b.classList.toggle("on", on); b.classList.toggle("fol", on && L.follow);
+  const tip = on ? "实时：正在跟着这个会话，有新的模型调用马上放出来；再点一下退出实时" : "实时：会话还在进行时跟着它，有新的模型调用马上放出来";
+  if (b.dataset.tip0 !== tip) { b.dataset.tip0 = tip; b.title = tip; }
+  let h = "";
+  if (on) {
+    const lt = n ? m.calls[n - 1].ts : 0;
+    if (L.err) h = `<span class="tfwarn">${esc(L.err)}</span>`;
+    else if (!L.follow && n) h = `<button class="ghost" id="tfBack" title="跳到最新那次调用，接着跟随">${ic("chev")}<span>回到实时</span></button>`;
+    else if (!n) h = `<span>等待第一次调用…</span>`;
+    else if (TF.play && TF.k >= n - 1) h = `<span>新调用</span>`;
+    else if (TF.play) h = `<span>追上最新…</span><span class="dim">+${n - 1 - TF.k}</span>`;
+    else h = `<span>等待新调用…</span>${lt ? `<span class="dim">上一次 ${tfAgo(lt)}</span>` : ""}`;
+  }
+  if (s.dataset.h !== h) { s.dataset.h = h; s.innerHTML = h; }
+}
+async function tfLivePoll(L){
+  if (L.busy) return; L.busy = true;
+  try {
+    while (L.on && TF.lv === L) {
+      const host = $("#svFlow");
+      if (!host || !host.isConnected || host.hidden || PAGE !== "sessions" || !SS.cur || SS.cur.agent + ":" + SS.cur.id !== L.key) { L.on = false; break; }
+      const d = TF.d; L.ac = new AbortController();
+      let r;
+      try { r = await api(`/api/sessions/tokenflow/live?agent=${L.agent}&id=${encodeURIComponent(L.id)}&gen=${encodeURIComponent(d.gen || "")}&v=${d.v || 0}&nt=${(d.turns || []).length}&wait=${TF_WAIT}`, undefined, {signal: L.ac.signal}); }
+      catch(e){ if (!L.on || TF.lv !== L) break; L.err = "实时连接断了，3 秒后重试：" + e.message; tfLiveUI(); await new Promise(z => setTimeout(z, 3000)); continue; }
+      if (!L.on || TF.lv !== L) break;
+      if (r.ok === false) { L.err = r.error || "读不了"; tfLiveUI(); await new Promise(z => setTimeout(z, 3000)); continue; }
+      L.err = ""; tfMerge(r);
+    }
+  } finally { L.busy = false; tfLiveUI(); }
+}
+// 把实时拿到的合进来：按 id 换掉 / 追加，按时间排好，重算比例尺和累计
+function tfMerge(r){
+  const L = TF.lv, d = TF.d, old = TF.m, n0 = old.calls.length, curId = n0 ? old.calls[TF.k].id : null, host = $("#svFlow");
+  if (r.reset) { Object.assign(d, r); }
+  else {
+    const fresh = (r.calls || []).length, nt = (r.turns || []).length;
+    Object.assign(d, {v: r.v, gen: r.gen, totals: r.totals, models: r.models, subagents: r.subagents, age: r.age, mtime: r.mtime});
+    if (!fresh && !nt) { tfLiveUI(); return; }
+    const idx = new Map(d.calls.map((c, i) => [c.id, i]));
+    for (const c of r.calls) { const i = idx.get(c.id); if (i != null) d.calls[i] = c; else { idx.set(c.id, d.calls.length); d.calls.push(c); } }
+    d.calls = d.calls.map((c, i) => [c, i]).sort((a, b) => (a[0].ts || 0) - (b[0].ts || 0) || a[1] - b[1]).map(x => x[0]);
+    if (d.calls.length > TF_MAX) { const cut = d.calls.length - TF_MAX; d.calls.splice(0, cut); d.cut = (d.cut || 0) + cut; }
+    d.calls.forEach((c, i) => { c.i = i; });
+    d.turns = (d.turns || []).slice(0, r.nt0 ?? d.turns.length).concat(r.turns || []);
+  }
+  const m = TF.m = tfModel(d), n = m.calls.length;
+  Object.assign(TF, {parts: null, strip: null, cur: -1, sv: (TF.sv || 0) + 1});
+  if (!n) { if (host && n0) tfRender(host, true); tfLiveUI(); return; }
+  if (!n0 || !$("#tfCv")) { TF.k = 0; TF.t = 1; if (host) tfRender(host, true); if (L && L.on && L.follow) tfFollowNew(-1); return; }
+  const k = curId ? m.calls.findIndex(c => c.id === curId) : -1;
+  TF.k = k >= 0 ? k : Math.min(TF.k, n - 1);
+  const sl = $("#tfSl"); if (sl) sl.max = n - 1;
+  const lg = $("#tfLeg"); if (lg) { const h = tfLegend(); if (lg.dataset.h !== h) { lg.dataset.h = h; lg.innerHTML = h; } }
+  if (L && L.on && L.follow && n > n0) tfFollowNew(TF.k);
+  else { tfDraw(); tfStats(); }
+  tfLiveUI();
+}
+function tfFollowNew(k){                               // 跟随中来了新调用：放完手上这次就接着放新的；减少动态效果时直接跳到最新
+  const n = TF.m.calls.length;
+  if (tfRM()) { tfSeek(n - 1, 1); return; }
+  if (!TF.play) { TF.k = Math.min(n - 1, k + 1); TF.t = 0; TF.parts = null; tfSetPlay(true); }
+  tfDraw(); tfStats();
+}
+// 全局「实时」：打开最近在动的那个会话（Claude Code / Codex / DeepSeek Harness），切到 Token 流转并跟随
+async function tfGlobalLive(){
+  let a;
+  try { a = await api("/api/sessions/tokenflow/active"); } catch(e){ toast("❌ " + e.message, 5000); return; }
+  if (!a.agent) { toast(a.reason || "最近没有在进行的会话", 5000); return; }
+  store.set("ccss.svmode", "flow"); TF.lvOff.delete(a.agent + ":" + a.id);
+  if (!SS.d || !SS.d.items.find(i => i.agent === a.agent && i.id === a.id)) await R.sessions(true);
+  ssView(a.agent, a.id);
 }
 // ---------- /Token 流转 ----------
 async function ssView(agent, id, lim){
@@ -2980,7 +3121,7 @@ async function ssView(agent, id, lim){
     const me = $("#svMoreE"); if (me) me.onclick = () => { SS.pvKeep = pv.scrollHeight - pv.scrollTop; me.disabled = true; ssView(agent, id, Math.min(5000, lim * 3)); }; }
   if (tfOn) {                          // 0.5.1：对话 | Token 流转（记住选的哪个）
     const show = m => { $$("#svMode button").forEach(b => b.classList.toggle("on", b.dataset.m === m)); $("#svPv").hidden = m === "flow"; $("#svFlow").hidden = m !== "flow";
-      if (m === "flow") tfView(agent, id, $("#svFlow")); else { tfSetPlay(false); const pv = $("#svPv"); pv.scrollTop = pv.scrollHeight; } };
+      if (m === "flow") tfView(agent, id, $("#svFlow")); else { tfSetPlay(false); if (TF.lv) { TF.lv.on = false; if (TF.lv.ac) TF.lv.ac.abort(); } const pv = $("#svPv"); pv.scrollTop = pv.scrollHeight; } };
     $$("#svMode button").forEach(b => b.onclick = () => { store.set("ccss.svmode", b.dataset.m); show(b.dataset.m); });
     if (mode === "flow") tfView(agent, id, $("#svFlow"));
   }
