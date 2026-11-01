@@ -531,6 +531,39 @@ td.nw,th.nw{white-space:nowrap}
 #banLegacy .lglist{margin:4px 0 4px 18px;padding:0;font-size:calc(13px*var(--fk))}#banLegacy .lglist li{margin:1px 0}
 .banmore{display:flex;justify-content:center;margin:-6px auto 12px;max-width:1180px}
 .banmore button{font-size:calc(12.5px*var(--fk));padding:2px 12px;border-radius:999px;color:var(--muted);background:var(--hover)}
+/* 0.5.1 Token 流转（会话详情）和「关于」页 */
+.svmode{margin:0 2px}
+#svPv[hidden],#svFlow[hidden]{display:none}
+#svFlow{max-height:calc(calc(100*var(--vh)) - 250px);overflow:auto;padding-right:2px}
+.tf{display:flex;flex-direction:column;gap:10px;outline:none}
+.tfbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tfbar #tfPlay{display:inline-flex;align-items:center;gap:6px;min-width:86px;justify-content:center}
+.tfbar input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.tfbar select{padding:3px 6px}
+.tfbar .flip{display:inline-flex;transform:scaleX(-1)}
+.tfpos{font-size:calc(13px*var(--fk));color:var(--muted);white-space:nowrap}.tfpos b{color:var(--text);font-weight:600}
+.tfcv{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel2);overflow:hidden}
+.tfcv canvas{display:block;width:100%;height:calc(340px*var(--fk));cursor:pointer}
+.tfacc{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.tfacc>div{border:1px solid var(--line2);border-radius:var(--r);padding:6px 10px;background:var(--panel);display:flex;flex-direction:column}
+.tfacc span{font-size:calc(12px*var(--fk));color:var(--muted);display:flex;align-items:center;gap:5px}
+.tfacc b{font-size:calc(16px*var(--fk));font-weight:650}
+.tfacc i,.tfnums i{display:inline-block;width:9px;height:9px;border-radius:3px}
+.tfcur{border:1px solid var(--line2);border-radius:var(--r);padding:8px 12px;background:var(--panel);display:flex;flex-direction:column;gap:6px;font-size:calc(13.5px*var(--fk))}
+.tfch{display:flex;align-items:center;gap:6px}.tfch .sp{flex:1}
+.tfnums{display:flex;flex-wrap:wrap;gap:4px 14px}.tfnums span{display:inline-flex;align-items:center;gap:5px}
+.tftools{display:flex;flex-wrap:wrap;gap:4px;font-size:calc(12.5px*var(--fk))}
+.tfchip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:0 9px;background:color-mix(in srgb,var(--u7) 14%,transparent);color:var(--u7);font-family:var(--mono);font-size:calc(12px*var(--fk))}
+.tfchip .ic{width:12px;height:12px}
+.tfturn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfleg{font-size:calc(12.5px*var(--fk));line-height:1.6}
+.ab{max-width:760px}
+.abhd{display:flex;align-items:center;gap:16px;margin:6px 0 14px}.abhd img{width:64px;height:64px}
+.abhd h2{margin:0}.abhd .ver{font-family:var(--mono);color:var(--muted)}
+.abgrid{display:grid;grid-template-columns:max-content 1fr;gap:8px 18px;align-items:center;font-size:calc(14px*var(--fk))}
+.abgrid>span:nth-child(odd){color:var(--muted)}
+.abgrid a{display:inline-flex;align-items:center;gap:5px;word-break:break-all}
+.ablinks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -549,6 +582,7 @@ td.nw,th.nw{white-space:nowrap}
     <span class="sp"></span>
     <div class="topact">
       <button class="tbx" id="tbTheme" title="主题"></button>
+      <button class="tbx" id="tbAbout" data-p="about" title="关于 CC Session Sync：版本、作者、仓库、许可证"><i data-ic="info"></i></button>
       <button class="tbx" id="tbSet" data-p="settings" title="设置"><i data-ic="gear"></i></button>
     </div>
   </header>
@@ -579,6 +613,7 @@ td.nw,th.nw{white-space:nowrap}
       <section class="page full" id="pg-usage"></section>
       <section class="page" id="pg-settings"></section>
       <section class="page" id="pg-diag"></section>
+      <section class="page" id="pg-about"></section>
     </main>
   </div>
 </div>
@@ -925,13 +960,13 @@ function go(p){
   if (!R[p]) return;
   if (PAGE !== p && $("#dlg").classList.contains("open")) closeDlg();
   PAGE = p;
-  $$("#nav [data-p], #tbSet").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor" || p === "codex"))));
+  $$("#nav [data-p], #tbSet, #tbAbout").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor" || p === "codex"))));
   $("#side").classList.toggle("on", p === "sessions");
   $$(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
   store.set("ccss.page", p);
   R[p]();
 }
-$$("#nav [data-p], #tbSet").forEach(t => t.onclick = () => go(t.dataset.p));
+$$("#nav [data-p], #tbSet, #tbAbout").forEach(t => t.onclick = () => go(t.dataset.p));
 $("#brand").onclick = () => go("sessions");
 $("#sdHead").onclick = e => { if (e.target.closest("button")) return; TR.sel = null; treeRender(); go("sessions"); };
 $("#tbUpd").onclick = () => updOpen(true);
@@ -2667,6 +2702,246 @@ async function chatSub(aid, desc){
     const pv = $("#dlgBody .chatpv"); if (pv) pv.scrollTop = pv.scrollHeight;
   } catch(e){ openDlg("子代理记录", `<div class="miss">${esc(e.message)}</div>`, `<button onclick="closeDlg()">关闭</button>`); }
 }
+// ---------- 0.5.1 Token 流转：把会话里每一次模型调用的真实用量按顺序回放 ----------
+// 数据来自 /api/sessions/tokenflow：后端用和「用量」页同一套解析（Claude 的 message.usage、Codex 的 token_count / token_usage_record、
+// DeepSeek Harness 的 usage），一次调用一条：新输入 / 缓存读 / 缓存写 → 模型 → 输出（含思考）→ 工具调用 → 下一次的输入。
+// 带子的宽度、粒子的个数都按真实 token 数线性换算：输入侧每个粒子 = uIn 个 token；输出通常小两三个数量级，输出侧整体放大 k 倍
+// （每个粒子 = uIn / k 个 token），图例里写明。粒子按「累计取整」发：放完整个会话，每一路的粒子总数 = 这一路 token 总数 ÷ 每粒 token 数（取整）。
+const TF_AG = ["claude", "codex", "dsh"];
+const TF = {d: null, m: null, k: 0, t: 0, play: false, speed: 1, raf: 0, last: 0, key: "", parts: null, strip: null, col: null, drag: false};
+const TF_PH = {inS: 0, inE: .42, inT: .3, outS: .5, outE: .8, outT: .2, tlS: .6, tlE: .84, tlT: .16, lpT: .26};
+const TF_SPAN = 2.4;                                    // 1x 时每次调用放 2.4 秒
+function tfNice(x){ if (!(x > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(x) + 1e-9)); for (const n of [1, 2, 5]) if (n * p >= x * (1 - 1e-12)) return n * p; return 10 * p; }
+function tfModel(d, o){
+  o = o || {};
+  const calls = (d && d.calls) || [];
+  let maxP = 1, maxO = 1;
+  for (const c of calls) { maxP = Math.max(maxP, c.inp + c.cr + c.cw); maxO = Math.max(maxO, c.out); }
+  const uIn = tfNice(maxP / (o.cap || 240));           // 最大那次调用的输入最多 ~240 个粒子
+  let k = 1;
+  const lim = .6 * maxP / maxO;                          // 输出侧放大到最多 ≈ 输入侧最宽处的 60%
+  for (const s of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]) if (s <= lim) k = s;
+  const uOut = uIn / k, S = ["cr", "cw", "inp", "out"];
+  const acc = {cr: 0, cw: 0, inp: 0, out: 0}, cum = {inp: 0, cr: 0, cw: 0, out: 0, reasoning: 0, tot: 0, cost: 0, priced: 0, tools: 0};
+  const cnt = [], before = [], turnAt = [];
+  calls.forEach((c, i) => {
+    before.push(Object.assign({}, cum));
+    const n = {};
+    for (const s of S) { const u = s === "out" ? uOut : uIn, a = acc[s]; acc[s] += c[s]; n[s] = Math.floor(acc[s] / u + 1e-7) - Math.floor(a / u + 1e-7); }
+    n.tools = Math.min(c.ntools || 0, 24);
+    cnt.push(n);
+    for (const s of ["inp", "cr", "cw", "out", "reasoning", "tot"]) cum[s] += c[s] || 0;
+    if (c.cost != null) { cum.cost += c.cost; cum.priced++; }
+    cum.tools += c.ntools || 0;
+    if (!i || c.turn !== calls[i - 1].turn) turnAt.push(i);
+  });
+  return {calls, maxP, maxO, uIn, uOut, k, cnt, before, turnAt, total: Object.assign({}, cum)};
+}
+// 第 i 次调用放到 t（0..1）时的累计：输入在输入粒子到齐的过程中加上，输出 / 费用在输出粒子到齐的过程中加上
+function tfCum(m, i, t){
+  const c = m.calls[i], b = m.before[i], cl = x => Math.max(0, Math.min(1, x));
+  const fi = cl((t - TF_PH.inS) / (TF_PH.inE + TF_PH.inT - TF_PH.inS)), fo = cl((t - TF_PH.outS) / (TF_PH.outE + TF_PH.outT - TF_PH.outS));
+  const r = {inp: b.inp + c.inp * fi, cr: b.cr + c.cr * fi, cw: b.cw + c.cw * fi, out: b.out + c.out * fo, reasoning: b.reasoning + c.reasoning * fo,
+             cost: b.cost + (c.cost || 0) * fo, priced: b.priced + (c.cost != null && fo >= 1 ? 1 : 0), tools: b.tools + (fo >= 1 ? c.ntools || 0 : 0)};
+  r.tot = r.inp + r.cr + r.cw + r.out;
+  const p = r.inp + r.cr + r.cw; r.hit = p ? r.cr / p : 0;
+  return r;
+}
+function tfRand(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// 这次调用的粒子：发出时间、在带子里的位置（固定种子：拖动 / 暂停 / 重放看到的一样）
+function tfParts(m, i){
+  const n = m.cnt[i], rnd = tfRand(i * 2654435761 + 7), P = [];
+  for (const s of ["cr", "cw", "inp"]) for (let j = 0; j < n[s]; j++) P.push({s, e: TF_PH.inS + (TF_PH.inE - TF_PH.inS) * (j + rnd()) / n[s], l: rnd()});
+  for (let j = 0; j < n.out; j++) P.push({s: "out", e: TF_PH.outS + (TF_PH.outE - TF_PH.outS) * (j + rnd()) / n.out, l: rnd()});
+  for (let j = 0; j < n.tools; j++) P.push({s: "tool", e: TF_PH.tlS + (TF_PH.tlE - TF_PH.tlS) * (j + .5) / n.tools, l: rnd()});
+  return P;
+}
+function tfColors(){
+  const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue(k).trim();
+  return {cr: g("--u1"), cw: g("--u4"), inp: g("--u2"), out: g("--u3"), rs: g("--u5"), tool: g("--u7"), sub: g("--u6"), text: g("--text"), muted: g("--muted"),
+          faint: g("--faint"), line: g("--line"), panel: g("--panel"), panel2: g("--panel2"), font: getComputedStyle(document.body).fontFamily};
+}
+const tfShort = s => String(s || "").replace(/^claude-/, "").replace(/-\d{8}$/, "");
+function tfGeo(W, H, m, c){
+  const strip = 58, Hf = H - strip - 16, cy = 18 + (Hf - 18) / 2, Bm = Math.max(40, Math.min(170, Hf * .62)), s = Bm / m.maxP;
+  const x0 = Math.min(150, W * .2), xm = Math.round(W * .48), xo = Math.max(xm + 90, W - Math.min(190, W * .26)), nw = 10;
+  const hs = {cr: Math.max(2, c.cr * s), cw: Math.max(2, c.cw * s), inp: Math.max(2, c.inp * s)}, G = 28;
+  let y = cy - (hs.cr + hs.cw + hs.inp + 2 * G) / 2;
+  const src = {};
+  for (const k of ["cr", "cw", "inp"]) { src[k] = {y, h: hs[k]}; y += hs[k] + G; }
+  const hm = Math.max(4, (c.cr + c.cw + c.inp) * s); let ym = cy - hm / 2;
+  const mi = {};
+  for (const k of ["cr", "cw", "inp"]) { const h = c[k] * s; mi[k] = {y: ym, h: Math.max(h, .6)}; ym += h; }
+  const ho = Math.max(2, c.out * s * m.k), oy = cy - 44 - ho / 2, ty = cy + 52;
+  return {W, H, Hf, cy, s, x0, xm, xo, nw, src, mi, hm, ym: cy - hm / 2, ho, oy, ty, sy: H - strip - 4, sh: strip - 6, sx: 12, sw: W - 24};
+}
+const tfE = p => 3 * p * p - 2 * p * p * p;
+function tfBand(x, x1, y1, h1, x2, y2, h2, col, a){
+  const xm = (x1 + x2) / 2;
+  x.beginPath(); x.moveTo(x1, y1); x.bezierCurveTo(xm, y1, xm, y2, x2, y2); x.lineTo(x2, y2 + h2); x.bezierCurveTo(xm, y2 + h2, xm, y1 + h1, x1, y1 + h1); x.closePath();
+  x.globalAlpha = a; x.fillStyle = col; x.fill(); x.globalAlpha = 1;
+}
+const tfBx = (x1, x2, p) => { const xm = (x1 + x2) / 2, q = 1 - p; return q * q * q * x1 + 3 * q * q * p * xm + 3 * q * p * p * xm + p * p * p * x2; };
+function tfStrip(cv, m, g, C){                         // 底下的时间轴（每次调用一根柱：缓存读 / 缓存写 / 新输入叠起来，上面一小截是输出 ×k）：画一次缓存起来
+  const key = [cv.width, cv.height, m.calls.length, C.cr, C.panel].join("|");
+  if (TF.strip && TF.strip.key === key) return TF.strip.c;
+  const dpr = cv.width / g.W, o = document.createElement("canvas"); o.width = cv.width; o.height = Math.ceil((g.sh + 8) * dpr);
+  const x = o.getContext("2d"); x.scale(dpr, dpr);
+  const N = m.calls.length, bw = g.sw / N, hh = g.sh - 10;
+  m.calls.forEach((c, i) => {
+    const x1 = g.sx + i * bw, w = Math.max(.8, bw - (bw > 4 ? 1 : 0)); let y = g.sh;
+    for (const k of ["cr", "cw", "inp"]) { const h = c[k] / m.maxP * hh; if (h > 0) { x.fillStyle = C[k]; x.fillRect(x1, y - h, w, h); y -= h; } }
+    const ho = Math.min(hh * .5, c.out * m.k / m.maxP * hh); x.fillStyle = C.out; x.fillRect(x1, y - ho - .5, w, Math.max(.8, ho));
+    if (c.sub) { x.fillStyle = C.sub; x.fillRect(x1, g.sh + 2, w, 3); }
+  });
+  x.fillStyle = C.faint; x.font = `10px ${C.font}`; let lx = -99;
+  m.turnAt.forEach((i, j) => { const px = g.sx + i * bw; x.fillRect(px, 0, 1, g.sh); if (px - lx > 22) { x.fillText(String(j + 1), px + 2, 9); lx = px; } });
+  TF.strip = {key, c: o};
+  return o;
+}
+function tfDraw(){
+  const cv = $("#tfCv"), m = TF.m; if (!cv || !m || !m.calls.length) return;
+  const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  const C = TF.col || (TF.col = tfColors()), c = m.calls[TF.k], g = tfGeo(W, H, m, c), t = TF.t, nw = g.nw;
+  if (!TF.parts || TF.parts.i !== TF.k) TF.parts = Object.assign(tfParts(m, TF.k), {i: TF.k});
+  // 带子（宽度 = token 数 × 比例尺）
+  for (const k of ["cr", "cw", "inp"]) if (c[k] > 0) tfBand(x, g.x0 + nw, g.src[k].y, g.src[k].h, g.xm, g.mi[k].y, g.mi[k].h, C[k], .22);
+  if (c.out > 0) tfBand(x, g.xm + 14, g.cy - g.ho / 2, g.ho, g.xo, g.oy, g.ho, C.out, .22);
+  if (c.ntools) { x.strokeStyle = C.tool; x.globalAlpha = .45; x.lineWidth = 2; x.beginPath(); x.moveTo(g.xm + 14, g.cy + g.ho / 2 + 6);
+    x.bezierCurveTo((g.xm + g.xo) / 2, g.cy + g.ho / 2 + 6, (g.xm + g.xo) / 2, g.ty, g.xo, g.ty); x.stroke(); x.globalAlpha = 1; }
+  // 回路：工具结果进下一次调用的输入
+  const ly = g.Hf + 4, loop = p => { const q = 1 - p, P0 = [g.xo + nw / 2, g.ty + 12], P1 = [g.xo + 40, ly], P2 = [g.x0 - 40, ly], P3 = [g.x0 + nw / 2, g.src.inp.y + g.src.inp.h + 4];
+    return [q*q*q*P0[0] + 3*q*q*p*P1[0] + 3*q*p*p*P2[0] + p*p*p*P3[0], q*q*q*P0[1] + 3*q*q*p*P1[1] + 3*q*p*p*P2[1] + p*p*p*P3[1]]; };
+  x.setLineDash([4, 5]); x.strokeStyle = c.ntools ? C.tool : C.line; x.globalAlpha = c.ntools ? .55 : .8; x.lineWidth = 1.2; x.beginPath();
+  for (let p = 0; p <= 1.0001; p += .04) { const [a, b] = loop(p); p ? x.lineTo(a, b) : x.moveTo(a, b); } x.stroke(); x.setLineDash([]); x.globalAlpha = 1;
+  // 节点
+  const node = (nx, ny, h, col, w) => { x.fillStyle = col; x.beginPath(); x.roundRect ? x.roundRect(nx, ny, w || nw, Math.max(2, h), 3) : x.rect(nx, ny, w || nw, Math.max(2, h)); x.fill(); };
+  for (const k of ["cr", "cw", "inp"]) node(g.x0, g.src[k].y, g.src[k].h, C[k]);
+  x.fillStyle = C.text; node(g.xm, g.ym, g.hm, C.text, 14);
+  node(g.xo, g.oy, g.ho, C.out);
+  if (c.reasoning > 0 && c.out > 0) node(g.xo, g.oy, g.ho * c.reasoning / c.out, C.rs);
+  x.fillStyle = c.ntools ? C.tool : C.line; x.beginPath(); x.arc(g.xo + nw / 2, g.ty, 7, 0, 7); x.fill();
+  // 粒子
+  const st = ["cr", "cw", "inp"];
+  for (const P of TF.parts) {
+    if (t < P.e) continue;
+    if (P.s === "tool") {
+      const p1 = (t - P.e) / TF_PH.tlT;
+      if (p1 <= 1) { const px = tfBx(g.xm + 14, g.xo, p1), py = g.cy + g.ho / 2 + 6 + (g.ty - g.cy - g.ho / 2 - 6) * tfE(p1); x.fillStyle = C.tool; x.beginPath(); x.arc(px, py, 3.6, 0, 7); x.fill(); }
+      else { const p2 = (t - P.e - TF_PH.tlT) / TF_PH.lpT; if (p2 <= 1) { const [a, b] = loop(Math.min(1, p2)); x.fillStyle = C.tool; x.beginPath(); x.arc(a, b, 3.6, 0, 7); x.fill(); } }
+      continue;
+    }
+    const isIn = st.includes(P.s), p = (t - P.e) / (isIn ? TF_PH.inT : TF_PH.outT); if (p > 1) continue;
+    let px, py;
+    if (isIn) { const a = g.src[P.s], b = g.mi[P.s], y1 = a.y + P.l * a.h, y2 = b.y + P.l * b.h; px = tfBx(g.x0 + nw, g.xm, p); py = y1 + (y2 - y1) * tfE(p); }
+    else { const y1 = g.cy - g.ho / 2 + P.l * g.ho, y2 = g.oy + P.l * g.ho; px = tfBx(g.xm + 14, g.xo, p); py = y1 + (y2 - y1) * tfE(p); }
+    x.fillStyle = P.s === "out" && c.out && P.l * c.out < c.reasoning ? C.rs : C[P.s]; x.beginPath(); x.arc(px, py, isIn ? 1.7 : 2.1, 0, 7); x.fill();
+  }
+  // 文字
+  x.textBaseline = "middle"; x.font = `12px ${C.font}`;
+  const lab = (s, n, lx, ly, al, col) => { x.textAlign = al; x.fillStyle = col || C.muted; x.fillText(s, lx, ly - 8); x.fillStyle = C.text; x.font = `600 13px ${C.font}`; x.fillText(n, lx, ly + 8); x.font = `12px ${C.font}`; };
+  const NM = {cr: tr("缓存读"), cw: tr("缓存写"), inp: tr("新输入")};
+  for (const k of ["cr", "cw", "inp"]) lab(NM[k], fmtN(c[k]), g.x0 - 8, g.src[k].y + g.src[k].h / 2, "right");
+  x.textAlign = "center"; x.fillStyle = C.text; x.font = `600 12.5px ${C.font}`; x.fillText(tfShort(c.model) || tr("模型"), g.xm + 7, g.ym - 26);
+  x.font = `12px ${C.font}`; x.fillStyle = C.muted; x.fillText(tr("上下文") + " " + fmtN(c.inp + c.cr + c.cw), g.xm + 7, g.ym - 11);
+  lab(tr("输出") + (m.k > 1 ? ` ×${m.k}` : ""), fmtN(c.out) + (c.reasoning ? ` · ${tr("思考")} ${fmtN(c.reasoning)}` : ""), g.xo + nw + 8, g.oy + g.ho / 2, "left");
+  lab(tr("工具调用"), "×" + (c.ntools || 0), g.xo + nw + 8, g.ty, "left");
+  x.textAlign = "center"; x.fillStyle = C.faint; x.font = `11px ${C.font}`; x.fillText(tr("工具结果 → 下一次调用的输入"), (g.x0 + g.xo) / 2, ly - 6);
+  // 时间轴
+  const N = m.calls.length, bw = g.sw / N;
+  x.drawImage(tfStrip(cv, m, g, C), 0, g.sy, W, (g.sh + 8));
+  const ph = g.sx + (TF.k + Math.min(1, t)) * bw;
+  x.globalAlpha = .6; x.fillStyle = C.panel; x.fillRect(ph, g.sy, g.sx + g.sw - ph, g.sh + 6); x.globalAlpha = 1;
+  x.fillStyle = C.text; x.fillRect(ph - 1, g.sy - 3, 2, g.sh + 9);
+}
+function tfStats(){
+  const m = TF.m; if (!m || !m.calls.length) return;
+  const c = m.calls[TF.k], r = tfCum(m, TF.k, TF.t), set = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  set("tfAi", fmtN(r.inp)); set("tfAcr", fmtN(r.cr)); set("tfAcw", fmtN(r.cw)); set("tfAo", fmtN(r.out)); set("tfArs", fmtN(r.reasoning));
+  set("tfAt", fmtN(r.tot)); set("tfAc", r.priced ? fmtC(r.cost) : "—"); set("tfAh", (r.hit * 100).toFixed(1) + "%"); set("tfAtl", String(r.tools));
+  set("tfK", `${TF.k + 1} / ${m.calls.length}`); set("tfTn", `${c.turn + 1} / ${Math.max(1, (TF.d.turns || []).length)}`);
+  const sl = $("#tfSl"); if (sl && !TF.drag && +sl.value !== TF.k) sl.value = TF.k;
+  if (TF.cur !== TF.k) { TF.cur = TF.k; const box = $("#tfCur"); if (!box) return;
+    const tu = (TF.d.turns || [])[c.turn], gap = TF.k ? c.ts - m.calls[TF.k - 1].ts : 0;
+    box.innerHTML = `<div class="tfch"><b>${esc(tfShort(c.model) || "—")}</b>${c.sub ? ` <span class="tag">子代理</span>` : ""}${c.est ? ` <span class="tag" title="这次的输出数是按文字长度估的（记录里没有完整用量）">估算</span>` : ""}<span class="sp"></span><span class="dim">${c.ts ? esc(when(c.ts)) : ""}${gap > 0 ? ` · +${gap < 60 ? gap.toFixed(1) + "s" : gap < 3600 ? (gap / 60).toFixed(1) + "m" : (gap / 3600).toFixed(1) + "h"}` : ""}</span></div>
+      <div class="tfnums"><span><i style="background:var(--u1)"></i>缓存读 <b>${c.cr.toLocaleString()}</b></span><span><i style="background:var(--u4)"></i>缓存写 <b>${c.cw.toLocaleString()}</b></span><span><i style="background:var(--u2)"></i>新输入 <b>${c.inp.toLocaleString()}</b></span><span><i style="background:var(--u3)"></i>输出 <b>${c.out.toLocaleString()}</b>${c.reasoning ? `（思考 ${c.reasoning.toLocaleString()}）` : ""}</span>${c.cost != null ? `<span>费用 <b>${fmtC(c.cost)}</b></span>` : ""}</div>
+      ${c.tools.length ? `<div class="tftools">${c.tools.map(t => `<span class="tfchip">${ic("tool")}${esc(t)}</span>`).join("")}${c.ntools > c.tools.length ? `<span class="dim">…共 ${c.ntools} 个</span>` : ""}</div>` : `<div class="dim tftools">这次调用没有调用工具</div>`}
+      ${tu ? `<div class="tfturn" title="${esc(tu.text)}"><span class="dim">第 ${c.turn + 1} 轮 · 你说：</span>${esc(tu.text)}</div>` : ""}`; }
+}
+function tfSeek(k, t){ const m = TF.m; if (!m) return; TF.k = Math.max(0, Math.min(m.calls.length - 1, k)); TF.t = t == null ? (TF.play ? 0 : 1) : t; tfDraw(); tfStats(); }
+function tfSetPlay(on){
+  TF.play = on; const b = $("#tfPlay"); if (b) b.innerHTML = ic(on ? "pause" : "play") + `<span>${on ? "暂停" : "播放"}</span>`;
+  if (on && TF.m && TF.k >= TF.m.calls.length - 1 && TF.t >= 1) { TF.k = 0; TF.t = 0; }
+  if (on && !TF.raf) { TF.last = 0; TF.raf = requestAnimationFrame(tfLoop); }
+}
+function tfLoop(ts){
+  TF.raf = 0;
+  const cv = $("#tfCv");
+  if (!cv || !cv.isConnected || PAGE !== "sessions" || !TF.play) { if (TF.play && !cv) TF.play = false; return; }
+  const dt = TF.last ? Math.min(.1, (ts - TF.last) / 1000) : 0; TF.last = ts;
+  TF.t += dt * TF.speed / TF_SPAN * (TF.m.calls.length > 600 ? Math.min(8, TF.m.calls.length / 600) : 1);
+  if (TF.t >= 1.08) { if (TF.k < TF.m.calls.length - 1) { TF.k++; TF.t = 0; } else { TF.t = 1; tfDraw(); tfStats(); tfSetPlay(false); return; } }
+  tfDraw(); tfStats();
+  TF.raf = requestAnimationFrame(tfLoop);
+}
+async function tfView(agent, id, host){
+  const key = agent + ":" + id;
+  host.innerHTML = '<div class="empty">读取用量…</div>';
+  let d;
+  try { d = await api(`/api/sessions/tokenflow?agent=${agent}&id=${encodeURIComponent(id)}`); } catch(e){ host.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  if (!SS.cur || SS.cur.agent + ":" + SS.cur.id !== key || !host.isConnected) return;
+  if (d.ok === false) { host.innerHTML = `<div class="miss">${esc(d.error || "读不了")}</div>`; return; }
+  if (!d.calls.length) { host.innerHTML = `<div class="emp">${ic("activity")}<b>没有可回放的 token 用量</b><div style="max-width:440px">${esc(d.reason || "")}</div></div>`; return; }
+  const m = tfModel(d), T = d.totals || {}, same = TF.key === key;
+  Object.assign(TF, {d, m, key, parts: null, strip: null, col: null, cur: -1});
+  if (!same) { TF.k = 0; TF.t = 0; }
+  TF.k = Math.min(TF.k, m.calls.length - 1);
+  const sp = +(store.get("ccss.tfspeed") || 1);
+  TF.speed = [.5, 1, 2, 4, 8, 16].includes(sp) ? sp : 1;
+  host.innerHTML = `<div class="tf">
+    <div class="tfbar"><button class="primary" id="tfPlay"></button>
+      <button class="ghost" id="tfPrev" title="上一次调用（←）"><span class="flip">${ic("chev")}</span></button><button class="ghost" id="tfNext" title="下一次调用（→）">${ic("chev")}</button>
+      <input type="range" id="tfSl" min="0" max="${m.calls.length - 1}" value="${TF.k}" title="拖动到某一次调用">
+      <select id="tfSp" title="播放速度">${[.5, 1, 2, 4, 8, 16].map(v => `<option value="${v}" ${v === TF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
+      <span class="tfpos">调用 <b id="tfK"></b> · 轮次 <b id="tfTn"></b></span></div>
+    <div class="tfcv"><canvas id="tfCv"></canvas></div>
+    <div class="tfacc">
+      <div><span><i style="background:var(--u2)"></i>新输入</span><b id="tfAi"></b></div><div><span><i style="background:var(--u1)"></i>缓存读</span><b id="tfAcr"></b></div>
+      <div><span><i style="background:var(--u4)"></i>缓存写</span><b id="tfAcw"></b></div><div><span><i style="background:var(--u3)"></i>输出</span><b id="tfAo"></b></div>
+      <div><span><i style="background:var(--u5)"></i>其中思考</span><b id="tfArs"></b></div><div><span>合计</span><b id="tfAt"></b></div>
+      <div><span>缓存命中率</span><b id="tfAh"></b></div><div><span>工具调用</span><b id="tfAtl"></b></div><div><span>费用</span><b id="tfAc"></b></div></div>
+    <div class="tfcur" id="tfCur"></div>
+    <div class="dim tfleg">累计到播放位置为止；整个会话：${(T.calls ?? m.calls.length).toLocaleString()} 次调用、合计 ${fmtN(T.tot)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${d.cut ? `（只回放最后 ${m.calls.length} 次，前面还有 ${d.cut} 次）` : ""}。
+      带子宽度和粒子个数按真实 token 数换算：输入侧每个粒子 ≈ <b>${m.uIn.toLocaleString()}</b> tokens${m.k > 1 ? `；输出侧放大 ${m.k} 倍，每个粒子 ≈ <b>${(+m.uOut.toPrecision(3)).toLocaleString()}</b> tokens` : ""}。
+      数据和「用量」页同一套口径（${agent === "codex" ? "Codex 的 token_count / token_usage_record" : agent === "dsh" ? "DeepSeek Harness 记录里的 usage" : "Claude Code 记录里每次回复的 message.usage，含子代理"}）；底部时间轴每根柱是一次调用，竖线是你说话的轮次。</div>
+  </div>`;
+  tfSetPlay(false);
+  $("#tfPlay").onclick = () => tfSetPlay(!TF.play);
+  $("#tfPrev").onclick = () => { tfSetPlay(false); tfSeek(TF.k - 1, 1); };
+  $("#tfNext").onclick = () => { tfSetPlay(false); tfSeek(TF.k + 1, 1); };
+  $("#tfSp").onchange = e => { TF.speed = +e.target.value; store.set("ccss.tfspeed", String(TF.speed)); };
+  const sl = $("#tfSl");
+  sl.oninput = () => { TF.drag = true; tfSeek(+sl.value, TF.play ? 0 : 1); };
+  sl.onchange = () => { TF.drag = false; };
+  const cv = $("#tfCv"), seekAt = e => { const r = cv.getBoundingClientRect(), g = tfGeo(r.width, r.height, m, m.calls[TF.k]), z = r.width / cv.clientWidth;
+    const px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
+    if (py < g.sy - 8 && !TF.drag) return false;
+    tfSeek(Math.floor((px - g.sx) / (g.sw / m.calls.length)), TF.play ? 0 : 1); return true; };
+  cv.onmousedown = e => { if (!seekAt(e)) return; TF.drag = true; const mv = ev => seekAt(ev), up = () => { TF.drag = false; document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up); };
+  host.tabIndex = -1;
+  host.onkeydown = e => { if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); $("#tfPrev").click(); } else if (e.key === "ArrowRight") { e.preventDefault(); $("#tfNext").click(); } else if (e.key === " ") { e.preventDefault(); $("#tfPlay").click(); } };
+  if (!TF.rs) { TF.rs = 1; window.addEventListener("resize", () => { TF.strip = null; if ($("#tfCv")) tfDraw(); });
+    new MutationObserver(() => { TF.col = null; TF.strip = null; if ($("#tfCv") && !TF.play) tfDraw(); }).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { TF.col = null; TF.strip = null; if ($("#tfCv")) tfDraw(); }); }
+  if (!same) TF.t = matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 0;
+  tfDraw(); tfStats();
+  if (!same && TF.t === 0) tfSetPlay(true);         // 打开就开始放（系统设置了「减少动态效果」时停在第一次调用）
+}
+// ---------- /Token 流转 ----------
 async function ssView(agent, id, lim){
   lim = lim || 300;
   const same = SS.cur && SS.cur.agent === agent && SS.cur.id === id;
@@ -2681,7 +2956,9 @@ async function ssView(agent, id, lim){
   if (SS.cur.agent !== agent || SS.cur.id !== id) return;
   if (dt && dt.item) x = Object.assign({}, dt.item, x, {resume: dt.item.resume, file: dt.item.file});
   const g = trGroup(x.gacct);
+  const tfOn = TF_AG.includes(agent), mode = tfOn && store.get("ccss.svmode") === "flow" ? "flow" : "chat";
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
+      ${tfOn ? `<span class="seg svmode" id="svMode" title="对话内容，或者按真实用量回放每一次模型调用的 token 流转"><button data-m="chat" class="${mode === "chat" ? "on" : ""}">对话</button><button data-m="flow" class="${mode === "flow" ? "on" : ""}">Token 流转</button></span>` : ""}
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
@@ -2696,10 +2973,17 @@ async function ssView(agent, id, lim){
         agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
         agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；也可以导进 Claude Code 接着聊">${ic("claude", "logo")} 导进 Claude Code…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : agent === "opencode" || agent === "zcode" ? `<span class="tag ${agent}">${esc(x.source_name || APPN[agent])} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
-    <div class="pv chatpv" id="svPv">${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
+    ${tfOn ? `<div id="svFlow"${mode === "flow" ? "" : " hidden"}></div>` : ""}
+    <div class="pv chatpv" id="svPv"${mode === "flow" ? " hidden" : ""}>${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
   { const pv = $("#svPv"), old = SS.pvKeep; SS.pvKeep = null;
     pv.scrollTop = old != null ? pv.scrollHeight - old : pv.scrollHeight;
     const me = $("#svMoreE"); if (me) me.onclick = () => { SS.pvKeep = pv.scrollHeight - pv.scrollTop; me.disabled = true; ssView(agent, id, Math.min(5000, lim * 3)); }; }
+  if (tfOn) {                          // 0.5.1：对话 | Token 流转（记住选的哪个）
+    const show = m => { $$("#svMode button").forEach(b => b.classList.toggle("on", b.dataset.m === m)); $("#svPv").hidden = m === "flow"; $("#svFlow").hidden = m !== "flow";
+      if (m === "flow") tfView(agent, id, $("#svFlow")); else { tfSetPlay(false); const pv = $("#svPv"); pv.scrollTop = pv.scrollHeight; } };
+    $$("#svMode button").forEach(b => b.onclick = () => { store.set("ccss.svmode", b.dataset.m); show(b.dataset.m); });
+    if (mode === "flow") tfView(agent, id, $("#svFlow"));
+  }
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
   if (agent === "opencode" || agent === "zcode") $("#svOpen").onclick = () => cvOpen(agent, [id]);
@@ -3335,7 +3619,7 @@ R.settings = async () => {
   ST.upd = u; setBadge(u.badge);
   const th = store.get("ccss.theme") || "system";
   const win = s.tray_supported, dis = win ? "" : "disabled";
-  pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。</p>
+  pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。 <a href="#about" id="stAbout">关于 CC Session Sync（v${esc(VERSION)}）</a></p>
     <div class="card"><h3>外观与窗口</h3><div class="setlist">
       ${setRow("globe", "界面语言 · Language", `缺省跟随系统（现在系统是${s.lang_system === "en" ? "英文" : "中文"}）。切换后界面马上重新载入；你的会话内容不会被翻译`, `<span class="seg" id="stLang" translate="no">${[["auto", s.lang_now === "en" ? "System" : "跟随系统"], ["zh", "中文"], ["en", "English"]].map(([v, t]) => `<button data-v="${v}" class="${(s.lang || "auto") === v ? "on" : ""}">${t}</button>`).join("")}</span>`)}
       ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
@@ -3367,6 +3651,7 @@ R.settings = async () => {
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
   $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
   $$("#stLang button").forEach(b => b.onclick = async () => { await saveSetting({lang: b.dataset.v}); location.reload(); });
+  $("#stAbout").onclick = e => { e.preventDefault(); go("about"); };
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
@@ -3422,6 +3707,37 @@ function scHtml(r){
   return `<div class="dim" style="font-size:calc(13px*var(--fk));margin-bottom:4px">${when(r.time)} · 通过 ${c.pass || 0} / 注意 ${c.warn || 0} / 没通过 ${c.fail || 0}（${r.ms} ms）</div>` +
     r.items.map(i => `<div class="sc ${i.status}">${ic(SC_IC[i.status])}<div style="min-width:0"><div class="nm">${esc(i.name)}</div><div class="dt">${esc(i.detail)}</div>${i.fix ? `<div class="fx">建议：${esc(i.fix)}</div>` : ""}</div></div>`).join("");
 }
+// ---------- 0.5.1「关于」：版本、作者、仓库、许可证（都是程序自己带的，不联网） ----------
+function extOpen(url){                                 // 桌面版走 pywebview 的 open_url（只开 GitHub 的页面），浏览器里开新标签页
+  try { if (window.pywebview && window.pywebview.api && window.pywebview.api.open_url) return window.pywebview.api.open_url(url); } catch(e){}
+  window.open(url, "_blank", "noopener");
+}
+R.about = async () => {
+  const pg = $("#pg-about");
+  let a;
+  try { a = await api("/api/about"); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  const L = (u, t, i) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-ext="${esc(u)}">${ic(i || "external")}${esc(t || u)}</a>`;
+  pg.innerHTML = `<div class="ab">
+    <div class="abhd"><img src="/icon.png" alt=""><div><h2>${esc(a.product)}</h2><div class="ver" translate="no">v${esc(a.version)}</div>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">Claude Code / Codex 的会话管家：账号同步、会话转换、时间线与备份、用量统计</div></div></div>
+    <div class="card"><div class="abgrid">
+      <span>版本</span><span translate="no">${esc(a.version)}${a.frozen ? "" : " (Python " + esc(a.python) + ")"}</span>
+      <span>作者</span><span>${L(a.author_url, a.author, "user")}</span>
+      <span>仓库</span><span>${L(a.repo_url, a.repo, "gitbranch")}</span>
+      <span>许可证</span><span>${L(a.license_url, a.license + " License", "file")} <span class="dim" translate="no">${esc(a.copyright)}</span></span>
+      <span>问题反馈</span><span>${L(a.issues_url, "GitHub Issues", "alert")}</span>
+      <span>发布页</span><span>${L(a.releases_url, "GitHub Releases", "download")}</span>
+      <span>系统</span><span translate="no">${esc(a.platform)}</span>
+      <span>数据目录</span><span><code>${esc(a.home)}</code></span>
+    </div>
+    <div class="ablinks"><button id="abUpd">${ic("refresh")} 检查更新</button><button id="abRepo">${ic("external")} 打开仓库</button><button id="abIss">${ic("alert")} 反馈问题</button></div></div>
+    <p class="dim" style="font-size:calc(13px*var(--fk))">最早是 ${L(a.origin, "CC Msg")} 里的功能，后来单独拿出来。本程序只读写这台电脑上的文件，不上传你的会话；检查更新只访问 GitHub。</p>
+  </div>`;
+  $$("#pg-about [data-ext]").forEach(e => e.onclick = ev => { ev.preventDefault(); extOpen(e.dataset.ext); });
+  $("#abUpd").onclick = () => updOpen(true);
+  $("#abRepo").onclick = () => extOpen(a.repo_url);
+  $("#abIss").onclick = () => extOpen(a.issues_url);
+};
 R.diag = async () => {
   const pg = $("#pg-diag");
   if (!pg.innerHTML) pg.innerHTML = '<div class="empty">检测中…</div>';

@@ -66,6 +66,23 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.5
 
+- **Token flow animation and an About page (0.5.1):** the session detail view gets a *Conversation | Token flow* switch (Claude Code, Codex,
+  DeepSeek Harness). It replays **every model call** of the session from the real usage in its records — Claude Code `message.usage`
+  (streamed lines deduped, subagents included), Codex `token_count` / `token_usage_record` deltas, DeepSeek Harness `usage` — the same
+  numbers as the Usage page (checked in the tests). Input flows in as cache read / cache write / fresh input, through the model (with the
+  context size), out as output (incl. reasoning) and tool calls, and tool results loop back into the next call. Band widths and particle
+  counts are proportional to the token counts: each input particle is a fixed number of tokens, so the session's particles add up exactly to
+  total ÷ unit; the much smaller output side is magnified by a stated 1 / 2 / 5 factor. Play / pause, previous / next (← →, space), drag or
+  click the timeline (one bar per call, lines at your turns, subagent calls marked), 0.5×–8× speed, running totals up to the playhead
+  (input, cache, output, reasoning, total, hit rate, tool calls, cost) and the current call's model, time, gap, turn and tools. Follows
+  light / dark and Chinese / English, doesn't autoplay with reduced motion, works offline with no new dependencies.
+  The new **About** page (ⓘ in the top bar, a link in Settings, *About…* in the tray) shows the version, author
+  [helefee](https://github.com/helefee), the repository [helefee/CC-SessionSync](https://github.com/helefee/CC-SessionSync), the MIT
+  license, issue / release links, system and data folder.
+
+  ![Token flow](docs/screenshots/v051-tokenflow-en.png)
+
+  ![About](docs/screenshots/v051-about-en.png)
 - **Account sync: deleted sessions stay deleted, undo restores byte-for-byte, and every sync / undo is verified (0.5.0):**
   sync used to check only the current account's deletion tombstones, so a session you deleted in account A could come back from an older
   copy in account C when syncing to B. Tombstones in every account folder now count (a session used again after the delete still syncs),

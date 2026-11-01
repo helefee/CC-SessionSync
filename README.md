@@ -89,6 +89,23 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 ![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
 
+### Token 流转动画与「关于」（0.5.1）
+
+- **会话详情里多了「对话 | Token 流转」**（Claude Code、Codex、DeepSeek Harness）：把这个会话**每一次模型调用**按记录里的真实用量回放，不是装饰动画。
+  - 数据来源和「用量」页同一套口径：Claude Code 每次回复的 `message.usage`（流式拆行去重、含子代理）、Codex 的 `token_count` / `token_usage_record`（按累计值求差）、DeepSeek Harness 的 `usage`；合计和用量库逐项对得上（测试里核对）。
+  - 左边是输入：**缓存读 / 缓存写 / 新输入**三股，中间是模型（显示这次的上下文大小），右边是**输出**（含思考）和**工具调用**；工具结果用虚线绕回下一次调用的输入，看得出 agent 循环。
+  - 带子宽度、粒子个数都按真实 token 数换算：输入侧每个粒子代表固定的 token 数，整段会话的粒子总数正好等于「合计 ÷ 单位」；输出通常比输入小两个数量级，所以输出侧按 1 / 2 / 5 的整数倍放大，倍数写在图上和图例里。
+  - 播放 / 暂停、上一次 / 下一次（← →、空格）、拖动进度条或点底部时间轴跳到任意一次调用，0.5× – 8× 变速；时间轴每根柱是一次调用，竖线是你说话的轮次，子代理的调用下面有标记。
+  - 下面是**累计到播放位置为止**的新输入、缓存读写、输出（其中思考）、合计、缓存命中率、工具调用次数和费用，以及当前这次调用的模型、时间、距上次间隔、所在轮次和你那一轮说的话、调了哪些工具。
+  - 浅色 / 深色、中文 / English 都跟着变；系统开了「减少动态效果」时不自动播放。不联网、不加依赖。Cursor / OpenCode / ZCode 的本地记录里没有逐次用量，会直接说明。
+- **「关于」页**：顶栏右上角的 ⓘ、设置页标题下的链接、托盘菜单「关于…」都能打开。写着版本号、作者 [helefee](https://github.com/helefee)、仓库 [helefee/CC-SessionSync](https://github.com/helefee/CC-SessionSync)、MIT 许可证、问题反馈和发布页链接，还有系统和数据目录；能直接检查更新。
+
+![Token 流转：按每次调用的真实用量回放](docs/screenshots/v051-tokenflow-light.png)
+
+![深色](docs/screenshots/v051-tokenflow-dark.png)
+
+![关于](docs/screenshots/v051-about-light.png)
+
 ### 账号同步：删过的不复活、撤回按原样换回、同步 / 撤回之后自动核对（0.5.0）
 
 - **在别的号里删过的会话不再被带回来**：以前只看当前号的「删除墓碑」，在 A 号删掉的会话，同步到 B 号时会从更早的 C 号文件夹里把旧登记又补回去。

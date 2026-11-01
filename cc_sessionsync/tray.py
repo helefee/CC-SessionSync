@@ -448,6 +448,7 @@ class Tray:
                   ("-",),
                   (20, f"● 有新版本 {u.get('latest')}…" if u.get("badge") else "检查更新", {}),
                   (22, "诊断自检…", {}),
+                  (23, "关于…", {}),
                   ("-",), (30, "退出", {})]
         return items
 
@@ -503,10 +504,10 @@ class Tray:
             elif cmd == 6:
                 settings.update(auto_sync=not settings.get("auto_sync", False))
                 self.refresh()
-            elif cmd in (3, 7, 8, 9, 14, 22):
+            elif cmd in (3, 7, 8, 9, 14, 22, 23):
                 self.app.open({"page": "convert", "src": "codex", "dst": "claude"} if cmd == 7 else
                               {"page": "timeline", "tab": "tl"} if cmd == 14 else
-                              {"page": {3: "usage", 8: "sessions", 9: "jobs", 22: "selfcheck"}[cmd]})
+                              {"page": {3: "usage", 8: "sessions", 9: "jobs", 22: "selfcheck", 23: "about"}[cmd]})
             elif cmd == 10:
                 autostart_set(not autostart_get(), self.app.port)
             elif cmd in (11, 12, 13):
