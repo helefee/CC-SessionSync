@@ -27,7 +27,7 @@ node = shutil.which("node")
 if not node:
     print("SKIP node not found"); sys.exit(1 if FAILS else 0)
 
-names = ["TF_PH", "tfRand", "tfNice", "tfModel", "tfParts", "tfGeo", "modelBrand", "UF_CAT", "ufModel", "ufK", "ufPaths", "ufUnit", "ufPlan", "ufGeo", "ufPathTot", "ufDelta", "fxSpread"]
+names = ["TF_PH", "tfRand", "tfNice", "tfModel", "tfParts", "tfGeo", "modelBrand", "UF_CAT", "ufModel", "ufK", "ufPaths", "ufUnit", "ufPlan", "fmtN", "ufGeo", "ufPathTot", "ufDelta", "fxSpread"]
 src = "\n".join(grab(n) for n in names if (n != "fxSpread" or "function fxSpread(" in page))
 stub = """
 let FXT = "0"; const store = {get: k => k === "ccss.fxtrue" ? FXT : null, set(){}}; const fxTrue = () => FXT === "1";
@@ -73,7 +73,14 @@ for (const real of [false, true]) { FXT = real ? "1" : "0";
   const perB = plan.map(row => row.reduce((a, p) => a + p.n, 0));
   const geos = [[900, 420], [1400, 520], [520, 360]].map(([W, H]) => { const g = ufGeo(W, H, m, CTX, 12, "x");
     return {k: g.k, s: g.s, chk: m.L.map((l, j) => { const G = g.LG[j]; if (!G) return null; const f = m.full[j] * g.s * (l.kind === "cd" ? g.k : 1); return Math.abs(G.h1 - f) < 1e-6 && Math.abs(G.h2 - f) < 1e-6; }),
-            gutter: m.L.every((l, j) => l.kind !== "cd" || !g.LG[j] || g.LG[j].x1 >= g.xC + 12 + g.lw - 1e-9) && g.lw > 40}; });
+            // 0.5.3：卡片在各自一列里不重叠、不出画布；卡片高度 ≥ 真实高度（太小的按最小高度当标签画）；带子从卡片边上真实高度的色条接出；时间轴不在这张画布里
+            lay: ["a", "c", "m", "o"].every(c => g.N[c].every((n, i) => n.y >= g.top - 1e-6 && n.y + n.h <= g.top + g.Hf + 1e-6 && n.h >= n.th - 1e-9 && n.h >= Math.min(g.mc, n.h) && n.w > 0 &&
+                   (i === 0 || n.y >= g.N[c][i - 1].y + g.N[c][i - 1].h - 1e-6))) &&
+                 g.xA + g.w.a < g.xB && g.xB + g.w.c < g.xC && g.xC + g.w.m < g.xD && g.xD + g.w.o <= W &&
+                 m.L.every((l, j) => { const G = g.LG[j]; if (!G) return true; const x1 = {ab: g.xA + g.w.a, bc: g.xB + g.w.c, cd: g.xC + g.w.m}[l.kind], x2 = {ab: g.xB, bc: g.xC, cd: g.xD}[l.kind];
+                   const tn = {ab: g.N.c[UF_CAT.indexOf(l.t)], bc: g.N.m[l.t], cd: g.N.o[UF_OUT.indexOf(l.t)]}[l.kind];
+                   return Math.abs(G.x1 - x1) < 1e-6 && Math.abs(G.x2 - x2) < 1e-6 && G.y2 >= tn.ty - 1e-6 && G.y2 + G.h2 <= tn.ty + tn.th + 1e-6; }) &&
+                 g.sy === undefined && g.sh === undefined}; });
   const d = ufDelta(m, ufModel(UFD2), u, k), m2 = ufModel(UFD2), t2 = {}; ufPaths(m2).forEach(row => row.forEach(p => { t2[p.key] = (t2[p.key] || 0) + p.v; }));
   R[real ? "ufReal" : "ufMag"] = {k, u, tot, cnt, outp, emptyB, maxB: Math.max(...perB), geos, delta: d.map(p => [p.key, p.n, p.out]), t2, T: m.T};
 }
@@ -108,7 +115,7 @@ if R:
         ok(all(x == 0 for x in r["emptyB"]) and len(r["emptyB"]) > 0, f"{key}: buckets with no usage emit nothing ({r['emptyB']})")
         ok(r["maxB"] <= 60 * 1.05 + 30, f"{key}: busiest bucket ≈ 60 particles ({r['maxB']})")
         ok(all(g["k"] == k for g in r["geos"]) and all(all(x is None or x for x in g["chk"]) for g in r["geos"]), f"{key}: band heights = real totals × scale (output × {k}), same k at every canvas size")
-        ok(all(g["gutter"] for g in r["geos"]), f"{key}: model labels have their own gutter; output bands start after it")
+        ok(all(g["lay"] for g in r["geos"]), f"{key}: cards don't overlap / stay on the canvas / are ≥ their true height; bands attach to the true-height port bars; no timeline strip inside the flow canvas")
         T = r["T"]
         if key == "ufReal": ok(k == 1, "usage true proportions: ×1")
         else: ok(k > 1 and T["out"] * k <= .5 * (T["inp"] + T["cr"] + T["cw"]) + 1e-6, f"usage magnified: ×{k}, output stays ≤ half the input")

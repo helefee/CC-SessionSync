@@ -183,6 +183,20 @@ def build(T: Path, extra: bool = False) -> dict:
                               "input_tokens": rnd.randint(5, 900), "output_tokens": rnd.randint(200, 6000), "cache_read_input_tokens": rnd.randint(20000, 220000),
                               "cache_creation_input_tokens": cw, "cache_creation": {"ephemeral_5m_input_tokens": cw // 3, "ephemeral_1h_input_tokens": cw - cw // 3}}}})
             sub.write_text("\n".join(json.dumps(x) for x in L) + "\n", encoding="utf-8")
+        if os.environ.get("CCSS_DEMO_BIGRATIO"):       # 截图 / 复现用：真实世界的极端比例（缓存读 2.5B、缓存写 73M、新输入 1.2 万，最近 11 个小时）
+            bsid, bcwd = sessions[0][0], sessions[0][2]
+            bf = H / ".claude/projects" / bcwd.replace("/", "-") / bsid / "subagents" / "agent-bigratio.jsonl"
+            bf.parent.mkdir(parents=True, exist_ok=True)
+            rb, L = random.Random(11), []
+            for n in range(5828):
+                t = NOW - timedelta(hours=rb.triangular(0, 11, 8), seconds=rb.uniform(0, 60))
+                out = rb.randint(300, 2750); th = int(out * rb.uniform(.3, .58)); cw = rb.randint(2000, 23000)
+                L.append({"type": "assistant", "uuid": U(), "sessionId": bsid, "cwd": bcwd, "isSidechain": True, "timestamp": iso(t), "requestId": "req_" + U()[:12],
+                          "message": {"id": "msg_" + U()[:12], "model": "claude-opus-5-5", "stop_reason": "end_turn", "usage": {
+                              "input_tokens": rb.choice((1, 1, 2, 2, 3, 4)), "output_tokens": out, "output_tokens_details": {"thinking_tokens": th},
+                              "cache_read_input_tokens": rb.randint(250000, 612000), "cache_creation_input_tokens": cw,
+                              "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": cw}}}})
+            bf.write_text("\n".join(json.dumps(x) for x in L) + "\n", encoding="utf-8")
         # API 模式（3P）：桌面端的 Claude-3p 目录，设备号 + 占位组织；一个能打开的会话、一个对话文件已经没了的
         P3 = T / "la/Claude-3p"
         dev = "d838cbef-0000-4c1c-987b-000000000001"
