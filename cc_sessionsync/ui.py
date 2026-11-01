@@ -517,6 +517,10 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/usage/"):
             from . import usage
             f = {k: q.get(k) for k in ("app", "provider", "model", "from", "to")}
+            if p == "/api/usage/flow":                   # 0.5.1：Token 流转（按筛选聚合的真实用量 + 时间桶）
+                return usage.flow(dict(f, proj=q.get("proj")), q.get("step") or None)
+            if p == "/api/usage/flow/live":              # 0.5.1：实时——数据版本变了才回；wait 秒长轮询
+                return usage.flow_live(dict(f, proj=q.get("proj")), q.get("v") or "", float(q.get("wait") or 0), q.get("step") or None)
             if p == "/api/usage/summary":
                 return usage.summary(f)
             if p == "/api/usage/heatmap":                # 0.4.4：每天用量（日历热力图，最近一年）

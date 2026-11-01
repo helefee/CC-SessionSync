@@ -83,11 +83,31 @@ anything that can be dry-run is dry-run first.
   hood it is a token-authenticated long-poll on the local server (up to 15 s) that reads only the bytes appended to the record, Claude
   subagent `agent-*.jsonl` files included. Half-written lines wait for the next read, and a truncated or replaced file triggers a full
   resend.
+  **Usage page token flow:** below the daily chart, the Usage page now draws the **real usage** for the current filters (range, app,
+  provider, model) as a four-column flow: **app → input type (cache read / cache write / fresh input) → model → output (reply /
+  reasoning)**. The local server aggregates it (`/api/usage/flow`): time bucket × app × model with requests, each token kind,
+  reasoning, cost and unpriced count, matching the Usage page's `summary()` for every filter (checked in the tests). Up to 7 models get
+  their own row and the rest are merged into *Other models*. Buckets are hourly up to two days, daily up to four months, then weekly.
+  Band widths follow the token counts. The pale band is the whole range and the solid band is the running total up to the playhead.
+  Particles are emitted from each bucket's real usage, and the output side is magnified by a stated 1 / 2 / 5 factor. You get play /
+  pause, scrubbing, 0.5×–4× speed, counting-up running totals (tokens, cache, output, reasoning, requests, hit rate, cost) and hover
+  tooltips with exact numbers. *● Live* long-polls the data version and merges new usage as it lands. The card loads only when it
+  scrolls into view.
+  **Polished visuals for both flows:** gradient bands with edges, glowing nodes and particles, eased band transitions, a HiDPI canvas
+  that re-lays out with its container, labels that spread out instead of overlapping (with a halo for contrast in light and dark), and
+  colours from the theme. Reduced motion means no autoplay and no particles. Particles are capped, animation runs on
+  `requestAnimationFrame` and stops while the page is hidden. No new dependencies or CDN.
   The new **About** page (ⓘ in the top bar, a link in Settings, *About…* in the tray) shows the version, author
   [helefee](https://github.com/helefee), the repository [helefee/CC-SessionSync](https://github.com/helefee/CC-SessionSync), the MIT
   license, issue / release links, system and data folder.
 
   ![Token flow](docs/screenshots/v051-tokenflow-en.png)
+
+  ![Usage page token flow](docs/screenshots/v051-usageflow-en-dark-hover.png)
+
+  ![Usage page token flow, light](docs/screenshots/v051-usageflow-en-light.png)
+
+  ![Session token flow, polished](docs/screenshots/v051-sessionflow-en-dark.png)
 
   ![Token flow, live](docs/screenshots/v051-live-en-light-panel.png)
 
