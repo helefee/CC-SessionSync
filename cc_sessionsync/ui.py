@@ -722,6 +722,16 @@ class H(BaseHTTPRequestHandler):
                         ch[k] = round(min(hi, max(lo, float(b[k]))), 3)
                     except (TypeError, ValueError):
                         raise ValueError(f"{k} 应该是数字")
+            if "chat_style" in b:                                                 # 对话气泡样式（0.5.3）
+                if b["chat_style"] not in ("app", "unified"):
+                    raise ValueError("气泡样式只能是 app / unified")
+                ch["chat_style"] = b["chat_style"]
+            if "chat_width" in b:                                                 # 对话文本宽度（0.5.3）：0 = 全宽
+                try:
+                    w = int(round(float(b["chat_width"])))
+                except (TypeError, ValueError):
+                    raise ValueError("chat_width 应该是数字")
+                ch["chat_width"] = 0 if w <= 0 else min(1600, max(520, w))
             if "lang" in b:                                                       # 界面语言（0.4.3）
                 if b["lang"] not in ("auto", "zh", "en"):
                     raise ValueError("界面语言只能是 auto / zh / en")

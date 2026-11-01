@@ -7,7 +7,9 @@
 <link rel="icon" href="/icon.png">
 <script>try { var t = localStorage.getItem("ccss.theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <script>try { var r = document.documentElement, f = +localStorage.getItem("ccss.fk"), z = +localStorage.getItem("ccss.zoom");   // 字号 / 界面缩放（0.2.6）：先套上，免得闪一下
-  if (f >= 0.8 && f <= 1.5) r.style.setProperty("--fk", f); if (z >= 0.8 && z <= 2) { r.style.zoom = z; r.style.setProperty("--z", z); } } catch (e) {}</script>
+  if (f >= 0.8 && f <= 1.5) r.style.setProperty("--fk", f); if (z >= 0.8 && z <= 2) { r.style.zoom = z; r.style.setProperty("--z", z); }
+  var w = localStorage.getItem("ccss.chatw"); w = w === null || w === "" ? 860 : +w;   // 对话文本宽度（0.5.3）：0 = 全宽
+  r.style.setProperty("--chatw", w === 0 ? "100%" : "calc(" + Math.min(1600, Math.max(520, w || 860)) + "px*var(--fk))"); } catch (e) {}</script>
 <style>
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-medium.woff2) format("woff2");font-weight:450 549;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
@@ -208,6 +210,30 @@ table.t td.n{text-align:right;white-space:nowrap}
 .cthink .tbody{background:transparent;color:var(--muted);border-left:2px solid var(--line);border-radius:0;font-family:var(--sans);margin:2px 0 4px 10px;max-height:360px}
 .cthink .tbody .md{font-size:calc(13px*var(--fk))}
 .chatpv{gap:0}
+/* 0.5.3：对话气泡跟着来源应用换样式（变量由 CHTH 生成，没设就是上面的统一样式）+ 可调的文本宽度 --chatw */
+.chat{width:100%;max-width:var(--chatw,100%);margin:0 auto;box-sizing:border-box}
+.chat .cm.u{align-self:var(--cu-al,flex-end);align-items:var(--cu-al,flex-end);max-width:var(--cu-mw,min(600px,85%))}
+.chat .cm.u .cmeta{align-self:flex-end}
+.chat .cbub{background:var(--cu-bg,var(--bubble));color:var(--cu-fg,inherit);border:var(--cu-bdw,0px) solid var(--cu-bd,transparent);border-left-width:var(--cu-blw,var(--cu-bdw,0px));border-radius:var(--cu-r,16px);padding:var(--cu-p,8px 14px);font-family:var(--cu-font,inherit)}
+.chat .cm.a{font-family:var(--ca-font,var(--serif));line-height:var(--ca-lh,1.7);font-size:calc(var(--ca-fs,15px)*var(--fk))}
+.chat .md a,.chat .cmore,.chat .tsub{color:var(--c-link,var(--accent))}
+.chat .md .cb,.chat .tcall pre{background:var(--c-code,var(--codebg))}
+.chat .chd .cav{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--c-avbg,transparent);flex:none}
+.chat .chd .cav .logo{width:14px;height:14px}
+.chat .ctools,.chat .cthink{font-family:var(--c-tfont,var(--sans))}
+.chat .tcall .tsm::before{content:var(--c-mark,none);color:var(--c-ok,var(--ok));font-weight:700;line-height:1;flex:none;width:10px;text-align:center;font-family:var(--sans);font-variant-emoji:text}
+.chat .tcall.bad .tsm::before{color:var(--c-bad,var(--bad))}
+.chat .tcall .tic{display:var(--c-tic,inline-flex)}
+.chat .cthink .tbody{border-left-color:var(--c-think,var(--line))}
+.rdpop{min-width:300px!important;padding:12px 14px!important;cursor:default}
+.rdpop .rdl{font-size:calc(12.5px*var(--fk));color:var(--muted);margin:2px 0 6px;display:flex;justify-content:space-between;gap:8px}
+.rdpop .rdl+.seg,.rdpop .seg+.rdl{margin-bottom:10px}
+.rdpop .seg button,.rdpop .seg button:hover{width:auto;display:inline-block;padding:3px 11px;border-radius:999px}
+.rdpop .seg button:not(.on):hover{background:transparent;color:var(--text)}
+.rdpop .rdn{font-size:calc(11.5px*var(--fk));color:var(--faint);line-height:1.45;margin-top:8px}
+.rdw{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}.rdw input[type=range]{accent-color:var(--accent);min-width:160px;flex:1}
+.rdw b{font-size:calc(12.5px*var(--fk));color:var(--muted);font-weight:500;min-width:56px}
+.rdpop .rdw{display:flex;margin-top:8px}
 .empty{color:var(--faint);text-align:center;padding:28px 10px;font-size:calc(14px*var(--fk))}
 .kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:calc(13.5px*var(--fk))}.kv>div:nth-child(odd){color:var(--muted)}
 .batch{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line2);font-size:calc(13.5px*var(--fk))}
@@ -728,6 +754,8 @@ if (I18N && I18N.dict) {
 }
 // ---------- SVG 图标（Lucide，ISC 许可；Claude / Codex 用官方 logo；从 CC Msg 搬来）----------
 const ICON = {
+  width: '<path d="M3 4v16"/><path d="M21 4v16"/><path d="M6 12h12"/><path d="m9 9-3 3 3 3"/><path d="m15 9 3 3-3 3"/>',
+  bubble: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   gitpr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
   gitmerge: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/>',
   gitbranch: '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
@@ -2755,10 +2783,88 @@ function toolRowHtml(t, i){
   const sub = t.sub && t.sub.agent_id ? `<button class="tsub" data-csub="${esc(t.sub.agent_id)}" data-cdesc="${esc(t.sub.desc || t.sub.type || "")}" title="看这个子代理自己的记录">${ic("subtask")} 子代理记录</button>` : "";
   const brief = t.sub && (t.sub.type || t.sub.desc) ? [t.sub.type, t.sub.desc].filter(Boolean).join(" · ") : t.brief || "";
   const head = `<span class="tic">${ic(toolIcon(t.name))}</span><span class="tnm">${esc(t.name || "tool")}</span><span class="ta" title="${esc(brief)}">${esc(brief)}</span>${t.err ? '<span class="terr">出错</span>' : ""}${sub}`;
-  if (t.input == null && t.out == null) return `<div class="tcall flat"><div class="tsm">${head}</div></div>`;
-  return `<details class="tcall" data-ci="${i}"><summary class="tsm">${head}</summary><div class="tbody"></div></details>`;
+  if (t.input == null && t.out == null) return `<div class="tcall flat${t.err ? " bad" : ""}"><div class="tsm">${head}</div></div>`;
+  return `<details class="tcall${t.err ? " bad" : ""}" data-ci="${i}"><summary class="tsm">${head}</summary><div class="tbody"></div></details>`;
 }
 const cpBtn = (i, tip) => `<button class="ccp" data-ccp="${i}" title="${tip || "复制"}">${ic("clipboard")}</button>`;
+// ---------- 0.5.3：对话气泡跟着来源应用换样式 ----------
+// 每个应用一套浅色 / 深色变量 + 形状。参考各家自己界面的公开样式（配色、圆角、字体、工具行的样子），在这里自己重写成 CSS；
+// 不用对方的图片、字体文件或代码，标识沿用上面 ICON 里已有的 SVG。来源见 README「对话样式」。
+// l / d：浅色 / 深色的颜色；s：两种模式共用的形状。mark：工具行前面的小圆点（成功 ok 色、出错 bad 色），tic：要不要工具小图标
+const CHTH = {
+  "claude": {"s": {"r": "16px", "af": "var(--serif)", "afs": "15px", "alh": "1.7", "mark": "●", "tic": "none"},
+    "l": {"ub": "#f0eee6", "uf": "#141413", "ubd": "transparent", "link": "#c96442", "ok": "#5f8f3e", "bad": "#bf4d43", "code": "#1f1e1d", "pane": "transparent", "av": "#d97757", "avbg": "transparent", "think": "#e3dacc"},
+    "d": {"ub": "#393937", "uf": "#faf9f5", "ubd": "transparent", "link": "#e08a6b", "ok": "#8fb573", "bad": "#e5766b", "code": "#1a1918", "pane": "transparent", "av": "#d97757", "avbg": "transparent", "think": "#4a4945"}},
+  "codex": {"s": {"r": "16px", "p": "8px 14px", "mw": "min(680px,77%)", "bdw": "1px", "af": "var(--sans)", "afs": "14.5px", "alh": "1.65", "mark": "•", "tic": "none"},
+    "l": {"ub": "#e3f4ec", "uf": "#0d0d0d", "ubd": "#bfe5d3", "link": "#0b8a6b", "ok": "#10a37f", "bad": "#d1453b", "code": "#0d0d0d", "pane": "#ffffff", "av": "#0d0d0d", "avbg": "#e3f4ec", "think": "#bfe5d3"},
+    "d": {"ub": "#163a2e", "uf": "#ececec", "ubd": "#1f5a46", "link": "#3ad29a", "ok": "#19c37d", "bad": "#f26d61", "code": "#0d0d0d", "pane": "#1b1b1b", "av": "#ececec", "avbg": "#163a2e", "think": "#2c4a3f"}},
+  "cursor": {"s": {"r": "8px", "p": "8px 12px", "mw": "100%", "al": "stretch", "bdw": "1px", "af": "var(--sans)", "afs": "14px", "alh": "1.6", "tic": "inline-flex"},
+    "l": {"ub": "#f3f3f3", "uf": "#141414", "ubd": "#14141426", "link": "#3c7cab", "ok": "#1f8a65", "bad": "#cf2d56", "code": "#141414", "pane": "#fcfcfc", "av": "#141414", "avbg": "#ededed", "think": "#14141426"},
+    "d": {"ub": "#262626", "uf": "#e4e4e4", "ubd": "#e4e4e426", "link": "#88c0d0", "ok": "#3fa266", "bad": "#e34671", "code": "#141414", "pane": "#181818", "av": "#e4e4e4", "avbg": "#262626", "think": "#e4e4e426"}},
+  "dsh": {"s": {"r": "22px", "p": "10px 16px", "mw": "calc(100% - 88px)", "uff": "var(--sans)", "af": "var(--sans)", "afs": "16px", "alh": "1.5", "tic": "inline-flex"},
+    "l": {"ub": "#edf3fe", "uf": "#0f1115", "ubd": "transparent", "link": "#3964fe", "ok": "#16a34a", "bad": "#dc2626", "code": "#1e1f22", "pane": "#ffffff", "av": "#4d6bfe", "avbg": "#edf3fe", "think": "#dbe5fd"},
+    "d": {"ub": "#2c2c2e", "uf": "#f9fafb", "ubd": "transparent", "link": "#7aa0ff", "ok": "#4ade80", "bad": "#f87171", "code": "#1e1f22", "pane": "#151517", "av": "#5686fe", "avbg": "#2c2c2e", "think": "#3a3a3d"}},
+  "opencode": {"s": {"r": "0", "p": "8px 12px", "mw": "100%", "al": "stretch", "bdw": "0px", "blw": "3px", "uff": "var(--mono)", "af": "var(--mono)", "afs": "13.5px", "alh": "1.6", "tf": "var(--mono)", "tic": "inline-flex"},
+    "l": {"ub": "#fafafa", "uf": "#1a1a1a", "ubd": "#3b7dd8", "link": "#3b7dd8", "ok": "#3d9a57", "bad": "#d1383d", "code": "#141414", "pane": "#ffffff", "av": "#3b7dd8", "avbg": "transparent", "think": "#d4d4d4"},
+    "d": {"ub": "#141414", "uf": "#eeeeee", "ubd": "#fab283", "link": "#fab283", "ok": "#7fd88f", "bad": "#e06c75", "code": "#141414", "pane": "#0a0a0a", "av": "#fab283", "avbg": "transparent", "think": "#484848"}},
+  "zcode": {"s": {"r": "14px 2px 14px 14px", "p": "8px 14px", "mw": "min(640px,80%)", "bdw": "1px", "uff": "'Geist',var(--sans)", "af": "'Geist',var(--sans)", "afs": "14.5px", "alh": "1.65", "tic": "inline-flex"},
+    "l": {"ub": "#f4f4f5", "uf": "#171717", "ubd": "#e4e4e7", "link": "#171717", "ok": "#16a34a", "bad": "#dc2626", "code": "#171717", "pane": "#ffffff", "av": "#171717", "avbg": "#f4f4f5", "think": "#e4e4e7"},
+    "d": {"ub": "#262626", "uf": "#fafafa", "ubd": "#404040", "link": "#fafafa", "ok": "#4ade80", "bad": "#f87171", "code": "#171717", "pane": "#161616", "av": "#fafafa", "avbg": "#262626", "think": "#404040"}}
+};
+const CHV = {ub: "--cu-bg", uf: "--cu-fg", ubd: "--cu-bd", link: "--c-link", ok: "--c-ok", bad: "--c-bad", code: "--c-code", avbg: "--c-avbg", think: "--c-think"};
+const CHS = {r: "--cu-r", p: "--cu-p", mw: "--cu-mw", al: "--cu-al", bdw: "--cu-bdw", blw: "--cu-blw", uff: "--cu-font", af: "--ca-font", afs: "--ca-fs", alh: "--ca-lh", tf: "--c-tfont", tic: "--c-tic"};
+function chatThCss(){
+  const vars = (o, m) => Object.entries(o).filter(([k]) => m[k]).map(([k, x]) => `${m[k]}:${x}`).join(";");
+  const L = [], D = [];
+  for (const [a, t] of Object.entries(CHTH)) {
+    const c = `.chat.th-${a}`, mk = t.s.mark ? `;--c-mark:"${t.s.mark}"` : "";
+    L.push(`${c}{${vars(t.s, CHS)}${mk};${vars(t.l, CHV)}}`, `${c} .chd .cav .logo{color:${t.l.av}}`);
+    D.push(`${c}{${vars(t.d, CHV)}}`, `${c} .chd .cav .logo{color:${t.d.av}}`);
+    if (t.l.pane !== "transparent") L.push(`.chatpv:has(>.chat.th-${a}){background:${t.l.pane};border-radius:12px;padding:0 14px}`);
+    if (t.d.pane !== "transparent") D.push(`.chatpv:has(>.chat.th-${a}){background:${t.d.pane}}`);
+  }
+  return L.join("\n") + "\n" + D.map(r => `:root[data-theme="dark"] ${r}`).join("\n")
+    + `\n@media (prefers-color-scheme:dark){\n${D.map(r => `:root:not([data-theme="light"]) ${r}`).join("\n")}\n}`;
+}
+if (typeof document !== "undefined") { const st = document.createElement("style"); st.id = "chatThCss"; st.textContent = chatThCss(); document.head.appendChild(st); }
+// 气泡样式：app = 跟着会话来源应用（缺省）；unified = 统一用上面那套（Claude 风格）
+const chatStyle = () => typeof store !== "undefined" && store.get("ccss.chatstyle") === "unified" ? "unified" : "app";
+const chatTh = agent => chatStyle() === "unified" ? "uni" : CHTH[agent] ? agent : "claude";
+// 文本宽度：窄 / 标准 / 宽 / 全宽（0），或者拖滑块 520–1600 px（跟着字号放大）
+const CHW = [[680, "窄"], [860, "标准"], [1120, "宽"], [0, "全宽"]], CHW_MIN = 520, CHW_MAX = 1600, CHW_DEF = 860;
+const chatWNorm = v => v === "" || v == null || isNaN(+v) ? CHW_DEF : +v === 0 ? 0 : Math.min(CHW_MAX, Math.max(CHW_MIN, Math.round(+v)));
+const chatW = () => chatWNorm(store.get("ccss.chatw"));
+function applyChatW(w, save = true){
+  w = chatWNorm(w); store.set("ccss.chatw", String(w));
+  document.documentElement.style.setProperty("--chatw", w ? `calc(${w}px*var(--fk))` : "100%");
+  rdSync();
+  if (save) { clearTimeout(applyChatW.t); applyChatW.t = setTimeout(() => api("/api/settings", {chat_width: w}).catch(() => {}), 500); }
+}
+function applyChatStyle(v, save = true){
+  v = v === "unified" ? "unified" : "app"; store.set("ccss.chatstyle", v);
+  $$(".chat[data-ag]").forEach(c => { c.className = c.className.replace(/\s*\bth-\S+/g, "") + " th-" + chatTh(c.dataset.ag); });
+  rdSync();
+  if (save) api("/api/settings", {chat_style: v}).catch(() => {});
+}
+const rdStyleCtl = () => `<span class="seg" data-rd="style"><button data-v="app" title="Codex 绿色气泡、Claude 米色气泡……照各应用自己的样子">跟随应用</button><button data-v="unified" title="所有会话都用同一种样式">统一样式</button></span>`;
+const rdWidthCtl = () => `<span class="rdw"><span class="seg" data-rd="w">${CHW.map(([v, t]) => `<button data-v="${v}">${t}</button>`).join("")}</span><input type="range" data-rd="wr" min="${CHW_MIN}" max="${CHW_MAX}" step="20" title="拖动调整对话文本宽度"><b data-rd="wv"></b></span>`;
+const rdPop = () => `<div class="rdl">对话气泡样式</div>${rdStyleCtl()}<div class="rdl">文本宽度</div>${rdWidthCtl()}<div class="rdn">会记住；设置 → 外观与窗口里也能改</div>`;
+function rdSync(){
+  const w = chatW(), v = chatStyle();
+  $$('[data-rd="style"] button').forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $$('[data-rd="w"] button').forEach(b => b.classList.toggle("on", +b.dataset.v === w));
+  $$('[data-rd="wr"]').forEach(r => { if (document.activeElement !== r) r.value = w || CHW_MAX; });
+  $$('[data-rd="wv"]').forEach(e => e.textContent = w ? w + " px" : "全宽");
+}
+function rdBind(root){
+  root.querySelectorAll('[data-rd="style"] button').forEach(b => b.onclick = () => applyChatStyle(b.dataset.v));
+  root.querySelectorAll('[data-rd="w"] button').forEach(b => b.onclick = () => applyChatW(b.dataset.v));
+  root.querySelectorAll('[data-rd="wr"]').forEach(r => r.oninput = () => applyChatW(r.value));
+  rdSync();
+}
+(async () => { try { const st = await api("/api/settings");       // 网页存储被清过时，从设置文件找回来
+  if (store.get("ccss.chatw") == null && st.chat_width != null) applyChatW(st.chat_width, false);
+  if (store.get("ccss.chatstyle") == null && st.chat_style) applyChatStyle(st.chat_style, false); } catch(e){} })();
 function chatHtml(entries, agent, opt = {}){
   if (!entries || !entries.length) return '<div class="empty">（没有对话内容）</div>';
   const key = "c" + (++CHAT.seq), es = entries.map(chatNorm); CHAT.data[key] = {es, agent};
@@ -2778,12 +2884,12 @@ function chatHtml(entries, agent, opt = {}){
       const long = e.text.length > 1500 || e.text.split("\n").length > 24;
       html += `<div class="cm u"><div class="cbub${long ? " clamp" : ""}">${esc(e.text)}</div>${long ? `<a class="cmore" data-cmore>展开全文</a>` : ""}<div class="cmeta">${e.ts ? `<span>${when(e.ts)}</span>` : ""}${cpBtn(i)}</div></div>`; return; }
     if (e.role === "thinking") { html += `<details class="cthink" data-ci="${i}"><summary>${ic("sparkles")}<span>思考过程</span><span class="dim">${(e.text || "").length} 字</span></summary><div class="tbody"></div></details>`; return; }
-    const who = head ? `<div class="chd">${logo(agent || "claude")}<b>${esc(name + (e.model ? " · " + e.model : ""))}</b>${e.ts ? `<span>${when(e.ts)}</span>` : ""}</div>` : "";
+    const who = head ? `<div class="chd"><span class="cav">${logo(agent || "claude")}</span><b>${esc(name + (e.model ? " · " + e.model : ""))}</b>${e.ts ? `<span>${when(e.ts)}</span>` : ""}</div>` : "";
     head = false;
     html += `<div class="cm a">${who}<div class="md">${mdHtml(e.text)}</div><div class="cacts">${cpBtn(i)}</div></div>`;
   });
   flush();
-  return `<div class="chat" data-chat="${key}">${html}</div>`;
+  return `<div class="chat th-${chatTh(agent)}" data-ag="${esc(agent || "claude")}" data-chat="${key}">${html}</div>`;
 }
 function chatFill(det){
   const box = det.closest("[data-chat]"), C = box && CHAT.data[box.dataset.chat], b = det.querySelector(":scope > .tbody");
@@ -3791,6 +3897,7 @@ async function ssView(agent, id, lim){
   const tfOn = TF_AG.includes(agent), mode = tfOn && store.get("ccss.svmode") === "flow" ? "flow" : "chat";
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
       ${tfOn ? `<span class="seg svmode" id="svMode" title="对话内容，或者按真实用量回放每一次模型调用的 token 流转"><button data-m="chat" class="${mode === "chat" ? "on" : ""}">对话</button><button data-m="flow" class="${mode === "flow" ? "on" : ""}">Token 流转</button></span>` : ""}
+      <span class="menu" id="svRd"><button class="ghost" id="svRdB" title="阅读设置：气泡样式、文本宽度">${ic("type")}</button><div class="list rdpop">${rdPop()}</div></span>
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
@@ -3818,6 +3925,9 @@ async function ssView(agent, id, lim){
   }
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
+  $("#svRdB").onclick = e => { e.stopPropagation(); $$(".menu.open").forEach(m => m !== $("#svRd") && m.classList.remove("open")); $("#svRd").classList.toggle("open"); };
+  $("#svRd .list").onclick = e => e.stopPropagation();          // 在里面点不收起
+  rdBind($("#svRd"));
   if (agent === "opencode" || agent === "zcode") $("#svOpen").onclick = () => cvOpen(agent, [id]);
   else if (agent === "cursor") $("#svOpen").onclick = () => { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); };
   else if (agent === "dsh") $("#svOpen").onclick = () => { copyText(x.resume || id); toast("已复制 dsh 命令行的继续命令。用桌面版的话，在 DeepSeek Harness 的会话列表里点开它就能接着聊（本程序不改 dsh 的会话）", 7000); };
@@ -4456,6 +4566,8 @@ R.settings = async () => {
       ${setRow("globe", "界面语言 · Language", `缺省跟随系统（现在系统是${s.lang_system === "en" ? "英文" : "中文"}）。切换后界面马上重新载入；你的会话内容不会被翻译`, `<span class="seg" id="stLang" translate="no">${[["auto", s.lang_now === "en" ? "System" : "跟随系统"], ["zh", "中文"], ["en", "English"]].map(([v, t]) => `<button data-v="${v}" class="${(s.lang || "auto") === v ? "on" : ""}">${t}</button>`).join("")}</span>`)}
       ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
       ${setRow("type", "字号", "整个界面的文字大小（缺省「标准」）", `<span class="seg" id="stFont">${FKS.map(([v, t]) => `<button data-v="${v}" class="${Math.abs(+v - fontK()) < 0.005 ? "on" : ""}">${t}</button>`).join("")}</span>`)}
+      ${setRow("bubble", "对话气泡样式", "缺省「跟随应用」：Codex 的会话是绿色气泡、Claude 是米色气泡、Cursor / DeepSeek Harness / OpenCode / ZCode 各照自己的样子（浅色 / 深色都有）。「统一样式」= 都用 Claude 那种", rdStyleCtl())}
+      ${setRow("width", "对话文本宽度", "看会话时正文和气泡最宽多少（跟着字号放大）。会话页标题栏的 <b>T</b> 按钮里也能随手改", rdWidthCtl())}
       ${setRow("zoom", "界面缩放", "整体放大 / 缩小（80%–200%）。快捷键 <kbd>Ctrl</kbd>+<kbd>=</kbd> 放大、<kbd>Ctrl</kbd>+<kbd>-</kbd> 缩小、<kbd>Ctrl</kbd>+<kbd>0</kbd> 还原，也可以按住 Ctrl 滚滚轮。会记住；Windows 的显示缩放（125% / 150%）另外照常生效",
         `<span class="zoomc"><button class="ghost" id="stZm" title="缩小">−</button><b id="stZoomV">${Math.round(zoomK() * 100)}%</b><button class="ghost" id="stZp" title="放大">+</button><button class="ghost" id="stZ0">还原</button></span>`)}
       ${setRow("x", "关窗口时缩到托盘", "关掉窗口后留在通知区域继续自动同步 / 检测账号切换；托盘菜单里「退出」才真正退出" + (win ? "" : "（只有 Windows 桌面版有托盘）"), sw("stTray", s.tray_close, dis))}
@@ -4482,6 +4594,7 @@ R.settings = async () => {
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
   $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
+  rdBind(pg);
   $$("#stLang button").forEach(b => b.onclick = async () => { await saveSetting({lang: b.dataset.v}); location.reload(); });
   $("#stAbout").onclick = e => { e.preventDefault(); go("about"); };
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
