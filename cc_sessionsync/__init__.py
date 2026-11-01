@@ -5,6 +5,12 @@
 
 最早是 CC Msg（https://github.com/helefee/CCMessage）里的功能，这里单独拿出来。
 """
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 PRODUCT = "CC Session Sync"
 PRODUCT_VERSION = __version__
+# 「关于」页 / 托盘 / 命令行用的同一份（和 pyproject.toml、LICENSE 一致）
+AUTHOR = "helefee"
+AUTHOR_URL = "https://github.com/helefee"
+REPO = "helefee/CC-SessionSync"
+REPO_URL = "https://github.com/" + REPO
+LICENSE = "MIT"

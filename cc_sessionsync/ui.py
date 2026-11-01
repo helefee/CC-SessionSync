@@ -96,6 +96,18 @@ def _check_backup_settings(ch: dict) -> None:
                 raise ValueError("保留天数要填整数")
 
 
+def about_view() -> dict:
+    """0.5.1：「关于」页。都是程序自己带的事实（版本号、pyproject / LICENSE 里的作者和许可证），不联网。"""
+    import platform
+    import sys
+    from . import AUTHOR, AUTHOR_URL, LICENSE, PRODUCT, REPO, REPO_URL
+    return {"product": PRODUCT, "version": __version__, "author": AUTHOR, "author_url": AUTHOR_URL, "repo": REPO, "repo_url": REPO_URL,
+            "issues_url": REPO_URL + "/issues", "releases_url": REPO_URL + "/releases", "license": LICENSE,
+            "license_url": REPO_URL + "/blob/main/LICENSE", "copyright": f"Copyright (c) 2026 {AUTHOR}",
+            "python": platform.python_version(), "platform": f"{platform.system()} {platform.release()}".strip(),
+            "frozen": bool(getattr(sys, "frozen", False)), "home": str(paths.HOME), "origin": "https://github.com/helefee/CCMessage"}
+
+
 def settings_view() -> dict:
     s = settings.load()
     try:
@@ -483,6 +495,8 @@ class H(BaseHTTPRequestHandler):
             return appclose.view(q.get("id") or "")
         if p == "/api/settings":
             return settings_view()
+        if p == "/api/about":                        # 0.5.1：「关于」页（版本、作者、仓库、许可证）
+            return about_view()
         if p == "/api/events":
             return {"events": events.recent(50)}
         if p == "/api/tray":
@@ -503,6 +517,10 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/usage/"):
             from . import usage
             f = {k: q.get(k) for k in ("app", "provider", "model", "from", "to")}
+            if p == "/api/usage/flow":                   # 0.5.1：Token 流转（按筛选聚合的真实用量 + 时间桶）
+                return usage.flow(dict(f, proj=q.get("proj")), q.get("step") or None)
+            if p == "/api/usage/flow/live":              # 0.5.1：实时——数据版本变了才回；wait 秒长轮询
+                return usage.flow_live(dict(f, proj=q.get("proj")), q.get("v") or "", float(q.get("wait") or 0), q.get("step") or None)
             if p == "/api/usage/summary":
                 return usage.summary(f)
             if p == "/api/usage/heatmap":                # 0.4.4：每天用量（日历热力图，最近一年）
@@ -521,6 +539,16 @@ class H(BaseHTTPRequestHandler):
                 return sessions.list_gen()
             if p == "/api/sessions/item":
                 return sessions.item(q["agent"], q["id"])
+            if p == "/api/sessions/tokenflow":                 # 0.5.1：Token 流转（逐次调用的真实用量，只读）
+                from . import tokenflow
+                return tokenflow.flow(q["agent"], q["id"])
+            if p == "/api/sessions/tokenflow/live":            # 0.5.1：实时——只回新增 / 变过的调用；wait 秒长轮询
+                from . import tokenflow
+                return tokenflow.live(q["agent"], q["id"], q.get("gen") or "", int(q.get("v") or 0), int(q.get("nt") or 0),
+                                      float(q.get("wait") or 0))
+            if p == "/api/sessions/tokenflow/active":          # 0.5.1：最近在动的那个会话（全局「实时」）
+                from . import tokenflow
+                return tokenflow.active()
             if p == "/api/sessions/read":
                 if q.get("rich") or q.get("sub"):                 # 0.4.9：对话样式
                     from . import chatview

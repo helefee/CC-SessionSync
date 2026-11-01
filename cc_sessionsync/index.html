@@ -531,6 +531,86 @@ td.nw,th.nw{white-space:nowrap}
 #banLegacy .lglist{margin:4px 0 4px 18px;padding:0;font-size:calc(13px*var(--fk))}#banLegacy .lglist li{margin:1px 0}
 .banmore{display:flex;justify-content:center;margin:-6px auto 12px;max-width:1180px}
 .banmore button{font-size:calc(12.5px*var(--fk));padding:2px 12px;border-radius:999px;color:var(--muted);background:var(--hover)}
+/* 0.5.1 Token 流转（会话详情）和「关于」页 */
+.svmode{margin:0 2px}
+#svPv[hidden],#svFlow[hidden]{display:none}
+#svFlow{max-height:calc(calc(100*var(--vh)) - 250px);overflow:auto;padding-right:2px}
+.tf{display:flex;flex-direction:column;gap:10px;outline:none}
+.tfbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tfbar #tfPlay{display:inline-flex;align-items:center;gap:6px;min-width:86px;justify-content:center}
+.tfbar input[type=range]{flex:1;min-width:120px;accent-color:var(--accent)}
+.tfbar select{padding:3px 6px}
+.tfbar .flip{display:inline-flex;transform:scaleX(-1)}
+.tfpos{font-size:calc(13px*var(--fk));color:var(--muted);white-space:nowrap}.tfpos b{color:var(--text);font-weight:600}
+.tfcv{border:1px solid var(--line);border-radius:var(--r2);background:var(--panel2);overflow:hidden}
+.tfcv canvas{display:block;width:100%;height:calc(340px*var(--fk));cursor:pointer}
+.tfacc{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.tfacc>div{border:1px solid var(--line2);border-radius:var(--r);padding:6px 10px;background:var(--panel);display:flex;flex-direction:column}
+.tfacc span{font-size:calc(12px*var(--fk));color:var(--muted);display:flex;align-items:center;gap:5px}
+.tfacc b{font-size:calc(16px*var(--fk));font-weight:650}
+.tfacc i,.tfnums i{display:inline-block;width:9px;height:9px;border-radius:3px}
+.tfcur{border:1px solid var(--line2);border-radius:var(--r);padding:8px 12px;background:var(--panel);display:flex;flex-direction:column;gap:6px;font-size:calc(13.5px*var(--fk))}
+.tfch{display:flex;align-items:center;gap:6px}.tfch .sp{flex:1}
+.tfnums{display:flex;flex-wrap:wrap;gap:4px 14px}.tfnums span{display:inline-flex;align-items:center;gap:5px}
+.tftools{display:flex;flex-wrap:wrap;gap:4px;font-size:calc(12.5px*var(--fk))}
+.tfchip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:0 9px;background:color-mix(in srgb,var(--u7) 14%,transparent);color:var(--u7);font-family:var(--mono);font-size:calc(12px*var(--fk))}
+.tfchip .ic{width:12px;height:12px}
+.tfturn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tfleg{font-size:calc(12.5px*var(--fk));line-height:1.6}
+.tflive{display:inline-flex;align-items:center;gap:6px}
+.tfdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.tflive.on .tfdot{background:#e5484d;box-shadow:0 0 0 0 color-mix(in srgb,#e5484d 55%,transparent)}
+.tflive.on.fol .tfdot{animation:tfpulse 1.6s ease-out infinite}
+.tflive.on{color:#e5484d;border-color:color-mix(in srgb,#e5484d 45%,var(--line))}
+#ssLive .tfdot{background:#e5484d}
+@keyframes tfpulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,#e5484d 55%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.tflive.on.fol .tfdot{animation:none}}
+.tfls{display:inline-flex;align-items:center;gap:8px;font-size:calc(12.5px*var(--fk));color:var(--muted);white-space:nowrap}
+.tfls #tfBack{display:inline-flex;align-items:center;gap:4px;padding:2px 8px}
+.tfwarn{color:var(--warn,#c27c0e)}
+/* 0.5.1：流转图悬停提示 / 用量页流转 */
+.tfcv{position:relative;background:radial-gradient(120% 90% at 50% 40%,var(--panel) 0%,var(--panel2) 70%)}
+.tfacc b{font-variant-numeric:tabular-nums}
+.tfbar #ufPlay{display:inline-flex;align-items:center;gap:6px;min-width:86px;justify-content:center}
+.fxtip{position:absolute;display:none;pointer-events:none;z-index:3;min-width:150px;max-width:280px;padding:7px 10px;border:1px solid var(--line);border-radius:var(--r);
+  background:color-mix(in srgb,var(--panel) 94%,transparent);box-shadow:0 6px 22px rgba(0,0,0,.16);font-size:calc(12.5px*var(--fk));line-height:1.5;font-variant-numeric:tabular-nums;backdrop-filter:blur(6px)}
+.fxtip b{display:block;font-weight:650;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fxtip>div{display:flex;align-items:center;gap:6px;white-space:nowrap}.fxtip .n{margin-left:auto;font-weight:600;padding-left:10px}
+.fxtip i{display:inline-block;width:8px;height:8px;border-radius:2px;flex:none}
+#usFlow .ct{gap:8px}#usFlow .tfbar .ic{width:1.1em;height:1.1em}#usFlow #ufBody{margin-top:8px}
+.uf .tfcv canvas{height:calc(400px*var(--fk))}.uf .tfacc{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+/* 0.5.2：模型品牌图标（内联 SVG）+ 两个流转图的版式：8px 网格、工具条、统计卡片 */
+.ic.mbi{width:1.1em;height:1.1em;fill:currentColor;stroke:none;flex:none;vertical-align:-.2em;margin-right:5px}
+.mb-claude{color:#d97757}.mb-openai{color:var(--text)}.mb-deepseek{color:var(--dsh,#4d6bfe)}.mb-other{color:var(--muted)}
+.fxtip b .mbi{margin-right:4px}.tfmod{display:inline-flex;align-items:center;font-size:calc(14.5px*var(--fk))}
+.tf{gap:16px}
+.tfbar{gap:8px;padding:8px 10px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tfbar>button,.tfbar select{height:32px;border-radius:9px}
+.tfbar #tfPlay,.tfbar #ufPlay{padding:0 16px;border-radius:999px;font-weight:600}
+.tfsep{width:1px;height:20px;background:var(--line2);margin:0 2px;flex:none}
+.tfseg{display:inline-flex;padding:2px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);flex:none}
+.tfseg button{border:0;background:transparent;color:var(--muted);padding:3px 10px;border-radius:8px;font-size:calc(12.5px*var(--fk));line-height:1.5;cursor:pointer;box-shadow:none}
+.tfseg button.on{background:var(--panel);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line2)}
+.tfunit{display:inline-flex;align-items:center;gap:8px;font-size:calc(12px*var(--fk));color:var(--muted);white-space:nowrap}
+.tfunit>i{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}.tfunit b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.tfux{padding-left:8px;border-left:1px solid var(--line2)}
+.tfcv{border-radius:16px;border-color:var(--line2);box-shadow:var(--shadow)}
+.tfacc{gap:10px;grid-template-columns:repeat(auto-fill,minmax(136px,1fr))}.uf .tfacc{grid-template-columns:repeat(auto-fit,minmax(106px,1fr))}
+.tfacc>div{padding:12px 14px;border-radius:12px;gap:6px;background:var(--panel);border-color:var(--line2)}
+.tfacc span{font-size:calc(12px*var(--fk));letter-spacing:.01em}
+.tfacc b{font-size:calc(20px*var(--fk));font-weight:650;line-height:1.1;letter-spacing:-.01em}
+.tfacc>.tfk1{background:var(--accent-weak);border-color:color-mix(in srgb,var(--accent) 22%,var(--line2))}.tfacc>.tfk1 b{color:var(--accent)}
+.tfcur{padding:14px 16px;border-radius:12px;gap:10px;border-color:var(--line2)}
+.tfnums{gap:6px 18px}
+.tfleg{color:var(--muted);line-height:1.7;padding:0 4px}.tfleg b{color:var(--text);font-weight:600}
+@media (max-width:700px){.tfcv canvas{height:calc(300px*var(--fk))}.uf .tfcv canvas{height:calc(340px*var(--fk))}}
+.ab{max-width:760px}
+.abhd{display:flex;align-items:center;gap:16px;margin:6px 0 14px}.abhd img{width:64px;height:64px}
+.abhd h2{margin:0}.abhd .ver{font-family:var(--mono);color:var(--muted)}
+.abgrid{display:grid;grid-template-columns:max-content 1fr;gap:8px 18px;align-items:center;font-size:calc(14px*var(--fk))}
+.abgrid>span:nth-child(odd){color:var(--muted)}
+.abgrid a{display:inline-flex;align-items:center;gap:5px;word-break:break-all}
+.ablinks{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -549,6 +629,7 @@ td.nw,th.nw{white-space:nowrap}
     <span class="sp"></span>
     <div class="topact">
       <button class="tbx" id="tbTheme" title="主题"></button>
+      <button class="tbx" id="tbAbout" data-p="about" title="关于 CC Session Sync：版本、作者、仓库、许可证"><i data-ic="info"></i></button>
       <button class="tbx" id="tbSet" data-p="settings" title="设置"><i data-ic="gear"></i></button>
     </div>
   </header>
@@ -579,6 +660,7 @@ td.nw,th.nw{white-space:nowrap}
       <section class="page full" id="pg-usage"></section>
       <section class="page" id="pg-settings"></section>
       <section class="page" id="pg-diag"></section>
+      <section class="page" id="pg-about"></section>
     </main>
   </div>
 </div>
@@ -732,6 +814,42 @@ Object.assign(ICON, {
 });
 function ic(name, cls){ return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ""}</svg>`; }
 const logo = agent => ic({claude: "claude", codex: "codex", dsh: "dsh", cursor: "cursor", opencode: "opencode", zcode: "zcode"}[agent] || "user", "logo" + ({dsh: " dshc", cursor: " curc", opencode: " occ", zcode: " zcc"}[agent] || ""));
+// 0.5.2：模型的品牌标识（SVG 矢量）。Claude / OpenAI / DeepSeek 用官方标识：路径取自 Simple Icons（CC0 1.0；Claude、DeepSeek 取自 simple-icons 16.36.0，
+// OpenAI 沿用上面 codex 那个、取自 Simple Icons 早先收录的 OpenAI 标识）；商标归各公司，这里只在本机工具里作识别用。其他模型：自己画的通用芯片图形。
+Object.assign(ICON, {
+  openai: ICON.codex,
+  deepseek: '<path d="M23.748 4.651c-.254-.124-.364.113-.512.233-.051.04-.094.09-.137.137-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.155-.708-.311-.955-.65-.172-.24-.219-.509-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.094.172.187.129.323-.082.28-.18.553-.266.833-.055.179-.137.218-.328.14a5.5 5.5 0 0 1-1.737-1.179c-.857-.828-1.631-1.743-2.597-2.46a12 12 0 0 0-.689-.47c-.985-.957.13-1.743.387-1.836.27-.098.094-.433-.778-.428-.872.003-1.67.295-2.687.685a3 3 0 0 1-.465.136 9.6 9.6 0 0 0-2.883-.101c-1.885.21-3.39 1.1-4.497 2.622C.082 8.776-.231 10.854.152 13.02c.403 2.284 1.568 4.175 3.36 5.653 1.857 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.132-.284 4.994-1.86.47.234.962.328 1.78.398.629.058 1.235-.031 1.705-.129.735-.155.684-.836.418-.961-2.155-1.004-1.682-.595-2.112-.926 1.095-1.295 2.768-3.598 3.284-6.733.05-.346.115-.834.108-1.114-.004-.171.035-.238.23-.257a4.2 4.2 0 0 0 1.545-.475c1.397-.763 1.96-2.016 2.093-3.517.02-.23-.004-.467-.247-.588M11.58 18.168c-2.088-1.642-3.101-2.183-3.52-2.16-.39.024-.32.472-.234.763.09.288.207.487.371.74.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.168-1.361-.801-2.5-1.86-3.301-3.306-.775-1.393-1.225-2.888-1.299-4.482-.02-.385.094-.522.477-.592a4.7 4.7 0 0 1 1.53-.038c2.131.311 3.946 1.264 5.467 2.774.868.86 1.525 1.887 2.202 2.89.72 1.066 1.494 2.082 2.48 2.915.348.291.626.513.892.677-.802.09-2.14.109-3.055-.615zm1.001-6.44a.306.306 0 0 1 .415-.287.3.3 0 0 1 .113.074.3.3 0 0 1 .086.214c0 .17-.136.307-.308.307a.303.303 0 0 1-.306-.307m3.11 1.596c-.2.081-.4.151-.591.16a1.25 1.25 0 0 1-.798-.254c-.274-.23-.47-.358-.551-.758a1.7 1.7 0 0 1 .015-.588c.07-.327-.007-.537-.238-.727-.188-.156-.426-.199-.689-.199a.6.6 0 0 1-.254-.078.253.253 0 0 1-.114-.358 1 1 0 0 1 .192-.21c.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.392.451.462.576.685.915.176.264.336.536.446.848.066.194-.02.353-.25.45"/>',
+  model: '<path fill-rule="evenodd" d="M9 1.5h2v3h2v-3h2v3h1.5A2.5 2.5 0 0 1 19 7v1.5h3.5v2H19v3h3.5v2H19V17a2.5 2.5 0 0 1-2.5 2.5H15v3h-2v-3h-2v3H9v-3H7.5A2.5 2.5 0 0 1 5 17v-1.5H1.5v-2H5v-3H1.5v-2H5V7a2.5 2.5 0 0 1 2.5-2.5H9zm-1.5 5a1 1 0 0 0-1 1v9.5a1 1 0 0 0 1 1H16.5a1 1 0 0 0 1-1V7.5a1 1 0 0 0-1-1zm2.5 3h4v5h-4z"/>'
+});
+// 模型名 → 品牌：claude-* / sonnet / opus / haiku → claude；gpt-* / o1 / o3 / o4… / *codex* → openai；deepseek-* → deepseek；其他（含「其他模型」）→ other
+function modelBrand(name){
+  const m = String(name || "").toLowerCase().trim().replace(/^(anthropic|openai|deepseek|azure|bedrock|vertex|openrouter)[/:]/, "").replace(/^[\w.-]+\//, "");
+  if (!m || m === "\x00other") return "other";
+  if (/claude|anthropic|(^|[^a-z])(sonnet|opus|haiku)([^a-z]|$)/.test(m)) return "claude";
+  if (/^(gpt|chatgpt)|(^|[^a-z0-9])o[1-9](?![0-9])|codex|openai|(^|[^a-z])gpt-/.test(m)) return "openai";
+  if (/deepseek/.test(m)) return "deepseek";
+  return "other";
+}
+const MB_ICON = {claude: "claude", openai: "openai", deepseek: "deepseek", other: "model"};
+const MB_NAME = {claude: "Claude", openai: "OpenAI", deepseek: "DeepSeek", other: ""};
+// DOM 里用：内联 <svg>（提示框 / 当前调用 / 图例）
+const mic = name => { const b = modelBrand(name); return `<svg class="ic mbi mb-${b}" viewBox="0 0 24 24" aria-hidden="true"${MB_NAME[b] ? ` aria-label="${MB_NAME[b]}"` : ""}>${ICON[MB_ICON[b]]}</svg>`; };
+// 画布里用：把同一份 SVG 做成 data URL 的 Image，按 设备像素 渲染（HiDPI 下也是清楚的），按 品牌|颜色|像素 缓存；载入好了重画一次
+const FXI = new Map();
+let fxIR = 0;
+function fxIconImg(b, col, px){
+  const key = b + "|" + col + "|" + px; let e = FXI.get(key);
+  if (!e) { const img = new Image(); e = {img, ok: false}; FXI.set(key, e);
+    img.onload = () => { e.ok = true; if (fxIR) return; fxIR = requestAnimationFrame(() => { fxIR = 0;
+      if (typeof TF !== "undefined" && $("#tfCv") && !TF.raf) tfDraw(); if (typeof UF !== "undefined" && $("#ufCv") && !UF.raf) ufDraw(); }); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 24 24" fill="${col}">${ICON[MB_ICON[b]]}</svg>`); }
+  return e.ok ? e.img : null;
+}
+function fxIcon(x, name, x0, y0, sz, C, dpr){
+  const b = modelBrand(name), col = b === "claude" ? "#D97757" : b === "openai" ? C.text : b === "deepseek" ? (C.dsh || "#4D6BFE") : C.muted;
+  const img = fxIconImg(b, col, Math.max(8, Math.round(sz * dpr))); if (img) x.drawImage(img, x0, y0, sz, sz);
+  return b;
+}
 const EMO = {"✅": "ok", "❌": "err", "⚠": "warn", "🔄": "sync", "📥": "download"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function emoIcons(t){ let out = esc(String(t)); for (const [e, n] of Object.entries(EMO)) out = out.split(e).join(ic(n)); return out.replace(/\uFE0F/g, ""); }
@@ -925,13 +1043,13 @@ function go(p){
   if (!R[p]) return;
   if (PAGE !== p && $("#dlg").classList.contains("open")) closeDlg();
   PAGE = p;
-  $$("#nav [data-p], #tbSet").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor" || p === "codex"))));
+  $$("#nav [data-p], #tbSet, #tbAbout").forEach(t => t.classList.toggle("on", t.dataset.p === p || (t.dataset.p === "convert" && (p === "dsh" || p === "cursor" || p === "codex"))));
   $("#side").classList.toggle("on", p === "sessions");
   $$(".page").forEach(s => s.classList.toggle("on", s.id === "pg-" + p));
   store.set("ccss.page", p);
   R[p]();
 }
-$$("#nav [data-p], #tbSet").forEach(t => t.onclick = () => go(t.dataset.p));
+$$("#nav [data-p], #tbSet, #tbAbout").forEach(t => t.onclick = () => go(t.dataset.p));
 $("#brand").onclick = () => go("sessions");
 $("#sdHead").onclick = e => { if (e.target.closest("button")) return; TR.sel = null; treeRender(); go("sessions"); };
 $("#tbUpd").onclick = () => updOpen(true);
@@ -1265,6 +1383,7 @@ function usRenderShell(){
     <div class="ucards" id="usCards"></div>
     <div class="uchart udist" id="usDist"><div class="ct"><span id="usDistTitle">分布</span><span class="sp" style="flex:1"></span><span class="seg" data-dim="1"><button data-v="model" class="${USS.dim==="model"?"on":""}">按模型</button><button data-v="project" class="${USS.dim==="project"?"on":""}">按项目</button></span>${styleSeg("dist")}</div><div class="ucv-body"></div><div class="uleg"></div><div class="utip"></div></div>
     <div class="uchart" id="usTrend"><div class="ct"><span id="usChTitle">用量趋势</span><span class="sp" style="flex:1"></span><span id="usSerSeg"></span>${seg("metric", [["tokens","Tokens"],["requests","请求数"],["cost","费用"]])}${styleSeg("trend")}</div><div class="ucv-body" id="usChart"></div><div class="uleg"></div><div class="utip"></div></div>
+    <div class="uchart" id="usFlow"><div class="ct"><span>Token 流转</span><span class="dim" id="ufSub" style="font-size:calc(12px*var(--fk))"></span><span class="sp" style="flex:1"></span><span class="tfls" id="ufLs"></span><button class="ghost tflive" id="ufLive"><i class="tfdot"></i><span>实时</span></button></div><div id="ufBody"><div class="empty">滚动到这里时读取…</div></div></div>
     <div id="usMiss"></div>
     <div class="utabs">${[["logs","请求日志"],["providers","供应商"],["models","模型"],["prices","价格"]].map(([v,t]) => `<button data-tab="${v}" class="${US.tab===v?"on":""}">${t}</button>`).join("")}</div>
     <div id="usTab"></div>`;
@@ -1280,6 +1399,7 @@ function usRenderShell(){
   $("#usModel").onchange = e => { US.model = e.target.value; usLoad(); };
   $$("#usBox .utabs button").forEach(b => b.onclick = () => { US.tab = b.dataset.tab; $$("#usBox .utabs button").forEach(x => x.classList.toggle("on", x === b)); usTab(); });
   $("#usSync").onclick = usSync; $("#usSrcBtn").onclick = usSources;
+  ufWatch();                                     // 0.5.1：Token 流转滚动到眼前才去取（不拖慢这一页）
 }
 function icons(root){ root.querySelectorAll("[data-ic]").forEach(e => { e.outerHTML = ic(e.dataset.ic, e.dataset.cls); }); }
 async function usSync(){
@@ -1304,6 +1424,7 @@ async function usLoad(quiet, heat){
     if (!quiet || US.tab !== "logs") { US.off = 0; US.logs = []; }
     done();
     if (USS.trend === "heat") setTimeout(() => seq === US.seq && usChart(), 0);   // 不挡住卡片 / 日志
+    ufOnLoad(heat);
     await usTab(quiet); if (seq === US.seq) usCachePut();
   } catch(e){
     if (seq !== US.seq || e.name === "AbortError") return;          // 被更新的一次取代了
@@ -2419,6 +2540,7 @@ R.sessions = async (keep) => {
   pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
       <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
       <button id="ssImp" title="把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html / .jsonl</button>
+      <button class="ghost tflive" id="ssLive" title="实时：打开最近在进行的 Claude Code / Codex / DeepSeek Harness 会话，跟着看它的 token 流转"><i class="tfdot"></i><span>实时</span></button>
       <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
     ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
     <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
@@ -2428,6 +2550,7 @@ R.sessions = async (keep) => {
   $("#ssImp").onclick = () => imDlg();
   const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
   $("#ssRef").onclick = () => R.sessions();
+  $("#ssLive").onclick = () => tfGlobalLive();
   dragGrip($("#ssGrip"), () => $("#pg-sessions .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-sessions .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
   if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else SS.cur = null;
 };
@@ -2667,6 +2790,927 @@ async function chatSub(aid, desc){
     const pv = $("#dlgBody .chatpv"); if (pv) pv.scrollTop = pv.scrollHeight;
   } catch(e){ openDlg("子代理记录", `<div class="miss">${esc(e.message)}</div>`, `<button onclick="closeDlg()">关闭</button>`); }
 }
+// ---------- 0.5.1 Token 流转：把会话里每一次模型调用的真实用量按顺序回放 ----------
+// 数据来自 /api/sessions/tokenflow：后端用和「用量」页同一套解析（Claude 的 message.usage、Codex 的 token_count / token_usage_record、
+// DeepSeek Harness 的 usage），一次调用一条：新输入 / 缓存读 / 缓存写 → 模型 → 输出（含思考）→ 工具调用 → 下一次的输入。
+// 带子的宽度、粒子的个数都按真实 token 数线性换算：输入侧每个粒子 = uIn 个 token；输出通常小两三个数量级，输出侧整体放大 k 倍
+// （每个粒子 = uIn / k 个 token），图例里写明。粒子按「累计取整」发：放完整个会话，每一路的粒子总数 = 这一路 token 总数 ÷ 每粒 token 数（取整）。
+const TF_AG = ["claude", "codex", "dsh"];
+// ---------- 0.5.1：两个流转图共用的画法（渐变带子、发光粒子、缓动、悬停提示、数字滚动、标签避让） ----------
+const fxE = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;      // 缓入缓出（三次）
+const fxO = p => 1 - Math.pow(1 - p, 3);                                          // 缓出（三次）
+const FX_RGB = new Map();
+function fxRGB(col){
+  let v = FX_RGB.get(col); if (v) return v;
+  const s = String(col || "").trim(); let m;
+  if ((m = s.match(/^#([0-9a-f]{3,8})$/i))) { let h = m[1]; if (h.length < 6) h = h.split("").map(c => c + c).join(""); v = [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; }
+  else if ((m = s.match(/rgba?\(([^)]+)\)/))) v = m[1].split(/[\s,\/]+/).slice(0, 3).map(Number);
+  else v = [128, 128, 128];
+  FX_RGB.set(col, v); return v;
+}
+const fxA = (col, a) => { const [r, g, b] = fxRGB(col); return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, a)).toFixed(3)})`; };
+const fxMix = (c1, c2, p) => { const a = fxRGB(c1), b = fxRGB(c2); return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * p)).join(",")})`; };
+// 高分屏清晰：画布按 devicePixelRatio 放大，坐标仍按 CSS 像素
+function fxCanvas(cv){
+  const W = cv.clientWidth, H = cv.clientHeight; if (!W || !H) return null;
+  const dpr = Math.min(3, window.devicePixelRatio || 1), w = Math.round(W * dpr), h = Math.round(H * dpr);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+  return {x, W, H, dpr};
+}
+// 带子：两端可以不同颜色 / 透明度的水平渐变，边缘一条细亮线；返回路径（悬停命中用）
+function fxBand(x, x1, y1, h1, x2, y2, h2, c1, c2, a1, a2){
+  const xm = (x1 + x2) / 2, P = new Path2D();
+  P.moveTo(x1, y1); P.bezierCurveTo(xm, y1, xm, y2, x2, y2); P.lineTo(x2, y2 + h2); P.bezierCurveTo(xm, y2 + h2, xm, y1 + h1, x1, y1 + h1); P.closePath();
+  const gr = x.createLinearGradient(x1, 0, x2, 0); gr.addColorStop(0, fxA(c1, a1)); gr.addColorStop(1, fxA(c2, a2));
+  x.fillStyle = gr; x.fill(P);
+  if (h1 > 3 || h2 > 3) { const e = new Path2D(); e.moveTo(x1, y1); e.bezierCurveTo(xm, y1, xm, y2, x2, y2);
+    const ge = x.createLinearGradient(x1, 0, x2, 0); ge.addColorStop(0, fxA(c1, Math.min(1, a1 * 1.5))); ge.addColorStop(1, fxA(c2, Math.min(1, a2 * 1.5)));
+    x.strokeStyle = ge; x.lineWidth = .8; x.stroke(e); }
+  return P;
+}
+// 节点：竖向渐变的圆角条，可以带一圈柔光
+function fxNode(x, nx, ny, w, h, col, glow){
+  h = Math.max(2, h); const r = Math.min(3, w / 2, h / 2), P = new Path2D();
+  P.roundRect ? P.roundRect(nx, ny, w, h, r) : P.rect(nx, ny, w, h);
+  const gr = x.createLinearGradient(0, ny, 0, ny + h); gr.addColorStop(0, fxMix(col, "#ffffff", .22)); gr.addColorStop(1, col);
+  if (glow) { x.save(); x.shadowColor = fxA(col, glow); x.shadowBlur = 10; x.fillStyle = gr; x.fill(P); x.restore(); } else { x.fillStyle = gr; x.fill(P); }
+  return P;
+}
+// 粒子：预先画好的径向渐变光晕（按颜色 / 大小缓存）+ 实心核
+const FX_SPR = new Map();
+function fxSprite(col, r, dpr){
+  const k = col + "|" + r + "|" + dpr; let o = FX_SPR.get(k); if (o) return o;
+  const s = Math.ceil(r * 6 * dpr); o = document.createElement("canvas"); o.width = o.height = s;
+  const x = o.getContext("2d"), g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, fxA(col, .55)); g.addColorStop(.35, fxA(col, .2)); g.addColorStop(1, fxA(col, 0));
+  x.fillStyle = g; x.fillRect(0, 0, s, s);
+  if (FX_SPR.size > 64) FX_SPR.clear();
+  FX_SPR.set(k, o); return o;
+}
+function fxDot(x, px, py, r, col, dpr, glow){
+  if (glow) x.drawImage(fxSprite(col, r, dpr), px - 3 * r, py - 3 * r, 6 * r, 6 * r);
+  x.fillStyle = col; x.beginPath(); x.arc(px, py, r, 0, 6.2832); x.fill();
+}
+// 文字：带一圈底色描边，压在带子上也看得清
+function fxText(x, s, tx, ty, al, col, font, halo){
+  x.font = font; x.textAlign = al; x.textBaseline = "middle";
+  if (halo) { x.lineJoin = "round"; x.lineWidth = 3.5; x.strokeStyle = halo; x.strokeText(s, tx, ty); }
+  x.fillStyle = col; x.fillText(s, tx, ty);
+}
+// 放不下就截短加「…」
+function fxFit(x, s, w, font){ if (font) x.font = font; if (!(w > 0) || x.measureText(s).width <= w) return s;
+  let lo = 0, hi = s.length; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (x.measureText(s.slice(0, mid) + "…").width <= w) lo = mid; else hi = mid - 1; }
+  return s.slice(0, lo) + "…"; }
+// 标签避让：想放的中心 y + 高度 → 不重叠、不出界的中心 y（保持原来的先后顺序）
+function fxSpread(items, lo, hi, gap){
+  const o = items.map((it, i) => ({i, y: it.y, h: it.h})).sort((a, b) => a.y - b.y || a.i - b.i);
+  for (let j = 0; j < o.length; j++) { const p = o[j - 1], min = p ? p.y + (p.h + o[j].h) / 2 + gap : lo + o[j].h / 2; if (o[j].y < min) o[j].y = min; }
+  for (let j = o.length - 1; j >= 0; j--) { const n = o[j + 1], max = n ? n.y - (n.h + o[j].h) / 2 - gap : hi - o[j].h / 2; if (o[j].y > max) o[j].y = max; }
+  for (let j = 0; j < o.length; j++) { const p = o[j - 1], min = p ? p.y + (p.h + o[j].h) / 2 + gap : lo + o[j].h / 2; if (o[j].y < min) o[j].y = min; }
+  const r = []; o.forEach(e => { r[e.i] = e.y; }); return r;
+}
+// 悬停提示：hits = [{p: Path2D | r: [x, y, w, h], tip: () => html}]，后画的先命中
+function fxHover(cv, tipEl, hits, e, extra){
+  if (!tipEl) return;
+  const r = cv.getBoundingClientRect(), z = r.width / cv.clientWidth, px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
+  let html = extra ? extra(px, py) : "";
+  if (!html) { const x = cv.getContext("2d"), dpr = cv.width / cv.clientWidth;
+    for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i];
+      if (h.r ? px >= h.r[0] && px <= h.r[0] + h.r[2] && py >= h.r[1] && py <= h.r[1] + h.r[3] : x.isPointInPath(h.p, px * dpr, py * dpr)) { html = h.tip(); break; } } }
+  if (!html) { tipEl.style.display = "none"; cv.style.cursor = ""; return; }
+  if (tipEl.dataset.h !== html) { tipEl.dataset.h = html; tipEl.innerHTML = html; }
+  tipEl.style.display = "block";
+  const W = cv.clientWidth, H = cv.clientHeight, tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+  tipEl.style.left = Math.max(4, Math.min(W - tw - 4, px + 14 > W - tw - 4 ? px - tw - 14 : px + 14)) + "px";
+  tipEl.style.top = Math.max(4, Math.min(H - th - 4, py + 14 > H - th - 4 ? py - th - 12 : py + 14)) + "px";
+}
+const fxRow = (col, name, v) => `<div>${col ? `<i style="background:${col}"></i>` : ""}${name} <span class="n">${v}</span></div>`;
+// 数字滚动：从上一次显示的数平滑滚到新数（播放中 / 减少动态效果时直接显示）
+const FX_CNT = new Map(); let fxcRaf = 0;
+function fxCount(el, v, fmt, instant){
+  if (!el) return;
+  const cur = el._fv;
+  if (instant || v == null || !isFinite(v) || cur == null || !isFinite(cur) || cur === v || tfRM() || document.hidden) {
+    FX_CNT.delete(el); el._fv = v; const s = fmt(v); if (el.textContent !== s) el.textContent = s; return; }
+  const a = FX_CNT.get(el); if (a && a.to === v) return;
+  FX_CNT.set(el, {from: cur, to: v, t0: performance.now(), fmt});
+  if (!fxcRaf) fxcRaf = requestAnimationFrame(fxcTick);
+}
+function fxcTick(ts){
+  fxcRaf = 0;
+  for (const [el, a] of FX_CNT) { const p = Math.max(0, Math.min(1, (ts - a.t0) / 480)), v = p >= 1 ? a.to : a.from + (a.to - a.from) * fxO(p);
+    el._fv = v; const s = a.fmt(v); if (el.textContent !== s) el.textContent = s; if (p >= 1 || !el.isConnected) FX_CNT.delete(el); }
+  if (FX_CNT.size) fxcRaf = requestAnimationFrame(fxcTick);
+}
+// 尺寸变了就重画（侧栏收起 / 窗口缩放）；画布不在页面上了就停
+function fxResize(cv, fn){
+  if (!("ResizeObserver" in window)) return;
+  let w = 0; const ro = new ResizeObserver(() => { if (!cv.isConnected) return ro.disconnect(); if (cv.clientWidth !== w) { w = cv.clientWidth; fn(); } }); ro.observe(cv);
+}
+// 页面切到后台就停动画，回来接着放
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (typeof TF !== "undefined" && TF.play && !TF.raf && $("#tfCv")) { TF.last = 0; TF.raf = requestAnimationFrame(tfLoop); }
+  if (typeof UF !== "undefined" && (UF.play || UF.P.length) && $("#ufCv")) ufKick();
+});
+const TF = {d: null, m: null, k: 0, t: 0, play: false, speed: 1, raf: 0, last: 0, key: "", parts: null, strip: null, col: null, drag: false, lv: null, lvOff: new Set(), sv: 0};
+// 一次调用里的先后（和真实顺序一致）：先把整段输入（缓存读 / 缓存写 / 新输入）送进模型，到齐了才开始出输出（先思考、后回复），
+// 输出出完才是工具调用，工具结果沿着虚线回到下一次调用的输入。数字是这次调用 0..1 里的时间点；t 跑到 1.08 再换下一次（回路的尾巴）。
+const TF_PH = {inS: 0, inE: .3, inT: .24, outS: .55, outE: .72, outT: .13, tlS: .85, tlE: .88, tlT: .08, lpT: .12};
+// 「真实比例」：输出侧不放大（×1），带子宽度、粒子单位两边一样；默认放大输出（输出通常只有输入的百分之几，不放大几乎看不见），放大多少写在图上
+const fxTrue = () => store.get("ccss.fxtrue") === "1";
+const TF_SPAN = 2.4;                                    // 1x 时每次调用放 2.4 秒
+function tfNice(x){ if (!(x > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(x) + 1e-9)); for (const n of [1, 2, 5]) if (n * p >= x * (1 - 1e-12)) return n * p; return 10 * p; }
+function tfModel(d, o){
+  o = o || {};
+  const calls = (d && d.calls) || [];
+  let maxP = 1, maxO = 1;
+  for (const c of calls) { maxP = Math.max(maxP, c.inp + c.cr + c.cw); maxO = Math.max(maxO, c.out); }
+  const uIn = tfNice(maxP / (o.cap || 240));           // 最大那次调用的输入最多 ~240 个粒子
+  let k = 1;
+  const lim = o.real ? 1 : .6 * maxP / maxO;                          // 输出侧放大到最多 ≈ 输入侧最宽处的 60%
+  for (const s of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]) if (s <= lim) k = s;
+  const uOut = uIn / k, S = ["cr", "cw", "inp", "out"];
+  const acc = {cr: 0, cw: 0, inp: 0, out: 0}, cum = {inp: 0, cr: 0, cw: 0, out: 0, reasoning: 0, tot: 0, cost: 0, priced: 0, tools: 0};
+  const cnt = [], before = [], turnAt = [];
+  calls.forEach((c, i) => {
+    before.push(Object.assign({}, cum));
+    const n = {};
+    for (const s of S) { const u = s === "out" ? uOut : uIn, a = acc[s]; acc[s] += c[s]; n[s] = Math.floor(acc[s] / u + 1e-7) - Math.floor(a / u + 1e-7); }
+    n.tools = Math.min(c.ntools || 0, 24);
+    cnt.push(n);
+    for (const s of ["inp", "cr", "cw", "out", "reasoning", "tot"]) cum[s] += c[s] || 0;
+    if (c.cost != null) { cum.cost += c.cost; cum.priced++; }
+    cum.tools += c.ntools || 0;
+    if (!i || c.turn !== calls[i - 1].turn) turnAt.push(i);
+  });
+  return {calls, maxP, maxO, uIn, uOut, k, cnt, before, turnAt, total: Object.assign({}, cum)};
+}
+// 第 i 次调用放到 t（0..1）时的累计：输入在输入粒子到齐的过程中加上，输出 / 费用在输出粒子到齐的过程中加上
+function tfCum(m, i, t){
+  const c = m.calls[i], b = m.before[i], cl = x => Math.max(0, Math.min(1, x));
+  const fi = cl((t - TF_PH.inS) / (TF_PH.inE + TF_PH.inT - TF_PH.inS)), fo = cl((t - TF_PH.outS) / (TF_PH.outE + TF_PH.outT - TF_PH.outS));
+  const r = {inp: b.inp + c.inp * fi, cr: b.cr + c.cr * fi, cw: b.cw + c.cw * fi, out: b.out + c.out * fo, reasoning: b.reasoning + c.reasoning * fo,
+             cost: b.cost + (c.cost || 0) * fo, priced: b.priced + (c.cost != null && fo >= 1 ? 1 : 0), tools: b.tools + (fo >= 1 ? c.ntools || 0 : 0)};
+  r.tot = r.inp + r.cr + r.cw + r.out;
+  const p = r.inp + r.cr + r.cw; r.hit = p ? r.cr / p : 0;
+  return r;
+}
+function tfRand(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// 这次调用的粒子：发出时间、在带子里的位置（固定种子：拖动 / 暂停 / 重放看到的一样）
+// 粒子个数 = m.cnt（按单位换算的真实 token 数）；输出里前 思考/输出 那一部分是思考（模型先想、后答），按发出先后上色
+function tfParts(m, i){
+  const n = m.cnt[i], c = m.calls[i] || {}, rnd = tfRand(i * 2654435761 + 7), P = [];
+  for (const s of ["cr", "cw", "inp"]) for (let j = 0; j < n[s]; j++) P.push({s, e: TF_PH.inS + (TF_PH.inE - TF_PH.inS) * (j + rnd()) / n[s], l: rnd()});
+  const nr = c.out > 0 ? Math.round(n.out * Math.min(1, (c.reasoning || 0) / c.out)) : 0;
+  for (let j = 0; j < n.out; j++) P.push({s: "out", rs: j < nr, e: TF_PH.outS + (TF_PH.outE - TF_PH.outS) * (j + rnd()) / n.out, l: rnd()});
+  for (let j = 0; j < n.tools; j++) P.push({s: "tool", e: TF_PH.tlS + (TF_PH.tlE - TF_PH.tlS) * (j + .5) / n.tools, l: rnd()});
+  return P;
+}
+function tfColors(){
+  const cs = getComputedStyle(document.documentElement), g = k => cs.getPropertyValue(k).trim();
+  const o = {cr: g("--u1"), cw: g("--u4"), inp: g("--u2"), out: g("--u3"), rs: g("--u5"), tool: g("--u7"), sub: g("--u6"), text: g("--text"), muted: g("--muted"),
+          faint: g("--faint"), line: g("--line"), panel: g("--panel"), panel2: g("--panel2"), font: getComputedStyle(document.body).fontFamily,
+          claude: g("--claude"), codex: g("--cxn"), dsh: g("--dsh")};
+  // 深色底上带子要更亮一点才看得清，浅色底上淡一点不糊
+  const [r, gg, b] = fxRGB(o.panel), dark = (r * .299 + gg * .587 + b * .114) < 128;
+  return Object.assign(o, {dark, bA: dark ? .5 : .42, bB: dark ? .2 : .14, gA: dark ? .09 : .07});
+}
+const tfShort = s => String(s || "").replace(/^claude-/, "").replace(/-\d{8}$/, "");
+function tfGeo(W, H, m, c){
+  const strip = 58, Hf = H - strip - 16, cy = 18 + (Hf - 18) / 2, Bm = Math.max(40, Math.min(170, Hf * .62)), s = Bm / m.maxP;
+  const x0 = Math.min(150, W * .2), xm = Math.round(W * .48), xo = Math.max(xm + 90, W - Math.min(190, W * .26)), nw = 10;
+  const hs = {cr: Math.max(2, c.cr * s), cw: Math.max(2, c.cw * s), inp: Math.max(2, c.inp * s)}, G = 28;
+  let y = cy - (hs.cr + hs.cw + hs.inp + 2 * G) / 2;
+  const src = {};
+  for (const k of ["cr", "cw", "inp"]) { src[k] = {y, h: hs[k]}; y += hs[k] + G; }
+  const hm = Math.max(4, (c.cr + c.cw + c.inp) * s); let ym = cy - hm / 2;
+  const mi = {};
+  for (const k of ["cr", "cw", "inp"]) { const h = c[k] * s; mi[k] = {y: ym, h: Math.max(h, .6)}; ym += h; }
+  const ho = Math.max(2, c.out * s * m.k), oy = cy - 44 - ho / 2, ty = cy + 52;
+  return {W, H, Hf, cy, s, x0, xm, xo, nw, src, mi, hm, ym: cy - hm / 2, ho, oy, ty, sy: H - strip - 4, sh: strip - 6, sx: 12, sw: W - 24};
+}
+const tfE = p => 3 * p * p - 2 * p * p * p;
+function tfBand(x, x1, y1, h1, x2, y2, h2, col, a){
+  const xm = (x1 + x2) / 2;
+  x.beginPath(); x.moveTo(x1, y1); x.bezierCurveTo(xm, y1, xm, y2, x2, y2); x.lineTo(x2, y2 + h2); x.bezierCurveTo(xm, y2 + h2, xm, y1 + h1, x1, y1 + h1); x.closePath();
+  x.globalAlpha = a; x.fillStyle = col; x.fill(); x.globalAlpha = 1;
+}
+const tfBx = (x1, x2, p) => { const xm = (x1 + x2) / 2, q = 1 - p; return q * q * q * x1 + 3 * q * q * p * xm + 3 * q * p * p * xm + p * p * p * x2; };
+function tfStrip(cv, m, g, C){                         // 底下的时间轴（每次调用一根柱：缓存读 / 缓存写 / 新输入叠起来，上面一小截是输出 ×k）：画一次缓存起来
+  const key = [cv.width, cv.height, m.calls.length, TF.sv, C.cr, C.panel].join("|");
+  if (TF.strip && TF.strip.key === key) return TF.strip.c;
+  const dpr = cv.width / g.W, o = document.createElement("canvas"); o.width = cv.width; o.height = Math.ceil((g.sh + 8) * dpr);
+  const x = o.getContext("2d"); x.scale(dpr, dpr);
+  const N = m.calls.length, bw = g.sw / N, hh = g.sh - 10;
+  m.calls.forEach((c, i) => {
+    const x1 = g.sx + i * bw, w = Math.max(.8, bw - (bw > 4 ? 1 : 0)); let y = g.sh;
+    for (const k of ["cr", "cw", "inp"]) { const h = c[k] / m.maxP * hh; if (h > 0) { x.fillStyle = C[k]; x.fillRect(x1, y - h, w, h); y -= h; } }
+    const ho = Math.min(hh * .6, c.out * m.k / m.maxP * hh); x.fillStyle = C.out; x.fillRect(x1, y - ho - .5, w, Math.max(.8, ho));
+    if (c.sub) { x.fillStyle = C.sub; x.fillRect(x1, g.sh + 2, w, 3); }
+  });
+  x.fillStyle = C.faint; x.font = `10px ${C.font}`; let lx = -99;
+  m.turnAt.forEach((i, j) => { const px = g.sx + i * bw; x.fillRect(px, 0, 1, g.sh); if (px - lx > 22) { x.fillText(String(j + 1), px + 2, 9); lx = px; } });
+  TF.strip = {key, c: o};
+  return o;
+}
+function tfDraw(){
+  const cv = $("#tfCv"), m = TF.m; if (!cv || !m || !m.calls.length) return;
+  const F = fxCanvas(cv); if (!F) return;
+  const {x, W, H, dpr} = F;
+  const C = TF.col || (TF.col = tfColors()), c = m.calls[TF.k], t = TF.t, fs = W < 560 ? 11 : 12, FN = C.font;
+  // 带子宽度始终 = 这次调用的真实 token 数 × 比例尺（不做从上一次过渡过来的插值，免得画出不存在的中间值）
+  const cg = c, g = tfGeo(W, H, m, cg), nw = g.nw;
+  if (!TF.parts || TF.parts.i !== TF.k) TF.parts = Object.assign(tfParts(m, TF.k), {i: TF.k});
+  const NM = {cr: tr("缓存读"), cw: tr("缓存写"), inp: tr("新输入")}, HITS = TF.hits = [], ctx = c.inp + c.cr + c.cw;
+  const pct = v => ctx ? ` <span class="dim">${(v / ctx * 100).toFixed(1)}%</span>` : "";
+  // 带子（宽度 = token 数 × 比例尺）：起点浓、终点淡的渐变
+  for (const k of ["cr", "cw", "inp"]) if (cg[k] > 0) {
+    const P = fxBand(x, g.x0 + nw, g.src[k].y, g.src[k].h, g.xm, g.mi[k].y, g.mi[k].h, C[k], C[k], C.bA, C.bB);
+    HITS.push({p: P, tip: () => `<b>${NM[k]} → ${mic(c.model)}${esc(tfShort(c.model) || tr("模型"))}</b>${fxRow(C[k], "Tokens", fmtFull(c[k]) + pct(c[k]))}`}); }
+  if (cg.out > 0) { const P = fxBand(x, g.xm + 14, g.cy - g.ho / 2, g.ho, g.xo, g.oy, g.ho, C.text, C.out, C.bB * .8, C.bA);
+    HITS.push({p: P, tip: () => `<b>${tr("输出")}</b>${fxRow(C.out, "Tokens", fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}`}); }
+  if (c.ntools) { x.strokeStyle = fxA(C.tool, .5); x.lineWidth = 2; x.beginPath(); x.moveTo(g.xm + 14, g.cy + g.ho / 2 + 6);
+    x.bezierCurveTo((g.xm + g.xo) / 2, g.cy + g.ho / 2 + 6, (g.xm + g.xo) / 2, g.ty, g.xo, g.ty); x.stroke(); }
+  // 回路：工具结果进下一次调用的输入
+  const ly = g.Hf + 4, loop = p => { const q = 1 - p, P0 = [g.xo + nw / 2, g.ty + 12], P1 = [g.xo + 40, ly], P2 = [g.x0 - 40, ly], P3 = [g.x0 + nw / 2, g.src.inp.y + g.src.inp.h + 4];
+    return [q*q*q*P0[0] + 3*q*q*p*P1[0] + 3*q*p*p*P2[0] + p*p*p*P3[0], q*q*q*P0[1] + 3*q*q*p*P1[1] + 3*q*p*p*P2[1] + p*p*p*P3[1]]; };
+  x.setLineDash([4, 5]); x.strokeStyle = c.ntools ? fxA(C.tool, .6) : C.line; x.lineWidth = 1.2; x.beginPath();
+  for (let p = 0; p <= 1.0001; p += .04) { const [a, b] = loop(p); p ? x.lineTo(a, b) : x.moveTo(a, b); } x.stroke(); x.setLineDash([]);
+  // 节点
+  for (const k of ["cr", "cw", "inp"]) HITS.push({p: fxNode(x, g.x0, g.src[k].y, nw, g.src[k].h, C[k]), tip: () => `<b>${NM[k]}</b>${fxRow(C[k], "Tokens", fmtFull(c[k]) + pct(c[k]))}`});
+  const mtip = () => `<b>${mic(c.model)}${esc(c.model || tr("模型"))}</b>${fxRow("", tr("上下文"), fmtFull(ctx))}${fxRow(C.out, tr("输出"), fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}${fxRow("", tr("缓存命中率"), ctx ? (c.cr / ctx * 100).toFixed(1) + "%" : "—")}${c.cost != null ? fxRow("", tr("费用"), fmtCF(c.cost)) : ""}`;
+  HITS.push({p: fxNode(x, g.xm, g.ym, 14, g.hm, C.text, t > 0 && t < TF_PH.outE ? .35 : 0), tip: mtip});
+  const otip = () => `<b>${tr("输出")}${m.k > 1 ? ` ×${m.k}` : ""}</b>${fxRow(C.out, "Tokens", fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}`;
+  HITS.push({p: fxNode(x, g.xo, g.oy, nw, g.ho, C.out, t > TF_PH.outS && t < 1 ? .45 : 0), tip: otip});
+  if (c.reasoning > 0 && c.out > 0) fxNode(x, g.xo, g.oy, nw, g.ho * c.reasoning / c.out, C.rs);
+  x.fillStyle = c.ntools ? C.tool : C.line; x.beginPath(); x.arc(g.xo + nw / 2, g.ty, 7, 0, 7); x.fill();
+  HITS.push({r: [g.xo - 4, g.ty - 11, 22, 22], tip: () => `<b>${tr("工具调用")} ×${c.ntools || 0}</b>${(c.tools || []).slice(0, 8).map(s => `<div class="n">${esc(s)}</div>`).join("")}`});
+  // 粒子（带光晕；位置用缓入缓出，沿着带子的曲线走）
+  const st = ["cr", "cw", "inp"], glow = !tfRM();
+  for (const P of TF.parts) {
+    if (t < P.e) continue;
+    if (P.s === "tool") {
+      const p1 = (t - P.e) / TF_PH.tlT;
+      if (p1 <= 1) { const q = fxE(p1), px = tfBx(g.xm + 14, g.xo, q), py = g.cy + g.ho / 2 + 6 + (g.ty - g.cy - g.ho / 2 - 6) * tfE(q); fxDot(x, px, py, 3.4, C.tool, dpr, glow); }
+      else { const p2 = (t - P.e - TF_PH.tlT) / TF_PH.lpT; if (p2 <= 1) { const [a, b] = loop(fxE(Math.min(1, p2))); fxDot(x, a, b, 3.4, C.tool, dpr, glow); } }
+      continue;
+    }
+    const isIn = st.includes(P.s), p0 = (t - P.e) / (isIn ? TF_PH.inT : TF_PH.outT); if (p0 > 1) continue;
+    const p = fxE(p0); let px, py;
+    if (isIn) { const a = g.src[P.s], b = g.mi[P.s], y1 = a.y + P.l * a.h, y2 = b.y + P.l * b.h; px = tfBx(g.x0 + nw, g.xm, p); py = y1 + (y2 - y1) * tfE(p); }
+    else { const y1 = g.cy - g.ho / 2 + P.l * g.ho, y2 = g.oy + P.l * g.ho; px = tfBx(g.xm + 14, g.xo, p); py = y1 + (y2 - y1) * tfE(p); }
+    fxDot(x, px, py, isIn ? 1.8 : 2.2, P.rs ? C.rs : C[P.s], dpr, glow);
+  }
+  // 文字：左边三组标签按需要错开，不重叠
+  const F1 = `${fs}px ${FN}`, F2 = `600 ${fs + 1}px ${FN}`;
+  const lab = (s, n, lx, ly, al, col) => { fxText(x, s, lx, ly - 8, al, col || C.muted, F1); fxText(x, n, lx, ly + 8, al, C.text, F2); };
+  const ys = fxSpread(st.map(k => ({y: g.src[k].y + g.src[k].h / 2, h: 32})), 4, g.Hf, 2);
+  st.forEach((k, i) => lab(NM[k], fmtN(c[k]), g.x0 - 8, ys[i], "right"));
+  { const MF = `600 ${fs + .5}px ${FN}`, nm = tfShort(c.model) || tr("模型"), isz = fs + 4; x.font = MF;
+    const tw = x.measureText(nm).width, x0 = g.xm + 7 - (isz + 5 + tw) / 2;
+    fxIcon(x, c.model, x0, g.ym - 26 - isz / 2, isz, C, dpr);
+    fxText(x, nm, x0 + isz + 5, g.ym - 26, "left", C.text, MF, C.panel2); }
+  fxText(x, tr("上下文") + " " + fmtN(c.inp + c.cr + c.cw), g.xm + 7, g.ym - 11, "center", C.muted, F1, C.panel2);
+  const oys = fxSpread([{y: g.oy + g.ho / 2, h: 32}, {y: g.ty, h: 32}], 4, g.Hf, 2);
+  lab(tr("输出") + (m.k > 1 ? ` ×${m.k}` : ""), fmtN(c.out) + (c.reasoning ? ` · ${tr("思考")} ${fmtN(c.reasoning)}` : ""), g.xo + nw + 8, oys[0], "left");
+  lab(tr("工具调用"), "×" + (c.ntools || 0), g.xo + nw + 8, oys[1], "left");
+  fxText(x, tr("工具结果 → 下一次调用的输入"), (g.x0 + g.xo) / 2, ly - 6, "center", C.faint, `${fs - 1}px ${FN}`);
+  // 时间轴
+  const N = m.calls.length, bw = g.sw / N;
+  x.drawImage(tfStrip(cv, m, g, C), 0, g.sy, W, (g.sh + 8));
+  const ph = g.sx + (TF.k + Math.min(1, Math.max(0, t))) * bw;
+  x.fillStyle = fxA(C.panel2, .62); x.fillRect(ph, g.sy, g.sx + g.sw - ph, g.sh + 6);
+  x.fillStyle = C.text; x.fillRect(ph - 1, g.sy - 3, 2, g.sh + 9);
+  TF.geo = g;
+}
+// 时间轴上悬停：这一根柱是哪次调用
+function tfStripTip(px, py){
+  const m = TF.m, g = TF.geo; if (!m || !g || py < g.sy - 2 || px < g.sx || px > g.sx + g.sw) return "";
+  const i = Math.floor((px - g.sx) / (g.sw / m.calls.length)), c = m.calls[i]; if (!c) return "";
+  return `<b>#${i + 1} · ${mic(c.model)}${esc(tfShort(c.model) || "—")}</b>${c.ts ? `<div class="dim">${esc(when(c.ts))}</div>` : ""}${fxRow(TF.col.cr, tr("缓存读"), fmtFull(c.cr))}${fxRow(TF.col.cw, tr("缓存写"), fmtFull(c.cw))}${fxRow(TF.col.inp, tr("新输入"), fmtFull(c.inp))}${fxRow(TF.col.out, tr("输出"), fmtFull(c.out))}${c.cost != null ? fxRow("", tr("费用"), fmtCF(c.cost)) : ""}`;
+}
+function tfStats(){
+  const m = TF.m; if (!m || !m.calls.length) return;
+  const c = m.calls[TF.k], r = tfCum(m, TF.k, TF.t), set = (id, v) => { const e = document.getElementById(id); if (e && e.textContent !== v) e.textContent = v; };
+  // 播放中每帧都在变，直接显示；跳到别处（拖动 / 上一次 / 下一次 / 实时新数据）时数字滚过去
+  const cnt = (id, v, f) => fxCount(document.getElementById(id), v, f, TF.play || TF.drag);
+  cnt("tfAi", r.inp, fmtN); cnt("tfAcr", r.cr, fmtN); cnt("tfAcw", r.cw, fmtN); cnt("tfAo", r.out, fmtN); cnt("tfArs", r.reasoning, fmtN);
+  cnt("tfAt", r.tot, fmtN); cnt("tfAc", r.priced ? r.cost : null, fmtC); cnt("tfAh", r.hit, v => (v * 100).toFixed(1) + "%"); cnt("tfAtl", r.tools, v => String(Math.round(v)));
+  set("tfK", `${TF.k + 1} / ${m.calls.length}`); set("tfTn", `${c.turn + 1} / ${Math.max(1, (TF.d.turns || []).length)}`);
+  const sl = $("#tfSl"); if (sl && !TF.drag && +sl.value !== TF.k) sl.value = TF.k;
+  if (TF.cur !== TF.k) { TF.cur = TF.k; const box = $("#tfCur"); if (!box) return;
+    const tu = (TF.d.turns || [])[c.turn], gap = TF.k ? c.ts - m.calls[TF.k - 1].ts : 0;
+    box.innerHTML = `<div class="tfch"><b class="tfmod" title="${esc(c.model || "")}">${mic(c.model)}${esc(tfShort(c.model) || "—")}</b>${c.sub ? ` <span class="tag">子代理</span>` : ""}${c.est ? ` <span class="tag" title="这次的输出数是按文字长度估的（记录里没有完整用量）">估算</span>` : ""}<span class="sp"></span><span class="dim">${c.ts ? esc(when(c.ts)) : ""}${gap > 0 ? ` · +${gap < 60 ? gap.toFixed(1) + "s" : gap < 3600 ? (gap / 60).toFixed(1) + "m" : (gap / 3600).toFixed(1) + "h"}` : ""}</span></div>
+      <div class="tfnums"><span><i style="background:var(--u1)"></i>缓存读 <b>${c.cr.toLocaleString()}</b></span><span><i style="background:var(--u4)"></i>缓存写 <b>${c.cw.toLocaleString()}</b></span><span><i style="background:var(--u2)"></i>新输入 <b>${c.inp.toLocaleString()}</b></span><span><i style="background:var(--u3)"></i>输出 <b>${c.out.toLocaleString()}</b>${c.reasoning ? `（思考 ${c.reasoning.toLocaleString()}）` : ""}</span>${c.cost != null ? `<span>费用 <b>${fmtC(c.cost)}</b></span>` : ""}</div>
+      ${c.tools.length ? `<div class="tftools">${c.tools.map(t => `<span class="tfchip">${ic("tool")}${esc(t)}</span>`).join("")}${c.ntools > c.tools.length ? `<span class="dim">…共 ${c.ntools} 个</span>` : ""}</div>` : `<div class="dim tftools">这次调用没有调用工具</div>`}
+      ${tu ? `<div class="tfturn" title="${esc(tu.text)}"><span class="dim">第 ${c.turn + 1} 轮 · 你说：</span>${esc(tu.text)}</div>` : ""}`; }
+}
+function tfSeek(k, t){ const m = TF.m; if (!m) return; TF.k = Math.max(0, Math.min(m.calls.length - 1, k)); TF.t = t == null ? (TF.play ? 0 : 1) : t; tfDraw(); tfStats(); }
+function tfSetPlay(on){
+  TF.play = on; const b = $("#tfPlay"); if (b) b.innerHTML = ic(on ? "pause" : "play") + `<span>${on ? "暂停" : "播放"}</span>`;
+  if (on && TF.m && TF.k >= TF.m.calls.length - 1 && TF.t >= 1) { TF.k = 0; TF.t = 0; }
+  if (on && !TF.raf) { TF.last = 0; TF.raf = requestAnimationFrame(tfLoop); }
+}
+function tfLoop(ts){
+  TF.raf = 0;
+  const cv = $("#tfCv");
+  if (!cv || !cv.isConnected || PAGE !== "sessions" || !TF.play) { if (TF.play && !cv) TF.play = false; return; }
+  if (document.hidden) return;                          // 切到后台：停，回来接着放（visibilitychange）
+  const dt = TF.last ? Math.min(.1, (ts - TF.last) / 1000) : 0; TF.last = ts;
+  const back = TF.lv && TF.lv.on && TF.lv.follow ? TF.m.calls.length - 1 - TF.k : 0;     // 实时跟随时积了好几次没放：加快追上
+  TF.t += dt * TF.speed / TF_SPAN * (TF.m.calls.length > 600 ? Math.min(8, TF.m.calls.length / 600) : 1) * (back > 2 ? Math.min(8, back / 2) : 1);
+  if (TF.t >= 1.08) { if (TF.k < TF.m.calls.length - 1) { TF.k++; TF.t = 0; } else { TF.t = 1; tfDraw(); tfStats(); tfSetPlay(false); return; } }
+  tfDraw(); tfStats();
+  TF.raf = requestAnimationFrame(tfLoop);
+}
+function tfLegend(){
+  const d = TF.d, m = TF.m, T = d.totals || {}, agent = d.agent;
+  return `累计到播放位置为止；整个会话：${(T.calls ?? m.calls.length).toLocaleString()} 次调用、合计 ${fmtN(T.tot)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${d.cut ? `（只回放最后 ${m.calls.length} 次，前面还有 ${d.cut} 次）` : ""}。
+      带子宽度和粒子个数都按真实 token 数换算：输入侧 1 个粒子 = <b>${m.uIn.toLocaleString()}</b> tokens${m.k > 1 ? `；输出侧放大 <b>×${m.k}</b>（带子宽度也 ×${m.k}），1 个粒子 = <b>${(+m.uOut.toPrecision(3)).toLocaleString()}</b> tokens。按真实比例，输出只占整个会话 tokens 的 <b>${fxPct(m.total.out, m.total.inp + m.total.cr + m.total.cw + m.total.out)}</b>，可以切到「真实比例」看` : `；输出侧和输入侧同一比例（真实比例，不放大）`}。工具调用每个点 = 1 次调用（一次最多画 24 个）。
+      先后和真实顺序一样：整段输入进模型 → 输出（先思考、后回复）→ 工具调用 → 工具结果回到下一次调用的输入。
+      数据和「用量」页同一套口径（${agent === "codex" ? "Codex 的 token_count / token_usage_record" : agent === "dsh" ? "DeepSeek Harness 记录里的 usage" : "Claude Code 记录里每次回复的 message.usage，含子代理"}）；底部时间轴每根柱是一次调用，竖线是你说话的轮次。`;
+}
+const fxPct = (a, b) => !b ? "—" : (a / b * 100 < 1 ? (a / b * 100).toFixed(2) : (a / b * 100).toFixed(1)) + "%";
+// 比例切换（两个流转图共用一个设置）+ 单位说明
+const fxSeg = id => `<span class="tfseg" id="${id}" role="group" title="输出侧的比例：放大才看得见；真实比例下两边同一个比例尺"><button type="button" data-v="0">放大输出</button><button type="button" data-v="1">真实比例</button></span>`;
+function fxSegSync(id){ const e = document.getElementById(id); if (!e) return; const v = fxTrue() ? "1" : "0"; e.querySelectorAll("button").forEach(b => { b.classList.toggle("on", b.dataset.v === v); b.setAttribute("aria-pressed", b.dataset.v === v); }); }
+function fxSegWire(id, cb){ const e = document.getElementById(id); if (!e) return; fxSegSync(id);
+  e.onclick = ev => { const b = ev.target.closest("button"); if (!b || (b.dataset.v === "1") === fxTrue()) return; store.set("ccss.fxtrue", b.dataset.v); fxSegSync(id); cb(); }; }
+const fxUnit = (u, k, uo) => `<i></i><span>1 粒 = <b>${(+(+u).toPrecision(3)).toLocaleString()}</b> tokens</span>${k > 1 ? `<span class="tfux">输出 ×${k} · 1 粒 = <b>${(+(+uo).toPrecision(3)).toLocaleString()}</b></span>` : ""}`;
+function tfScaleUI(){ const m = TF.m, e = $("#tfUnit"); fxSegSync("tfSc"); if (!e || !m) return; const h = fxUnit(m.uIn, m.k, m.uOut); if (e.dataset.h !== h) { e.dataset.h = h; e.innerHTML = h; }
+  const lg = $("#tfLeg"); if (lg) { const h2 = tfLegend(); if (lg.dataset.h !== h2) { lg.dataset.h = h2; lg.innerHTML = h2; } } }
+const TF_LVBTN = `<button class="ghost tflive" id="tfLive"><i class="tfdot"></i><span>实时</span></button><span class="tfls" id="tfLs"></span>`;
+async function tfView(agent, id, host){
+  const key = agent + ":" + id;
+  host.innerHTML = '<div class="empty">读取用量…</div>';
+  let d;
+  try { d = await api(`/api/sessions/tokenflow?agent=${agent}&id=${encodeURIComponent(id)}`); } catch(e){ host.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  if (!SS.cur || SS.cur.agent + ":" + SS.cur.id !== key || !host.isConnected) return;
+  if (d.ok === false) { host.innerHTML = `<div class="miss">${esc(d.error || "读不了")}</div>`; return; }
+  const same = TF.key === key;
+  if (TF.lv) { TF.lv.on = false; if (TF.lv.ac) TF.lv.ac.abort(); }
+  Object.assign(TF, {d, m: tfModel(d, {real: fxTrue()}), key, parts: null, strip: null, col: null, cur: -1});
+  if (!same) { TF.k = 0; TF.t = 0; }
+  // 实时：记录文件最近改过（会话还在进行）就默认打开；自己关掉的这次打开期间不再自动开
+  const can = !!d.gen, auto = can && !TF.lvOff.has(key) && d.age != null && d.age < (d.live_s || 120);
+  TF.lv = can ? {key, agent, id, on: false, follow: false, ac: null, err: "", busy: false} : null;
+  tfRender(host, same);
+  if (auto) tfLiveOn(true, true);
+}
+function tfRender(host, same){
+  const d = TF.d, m = TF.m;
+  if (!m.calls.length) {
+    host.innerHTML = `${TF.lv ? `<div class="tfbar">${TF_LVBTN}</div>` : ""}<div class="emp">${ic("activity")}<b>没有可回放的 token 用量</b><div style="max-width:440px">${esc(d.reason || "")}</div></div>`;
+    tfLiveWire(); tfLiveUI(); return;
+  }
+  TF.k = Math.min(TF.k, m.calls.length - 1);
+  const sp = +(store.get("ccss.tfspeed") || 1);
+  TF.speed = [.5, 1, 2, 4, 8, 16].includes(sp) ? sp : 1;
+  host.innerHTML = `<div class="tf">
+    <div class="tfbar"><button class="primary" id="tfPlay"></button>
+      <button class="ghost" id="tfPrev" title="上一次调用（←）"><span class="flip">${ic("chev")}</span></button><button class="ghost" id="tfNext" title="下一次调用（→）">${ic("chev")}</button>
+      <input type="range" id="tfSl" min="0" max="${m.calls.length - 1}" value="${TF.k}" title="拖动到某一次调用">
+      <select id="tfSp" title="播放速度">${[.5, 1, 2, 4, 8, 16].map(v => `<option value="${v}" ${v === TF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
+      <span class="tfpos">调用 <b id="tfK"></b> · 轮次 <b id="tfTn"></b></span><span class="tfsep"></span>${fxSeg("tfSc")}<span class="tfunit" id="tfUnit"></span>${TF.lv ? `<span class="tfsep"></span>${TF_LVBTN}` : ""}</div>
+    <div class="tfcv"><canvas id="tfCv"></canvas><div class="fxtip" id="tfTip"></div></div>
+    <div class="tfacc">
+      <div class="tfk1"><span>合计</span><b id="tfAt"></b></div><div><span><i style="background:var(--u2)"></i>新输入</span><b id="tfAi"></b></div><div><span><i style="background:var(--u1)"></i>缓存读</span><b id="tfAcr"></b></div>
+      <div><span><i style="background:var(--u4)"></i>缓存写</span><b id="tfAcw"></b></div><div><span><i style="background:var(--u3)"></i>输出</span><b id="tfAo"></b></div>
+      <div><span><i style="background:var(--u5)"></i>其中思考</span><b id="tfArs"></b></div>
+      <div><span>缓存命中率</span><b id="tfAh"></b></div><div><span>工具调用</span><b id="tfAtl"></b></div><div><span>费用</span><b id="tfAc"></b></div></div>
+    <div class="tfcur" id="tfCur"></div>
+    <div class="dim tfleg" id="tfLeg">${tfLegend()}</div>
+  </div>`;
+  tfSetPlay(false);
+  tfScaleUI();
+  fxSegWire("tfSc", () => { if (!TF.d) return; TF.m = tfModel(TF.d, {real: fxTrue()}); Object.assign(TF, {parts: null, strip: null, cur: -1, sv: (TF.sv || 0) + 1}); tfScaleUI(); tfDraw(); tfStats(); });
+  $("#tfPlay").onclick = () => { tfSetPlay(!TF.play); tfUser(!TF.play); };
+  $("#tfPrev").onclick = () => { tfSetPlay(false); tfSeek(TF.k - 1, 1); tfUser(); };
+  $("#tfNext").onclick = () => { tfSetPlay(false); tfSeek(TF.k + 1, 1); tfUser(); };
+  $("#tfSp").onchange = e => { TF.speed = +e.target.value; store.set("ccss.tfspeed", String(TF.speed)); };
+  const sl = $("#tfSl");
+  sl.oninput = () => { TF.drag = true; tfSeek(+sl.value, TF.play ? 0 : 1); tfUser(); };
+  sl.onchange = () => { TF.drag = false; };
+  const cv = $("#tfCv"), seekAt = e => { const m = TF.m, r = cv.getBoundingClientRect(), z = r.width / cv.clientWidth, g = tfGeo(cv.clientWidth, cv.clientHeight, m, m.calls[TF.k]);
+    const px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
+    if (py < g.sy - 8 && !TF.drag) return false;
+    tfSeek(Math.floor((px - g.sx) / (g.sw / m.calls.length)), TF.play ? 0 : 1); tfUser(); return true; };
+  cv.onmousedown = e => { if (!seekAt(e)) return; TF.drag = true; const mv = ev => seekAt(ev), up = () => { TF.drag = false; document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up); };
+  const tip = $("#tfTip");
+  cv.onmousemove = e => fxHover(cv, tip, TF.hits || [], e, tfStripTip);
+  cv.onmouseleave = () => { tip.style.display = "none"; };
+  fxResize(cv, () => { TF.strip = null; if (!TF.play) tfDraw(); });
+  host.tabIndex = -1;
+  host.onkeydown = e => { if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.key === "ArrowLeft") { e.preventDefault(); $("#tfPrev").click(); } else if (e.key === "ArrowRight") { e.preventDefault(); $("#tfNext").click(); } else if (e.key === " ") { e.preventDefault(); $("#tfPlay").click(); } };
+  if (!TF.rs) { TF.rs = 1; window.addEventListener("resize", () => { TF.strip = null; if ($("#tfCv")) tfDraw(); });
+    new MutationObserver(() => { TF.col = null; TF.strip = null; UF.col = null; UF.strip = null; if ($("#tfCv") && !TF.play) tfDraw(); if ($("#ufCv") && !UF.raf) ufDraw(); }).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { TF.col = null; TF.strip = null; UF.col = null; UF.strip = null; if ($("#tfCv")) tfDraw(); if ($("#ufCv")) ufDraw(); }); }
+  if (!same) TF.t = tfRM() ? 1 : 0;
+  tfLiveWire();
+  tfDraw(); tfStats(); tfLiveUI();
+  if (!same && TF.t === 0) tfSetPlay(true);         // 打开就开始放（系统设置了「减少动态效果」时停在第一次调用）
+}
+const tfRM = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+// ---------- 0.5.1 实时：会话还在进行时跟着它走 ----------
+// 后端按字节偏移往后读记录文件（Claude 含子代理 agent-*.jsonl；还在写的半行留到下次），只回 v 之后新增 / 变过的调用；
+// 这里长轮询：每次最多等 TF_WAIT 秒，有新调用马上回。新调用到了：时间轴多一根柱、累计 / 费用 / 命中率跟着变，跟随时接着放这一次。
+// 往回拖 / 暂停 = 不再跟随（时间轴照样长），点「回到实时」跳到最新那次。
+const TF_WAIT = 15, TF_MAX = 4000;
+function tfLiveWire(){
+  const b = $("#tfLive"), s = $("#tfLs"); if (!b) return;
+  b.onclick = () => tfLiveOn(!(TF.lv && TF.lv.on));
+  s.onclick = e => { if (e.target.closest("#tfBack")) tfFollow(); };
+}
+function tfLiveOn(on, auto){
+  const L = TF.lv; if (!L) return;
+  L.on = on; L.err = "";
+  if (on) { TF.lvOff.delete(L.key); tfFollow(auto); tfLivePoll(L); if (!L.iv) L.iv = setInterval(() => { if (TF.lv !== L || !L.on || !$("#tfLive")) { clearInterval(L.iv); L.iv = 0; return; } tfLiveUI(); }, 1000); }
+  else { TF.lvOff.add(L.key); L.follow = false; if (L.ac) L.ac.abort(); }
+  tfLiveUI();
+}
+// 跟到最新那次调用（刚打开时如果已经在从头放，就让它放完再跟上）
+function tfFollow(auto){
+  const L = TF.lv, m = TF.m; if (!L || !m) return;
+  L.follow = true;
+  const last = m.calls.length - 1;
+  if (last >= 0 && TF.k !== last) { if (tfRM()) tfSeek(last, 1); else { tfSetPlay(false); TF.k = last; TF.t = 0; TF.parts = null; tfSetPlay(true); } }
+  else if (last >= 0 && !auto && !TF.play && TF.t >= 1) tfSeek(last, 1);
+  tfLiveUI();
+}
+function tfUser(paused){                              // 自己动了播放位置：停在最新那次上才算还在跟随
+  const L = TF.lv; if (!L || !L.on || !TF.m) return;
+  L.follow = !paused && TF.k >= TF.m.calls.length - 1;
+  tfLiveUI();
+}
+function tfAgo(ts){ const s = Math.max(0, Date.now() / 1000 - ts); return s < 60 ? `${Math.round(s)} 秒前` : s < 3600 ? `${Math.round(s / 60)} 分钟前` : `${(s / 3600).toFixed(1)} 小时前`; }
+function tfLiveUI(){
+  const L = TF.lv, b = $("#tfLive"), s = $("#tfLs"); if (!b || !s) return;
+  const on = !!(L && L.on), m = TF.m, n = m ? m.calls.length : 0;
+  b.classList.toggle("on", on); b.classList.toggle("fol", on && L.follow);
+  const tip = on ? "实时：正在跟着这个会话，有新的模型调用马上放出来；再点一下退出实时" : "实时：会话还在进行时跟着它，有新的模型调用马上放出来";
+  if (b.dataset.tip0 !== tip) { b.dataset.tip0 = tip; b.title = tip; }
+  let h = "";
+  if (on) {
+    const lt = n ? m.calls[n - 1].ts : 0;
+    if (L.err) h = `<span class="tfwarn">${esc(L.err)}</span>`;
+    else if (!L.follow && n) h = `<button class="ghost" id="tfBack" title="跳到最新那次调用，接着跟随">${ic("chev")}<span>回到实时</span></button>`;
+    else if (!n) h = `<span>等待第一次调用…</span>`;
+    else if (TF.play && TF.k >= n - 1) h = `<span>新调用</span>`;
+    else if (TF.play) h = `<span>追上最新…</span><span class="dim">+${n - 1 - TF.k}</span>`;
+    else h = `<span>等待新调用…</span>${lt ? `<span class="dim">上一次 ${tfAgo(lt)}</span>` : ""}`;
+  }
+  if (s.dataset.h !== h) { s.dataset.h = h; s.innerHTML = h; }
+}
+async function tfLivePoll(L){
+  if (L.busy) return; L.busy = true;
+  try {
+    while (L.on && TF.lv === L) {
+      const host = $("#svFlow");
+      if (!host || !host.isConnected || host.hidden || PAGE !== "sessions" || !SS.cur || SS.cur.agent + ":" + SS.cur.id !== L.key) { L.on = false; break; }
+      const d = TF.d; L.ac = new AbortController();
+      let r;
+      try { r = await api(`/api/sessions/tokenflow/live?agent=${L.agent}&id=${encodeURIComponent(L.id)}&gen=${encodeURIComponent(d.gen || "")}&v=${d.v || 0}&nt=${(d.turns || []).length}&wait=${TF_WAIT}`, undefined, {signal: L.ac.signal}); }
+      catch(e){ if (!L.on || TF.lv !== L) break; L.err = "实时连接断了，3 秒后重试：" + e.message; tfLiveUI(); await new Promise(z => setTimeout(z, 3000)); continue; }
+      if (!L.on || TF.lv !== L) break;
+      if (r.ok === false) { L.err = r.error || "读不了"; tfLiveUI(); await new Promise(z => setTimeout(z, 3000)); continue; }
+      L.err = ""; tfMerge(r);
+    }
+  } finally { L.busy = false; tfLiveUI(); }
+}
+// 把实时拿到的合进来：按 id 换掉 / 追加，按时间排好，重算比例尺和累计
+function tfMerge(r){
+  const L = TF.lv, d = TF.d, old = TF.m, n0 = old.calls.length, curId = n0 ? old.calls[TF.k].id : null, host = $("#svFlow");
+  if (r.reset) { Object.assign(d, r); }
+  else {
+    const fresh = (r.calls || []).length, nt = (r.turns || []).length;
+    Object.assign(d, {v: r.v, gen: r.gen, totals: r.totals, models: r.models, subagents: r.subagents, age: r.age, mtime: r.mtime});
+    if (!fresh && !nt) { tfLiveUI(); return; }
+    const idx = new Map(d.calls.map((c, i) => [c.id, i]));
+    for (const c of r.calls) { const i = idx.get(c.id); if (i != null) d.calls[i] = c; else { idx.set(c.id, d.calls.length); d.calls.push(c); } }
+    d.calls = d.calls.map((c, i) => [c, i]).sort((a, b) => (a[0].ts || 0) - (b[0].ts || 0) || a[1] - b[1]).map(x => x[0]);
+    if (d.calls.length > TF_MAX) { const cut = d.calls.length - TF_MAX; d.calls.splice(0, cut); d.cut = (d.cut || 0) + cut; }
+    d.calls.forEach((c, i) => { c.i = i; });
+    d.turns = (d.turns || []).slice(0, r.nt0 ?? d.turns.length).concat(r.turns || []);
+  }
+  const m = TF.m = tfModel(d, {real: fxTrue()}), n = m.calls.length;
+  Object.assign(TF, {parts: null, strip: null, cur: -1, sv: (TF.sv || 0) + 1});
+  if (!n) { if (host && n0) tfRender(host, true); tfLiveUI(); return; }
+  if (!n0 || !$("#tfCv")) { TF.k = 0; TF.t = 1; if (host) tfRender(host, true); if (L && L.on && L.follow) tfFollowNew(-1); return; }
+  const k = curId ? m.calls.findIndex(c => c.id === curId) : -1;
+  TF.k = k >= 0 ? k : Math.min(TF.k, n - 1);
+  const sl = $("#tfSl"); if (sl) sl.max = n - 1;
+  tfScaleUI();
+  if (L && L.on && L.follow && n > n0) tfFollowNew(TF.k);
+  else { tfDraw(); tfStats(); }
+  tfLiveUI();
+}
+function tfFollowNew(k){                               // 跟随中来了新调用：放完手上这次就接着放新的；减少动态效果时直接跳到最新
+  const n = TF.m.calls.length;
+  if (tfRM()) { tfSeek(n - 1, 1); return; }
+  if (!TF.play) { TF.k = Math.min(n - 1, k + 1); TF.t = 0; TF.parts = null; tfSetPlay(true); }
+  tfDraw(); tfStats();
+}
+// 全局「实时」：打开最近在动的那个会话（Claude Code / Codex / DeepSeek Harness），切到 Token 流转并跟随
+async function tfGlobalLive(){
+  let a;
+  try { a = await api("/api/sessions/tokenflow/active"); } catch(e){ toast("❌ " + e.message, 5000); return; }
+  if (!a.agent) { toast(a.reason || "最近没有在进行的会话", 5000); return; }
+  store.set("ccss.svmode", "flow"); TF.lvOff.delete(a.agent + ":" + a.id);
+  if (!SS.d || !SS.d.items.find(i => i.agent === a.agent && i.id === a.id)) await R.sessions(true);
+  ssView(a.agent, a.id);
+}
+// ---------- /Token 流转 ----------
+// ---------- 0.5.1：用量页的 Token 流转 ----------
+// 后端 /api/usage/flow 按当前筛选（应用 / 供应商 / 模型 / 时间段）把 calls 表聚合成「时间桶 × 应用 × 模型」的格子；
+// 这里换算成四列：来源（应用）→ 输入种类（缓存读 / 缓存写 / 新输入）→ 模型 → 输出（回复 / 思考）。
+// 浅色底 = 整段时间的总量，实色 = 播放到当前位置的累计；粒子按当前时间桶的真实 token 数发出。实时：数据版本变了就回新的聚合，新增的部分化成一波粒子流进去。
+const UF = {d: null, m: null, g: null, pos: 0, play: false, speed: 1, raf: 0, last: 0, clock: 0, P: [], emit: 0, qk: "", seen: false, io: null, ac: null,
+            lv: {on: false, ac: null, busy: false, err: "", at: 0}, hits: [], strip: null, col: null, sv: 0, drag: false};
+const UF_APP = {"claude-code": "Claude Code", "claude-desktop": "Claude 桌面", codex: "Codex", dsh: "DeepSeek Harness"};
+const UF_CAT = ["cr", "cw", "inp"], UF_OUT = ["rp", "rs"], UF_WAIT = 15, UF_MAXP = 2400, UF_BUD = 60;
+const ufCat = k => tr({cr: "缓存读", cw: "缓存写", inp: "新输入", rp: "回复", rs: "思考"}[k]);
+const ufMod = s => s === "\x00other" ? tr("其他模型") : tfShort(s);
+const ufApp = a => tr(UF_APP[a] || a || "?");
+const ufAppCol = (C, a) => a === "codex" ? C.codex : a === "dsh" ? C.dsh : String(a).startsWith("claude") ? C.claude : C.sub;
+function ufModel(d){
+  const A = d.apps.length, M = d.models.length, N = d.buckets.length, L = [], idx = {};
+  const add = (key, kind, s, t, cat) => { idx[key] = L.length; L.push({key, kind, s, t, cat}); };
+  for (let a = 0; a < A; a++) for (const c of UF_CAT) add(`a${a}|${c}`, "ab", a, c, c);
+  for (const c of UF_CAT) for (let m = 0; m < M; m++) add(`${c}|m${m}`, "bc", c, m, c);
+  for (let m = 0; m < M; m++) for (const o of UF_OUT) add(`m${m}|${o}`, "cd", m, o, o);
+  const nl = L.length, vals = new Float64Array(Math.max(1, N * nl)), cum = new Float64Array((N + 1) * nl);
+  const SK = ["n", "inp", "cr", "cw", "out", "rs", "cost", "unpriced"], st = [], cst = [Object.fromEntries(SK.map(k => [k, 0]))];
+  const appT = Array.from({length: A}, () => ({n: 0, inp: 0, cr: 0, cw: 0, out: 0, rs: 0, cost: 0})), modT = Array.from({length: M}, () => ({n: 0, inp: 0, cr: 0, cw: 0, out: 0, rs: 0, cost: 0}));
+  let maxP = 0, maxO = 0;
+  d.buckets.forEach((b, i) => {
+    const s = Object.fromEntries(SK.map(k => [k, 0])), o = i * nl;
+    for (const [a, m, n, inp, cr, cw, out, rs, cost, unp] of b.cells) {
+      const v = {inp, cr, cw};
+      for (const c of UF_CAT) { vals[o + idx[`a${a}|${c}`]] += v[c]; vals[o + idx[`${c}|m${m}`]] += v[c]; }
+      vals[o + idx[`m${m}|rp`]] += out - rs; vals[o + idx[`m${m}|rs`]] += rs;
+      for (const [k, x] of Object.entries({n, inp, cr, cw, out, rs, cost, unpriced: unp})) s[k] += x;
+      for (const T of [appT[a], modT[m]]) { T.n += n; T.inp += inp; T.cr += cr; T.cw += cw; T.out += out; T.rs += rs; T.cost += cost; }
+    }
+    st.push(s); maxP = Math.max(maxP, s.inp + s.cr + s.cw); maxO = Math.max(maxO, s.out);
+    const p = cst[i], q = {}; for (const k of SK) q[k] = p[k] + s[k]; cst.push(q);
+    for (let j = 0; j < nl; j++) cum[(i + 1) * nl + j] = cum[i * nl + j] + vals[o + j];
+  });
+  const full = cum.subarray(N * nl, (N + 1) * nl), T = cst[N];
+  return {d, L, idx, nl, N, A, M, vals, cum, full, st, cst, T, appT, modT, maxP, maxO};
+}
+// 播放位置 p（0..N，可以是小数）时第 j 条带子 / 统计的累计
+const ufAt = (m, j, p) => { const i = Math.min(m.N, Math.floor(p)), f = p - i; return m.cum[i * m.nl + j] + (i < m.N ? f * m.vals[i * m.nl + j] : 0); };
+function ufCum(m, p){ const i = Math.min(m.N, Math.floor(p)), f = p - i, a = m.cst[i], b = m.st[i], r = {};
+  for (const k in a) r[k] = a[k] + (b && i < m.N ? f * b[k] : 0);
+  r.tok = r.inp + r.cr + r.cw + r.out; const P = r.inp + r.cr + r.cw; r.hit = P ? r.cr / P : null; return r; }
+function ufGeo(W, H, m, x, fs, FN){
+  const strip = 54, top = 22, Hf = H - strip - top - 20, nw = 10, F = m.full, L = m.L;
+  const sum = f => { let v = 0; L.forEach((l, j) => { if (f(l)) v += F[j]; }); return v; };
+  const va = d3(m.A, a => sum(l => l.kind === "ab" && l.s === a)), vc = UF_CAT.map(c => sum(l => l.kind === "bc" && l.s === c)),
+        vm = d3(m.M, i => sum(l => l.kind === "bc" && l.t === i)), vo = UF_OUT.map(o => sum(l => l.kind === "cd" && l.t === o));
+  function d3(n, f){ return Array.from({length: n}, (_, i) => f(i)); }
+  x.font = `600 ${fs + 1}px ${FN}`;
+  const aw = Math.max(40, ...m.d.apps.map(a => x.measureText(ufApp(a)).width)), ow = Math.max(60, x.measureText(tr("思考") + " 000.00M").width);
+  const xA = Math.round(Math.min(W * .24, Math.max(70, aw + 16))), xD = Math.round(W - Math.min(W * .24, Math.max(84, ow + 18)) - nw);
+  // 模型列的标签（图标 + 名字 + 数字）占一条自己的空当，输出带子从空当后面才开始：标签不再压在带子上
+  x.font = `600 ${fs + .5}px ${FN}`;
+  const isz = fs + 3, mw = Math.max(36, ...m.d.models.map(s => x.measureText(ufMod(s)).width)), lw = Math.round(Math.min(Math.max(90, (xD - xA) * .24), 7 + isz + 5 + mw + 14));
+  const span = xD - xA - lw - 12, xB = Math.round(xA + span * .34), xC = Math.round(xA + span * .68);
+  const P = vc.reduce((a, b) => a + b, 0) || 1, G = Math.max(8, Math.min(22, Hf * .07));
+  const s = Math.max(1e-12, Math.min(...[va, vc, vm].map(v => (Hf - (v.length - 1) * G - v.length * 2) / P)));
+  const k = ufK(m);
+  const stack = (vals, sc, xx, w) => { const hs = vals.map(v => Math.max(2, v * sc)), tot = hs.reduce((a, b) => a + b, 0) + G * (vals.length - 1); let y = top + (Hf - tot) / 2;
+    return hs.map(h => { const r = {x: xx, y, h, w}; y += h + G; return r; }); };
+  const N = {a: stack(va, s, xA - nw, nw), c: stack(vc, s, xB, nw), m: stack(vm, s, xC, 12), o: stack(vo, s * k, xD, nw)};
+  const off = {}, take = (key, node, h) => { const o = off[key] || 0; off[key] = o + h; return node.y + o; };
+  const LG = L.map(() => null);
+  // 每个节点里带子的先后：跟另一端节点的先后一致，减少交叉
+  L.forEach((l, j) => { if (l.kind !== "ab") return; const h = F[j] * s; LG[j] = {x1: xA, y1: take("a" + l.s, N.a[l.s], h), h1: h, x2: xB, y2: 0, h2: h}; });
+  UF_CAT.forEach((c, ci) => L.forEach((l, j) => { if (l.kind === "ab" && l.t === c) LG[j].y2 = take("ci" + c, N.c[ci], LG[j].h2); }));
+  L.forEach((l, j) => { if (l.kind !== "bc") return; const ci = UF_CAT.indexOf(l.s), h = F[j] * s; LG[j] = {x1: xB + nw, y1: take("co" + l.s, N.c[ci], h), h1: h, x2: xC, y2: 0, h2: h}; });
+  for (let mi = 0; mi < m.M; mi++) UF_CAT.forEach(c => { const j = m.idx[`${c}|m${mi}`]; LG[j].y2 = take("mi" + mi, N.m[mi], LG[j].h2); });
+  for (let mi = 0; mi < m.M; mi++) { const nd = N.m[mi], hs = UF_OUT.map(o => F[m.idx[`m${mi}|${o}`]] * s * k), tot = hs[0] + hs[1]; let y = nd.y + nd.h / 2 - tot / 2;
+    UF_OUT.forEach((o, oi) => { const j = m.idx[`m${mi}|${o}`]; LG[j] = {x1: xC + 12 + lw, y1: y, h1: hs[oi], x2: xD, y2: 0, h2: hs[oi]}; y += hs[oi]; }); }
+  UF_OUT.forEach((o, oi) => { for (let mi = 0; mi < m.M; mi++) { const j = m.idx[`m${mi}|${o}`]; LG[j].y2 = take("o" + o, N.o[oi], LG[j].h2); } });
+  return {W, H, top, Hf, s, k, N, LG, va, vc, vm, vo, xA, xB, xC, xD, nw, lw, isz, sy: H - strip - 2, sh: strip - 8, sx: 12, sw: W - 24, fs};
+}
+// 输出侧放大倍数（1-2-5 序列）：放大后输出最多 ≈ 输入的一半；「真实比例」时 ×1。只看数据，不看画布大小（粒子单位跟着它，换窗口大小不变）
+function ufK(m){
+  const P = m.T.inp + m.T.cr + m.T.cw, O = m.T.out; let k = 1;
+  if (fxTrue() || !(O > 0)) return 1;
+  for (const q of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]) if (O * q <= .5 * P) k = q;
+  return k;
+}
+// 粒子计划：每个时间桶里每条路径（应用→种类→模型 / 模型→回复|思考）发几个粒子。按真实 token 数用累计取整换算成整数个：
+// 输入 1 粒 = u tokens，输出 1 粒 = u / k tokens；每条路径整段加起来正好 = floor(合计 / 单位)。不抽样、不凑数，没用量的桶一个粒子也没有。
+function ufPaths(m){
+  return m.d.buckets.map(b => { const row = new Map(), add = (key, j1, j2, v, out) => { if (!(v > 0)) return; const e = row.get(key); if (e) e.v += v; else row.set(key, {key, j1, j2, v, out}); };
+    for (const [a, mi, n, inp, cr, cw, out, rs] of b.cells) { const v = {inp, cr, cw}, an = m.d.apps[a], mn = m.d.models[mi];
+      for (const c of UF_CAT) add(`${an}|${c}|${mn}`, m.idx[`a${a}|${c}`], m.idx[`${c}|m${mi}`], v[c], 0);
+      add(`${mn}|rp`, m.idx[`m${mi}|rp`], null, out - rs, 1); add(`${mn}|rs`, m.idx[`m${mi}|rs`], null, rs, 1); }
+    return [...row.values()]; });
+}
+function ufUnit(m, k){ let mx = 0; m.st.forEach(s => { mx = Math.max(mx, s.inp + s.cr + s.cw + s.out * k); }); return tfNice(Math.max(1, mx) / UF_BUD); }   // 最多那段时间 ≈ 60 个粒子
+function ufPlan(m, u, k){
+  const acc = new Map(), fl = (v, un) => Math.floor(v / un + 1e-7);
+  return ufPaths(m).map(row => row.map(p => { const un = p.out ? u / k : u, a = acc.get(p.key) || 0; acc.set(p.key, a + p.v);
+    return {key: p.key, j1: p.j1, j2: p.j2, out: p.out, v: p.v, n: fl(a + p.v, un) - fl(a, un)}; }).filter(p => p.n > 0));
+}
+function ufScale(){ const m = UF.m; if (!m) return; UF.k = ufK(m); UF.u = ufUnit(m, UF.k); UF.plan = ufPlan(m, UF.u, UF.k); }
+function ufColors(){ return tfColors(); }
+function ufLinkCols(C, m, l){
+  if (l.kind === "ab") return [ufAppCol(C, m.d.apps[l.s]), C[l.cat]];
+  if (l.kind === "bc") return [C[l.cat], C[l.cat]];
+  return [l.t === "rs" ? C.rs : C.out, l.t === "rs" ? C.rs : C.out];
+}
+function ufTipLink(m, j){
+  const l = m.L[j], C = UF.col, v = ufAt(m, j, UF.pos), f = m.full[j];
+  const a = l.kind === "ab" ? esc(ufApp(m.d.apps[l.s])) : l.kind === "bc" ? esc(ufCat(l.s)) : mic(m.d.models[l.s]) + esc(ufMod(m.d.models[l.s]));
+  const b = l.kind === "ab" ? esc(ufCat(l.t)) : l.kind === "bc" ? mic(m.d.models[l.t]) + esc(ufMod(m.d.models[l.t])) : esc(ufCat(l.t));
+  return `<b>${a} → ${b}</b>${fxRow(ufLinkCols(C, m, l)[1], tr("累计"), fmtFull(v))}${UF.pos < m.N ? fxRow("", tr("整段时间"), fmtFull(f)) : ""}`;
+}
+function ufTipNode(m, col, i){
+  const C = UF.col, T = m.T;
+  if (col === "a" || col === "m") { const t = (col === "a" ? m.appT : m.modT)[i], P = t.inp + t.cr + t.cw;
+    const name = col === "a" ? ufApp(m.d.apps[i]) : m.d.models[i] === "\x00other" ? tr("其他模型") : m.d.models[i];
+    return `<b>${col === "m" ? mic(m.d.models[i]) : ""}${esc(name)}</b><div class="dim">${tr("整段时间")}</div>${fxRow("", tr("请求数"), fmtFull(t.n))}${fxRow(C.cr, tr("缓存读"), fmtFull(t.cr))}${fxRow(C.cw, tr("缓存写"), fmtFull(t.cw))}${fxRow(C.inp, tr("新输入"), fmtFull(t.inp))}${fxRow(C.out, tr("输出"), fmtFull(t.out))}${t.rs ? fxRow(C.rs, tr("其中思考"), fmtFull(t.rs)) : ""}${fxRow("", tr("缓存命中率"), P ? (t.cr / P * 100).toFixed(1) + "%" : "—")}${fxRow("", tr("费用"), fmtCF(t.cost))}`; }
+  if (col === "c") { const k = UF_CAT[i], P = T.inp + T.cr + T.cw; return `<b>${ufCat(k)}</b>${fxRow(C[k], "Tokens", fmtFull(T[k]))}${fxRow("", tr("占输入"), P ? (T[k] / P * 100).toFixed(1) + "%" : "—")}`; }
+  const o = UF_OUT[i]; return `<b>${ufCat(o)}</b>${fxRow(o === "rs" ? C.rs : C.out, "Tokens", fmtFull(o === "rs" ? T.rs : T.out - T.rs))}${UF.g && UF.g.k > 1 ? `<div class="dim">${tr("输出侧放大")} ×${UF.g.k}</div>` : ""}`;
+}
+function ufLabelT(ts, step){ const d = new Date(ts * 1000); return step === "h" ? `${pad(d.getHours())}:00` : `${d.getMonth() + 1}/${d.getDate()}`; }
+function ufTitleT(ts, step){ const d = new Date(ts * 1000); return step === "h" ? `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:00` : step === "w" ? tr("周") + " " + `${d.getMonth() + 1}/${d.getDate()}` : d.toLocaleDateString(LANG_TAG()); }
+const LANG_TAG = () => document.documentElement.lang === "en" ? "en-US" : "zh-CN";
+function ufStrip(cv, m, g, C){
+  const key = [cv.width, cv.height, m.N, UF.sv, C.cr, C.panel2].join("|");
+  if (UF.strip && UF.strip.key === key) return UF.strip.c;
+  const dpr = cv.width / g.W, o = document.createElement("canvas"); o.width = cv.width; o.height = Math.ceil((g.sh + 14) * dpr);
+  const x = o.getContext("2d"); x.scale(dpr, dpr);
+  const N = Math.max(1, m.N), bw = g.sw / N, hh = g.sh - 4, mx = Math.max(1, ...m.st.map(s => s.inp + s.cr + s.cw + s.out));
+  m.st.forEach((s, i) => { const x1 = g.sx + i * bw + (bw > 6 ? 1 : 0), w = Math.max(.8, bw - (bw > 6 ? 2 : bw > 3 ? 1 : 0)); let y = g.sh;
+    for (const k of UF_CAT) { const h = s[k] / mx * hh; if (h > 0) { x.fillStyle = C[k]; x.fillRect(x1, y - h, w, h); y -= h; } }
+    const ho = s.out / mx * hh; if (s.out > 0) { x.fillStyle = C.out; x.fillRect(x1, y - Math.max(1, ho), w, Math.max(1, ho)); } });
+  x.fillStyle = C.faint; x.font = `10px ${C.font}`; x.textBaseline = "top"; let lx = -99;
+  m.d.buckets.forEach((b, i) => { const px = g.sx + i * bw; const s = ufLabelT(b.t, m.d.step), w = x.measureText(s).width;
+    if (px - lx > w + 12 && px + w < g.sx + g.sw) { x.fillText(s, px + 1, g.sh + 2); lx = px; } });
+  UF.strip = {key, c: o};
+  return o;
+}
+function ufDraw(){
+  const cv = $("#ufCv"), m = UF.m; if (!cv || !m) return;
+  const F = fxCanvas(cv); if (!F) return;
+  const {x, W, H, dpr} = F, C = UF.col || (UF.col = tfColors()), fs = W < 560 ? 11 : 12, FN = C.font;
+  const gk = [W, H, UF.sv, fs].join("|"), g = UF.g && UF.g.key === gk ? UF.g : (UF.g = Object.assign(ufGeo(W, H, m, x, fs, FN), {key: gk}));
+  const HITS = UF.hits = [], p = UF.pos;
+  if (!m.T.n) { fxText(x, tr("这段时间没有用量"), W / 2, g.top + g.Hf / 2, "center", C.muted, `${fs + 1}px ${FN}`); }
+  else {
+    const cur = new Float64Array(m.nl); for (let j = 0; j < m.nl; j++) cur[j] = ufAt(m, j, p);
+    // 带子：浅色底是整段时间，实色是累计到播放位置
+    m.L.forEach((l, j) => { const G = g.LG[j], f = m.full[j]; if (!f || !G) return;
+      const [c1, c2] = ufLinkCols(C, m, l), r = Math.min(1, cur[j] / f);
+      const ghost = fxBand(x, G.x1, G.y1, G.h1, G.x2, G.y2, G.h2, c1, c2, C.gA, C.gA * .8);
+      if (r > 0) fxBand(x, G.x1, G.y1, G.h1 * r, G.x2, G.y2, G.h2 * r, c1, c2, C.bA, C.bB);
+      HITS.push({p: ghost, tip: () => ufTipLink(m, j)}); });
+    // 节点
+    const nodeCur = (col, i) => { let v = 0; m.L.forEach((l, j) => { if ((col === "a" && l.kind === "ab" && l.s === i) || (col === "c" && l.kind === "ab" && l.t === UF_CAT[i]) ||
+      (col === "m" && l.kind === "bc" && l.t === i) || (col === "o" && l.kind === "cd" && l.t === UF_OUT[i])) v += cur[j]; }); return v; };
+    const full = {a: g.va, c: g.vc, m: g.vm, o: g.vo}, active = UF.play || UF.P.length;
+    for (const col of ["a", "c", "m", "o"]) g.N[col].forEach((nd, i) => {
+      const color = col === "a" ? ufAppCol(C, m.d.apps[i]) : col === "c" ? C[UF_CAT[i]] : col === "m" ? C.text : (i ? C.rs : C.out);
+      const fv = full[col][i], r = fv ? Math.min(1, nodeCur(col, i) / fv) : 0;
+      x.fillStyle = fxA(color, C.gA * 1.6); x.fillRect(nd.x, nd.y, nd.w, Math.max(2, nd.h));
+      if (r > 0) fxNode(x, nd.x, nd.y, nd.w, Math.max(2, nd.h * r), color, active && col !== "m" ? .4 : 0);
+      HITS.push({r: [nd.x - 3, nd.y - 2, nd.w + 6, Math.max(6, nd.h) + 4], tip: () => ufTipNode(m, col, i)}); });
+    // 粒子
+    const glow = !tfRM();
+    for (const P of UF.P) { const q = (UF.clock - P.b) / P.dur; if (q < 0 || q > 1) continue;
+      const segs = P.j2 == null ? 1 : 2, u = q * segs, j = u < 1 || segs === 1 ? P.j1 : P.j2, w = fxE(segs === 1 ? q : u < 1 ? u : u - 1), G = g.LG[j]; if (!G) continue;
+      const r = m.full[j] ? Math.min(1, cur[j] / m.full[j]) : 0, h1 = Math.max(1, G.h1 * r), h2 = Math.max(1, G.h2 * r);
+      const px = tfBx(G.x1, G.x2, w), y1 = G.y1 + P.l * h1, y2 = G.y2 + P.l * h2, py = y1 + (y2 - y1) * tfE(w);
+      fxDot(x, px, py, P.r, P.col, dpr, glow); }
+    // 标签（每列避让，不重叠）
+    const F1 = `${fs}px ${FN}`, F2 = `600 ${fs + .5}px ${FN}`, two = (col, n) => g.Hf / Math.max(1, n) >= 30;
+    const labs = (col, names, vals, side, colr, icon) => { const nds = g.N[col], tw = two(col, nds.length), hh = tw ? 30 : 15;
+      const ys = fxSpread(nds.map(nd => ({y: nd.y + nd.h / 2, h: hh})), g.top - 18, g.top + g.Hf + 14, 1);
+      nds.forEach((nd, i) => { let lx = side === "l" ? nd.x - 7 : nd.x + nd.w + 7; const al = side === "l" ? "right" : "left";
+        if (icon) { const isz = tw ? g.isz : g.isz - 2; fxIcon(x, icon(i), lx, (tw ? ys[i] - 7 : ys[i]) - isz / 2, isz, C, dpr); lx += isz + 5; }
+        const mx = icon ? g.lw - (lx - nd.x - nd.w) - 8 : 1e9;
+        if (tw) { fxText(x, fxFit(x, names[i], mx, F2), lx, ys[i] - 7, al, colr ? colr(i) : C.text, F2, C.panel2); fxText(x, vals[i], lx, ys[i] + 8, al, C.muted, F1, C.panel2); }
+        else fxText(x, fxFit(x, names[i] + "  " + vals[i], mx, F1), lx, ys[i], al, C.text, F1, C.panel2); }); };
+    labs("a", m.d.apps.map(ufApp), g.va.map((v, i) => fmtN(nodeCur("a", i))), "l");
+    labs("c", UF_CAT.map(ufCat), UF_CAT.map((k, i) => fmtN(nodeCur("c", i))), "r");
+    labs("m", m.d.models.map(ufMod), g.vm.map((v, i) => fmtN(nodeCur("m", i))), "r", null, i => m.d.models[i]);
+    labs("o", [tr("输出") + " · " + ufCat("rp") + (g.k > 1 ? ` ×${g.k}` : ""), ufCat("rs")], UF_OUT.map((o, i) => fmtN(nodeCur("o", i))), "r", i => i ? C.rs : C.out);
+    // 列标题
+    const hf = `${fs - 1}px ${FN}`;
+    [[g.xA - g.nw / 2, tr("来源")], [g.xB + g.nw / 2, tr("输入种类")], [g.xC + 6 + Math.min(40, g.lw / 3), tr("模型")], [g.xD + g.nw / 2, tr("输出")]].forEach(([hx, s]) => fxText(x, s, hx, 8, "center", C.faint, hf));
+  }
+  // 时间轴
+  if (m.N) {
+    x.drawImage(ufStrip(cv, m, g, C), 0, g.sy, W, g.sh + 14);
+    const bw = g.sw / m.N, ph = g.sx + Math.min(m.N, p) * bw;
+    x.fillStyle = fxA(C.panel2, .62); x.fillRect(ph, g.sy, g.sx + g.sw - ph, g.sh + 1);
+    x.fillStyle = C.text; x.fillRect(ph - 1, g.sy - 3, 2, g.sh + 5);
+  }
+}
+function ufStripTip(px, py){
+  const m = UF.m, g = UF.g; if (!m || !g || !m.N || py < g.sy - 2 || px < g.sx || px > g.sx + g.sw) return "";
+  const i = Math.min(m.N - 1, Math.floor((px - g.sx) / (g.sw / m.N))), s = m.st[i], b = m.d.buckets[i], C = UF.col; if (!s) return "";
+  const P = s.inp + s.cr + s.cw;
+  return `<b>${esc(ufTitleT(b.t, m.d.step))}</b>${fxRow("", tr("请求数"), fmtFull(s.n))}${fxRow(C.cr, tr("缓存读"), fmtFull(s.cr))}${fxRow(C.cw, tr("缓存写"), fmtFull(s.cw))}${fxRow(C.inp, tr("新输入"), fmtFull(s.inp))}${fxRow(C.out, tr("输出"), fmtFull(s.out))}${fxRow("", tr("缓存命中率"), P ? (s.cr / P * 100).toFixed(1) + "%" : "—")}${fxRow("", tr("费用"), fmtCF(s.cost))}`;
+}
+// 粒子：按粒子计划发（见 ufPlan）。输入粒子走 来源→种类→模型 两段；同一个粒子位置上的输出粒子要等输入走到模型才出发（先读输入、再出输出），走 模型→输出 一段
+function ufDur(bdr){ const din = Math.max(.5, Math.min(2.2, 4 * bdr)); return [din, din * .6]; }
+function ufPush(P){ if (UF.P.length < UF_MAXP) UF.P.push(P); else UF.drop = (UF.drop || 0) + 1; }
+function ufMk(m, p, b, din, dout, C){
+  const l = m.L[p.out ? p.j1 : p.j2];
+  if (!p.out) ufPush({j1: p.j1, j2: p.j2, l: Math.random(), b, dur: din, r: 1.9, col: C[l.s]});
+  else ufPush({j1: p.j1, j2: null, l: Math.random(), b: b + din, dur: dout, r: 2.2, col: l.t === "rs" ? C.rs : C.out});
+}
+// 播放位置从 p0 走到 p1：落在这一段里的粒子都发出去（第 q 个粒子在桶里的位置 = (q + .5) / n，整桶均匀）
+function ufEmit(m, p0, p1, bdr){
+  const C = UF.col || (UF.col = tfColors()), [din, dout] = ufDur(bdr), plan = UF.plan || [];
+  for (let i = Math.max(0, Math.floor(p0)); i < Math.min(m.N, Math.ceil(p1)); i++) for (const p of plan[i] || [])
+    for (let q = 0; q < p.n; q++) { const f = i + (q + .5) / p.n; if (f >= p0 && f < p1) ufMk(m, p, UF.clock + (f - p1) * bdr, din, dout, C); }
+}
+const ufBD = m => Math.max(.12, Math.min(.9, 14 / Math.max(1, m.N)));          // 1× 时每个时间桶放多久（整段 ≈ 14 秒）
+function ufLoop(ts){
+  UF.raf = 0;
+  const cv = $("#ufCv"), m = UF.m;
+  if (!cv || !cv.isConnected || PAGE !== "usage" || !m) { UF.play = false; UF.P = []; return; }
+  if (document.hidden) return;                                                     // 切到后台：停，回来接着放
+  const dt = UF.last ? Math.min(.1, (ts - UF.last) / 1000) : 0; UF.last = ts; UF.clock += dt;
+  if (UF.play) {
+    const bd = ufBD(m), p0 = UF.pos;
+    UF.pos = Math.min(m.N, UF.pos + dt * UF.speed / bd);
+    if (!tfRM() && UF.pos > p0) ufEmit(m, p0, UF.pos, bd / UF.speed);
+    if (UF.pos >= m.N) { UF.pos = m.N; ufSetPlay(false); }
+  }
+  if (UF.P.length) UF.P = UF.P.filter(P => UF.clock - P.b < P.dur);           // 还没出发的（等输入到模型的输出粒子）也留着
+  ufDraw(); ufStats();
+  if (UF.play || UF.P.length) UF.raf = requestAnimationFrame(ufLoop);
+}
+function ufKick(){ if (!UF.raf) { UF.last = 0; UF.raf = requestAnimationFrame(ufLoop); } }
+function ufSetPlay(on){
+  UF.play = on; const b = $("#ufPlay"); if (b) b.innerHTML = ic(on ? "pause" : "play") + `<span>${on ? "暂停" : "播放"}</span>`;
+  if (on && UF.m && UF.pos >= UF.m.N) { UF.pos = 0; UF.P = []; UF.drop = 0; }
+  if (on) ufKick();
+}
+function ufSeek(p){ const m = UF.m; if (!m) return; UF.pos = Math.max(0, Math.min(m.N, p)); UF.P = []; if (!UF.raf) { ufDraw(); } ufStats(); }
+function ufStats(){
+  const m = UF.m; if (!m) return; const r = ufCum(m, UF.pos), inst = UF.play || UF.drag, g = id => document.getElementById(id);
+  fxCount(g("ufAt"), r.tok, fmtN, inst); fxCount(g("ufAi"), r.inp, fmtN, inst); fxCount(g("ufAcr"), r.cr, fmtN, inst); fxCount(g("ufAcw"), r.cw, fmtN, inst);
+  fxCount(g("ufAo"), r.out, fmtN, inst); fxCount(g("ufArs"), r.rs, fmtN, inst); fxCount(g("ufAn"), r.n, fmtN, inst);
+  fxCount(g("ufAh"), r.hit, v => v == null ? "—" : (v * 100).toFixed(1) + "%", inst);
+  fxCount(g("ufAc"), r.n && r.unpriced >= r.n ? null : r.cost, fmtC, inst);
+  const sl = $("#ufSl"); if (sl && !UF.drag && +sl.value !== Math.round(UF.pos)) sl.value = Math.round(UF.pos);
+  const ps = $("#ufPos"); if (ps) { const i = Math.min(m.N - 1, Math.floor(UF.pos)), b = m.d.buckets[i];
+    const h = !m.N ? "" : UF.pos >= m.N ? `<b>${tr("整段时间")}</b> · ${m.N} ${tr("段")}` : `${tr("截至")} <b>${esc(ufTitleT(b.t, m.d.step))}</b> · ${i + 1} / ${m.N}`;
+    if (ps.dataset.h !== h) { ps.dataset.h = h; ps.innerHTML = h; } }
+}
+function ufLegend(){
+  const m = UF.m, g = UF.g, d = m.d, T = d.totals || {};
+  const st = {h: "一个小时", d: "一天", w: "一周"}[d.step] || "";
+  return `按当前筛选汇总「用量」页同一份记录：${fmtFull(T.n)} 次请求、合计 ${fmtN(T.real)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${T.hit != null ? `、缓存命中率 ${(T.hit * 100).toFixed(1)}%` : ""}。
+    带子宽度、粒子个数都按真实 token 数换算：输入 1 个粒子 = <b>${(UF.u || 0).toLocaleString()}</b> tokens${UF.k > 1 ? `；输出侧放大 <b>×${UF.k}</b>（带子宽度也 ×${UF.k}），1 个粒子 = <b>${(+(UF.u / UF.k).toPrecision(3)).toLocaleString()}</b> tokens。按真实比例，输出只占这段时间 tokens 的 <b>${fxPct(m.T.out, m.T.inp + m.T.cr + m.T.cw + m.T.out)}</b>，可以切到「真实比例」看` : `；输出侧和输入侧同一比例（真实比例，不放大）`}。
+    浅色底是整段时间的总量，实色是播放到当前位置的累计；每段时间的粒子按那段时间每条路径的真实用量算好个数，先输入进模型、再出输出。没有用量就没有粒子。底部每根柱是${st}。悬停看准确数字。`;
+}
+function ufRender(){
+  const box = $("#ufBody"), m = UF.m; if (!box || !m) return;
+  const sp = +(store.get("ccss.ufspeed") || 1); UF.speed = [.5, 1, 2, 4].includes(sp) ? sp : 1;
+  const card = (id, name, col, cls) => `<div${cls ? ` class="${cls}"` : ""}><span>${col ? `<i style="background:var(${col})"></i>` : ""}${name}</span><b id="${id}">—</b></div>`;
+  box.innerHTML = `<div class="tf uf">
+    <div class="tfbar"><button class="primary" id="ufPlay"></button>
+      <input type="range" id="ufSl" min="0" max="${m.N}" step="1" value="${Math.round(UF.pos)}" title="拖动到某个时间" ${m.N ? "" : "disabled"}>
+      <select id="ufSp" title="播放速度">${[.5, 1, 2, 4].map(v => `<option value="${v}" ${v === UF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
+      <span class="tfpos" id="ufPos"></span><span class="tfsep"></span>${fxSeg("ufSc")}<span class="tfunit" id="ufUnit"></span></div>
+    <div class="tfcv"><canvas id="ufCv"></canvas><div class="fxtip" id="ufTip"></div></div>
+    <div class="tfacc">${card("ufAt", "合计 Tokens", "", "tfk1")}${card("ufAi", "新输入", "--u2")}${card("ufAcr", "缓存读", "--u1")}${card("ufAcw", "缓存写", "--u4")}${card("ufAo", "输出", "--u3")}${card("ufArs", "其中思考", "--u5")}${card("ufAn", "请求数")}${card("ufAh", "缓存命中率")}${card("ufAc", "费用")}</div>
+    <div class="dim tfleg" id="ufLeg"></div></div>`;
+  ufSetPlay(false);
+  $("#ufPlay").onclick = () => ufSetPlay(!UF.play);
+  $("#ufSp").onchange = e => { UF.speed = +e.target.value; store.set("ccss.ufspeed", String(UF.speed)); };
+  const sl = $("#ufSl"); sl.oninput = () => { UF.drag = true; ufSeek(+sl.value); }; sl.onchange = () => { UF.drag = false; ufStats(); };
+  const cv = $("#ufCv"), tip = $("#ufTip");
+  const seekAt = e => { const g = UF.g; if (!g || !UF.m.N) return false; const r = cv.getBoundingClientRect(), z = r.width / cv.clientWidth, px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
+    if (py < g.sy - 8 && !UF.drag) return false; ufSeek(Math.max(0, Math.min(UF.m.N, Math.round((px - g.sx) / (g.sw / UF.m.N))))); return true; };
+  cv.onmousedown = e => { if (!seekAt(e)) return; UF.drag = true; const mv = ev => seekAt(ev), up = () => { UF.drag = false; ufStats(); document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up); };
+  cv.onmousemove = e => fxHover(cv, tip, UF.hits, e, ufStripTip);
+  cv.onmouseleave = () => { tip.style.display = "none"; };
+  fxResize(cv, () => { UF.strip = null; if (!UF.raf) ufDraw(); });
+  fxSegWire("ufSc", () => { ufScale(); UF.g = null; UF.strip = null; UF.P = []; UF.drop = 0; ufScaleUI(); if (!UF.raf) ufDraw(); ufStats(); });
+  ufDraw(); ufStats(); ufLiveUI(); ufScaleUI();
+}
+function ufScaleUI(){ fxSegSync("ufSc"); const e = $("#ufUnit"); if (e && UF.u) { const h = fxUnit(UF.u, UF.k, UF.u / UF.k); if (e.dataset.h !== h) { e.dataset.h = h; e.innerHTML = h; } }
+  const lg = $("#ufLeg"); if (lg && UF.m) { const h = ufLegend(); if (lg.dataset.h !== h) { lg.dataset.h = h; lg.innerHTML = h; } } }
+// 拿到（新的）聚合：new = 换了筛选，从头放一遍；refresh = 同一筛选的新数据，停在末尾就留在末尾
+function ufSet(d, mode){
+  const old = UF.m, atEnd = !old || UF.pos >= old.N;
+  UF.d = d; UF.m = ufModel(d); UF.g = null; UF.strip = null; UF.sv++; UF.col = null;
+  ufScale();
+  if (mode === "new" || !$("#ufCv")) {
+    const auto = mode === "new" && !tfRM() && UF.m.N > 1 && UF.m.T.n;
+    UF.pos = auto ? 0 : UF.m.N; UF.P = [];
+    ufRender();
+    if (auto) ufSetPlay(true);
+  } else {
+    UF.pos = atEnd ? UF.m.N : Math.min(UF.pos, UF.m.N);
+    const sl = $("#ufSl"); if (sl) { sl.max = UF.m.N; sl.disabled = !UF.m.N; }
+    ufScaleUI();
+    if (!UF.raf) ufDraw(); ufStats();
+  }
+  const sub = $("#ufSub"); if (sub) sub.textContent = tr({h: "按小时", d: "按天", w: "按周"}[d.step] || "");
+}
+const ufQk = () => usQs().replace(/(from|to)=\d+&?/g, "") + "|" + US.range;
+async function ufLoad(force){
+  const box = $("#ufBody"); if (!box) return;
+  const qs = usQs(), qk = ufQk();
+  if (!force && UF.d && UF.qk === qk && $("#ufCv")) return;
+  if (UF.ac) UF.ac.abort();
+  const ac = UF.ac = new AbortController();
+  if (!$("#ufCv")) box.innerHTML = '<div class="empty">读取用量…</div>';
+  let d;
+  try { d = await api("/api/usage/flow?" + qs, undefined, {signal: ac.signal}); }
+  catch(e){ if (e.name === "AbortError" || UF.ac !== ac) return; if (!$("#ufCv") && $("#ufBody")) $("#ufBody").innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  finally { if (UF.ac === ac) UF.ac = null; }
+  if (!$("#ufBody")) return;
+  const same = UF.qk === qk && UF.d;
+  UF.qk = qk;
+  if (UF.lv.ac && !same) UF.lv.ac.abort();                                         // 换了筛选：实时那边按新筛选重新等
+  ufSet(d, same ? "refresh" : "new");
+  if (UF.lv.on) ufLivePoll();
+}
+// 用量页每次加载完（换筛选 / 定时刷新 / 同步）：看过流转图才去取；实时开着时由实时负责新数据
+function ufOnLoad(heat){ if (UF.seen && $("#ufBody")) ufLoad(heat === "tick" && !UF.lv.on); }
+function ufWatch(){
+  const el = $("#usFlow"); if (!el) return;
+  UF.seen = false; if (UF.io) UF.io.disconnect();
+  UF.lv.on = store.get("ccss.uflive") === "1"; ufLiveWire();
+  if (!("IntersectionObserver" in window)) { UF.seen = true; ufLoad(); return; }
+  UF.io = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting)) return; UF.io.disconnect(); UF.io = null; UF.seen = true; ufLoad(true); }, {rootMargin: "120px"});
+  UF.io.observe(el);
+}
+// ---- 实时：长轮询 /api/usage/flow/live，用量记下来（后台增量扫描）就流进来 ----
+function ufLiveWire(){ const b = $("#ufLive"); if (b) b.onclick = () => ufLiveOn(!UF.lv.on); ufLiveUI(); }
+function ufLiveOn(on){
+  const L = UF.lv; L.on = on; L.err = ""; store.set("ccss.uflive", on ? "1" : "0");
+  if (on) { if (UF.m) { UF.pos = UF.m.N; ufSetPlay(false); ufDraw(); ufStats(); } ufLivePoll();
+    if (!L.iv) L.iv = setInterval(() => { if (!L.on || !$("#ufLive")) { clearInterval(L.iv); L.iv = 0; return; } ufLiveUI(); }, 1000); }
+  else if (L.ac) L.ac.abort();
+  ufLiveUI();
+}
+function ufLiveUI(){
+  const L = UF.lv, b = $("#ufLive"), s = $("#ufLs"); if (!b || !s) return;
+  b.classList.toggle("on", L.on); b.classList.toggle("fol", L.on && !L.err);
+  const tip = L.on ? "实时：新记下的用量几秒内流进来；再点一下退出实时" : "实时：跟着新记下的用量（几秒扫描一次本机记录）";
+  if (b.dataset.tip0 !== tip) { b.dataset.tip0 = tip; b.title = tip; }
+  let h = "";
+  if (L.on) { const last = UF.d && UF.d.last;
+    h = L.err ? `<span class="tfwarn">${esc(L.err)}</span>` : L.at && Date.now() - L.at < 4000 ? `<span>新用量</span>` : `<span>等待新用量…</span>${last ? `<span class="dim">上一次 ${tfAgo(last)}</span>` : ""}`; }
+  if (s.dataset.h !== h) { s.dataset.h = h; s.innerHTML = h; }
+}
+async function ufLivePoll(){
+  const L = UF.lv; if (L.busy) return; L.busy = true;
+  try {
+    while (L.on) {
+      if (!$("#ufCv") || PAGE !== "usage") break;
+      if (!UF.d) { await new Promise(z => setTimeout(z, 1000)); continue; }
+      const qk = UF.qk; L.ac = new AbortController();
+      let r;
+      try { r = await api(`/api/usage/flow/live?${usQs()}&v=${encodeURIComponent(UF.d.v || "")}&wait=${UF_WAIT}`, undefined, {signal: L.ac.signal}); }
+      catch(e){ if (!L.on) break; if (e.name === "AbortError") continue; L.err = "实时连接断了，3 秒后重试：" + e.message; ufLiveUI(); await new Promise(z => setTimeout(z, 3000)); continue; }
+      if (!L.on) break;
+      L.err = "";
+      if (!r.same && qk === UF.qk && ufQk() === qk) ufMerge(r);
+      ufLiveUI();
+    }
+  } finally { L.busy = false; L.ac = null; ufLiveUI(); }
+}
+// 实时新增的部分：每条路径 新合计 − 旧合计，按同一个单位（累计取整）换成粒子个数，1.6 秒里放完；没有新增就不动
+function ufPathTot(m){ const t = new Map(), e = new Map(); ufPaths(m).forEach(row => row.forEach(p => { t.set(p.key, (t.get(p.key) || 0) + p.v); e.set(p.key, p); })); return {t, e}; }
+function ufDelta(old, m, u, k){
+  const a = ufPathTot(old).t, b = ufPathTot(m), out = [], fl = (v, un) => Math.floor(v / un + 1e-7);
+  for (const [key, v] of b.t) { const p = b.e.get(key), un = p.out ? u / k : u, n = fl(v, un) - fl(a.get(key) || 0, un); if (n > 0) out.push({key, j1: p.j1, j2: p.j2, out: p.out, n}); }
+  return out;
+}
+function ufMerge(r){
+  const old = UF.m;
+  ufSet(r, "refresh");
+  const m = UF.m; UF.lv.at = Date.now();
+  if (!old || !$("#ufCv")) return;
+  UF.pos = m.N;
+  const dl = ufDelta(old, m, UF.u, UF.k);
+  if (dl.length && !tfRM()) { const C = UF.col || (UF.col = tfColors()), [din, dout] = ufDur(.4);
+    for (const p of dl) for (let q = 0; q < p.n; q++) ufMk(m, p, UF.clock + 1.6 * (q + .5) / p.n, din, dout, C); ufKick(); }
+  else { ufDraw(); ufStats(); }
+}
+new MutationObserver(() => { UF.col = null; UF.strip = null; if ($("#ufCv") && !UF.raf) ufDraw(); }).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { UF.col = null; UF.strip = null; if ($("#ufCv") && !UF.raf) ufDraw(); });
+// ---------- /用量页的 Token 流转 ----------
 async function ssView(agent, id, lim){
   lim = lim || 300;
   const same = SS.cur && SS.cur.agent === agent && SS.cur.id === id;
@@ -2681,7 +3725,9 @@ async function ssView(agent, id, lim){
   if (SS.cur.agent !== agent || SS.cur.id !== id) return;
   if (dt && dt.item) x = Object.assign({}, dt.item, x, {resume: dt.item.resume, file: dt.item.file});
   const g = trGroup(x.gacct);
+  const tfOn = TF_AG.includes(agent), mode = tfOn && store.get("ccss.svmode") === "flow" ? "flow" : "chat";
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
+      ${tfOn ? `<span class="seg svmode" id="svMode" title="对话内容，或者按真实用量回放每一次模型调用的 token 流转"><button data-m="chat" class="${mode === "chat" ? "on" : ""}">对话</button><button data-m="flow" class="${mode === "flow" ? "on" : ""}">Token 流转</button></span>` : ""}
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
@@ -2696,10 +3742,17 @@ async function ssView(agent, id, lim){
         agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
         agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；也可以导进 Claude Code 接着聊">${ic("claude", "logo")} 导进 Claude Code…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : agent === "opencode" || agent === "zcode" ? `<span class="tag ${agent}">${esc(x.source_name || APPN[agent])} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
-    <div class="pv chatpv" id="svPv">${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
+    ${tfOn ? `<div id="svFlow"${mode === "flow" ? "" : " hidden"}></div>` : ""}
+    <div class="pv chatpv" id="svPv"${mode === "flow" ? " hidden" : ""}>${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
   { const pv = $("#svPv"), old = SS.pvKeep; SS.pvKeep = null;
     pv.scrollTop = old != null ? pv.scrollHeight - old : pv.scrollHeight;
     const me = $("#svMoreE"); if (me) me.onclick = () => { SS.pvKeep = pv.scrollHeight - pv.scrollTop; me.disabled = true; ssView(agent, id, Math.min(5000, lim * 3)); }; }
+  if (tfOn) {                          // 0.5.1：对话 | Token 流转（记住选的哪个）
+    const show = m => { $$("#svMode button").forEach(b => b.classList.toggle("on", b.dataset.m === m)); $("#svPv").hidden = m === "flow"; $("#svFlow").hidden = m !== "flow";
+      if (m === "flow") tfView(agent, id, $("#svFlow")); else { tfSetPlay(false); if (TF.lv) { TF.lv.on = false; if (TF.lv.ac) TF.lv.ac.abort(); } const pv = $("#svPv"); pv.scrollTop = pv.scrollHeight; } };
+    $$("#svMode button").forEach(b => b.onclick = () => { store.set("ccss.svmode", b.dataset.m); show(b.dataset.m); });
+    if (mode === "flow") tfView(agent, id, $("#svFlow"));
+  }
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
   if (agent === "opencode" || agent === "zcode") $("#svOpen").onclick = () => cvOpen(agent, [id]);
@@ -3335,7 +4388,7 @@ R.settings = async () => {
   ST.upd = u; setBadge(u.badge);
   const th = store.get("ccss.theme") || "system";
   const win = s.tray_supported, dis = win ? "" : "disabled";
-  pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。</p>
+  pg.innerHTML = `<h2>${ic("gear")}设置</h2><p class="sub">设置存在 <code>${esc(st.home)}/settings.json</code>，和 CC Msg 的互不影响。 <a href="#about" id="stAbout">关于 CC Session Sync（v${esc(VERSION)}）</a></p>
     <div class="card"><h3>外观与窗口</h3><div class="setlist">
       ${setRow("globe", "界面语言 · Language", `缺省跟随系统（现在系统是${s.lang_system === "en" ? "英文" : "中文"}）。切换后界面马上重新载入；你的会话内容不会被翻译`, `<span class="seg" id="stLang" translate="no">${[["auto", s.lang_now === "en" ? "System" : "跟随系统"], ["zh", "中文"], ["en", "English"]].map(([v, t]) => `<button data-v="${v}" class="${(s.lang || "auto") === v ? "on" : ""}">${t}</button>`).join("")}</span>`)}
       ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
@@ -3367,6 +4420,7 @@ R.settings = async () => {
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
   $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
   $$("#stLang button").forEach(b => b.onclick = async () => { await saveSetting({lang: b.dataset.v}); location.reload(); });
+  $("#stAbout").onclick = e => { e.preventDefault(); go("about"); };
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
@@ -3422,6 +4476,37 @@ function scHtml(r){
   return `<div class="dim" style="font-size:calc(13px*var(--fk));margin-bottom:4px">${when(r.time)} · 通过 ${c.pass || 0} / 注意 ${c.warn || 0} / 没通过 ${c.fail || 0}（${r.ms} ms）</div>` +
     r.items.map(i => `<div class="sc ${i.status}">${ic(SC_IC[i.status])}<div style="min-width:0"><div class="nm">${esc(i.name)}</div><div class="dt">${esc(i.detail)}</div>${i.fix ? `<div class="fx">建议：${esc(i.fix)}</div>` : ""}</div></div>`).join("");
 }
+// ---------- 0.5.1「关于」：版本、作者、仓库、许可证（都是程序自己带的，不联网） ----------
+function extOpen(url){                                 // 桌面版走 pywebview 的 open_url（只开 GitHub 的页面），浏览器里开新标签页
+  try { if (window.pywebview && window.pywebview.api && window.pywebview.api.open_url) return window.pywebview.api.open_url(url); } catch(e){}
+  window.open(url, "_blank", "noopener");
+}
+R.about = async () => {
+  const pg = $("#pg-about");
+  let a;
+  try { a = await api("/api/about"); } catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
+  const L = (u, t, i) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-ext="${esc(u)}">${ic(i || "external")}${esc(t || u)}</a>`;
+  pg.innerHTML = `<div class="ab">
+    <div class="abhd"><img src="/icon.png" alt=""><div><h2>${esc(a.product)}</h2><div class="ver" translate="no">v${esc(a.version)}</div>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">Claude Code / Codex 的会话管家：账号同步、会话转换、时间线与备份、用量统计</div></div></div>
+    <div class="card"><div class="abgrid">
+      <span>版本</span><span translate="no">${esc(a.version)}${a.frozen ? "" : " (Python " + esc(a.python) + ")"}</span>
+      <span>作者</span><span>${L(a.author_url, a.author, "user")}</span>
+      <span>仓库</span><span>${L(a.repo_url, a.repo, "gitbranch")}</span>
+      <span>许可证</span><span>${L(a.license_url, a.license + " License", "file")} <span class="dim" translate="no">${esc(a.copyright)}</span></span>
+      <span>问题反馈</span><span>${L(a.issues_url, "GitHub Issues", "alert")}</span>
+      <span>发布页</span><span>${L(a.releases_url, "GitHub Releases", "download")}</span>
+      <span>系统</span><span translate="no">${esc(a.platform)}</span>
+      <span>数据目录</span><span><code>${esc(a.home)}</code></span>
+    </div>
+    <div class="ablinks"><button id="abUpd">${ic("refresh")} 检查更新</button><button id="abRepo">${ic("external")} 打开仓库</button><button id="abIss">${ic("alert")} 反馈问题</button></div></div>
+    <p class="dim" style="font-size:calc(13px*var(--fk))">最早是 ${L(a.origin, "CC Msg")} 里的功能，后来单独拿出来。本程序只读写这台电脑上的文件，不上传你的会话；检查更新只访问 GitHub。</p>
+  </div>`;
+  $$("#pg-about [data-ext]").forEach(e => e.onclick = ev => { ev.preventDefault(); extOpen(e.dataset.ext); });
+  $("#abUpd").onclick = () => updOpen(true);
+  $("#abRepo").onclick = () => extOpen(a.repo_url);
+  $("#abIss").onclick = () => extOpen(a.issues_url);
+};
 R.diag = async () => {
   const pg = $("#pg-diag");
   if (!pg.innerHTML) pg.innerHTML = '<div class="empty">检测中…</div>';

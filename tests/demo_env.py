@@ -57,6 +57,56 @@ def claude_transcript(f: Path, sid: str, cwd: str, turns: list[tuple[str, str]],
     os.utime(f, (t, t))
 
 
+def agentic_transcript(f: Path, sid: str, cwd: str, when: datetime, model="claude-sonnet-4-5"):
+    """截图用：像真的 agent 那样多轮调用工具的 Claude Code 会话（每次调用都有 usage，缓存逐步变大），外加一个子代理。"""
+    import random
+    rnd = random.Random(11)
+    plan = [("结账页偶尔重复扣款，帮我查一下", [["Grep", "Read"], ["Read", "Read"], ["Bash"], ["Edit"], ["Bash"], []]),
+            ("顺便补上单测", [["Read"], ["Write"], ["Bash"], ["Edit", "Bash"], []]),
+            ("把改动总结成 PR 描述", [["Bash"], []])]
+    L, parent, t, ctx = [], None, when, 9000
+    for q, steps in plan:
+        u = U()
+        L.append({"type": "user", "uuid": u, "parentUuid": parent, "sessionId": sid, "cwd": cwd, "timestamp": iso(t), "version": "2.1.0",
+                  "message": {"role": "user", "content": q}})
+        parent, fresh = u, 1800 + rnd.randint(0, 900)
+        for j, tools in enumerate(steps):
+            t += timedelta(seconds=rnd.randint(6, 40))
+            out = rnd.randint(150, 700) if tools else rnd.randint(900, 2400)
+            cw = fresh + rnd.randint(200, 2600)
+            content = [{"type": "text", "text": "先看一下相关代码。" if j == 0 else ("改好了，测试全过。" if not tools else "继续。")}]
+            ids = []
+            for n in tools:
+                ids.append("toolu_" + U()[:12])
+                content.append({"type": "tool_use", "id": ids[-1], "name": n, "input": {"path": "src/checkout.ts"} if n != "Bash" else {"command": "npm test"}})
+            m = U()
+            L.append({"type": "assistant", "uuid": m, "parentUuid": parent, "sessionId": sid, "cwd": cwd, "timestamp": iso(t), "requestId": "req_" + U()[:12],
+                      "message": {"id": "msg_" + U()[:12], "role": "assistant", "model": model, "type": "message", "content": content,
+                                  "stop_reason": "tool_use" if tools else "end_turn",
+                                  "usage": {"input_tokens": rnd.randint(3, 40) if j else fresh, "output_tokens": out, "cache_read_input_tokens": ctx,
+                                            "cache_creation_input_tokens": cw, "cache_creation": {"ephemeral_5m_input_tokens": cw, "ephemeral_1h_input_tokens": 0}}}})
+            parent, ctx = m, ctx + cw
+            if tools:
+                t += timedelta(seconds=rnd.randint(2, 25))
+                r = U()
+                L.append({"type": "user", "uuid": r, "parentUuid": parent, "sessionId": sid, "cwd": cwd, "timestamp": iso(t),
+                          "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": i, "content": "ok"} for i in ids]}})
+                parent = r
+        t += timedelta(minutes=rnd.randint(2, 6))
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in L) + "\n", encoding="utf-8")
+    sub, st = f.with_suffix("") / "subagents" / "agent-explore.jsonl", when + timedelta(seconds=30)
+    sub.parent.mkdir(parents=True, exist_ok=True)
+    S = []
+    for k in range(3):
+        st += timedelta(seconds=12)
+        S.append({"type": "assistant", "uuid": U(), "sessionId": sid, "cwd": cwd, "isSidechain": True, "timestamp": iso(st), "requestId": "req_" + U()[:12],
+                  "message": {"id": "msg_" + U()[:12], "model": "claude-haiku-4-5-20251001", "content": [{"type": "tool_use", "id": "toolu_" + U()[:10], "name": "Grep", "input": {}}] if k < 2 else [],
+                              "usage": {"input_tokens": 2400 if k == 0 else 20, "output_tokens": 220, "cache_read_input_tokens": 3000 * k, "cache_creation_input_tokens": 2500}}})
+    sub.write_text("\n".join(json.dumps(x) for x in S) + "\n", encoding="utf-8")
+    os.utime(f, (t.timestamp(), t.timestamp()))
+
+
 def jwt(claims: dict) -> str:
     b = lambda o: base64.urlsafe_b64encode(json.dumps(o).encode()).decode().rstrip("=")
     return f"{b({'alg': 'none'})}.{b(claims)}.sig"
@@ -110,6 +160,8 @@ def build(T: Path, extra: bool = False) -> dict:
         sid4 = U()
         claude_transcript(H / ".claude/projects/-work-scratch" / f"{sid4}.jsonl", sid4, "/work/scratch",
                           [("随手写个正则：匹配手机号", "^1[3-9]\\d{9}$")], NOW - timedelta(hours=7))
+        sid6 = U()
+        agentic_transcript(H / ".claude/projects/-work-shop" / f"{sid6}.jsonl", sid6, "/work/shop", NOW - timedelta(hours=2))
         ssd = T / "ss"
         ssd.mkdir(parents=True, exist_ok=True)
         (ssd / "claude-accounts.json").write_text(json.dumps({A1: {"email": "old.account@example.com", "name": "Old Account", "from": "demo"},

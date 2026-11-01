@@ -1065,6 +1065,136 @@ def heat_rows(h: dict) -> list:
     return [dict(zip(h["cols"], r)) for r in h["days"]]
 
 
+# ---------------- 0.5.1：用量页的 Token 流转（来源 → 输入种类 → 模型 → 输出，按时间桶回放） ----------------
+FLOW_COLS = ("n", "inp", "cr", "cw", "out", "rs", "cost", "unpriced")
+FLOW_TOPM = 7                       # 模型最多单列 7 个，其余并进「其他模型」
+_FLOW_MEMO: dict = {}
+_KICK = {"at": 0.0}
+
+
+def _verkey(c) -> str:
+    """数据版本：汇总版本（每次写入后的 rollup 都会换）+ 最大 rowid。变了 = 有新用量。"""
+    av = (c.execute("SELECT v FROM meta WHERE k='aggver'").fetchone() or ("",))[0]
+    return f"{av}:{c.execute('SELECT max(rowid) FROM calls').fetchone()[0] or 0}"
+
+
+def _flow_step(span: float) -> str:
+    """跟用量页的趋势图一致：两天多以内按小时，四个月以内按天，再长按周（时间轴最多一两百格）。"""
+    return "h" if span <= 2.2 * 86400 else "d" if span <= 120 * 86400 else "w"
+
+
+def _flow_key(ts: float, step: str) -> float:
+    """时间戳 → 所在本机小时 / 日历日 / 周（星期一）的起点。"""
+    t = time.localtime(ts)
+    if step == "h":
+        return time.mktime((t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, 0, 0, 0, 0, -1))
+    d = t.tm_mday - (t.tm_wday if step == "w" else 0)
+    return time.mktime((t.tm_year, t.tm_mon, d, 0, 0, 0, 0, 0, -1))
+
+
+def _flow_next(k: float, step: str) -> float:
+    t = time.localtime(k)
+    if step == "h":
+        return _flow_key(k + 3600 + 1, "h") if _flow_key(k + 3600, "h") <= k else _flow_key(k + 3600, "h")
+    return time.mktime((t.tm_year, t.tm_mon, t.tm_mday + (7 if step == "w" else 1), 0, 0, 0, 0, 0, -1))
+
+
+def flow(f: dict, step: str | None = None, now: float | None = None) -> dict:
+    """用量页「Token 流转」：按筛选（应用 / 供应商 / 模型 / 项目 / 时间段）把真实用量聚合成
+    时间桶 × 应用 × 模型 的格子（请求数、新输入、缓存读、缓存写、输出、其中思考、费用、缺价条数）。
+    前端用格子算出「来源 → 输入种类 → 模型 → 输出」各条带子的宽度，并按时间桶回放 / 累计。
+    跟 summary() 一样按 UTC 时间桶分组、再在 Python 里换成本机时间；同一筛选 + 数据版本直接给上次的结果。"""
+    now = now or time.time()
+    c = _conn()
+    try:
+        vk = _verkey(c)
+        w, a = _where(f)
+        mk = (str(DB_PATH), vk, tuple(sorted((k, str(v)) for k, v in f.items() if v)), step, int(now // 60))
+        if mk in _FLOW_MEMO:
+            return _FLOW_MEMO[mk]
+        B = _bucket()
+        rows = c.execute(f"SELECT CAST(ts/{B} AS INT), app, model, count(*), sum(inp), sum(cr), sum(cw5)+sum(cw1h), sum(out), "
+                         f"sum(min(coalesce(reasoning,0), out)), "
+                         f"sum(coalesce(c_in,0)+coalesce(c_cr,0)+coalesce(c_cw5,0)+coalesce(c_cw1h,0)+coalesce(c_out,0)), "
+                         f"sum(CASE WHEN coalesce(priced,0)=0 THEN 1 ELSE 0 END), max(ts), min(ts) FROM calls{w} GROUP BY 1,2,3", a).fetchall()
+    finally:
+        c.close()
+    t0 = float(f["from"]) if f.get("from") else min((r[12] for r in rows), default=now)
+    t1 = float(f["to"]) if f.get("to") else now
+    step = step if step in ("h", "d", "w") else _flow_step(max(0.0, t1 - t0))
+    mtot: dict = {}
+    for r in rows:
+        mtot[r[2]] = mtot.get(r[2], 0) + (r[4] or 0) + (r[5] or 0) + (r[6] or 0) + (r[7] or 0)
+    top = [m for m, _ in sorted(mtot.items(), key=lambda kv: (-kv[1], str(kv[0])))]
+    models = top[:FLOW_TOPM] + (["\x00other"] if len(top) > FLOW_TOPM else [])
+    mi = {m: i for i, m in enumerate(models)}
+    oth = len(models) - 1
+    apps = sorted({r[1] for r in rows}, key=lambda x: ({"claude-code": 0, "claude-desktop": 1, "codex": 2, "dsh": 3}.get(x, 9), str(x)))
+    ai = {x: i for i, x in enumerate(apps)}
+    keyof: dict = {}
+    cells: dict = {}                         # 桶起点 → {(应用, 模型): [8 个数]}
+    tot = [0] * 8
+    last = 0.0
+    for b, app, model, *v in rows:
+        k = keyof.get(b)
+        if k is None:
+            k = keyof[b] = _flow_key(b * B, step)
+        v = [x or 0 for x in v]
+        last = max(last, v[8])
+        ck = (ai[app], mi.get(model, oth))
+        e = cells.setdefault(k, {}).setdefault(ck, [0] * 8)
+        for i in range(8):
+            e[i] += v[i]
+            tot[i] += v[i]
+    keys = []
+    if rows or f.get("from"):
+        k, lastc = _flow_key(t0, step), max(cells, default=t0)
+        while (k < t1 or k <= lastc) and len(keys) < 2000:      # 「到」不含（跟筛选 ts < to 一致），有用量的桶都要在
+            keys.append(k)
+            k = _flow_next(k, step)
+        for k in cells:                      # 时间段外 / 夏令时边界上的桶也别丢
+            if k not in keys:
+                keys.append(k)
+        keys.sort()
+    r6 = lambda x: round(x, 6)
+    out = {"v": vk, "step": step, "from": t0, "to": t1, "last": last or None, "cols": list(FLOW_COLS), "apps": apps, "models": models,
+           "buckets": [{"t": k, "cells": [[ca, cm, *[r6(x) if i == 6 else x for i, x in enumerate(e)]] for (ca, cm), e in sorted(cells.get(k, {}).items())]}
+                       for k in keys]}
+    T = dict(zip(FLOW_COLS, tot))
+    p = T["inp"] + T["cr"] + T["cw"]
+    T.update(cost=r6(T["cost"]), real=p + T["out"], hit=(T["cr"] / p) if p else None, partial=bool(T["unpriced"]) and T["unpriced"] < T["n"])
+    out["totals"] = T
+    _FLOW_MEMO.clear()
+    _FLOW_MEMO[mk] = out
+    return out
+
+
+def flow_live(f: dict, v: str = "", wait: float = 0, step: str | None = None, kick: float = 5.0) -> dict:
+    """用量流转的「实时」：长轮询，数据版本跟 v 不一样了就回新的聚合（{"same": true} = 等到点还没变）。
+    等的时候每 kick 秒顺手做一次增量扫描（后台本来一分钟才扫一次），这样新记下的用量几秒内就能流进来。"""
+    deadline = time.time() + max(0.0, min(float(wait or 0), 25.0))
+    while True:
+        c = _conn()
+        try:
+            vk = _verkey(c)
+        finally:
+            c.close()
+        if vk != v:
+            return dict(flow(f, step), changed=bool(v))
+        if time.time() >= deadline:
+            return {"same": True, "v": vk}
+        if kick and not os.environ.get("CC_SESSIONSYNC_NO_USAGE") and time.time() - _KICK["at"] >= kick and _lock.acquire(blocking=False):
+            try:
+                _KICK["at"] = time.time()
+                scan()
+            except Exception:
+                pass
+            finally:
+                _lock.release()
+            continue
+        time.sleep(0.4)
+
+
 def options() -> dict:
     """筛选下拉框的选项。0.4.6：从 daily 日汇总表取（几千行），不再每次把全部原始记录扫三遍。"""
     c = _conn()

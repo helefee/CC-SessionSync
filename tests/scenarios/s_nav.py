@@ -18,7 +18,7 @@ navp = re.findall(r'data-p="([\w-]+)"', top)
 ok("convert" in navp, "nav has 会话转换")
 ok(not any(p in navp for p in ("codex", "dsh", "cursor")), f"no per-pair pages left in the nav ({navp})")
 ok("Codex→Claude" not in top and "DeepSeek⇄Claude" not in top and "Cursor⇄Claude" not in top, "no per-pair labels in the top bar")
-ok(set(navp) <= {"timeline", "sync", "convert", "usage", "models", "diag", "settings"}, "nav = timeline / sync / convert / usage / models / diag / settings")
+ok(set(navp) <= {"timeline", "sync", "convert", "usage", "models", "diag", "settings", "about"}, "nav = timeline / sync / convert / usage / models / diag / settings / about")
 for p in ("codex", "dsh", "cursor"):
     ok(f'id="pg-{p}"' in page and f'data-go="{p}"' in page, f"old {p} page kept, reachable only via the link at the bottom of 会话转换")
 ok(re.search(r'const PAGE_ALIAS = \{codex: \["codex", "claude"\]', page) is not None, "PAGE_ALIAS: codex → 会话转换 with Codex → Claude Code preselected")

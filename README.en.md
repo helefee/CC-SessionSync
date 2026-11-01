@@ -66,6 +66,66 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.5
 
+- **Token flow animation and an About page (0.5.1):** the session detail view gets a *Conversation | Token flow* switch (Claude Code, Codex,
+  DeepSeek Harness). It replays **every model call** of the session from the real usage in its records — Claude Code `message.usage`
+  (streamed lines deduped, subagents included), Codex `token_count` / `token_usage_record` deltas, DeepSeek Harness `usage` — the same
+  numbers as the Usage page (checked in the tests). Input flows in as cache read / cache write / fresh input, through the model (with the
+  context size), out as output (incl. reasoning) and tool calls, and tool results loop back into the next call. Band widths and particle
+  counts are proportional to the token counts: each input particle is a fixed number of tokens, so the session's particles add up exactly to
+  total ÷ unit; the much smaller output side is magnified by a stated 1 / 2 / 5 factor. Play / pause, previous / next (← →, space), drag or
+  click the timeline (one bar per call, lines at your turns, subagent calls marked), 0.5×–8× speed, running totals up to the playhead
+  (input, cache, output, reasoning, total, hit rate, tool calls, cost) and the current call's model, time, gap, turn and tools. Follows
+  light / dark and Chinese / English, doesn't autoplay with reduced motion, works offline with no new dependencies.
+  **Live:** if the session is still running (record written in the last 2 minutes), the view turns on *● Live* with a pulsing dot.
+  Each new model call is animated as it lands, the timeline grows a bar, and the totals, cost and cache hit rate update. When idle it
+  shows *Waiting for the next call…* and when the last call was. Scrubbing back or pausing stops following, and *Back to live* jumps to
+  the newest call. *● Live* in the sessions bar opens the most recently active Claude Code / Codex / DeepSeek Harness session. Under the
+  hood it is a token-authenticated long-poll on the local server (up to 15 s) that reads only the bytes appended to the record, Claude
+  subagent `agent-*.jsonl` files included. Half-written lines wait for the next read, and a truncated or replaced file triggers a full
+  resend.
+  **Usage page token flow:** below the daily chart, the Usage page now draws the **real usage** for the current filters (range, app,
+  provider, model) as a four-column flow: **app → input type (cache read / cache write / fresh input) → model → output (reply /
+  reasoning)**. The local server aggregates it (`/api/usage/flow`): time bucket × app × model with requests, each token kind,
+  reasoning, cost and unpriced count, matching the Usage page's `summary()` for every filter (checked in the tests). Up to 7 models get
+  their own row and the rest are merged into *Other models*. Buckets are hourly up to two days, daily up to four months, then weekly.
+  Band widths follow the token counts. The pale band is the whole range and the solid band is the running total up to the playhead.
+  Particles are emitted from each bucket's real usage, and the output side is magnified by a stated 1 / 2 / 5 factor. You get play /
+  pause, scrubbing, 0.5×–4× speed, counting-up running totals (tokens, cache, output, reasoning, requests, hit rate, cost) and hover
+  tooltips with exact numbers. *● Live* long-polls the data version and merges new usage as it lands. The card loads only when it
+  scrolls into view.
+  **Polished visuals for both flows:** gradient bands with edges, glowing nodes and particles, a HiDPI canvas
+  that re-lays out with its container, labels that spread out instead of overlapping (with a halo for contrast in light and dark), and
+  colours from the theme. Reduced motion means no autoplay and no particles. Particles are capped, animation runs on
+  `requestAnimationFrame` and stops while the page is hidden. No new dependencies or CDN.
+  **Model icons and a faithful flow:** model nodes, tooltips, the legend and the current-call panel show a Claude icon for Claude
+  models, an OpenAI icon for GPT / o-series / Codex models, a DeepSeek icon for DeepSeek and a neutral chip otherwise (inline SVG from
+  Simple Icons, CC0, also drawn on the canvas from SVG). A *Magnify output | True proportions* switch sits in both toolbars next to a
+  "1 dot = N tokens" chip; when magnified, the factor, the output unit and output's real share are stated. The order matches reality:
+  the whole input reaches the model before output starts (reasoning first), tool calls follow, and tool results loop into the next
+  input. Band widths are always the current call's real numbers (no tween). Usage-page dots are no longer sampled at random: each
+  bucket's dots per path are computed from real usage so they sum to total ÷ unit, empty periods emit none, and live bursts are
+  exact deltas (`tests/scenarios/s_flow_fidelity.py` checks this in node). Model labels get their own gutter instead of covering the
+  output bands.
+
+  ![Usage token flow with model icons](docs/screenshots/v052-usageflow-en-dark.png)
+
+  ![Session token flow](docs/screenshots/v052-sessionflow-en-dark.png)
+
+  The new **About** page (ⓘ in the top bar, a link in Settings, *About…* in the tray) shows the version, author
+  [helefee](https://github.com/helefee), the repository [helefee/CC-SessionSync](https://github.com/helefee/CC-SessionSync), the MIT
+  license, issue / release links, system and data folder.
+
+  ![Token flow](docs/screenshots/v051-tokenflow-en.png)
+
+  ![Usage page token flow](docs/screenshots/v051-usageflow-en-dark-hover.png)
+
+  ![Usage page token flow, light](docs/screenshots/v051-usageflow-en-light.png)
+
+  ![Session token flow, polished](docs/screenshots/v051-sessionflow-en-dark.png)
+
+  ![Token flow, live](docs/screenshots/v051-live-en-light-panel.png)
+
+  ![About](docs/screenshots/v051-about-en.png)
 - **Account sync: deleted sessions stay deleted, undo restores byte-for-byte, and every sync / undo is verified (0.5.0):**
   sync used to check only the current account's deletion tombstones, so a session you deleted in account A could come back from an older
   copy in account C when syncing to B. Tombstones in every account folder now count (a session used again after the delete still syncs),
