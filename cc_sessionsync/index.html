@@ -7,7 +7,9 @@
 <link rel="icon" href="/icon.png">
 <script>try { var t = localStorage.getItem("ccss.theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <script>try { var r = document.documentElement, f = +localStorage.getItem("ccss.fk"), z = +localStorage.getItem("ccss.zoom");   // 字号 / 界面缩放（0.2.6）：先套上，免得闪一下
-  if (f >= 0.8 && f <= 1.5) r.style.setProperty("--fk", f); if (z >= 0.8 && z <= 2) { r.style.zoom = z; r.style.setProperty("--z", z); } } catch (e) {}</script>
+  if (f >= 0.8 && f <= 1.5) r.style.setProperty("--fk", f); if (z >= 0.8 && z <= 2) { r.style.zoom = z; r.style.setProperty("--z", z); }
+  var w = localStorage.getItem("ccss.chatw"); w = w === null || w === "" ? 860 : +w;   // 对话文本宽度（0.5.2）：0 = 全宽
+  r.style.setProperty("--chatw", w === 0 ? "100%" : "calc(" + Math.min(1600, Math.max(520, w || 860)) + "px*var(--fk))"); } catch (e) {}</script>
 <style>
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-medium.woff2) format("woff2");font-weight:450 549;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
@@ -208,6 +210,30 @@ table.t td.n{text-align:right;white-space:nowrap}
 .cthink .tbody{background:transparent;color:var(--muted);border-left:2px solid var(--line);border-radius:0;font-family:var(--sans);margin:2px 0 4px 10px;max-height:360px}
 .cthink .tbody .md{font-size:calc(13px*var(--fk))}
 .chatpv{gap:0}
+/* 0.5.2：对话气泡跟着来源应用换样式（变量由 CHTH 生成，没设就是上面的统一样式）+ 可调的文本宽度 --chatw */
+.chat{width:100%;max-width:var(--chatw,100%);margin:0 auto;box-sizing:border-box}
+.chat .cm.u{align-self:var(--cu-al,flex-end);align-items:var(--cu-al,flex-end);max-width:var(--cu-mw,min(600px,85%))}
+.chat .cm.u .cmeta{align-self:flex-end}
+.chat .cbub{background:var(--cu-bg,var(--bubble));color:var(--cu-fg,inherit);border:var(--cu-bdw,0px) solid var(--cu-bd,transparent);border-left-width:var(--cu-blw,var(--cu-bdw,0px));border-radius:var(--cu-r,16px);padding:var(--cu-p,8px 14px);font-family:var(--cu-font,inherit)}
+.chat .cm.a{font-family:var(--ca-font,var(--serif));line-height:var(--ca-lh,1.7);font-size:calc(var(--ca-fs,15px)*var(--fk))}
+.chat .md a,.chat .cmore,.chat .tsub{color:var(--c-link,var(--accent))}
+.chat .md .cb,.chat .tcall pre{background:var(--c-code,var(--codebg))}
+.chat .chd .cav{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--c-avbg,transparent);flex:none}
+.chat .chd .cav .logo{width:14px;height:14px}
+.chat .ctools,.chat .cthink{font-family:var(--c-tfont,var(--sans))}
+.chat .tcall .tsm::before{content:var(--c-mark,none);color:var(--c-ok,var(--ok));font-weight:700;line-height:1;flex:none;width:10px;text-align:center;font-family:var(--sans);font-variant-emoji:text}
+.chat .tcall.bad .tsm::before{color:var(--c-bad,var(--bad))}
+.chat .tcall .tic{display:var(--c-tic,inline-flex)}
+.chat .cthink .tbody{border-left-color:var(--c-think,var(--line))}
+.rdpop{min-width:300px!important;padding:12px 14px!important;cursor:default}
+.rdpop .rdl{font-size:calc(12.5px*var(--fk));color:var(--muted);margin:2px 0 6px;display:flex;justify-content:space-between;gap:8px}
+.rdpop .rdl+.seg,.rdpop .seg+.rdl{margin-bottom:10px}
+.rdpop .seg button,.rdpop .seg button:hover{width:auto;display:inline-block;padding:3px 11px;border-radius:999px}
+.rdpop .seg button:not(.on):hover{background:transparent;color:var(--text)}
+.rdpop .rdn{font-size:calc(11.5px*var(--fk));color:var(--faint);line-height:1.45;margin-top:8px}
+.rdw{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap}.rdw input[type=range]{accent-color:var(--accent);min-width:160px;flex:1}
+.rdw b{font-size:calc(12.5px*var(--fk));color:var(--muted);font-weight:500;min-width:56px}
+.rdpop .rdw{display:flex;margin-top:8px}
 .empty{color:var(--faint);text-align:center;padding:28px 10px;font-size:calc(14px*var(--fk))}
 .kv{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;font-size:calc(13.5px*var(--fk))}.kv>div:nth-child(odd){color:var(--muted)}
 .batch{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line2);font-size:calc(13.5px*var(--fk))}
@@ -381,6 +407,8 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .split2{display:flex;align-items:stretch;min-height:0}
 .split2>.l{flex:1;min-width:300px}
 .split2>.r{width:var(--dw,44%);flex:none;min-width:320px;max-width:70%}
+.split2.nocur>.r,.split2.nocur>.grip,.split2.focus>.l,.split2.focus>.grip{display:none}.split2.focus>.r{width:auto;flex:1;max-width:none;min-width:0}
+.ssnav{display:inline-flex;gap:6px;align-items:center}.ssnav:empty{display:none}.ssnav button{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px}.ssnav .dim{font-size:calc(12px*var(--fk))}
 .split2>.grip{margin:0 3px}
 .split2>.l>.card,.split2>.r>.card{height:100%;margin-bottom:0}
 @media (max-width:900px){.split2{flex-direction:column}.split2>.r{width:auto;max-width:none}.split2>.grip{display:none}}
@@ -578,11 +606,13 @@ td.nw,th.nw{white-space:nowrap}
 .fxtip>div{display:flex;align-items:center;gap:6px;white-space:nowrap}.fxtip .n{margin-left:auto;font-weight:600;padding-left:10px}
 .fxtip i{display:inline-block;width:8px;height:8px;border-radius:2px;flex:none}
 #usFlow .ct{gap:8px}#usFlow .tfbar .ic{width:1.1em;height:1.1em}#usFlow #ufBody{margin-top:8px}
-.uf .tfcv canvas{height:calc(400px*var(--fk))}.uf .tfacc{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+.uf .tfcv canvas{height:calc(380px*var(--fk))}.uf .uftl{margin-top:8px}.uf .uftl canvas{height:calc(58px*var(--fk))}
+.ufth{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;min-height:calc(30px*var(--fk));padding:6px 12px 0;font-size:calc(12px*var(--fk));color:var(--muted)}
+.ufth b{color:var(--text);font-weight:600}.ufth i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0}.uf .tfacc{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
 /* 0.5.2：模型品牌图标（内联 SVG）+ 两个流转图的版式：8px 网格、工具条、统计卡片 */
 .ic.mbi{width:1.1em;height:1.1em;fill:currentColor;stroke:none;flex:none;vertical-align:-.2em;margin-right:5px}
 .mb-claude{color:#d97757}.mb-openai{color:var(--text)}.mb-deepseek{color:var(--dsh,#4d6bfe)}.mb-other{color:var(--muted)}
-.fxtip b .mbi{margin-right:4px}.tfmod{display:inline-flex;align-items:center;font-size:calc(14.5px*var(--fk))}
+.fxtip b .mbi{margin-right:4px}.us .uchart .fxtip svg.mbi,.us .uchart .ufth svg.mbi{width:1.1em;height:1.1em;display:inline-block}.tfmod{display:inline-flex;align-items:center;font-size:calc(14.5px*var(--fk))}
 .tf{gap:16px}
 .tfbar{gap:8px;padding:8px 10px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.04)}
 .tfbar>button,.tfbar select{height:32px;border-radius:9px}
@@ -603,7 +633,7 @@ td.nw,th.nw{white-space:nowrap}
 .tfcur{padding:14px 16px;border-radius:12px;gap:10px;border-color:var(--line2)}
 .tfnums{gap:6px 18px}
 .tfleg{color:var(--muted);line-height:1.7;padding:0 4px}.tfleg b{color:var(--text);font-weight:600}
-@media (max-width:700px){.tfcv canvas{height:calc(300px*var(--fk))}.uf .tfcv canvas{height:calc(340px*var(--fk))}}
+@media (max-width:700px){.tfcv canvas{height:calc(300px*var(--fk))}.uf .tfcv canvas{height:calc(330px*var(--fk))}.uf .uftl canvas{height:calc(54px*var(--fk))}}
 .ab{max-width:760px}
 .abhd{display:flex;align-items:center;gap:16px;margin:6px 0 14px}.abhd img{width:64px;height:64px}
 .abhd h2{margin:0}.abhd .ver{font-family:var(--mono);color:var(--muted)}
@@ -724,6 +754,8 @@ if (I18N && I18N.dict) {
 }
 // ---------- SVG 图标（Lucide，ISC 许可；Claude / Codex 用官方 logo；从 CC Msg 搬来）----------
 const ICON = {
+  width: '<path d="M3 4v16"/><path d="M21 4v16"/><path d="M6 12h12"/><path d="m9 9-3 3 3 3"/><path d="m15 9 3 3-3 3"/>',
+  bubble: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   gitpr: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/>',
   gitmerge: '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 21V9a9 9 0 0 0 9 9"/>',
   gitbranch: '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
@@ -1067,7 +1099,7 @@ const rootCss = (k, v) => document.documentElement.style.setProperty(k, v);
   const d = +store.get("ccss.detailw"); if (d >= 300) rootCss("--dw", d + "px");
   if (store.get("ccss.side") === "0") $("#app").classList.add("noside"); }
 dragGrip($("#sideGrip"), () => $("#side").getBoundingClientRect().width, w => rootCss("--sw", w + "px"), 200, () => Math.min(560, innerWidth * .5), "ccss.sidew");
-function toggleSide(){ const n = $("#app").classList.toggle("noside"); store.set("ccss.side", n ? "0" : "1"); }
+function toggleSide(){ const n = $("#app").classList.toggle("noside"); store.set("ccss.side", n ? "0" : "1"); ssLayout(); }
 $("#tbSide").onclick = toggleSide;
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "b") { e.preventDefault(); toggleSide(); }
@@ -1241,7 +1273,9 @@ function treeRender(){
   box.innerHTML = html;
   foldBind(box, () => { treeRender(); ssList(); });
   $$("#tree [data-tw]").forEach(t => t.onclick = e => { e.stopPropagation(); const id = t.dataset.tw; TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id); trSave(); treeRender(); });
-  $$("#tree .tn[data-sel]").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel); if (TR.sel && t.dataset.id) { TR.open.add(t.dataset.id); trSave(); } treeRender(); trApply(); });
+  $$("#tree .tn[data-sel]").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel); if (TR.sel && t.dataset.id) { TR.open.add(t.dataset.id); trSave(); }
+    if (PAGE === "sessions" && $("#pg-sessions .split2.focus")) ssClose();   // 0.5.2：点分组 = 想看这组的列表，先把占满中间的会话收起来
+    treeRender(); trApply(); });
   $$("#tree .tn[data-sk]").forEach(t => t.onclick = () => { const [a, ...i] = t.dataset.sk.split(":"); SS.cur = {agent: a, id: i.join(":")};
     if (PAGE !== "sessions") go("sessions"); else { ssList(); ssView(a, i.join(":")); } treeRender(); });
   rvPaint();
@@ -2537,7 +2571,7 @@ R.sessions = async (keep) => {
   if (!SS.d) pg.innerHTML = '<div class="emp">' + ic("list") + '读取会话…</div>';
   try { SS.d = await api("/api/sessions"); } catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
   const live = new Set(SS.d.items.map(skey)); for (const k of [...SS.sel]) if (!live.has(k)) SS.sel.delete(k);
-  pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
+  pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssNav" class="ssnav"></span><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
       <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
       <button id="ssImp" title="把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html / .jsonl</button>
       <button class="ghost tflive" id="ssLive" title="实时：打开最近在进行的 Claude Code / Codex / DeepSeek Harness 会话，跟着看它的 token 流转"><i class="tfdot"></i><span>实时</span></button>
@@ -2545,15 +2579,34 @@ R.sessions = async (keep) => {
     ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
     <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
       <div class="batch" id="ssBatch"></div></div></div><div class="grip" id="ssGrip" title="拖动调整宽度"></div>
-      <div class="r"><div class="card" id="ssView"><div class="emp">${ic("messages")}点左边一个会话，在这里看记录（只读）</div></div></div></div>`;
-  ssList(); ssChip(); treeRender(); ssStale();
+      <div class="r"><div class="card" id="ssView">${SS_EMPTY()}</div></div></div>`;
+  ssList(); ssChip(); treeRender(); ssStale(); ssLayout();
   $("#ssImp").onclick = () => imDlg();
   const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
   $("#ssRef").onclick = () => R.sessions();
   $("#ssLive").onclick = () => tfGlobalLive();
   dragGrip($("#ssGrip"), () => $("#pg-sessions .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-sessions .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
-  if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else SS.cur = null;
+  if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else { SS.cur = null; ssLayout(); }
 };
+// 0.5.2：左侧面板已经是会话列表了，打开一个会话时中间不再重复一份列表——会话占满；
+// 「← 会话列表」回到列表（多选、批量导出 / 删除都在那里，已选的保留），「并排显示列表」恢复旧的左右分栏（记住选择）。
+// 左侧面板收起时（Ctrl+B）中间的列表就是唯一的列表，照旧并排。
+const SS_EMPTY = () => `<div class="emp">${ic("messages")}点左边一个会话，在这里看记录（只读）</div>`;
+function ssLayout(){
+  const sp = $("#pg-sessions .split2"); if (!sp) return;
+  const side = !$("#app").classList.contains("noside"), pin = store.get("ccss.sspin") === "1", cur = !!SS.cur;
+  const mode = !cur ? "nocur" : side && !pin ? "focus" : "";
+  sp.classList.toggle("nocur", mode === "nocur"); sp.classList.toggle("focus", mode === "focus");
+  const n = $("#ssNav"); if (!n) return; const k = SS.sel.size;
+  n.innerHTML = (mode === "focus" ? `<button class="ghost" id="ssBack" title="回到会话列表（多选、批量导出 / 删除在那里）">${ic("back")}<span>会话列表</span>${k ? `<span class="dim">· 已选 ${k}</span>` : ""}</button>` : "") +
+    (cur && side ? `<button class="ghost" id="ssPin" title="${pin ? "收起中间的列表：用左侧面板选会话，会话占满" : "左侧面板之外，中间也并排显示会话列表"}">${ic(pin ? "panelR" : "panelL")}<span>${pin ? "收起列表" : "并排显示列表"}</span></button>` : "");
+  const b = $("#ssBack"); if (b) b.onclick = ssClose;
+  const q = $("#ssPin"); if (q) q.onclick = () => { store.set("ccss.sspin", pin ? "0" : "1"); ssLayout(); };
+}
+function ssClose(){
+  SS.cur = null; const v = $("#ssView"); if (v) v.innerHTML = SS_EMPTY();
+  ssLayout(); ssList(); treeRender();
+}
 function ssChip(){
   const c = $("#ssChip"); if (!c) return;
   c.innerHTML = TR.sel ? `<span class="chip" title="左侧分组"><span>${esc(trLabel())}</span><button id="ssChipX" title="不按分组筛">${ic("x")}</button></span>` : "";
@@ -2730,10 +2783,88 @@ function toolRowHtml(t, i){
   const sub = t.sub && t.sub.agent_id ? `<button class="tsub" data-csub="${esc(t.sub.agent_id)}" data-cdesc="${esc(t.sub.desc || t.sub.type || "")}" title="看这个子代理自己的记录">${ic("subtask")} 子代理记录</button>` : "";
   const brief = t.sub && (t.sub.type || t.sub.desc) ? [t.sub.type, t.sub.desc].filter(Boolean).join(" · ") : t.brief || "";
   const head = `<span class="tic">${ic(toolIcon(t.name))}</span><span class="tnm">${esc(t.name || "tool")}</span><span class="ta" title="${esc(brief)}">${esc(brief)}</span>${t.err ? '<span class="terr">出错</span>' : ""}${sub}`;
-  if (t.input == null && t.out == null) return `<div class="tcall flat"><div class="tsm">${head}</div></div>`;
-  return `<details class="tcall" data-ci="${i}"><summary class="tsm">${head}</summary><div class="tbody"></div></details>`;
+  if (t.input == null && t.out == null) return `<div class="tcall flat${t.err ? " bad" : ""}"><div class="tsm">${head}</div></div>`;
+  return `<details class="tcall${t.err ? " bad" : ""}" data-ci="${i}"><summary class="tsm">${head}</summary><div class="tbody"></div></details>`;
 }
 const cpBtn = (i, tip) => `<button class="ccp" data-ccp="${i}" title="${tip || "复制"}">${ic("clipboard")}</button>`;
+// ---------- 0.5.2：对话气泡跟着来源应用换样式 ----------
+// 每个应用一套浅色 / 深色变量 + 形状。参考各家自己界面的公开样式（配色、圆角、字体、工具行的样子），在这里自己重写成 CSS；
+// 不用对方的图片、字体文件或代码，标识沿用上面 ICON 里已有的 SVG。来源见 README「对话样式」。
+// l / d：浅色 / 深色的颜色；s：两种模式共用的形状。mark：工具行前面的小圆点（成功 ok 色、出错 bad 色），tic：要不要工具小图标
+const CHTH = {
+  "claude": {"s": {"r": "16px", "af": "var(--serif)", "afs": "15px", "alh": "1.7", "mark": "●", "tic": "none"},
+    "l": {"ub": "#f0eee6", "uf": "#141413", "ubd": "transparent", "link": "#c96442", "ok": "#5f8f3e", "bad": "#bf4d43", "code": "#1f1e1d", "pane": "transparent", "av": "#d97757", "avbg": "transparent", "think": "#e3dacc"},
+    "d": {"ub": "#393937", "uf": "#faf9f5", "ubd": "transparent", "link": "#e08a6b", "ok": "#8fb573", "bad": "#e5766b", "code": "#1a1918", "pane": "transparent", "av": "#d97757", "avbg": "transparent", "think": "#4a4945"}},
+  "codex": {"s": {"r": "16px", "p": "8px 14px", "mw": "min(680px,77%)", "bdw": "1px", "af": "var(--sans)", "afs": "14.5px", "alh": "1.65", "mark": "•", "tic": "none"},
+    "l": {"ub": "#e3f4ec", "uf": "#0d0d0d", "ubd": "#bfe5d3", "link": "#0b8a6b", "ok": "#10a37f", "bad": "#d1453b", "code": "#0d0d0d", "pane": "#ffffff", "av": "#0d0d0d", "avbg": "#e3f4ec", "think": "#bfe5d3"},
+    "d": {"ub": "#163a2e", "uf": "#ececec", "ubd": "#1f5a46", "link": "#3ad29a", "ok": "#19c37d", "bad": "#f26d61", "code": "#0d0d0d", "pane": "#1b1b1b", "av": "#ececec", "avbg": "#163a2e", "think": "#2c4a3f"}},
+  "cursor": {"s": {"r": "8px", "p": "8px 12px", "mw": "100%", "al": "stretch", "bdw": "1px", "af": "var(--sans)", "afs": "14px", "alh": "1.6", "tic": "inline-flex"},
+    "l": {"ub": "#f3f3f3", "uf": "#141414", "ubd": "#14141426", "link": "#3c7cab", "ok": "#1f8a65", "bad": "#cf2d56", "code": "#141414", "pane": "#fcfcfc", "av": "#141414", "avbg": "#ededed", "think": "#14141426"},
+    "d": {"ub": "#262626", "uf": "#e4e4e4", "ubd": "#e4e4e426", "link": "#88c0d0", "ok": "#3fa266", "bad": "#e34671", "code": "#141414", "pane": "#181818", "av": "#e4e4e4", "avbg": "#262626", "think": "#e4e4e426"}},
+  "dsh": {"s": {"r": "22px", "p": "10px 16px", "mw": "calc(100% - 88px)", "uff": "var(--sans)", "af": "var(--sans)", "afs": "16px", "alh": "1.5", "tic": "inline-flex"},
+    "l": {"ub": "#edf3fe", "uf": "#0f1115", "ubd": "transparent", "link": "#3964fe", "ok": "#16a34a", "bad": "#dc2626", "code": "#1e1f22", "pane": "#ffffff", "av": "#4d6bfe", "avbg": "#edf3fe", "think": "#dbe5fd"},
+    "d": {"ub": "#2c2c2e", "uf": "#f9fafb", "ubd": "transparent", "link": "#7aa0ff", "ok": "#4ade80", "bad": "#f87171", "code": "#1e1f22", "pane": "#151517", "av": "#5686fe", "avbg": "#2c2c2e", "think": "#3a3a3d"}},
+  "opencode": {"s": {"r": "0", "p": "8px 12px", "mw": "100%", "al": "stretch", "bdw": "0px", "blw": "3px", "uff": "var(--mono)", "af": "var(--mono)", "afs": "13.5px", "alh": "1.6", "tf": "var(--mono)", "tic": "inline-flex"},
+    "l": {"ub": "#fafafa", "uf": "#1a1a1a", "ubd": "#3b7dd8", "link": "#3b7dd8", "ok": "#3d9a57", "bad": "#d1383d", "code": "#141414", "pane": "#ffffff", "av": "#3b7dd8", "avbg": "transparent", "think": "#d4d4d4"},
+    "d": {"ub": "#141414", "uf": "#eeeeee", "ubd": "#fab283", "link": "#fab283", "ok": "#7fd88f", "bad": "#e06c75", "code": "#141414", "pane": "#0a0a0a", "av": "#fab283", "avbg": "transparent", "think": "#484848"}},
+  "zcode": {"s": {"r": "14px 2px 14px 14px", "p": "8px 14px", "mw": "min(640px,80%)", "bdw": "1px", "uff": "'Geist',var(--sans)", "af": "'Geist',var(--sans)", "afs": "14.5px", "alh": "1.65", "tic": "inline-flex"},
+    "l": {"ub": "#f4f4f5", "uf": "#171717", "ubd": "#e4e4e7", "link": "#171717", "ok": "#16a34a", "bad": "#dc2626", "code": "#171717", "pane": "#ffffff", "av": "#171717", "avbg": "#f4f4f5", "think": "#e4e4e7"},
+    "d": {"ub": "#262626", "uf": "#fafafa", "ubd": "#404040", "link": "#fafafa", "ok": "#4ade80", "bad": "#f87171", "code": "#171717", "pane": "#161616", "av": "#fafafa", "avbg": "#262626", "think": "#404040"}}
+};
+const CHV = {ub: "--cu-bg", uf: "--cu-fg", ubd: "--cu-bd", link: "--c-link", ok: "--c-ok", bad: "--c-bad", code: "--c-code", avbg: "--c-avbg", think: "--c-think"};
+const CHS = {r: "--cu-r", p: "--cu-p", mw: "--cu-mw", al: "--cu-al", bdw: "--cu-bdw", blw: "--cu-blw", uff: "--cu-font", af: "--ca-font", afs: "--ca-fs", alh: "--ca-lh", tf: "--c-tfont", tic: "--c-tic"};
+function chatThCss(){
+  const vars = (o, m) => Object.entries(o).filter(([k]) => m[k]).map(([k, x]) => `${m[k]}:${x}`).join(";");
+  const L = [], D = [];
+  for (const [a, t] of Object.entries(CHTH)) {
+    const c = `.chat.th-${a}`, mk = t.s.mark ? `;--c-mark:"${t.s.mark}"` : "";
+    L.push(`${c}{${vars(t.s, CHS)}${mk};${vars(t.l, CHV)}}`, `${c} .chd .cav .logo{color:${t.l.av}}`);
+    D.push(`${c}{${vars(t.d, CHV)}}`, `${c} .chd .cav .logo{color:${t.d.av}}`);
+    if (t.l.pane !== "transparent") L.push(`.chatpv:has(>.chat.th-${a}){background:${t.l.pane};border-radius:12px;padding:0 14px}`);
+    if (t.d.pane !== "transparent") D.push(`.chatpv:has(>.chat.th-${a}){background:${t.d.pane}}`);
+  }
+  return L.join("\n") + "\n" + D.map(r => `:root[data-theme="dark"] ${r}`).join("\n")
+    + `\n@media (prefers-color-scheme:dark){\n${D.map(r => `:root:not([data-theme="light"]) ${r}`).join("\n")}\n}`;
+}
+if (typeof document !== "undefined") { const st = document.createElement("style"); st.id = "chatThCss"; st.textContent = chatThCss(); document.head.appendChild(st); }
+// 气泡样式：app = 跟着会话来源应用（缺省）；unified = 统一用上面那套（Claude 风格）
+const chatStyle = () => typeof store !== "undefined" && store.get("ccss.chatstyle") === "unified" ? "unified" : "app";
+const chatTh = agent => chatStyle() === "unified" ? "uni" : CHTH[agent] ? agent : "claude";
+// 文本宽度：窄 / 标准 / 宽 / 全宽（0），或者拖滑块 520–1600 px（跟着字号放大）
+const CHW = [[680, "窄"], [860, "标准"], [1120, "宽"], [0, "全宽"]], CHW_MIN = 520, CHW_MAX = 1600, CHW_DEF = 860;
+const chatWNorm = v => v === "" || v == null || isNaN(+v) ? CHW_DEF : +v === 0 ? 0 : Math.min(CHW_MAX, Math.max(CHW_MIN, Math.round(+v)));
+const chatW = () => chatWNorm(store.get("ccss.chatw"));
+function applyChatW(w, save = true){
+  w = chatWNorm(w); store.set("ccss.chatw", String(w));
+  document.documentElement.style.setProperty("--chatw", w ? `calc(${w}px*var(--fk))` : "100%");
+  rdSync();
+  if (save) { clearTimeout(applyChatW.t); applyChatW.t = setTimeout(() => api("/api/settings", {chat_width: w}).catch(() => {}), 500); }
+}
+function applyChatStyle(v, save = true){
+  v = v === "unified" ? "unified" : "app"; store.set("ccss.chatstyle", v);
+  $$(".chat[data-ag]").forEach(c => { c.className = c.className.replace(/\s*\bth-\S+/g, "") + " th-" + chatTh(c.dataset.ag); });
+  rdSync();
+  if (save) api("/api/settings", {chat_style: v}).catch(() => {});
+}
+const rdStyleCtl = () => `<span class="seg" data-rd="style"><button data-v="app" title="Codex 绿色气泡、Claude 米色气泡……照各应用自己的样子">跟随应用</button><button data-v="unified" title="所有会话都用同一种样式">统一样式</button></span>`;
+const rdWidthCtl = () => `<span class="rdw"><span class="seg" data-rd="w">${CHW.map(([v, t]) => `<button data-v="${v}">${t}</button>`).join("")}</span><input type="range" data-rd="wr" min="${CHW_MIN}" max="${CHW_MAX}" step="20" title="拖动调整对话文本宽度"><b data-rd="wv"></b></span>`;
+const rdPop = () => `<div class="rdl">对话气泡样式</div>${rdStyleCtl()}<div class="rdl">文本宽度</div>${rdWidthCtl()}<div class="rdn">会记住；设置 → 外观与窗口里也能改</div>`;
+function rdSync(){
+  const w = chatW(), v = chatStyle();
+  $$('[data-rd="style"] button').forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  $$('[data-rd="w"] button').forEach(b => b.classList.toggle("on", +b.dataset.v === w));
+  $$('[data-rd="wr"]').forEach(r => { if (document.activeElement !== r) r.value = w || CHW_MAX; });
+  $$('[data-rd="wv"]').forEach(e => e.textContent = w ? w + " px" : "全宽");
+}
+function rdBind(root){
+  root.querySelectorAll('[data-rd="style"] button').forEach(b => b.onclick = () => applyChatStyle(b.dataset.v));
+  root.querySelectorAll('[data-rd="w"] button').forEach(b => b.onclick = () => applyChatW(b.dataset.v));
+  root.querySelectorAll('[data-rd="wr"]').forEach(r => r.oninput = () => applyChatW(r.value));
+  rdSync();
+}
+(async () => { try { const st = await api("/api/settings");       // 网页存储被清过时，从设置文件找回来
+  if (store.get("ccss.chatw") == null && st.chat_width != null) applyChatW(st.chat_width, false);
+  if (store.get("ccss.chatstyle") == null && st.chat_style) applyChatStyle(st.chat_style, false); } catch(e){} })();
 function chatHtml(entries, agent, opt = {}){
   if (!entries || !entries.length) return '<div class="empty">（没有对话内容）</div>';
   const key = "c" + (++CHAT.seq), es = entries.map(chatNorm); CHAT.data[key] = {es, agent};
@@ -2753,12 +2884,12 @@ function chatHtml(entries, agent, opt = {}){
       const long = e.text.length > 1500 || e.text.split("\n").length > 24;
       html += `<div class="cm u"><div class="cbub${long ? " clamp" : ""}">${esc(e.text)}</div>${long ? `<a class="cmore" data-cmore>展开全文</a>` : ""}<div class="cmeta">${e.ts ? `<span>${when(e.ts)}</span>` : ""}${cpBtn(i)}</div></div>`; return; }
     if (e.role === "thinking") { html += `<details class="cthink" data-ci="${i}"><summary>${ic("sparkles")}<span>思考过程</span><span class="dim">${(e.text || "").length} 字</span></summary><div class="tbody"></div></details>`; return; }
-    const who = head ? `<div class="chd">${logo(agent || "claude")}<b>${esc(name + (e.model ? " · " + e.model : ""))}</b>${e.ts ? `<span>${when(e.ts)}</span>` : ""}</div>` : "";
+    const who = head ? `<div class="chd"><span class="cav">${logo(agent || "claude")}</span><b>${esc(name + (e.model ? " · " + e.model : ""))}</b>${e.ts ? `<span>${when(e.ts)}</span>` : ""}</div>` : "";
     head = false;
     html += `<div class="cm a">${who}<div class="md">${mdHtml(e.text)}</div><div class="cacts">${cpBtn(i)}</div></div>`;
   });
   flush();
-  return `<div class="chat" data-chat="${key}">${html}</div>`;
+  return `<div class="chat th-${chatTh(agent)}" data-ag="${esc(agent || "claude")}" data-chat="${key}">${html}</div>`;
 }
 function chatFill(det){
   const box = det.closest("[data-chat]"), C = box && CHAT.data[box.dataset.chat], b = det.querySelector(":scope > .tbody");
@@ -2870,8 +3001,8 @@ function fxSpread(items, lo, hi, gap){
   for (let j = 0; j < o.length; j++) { const p = o[j - 1], min = p ? p.y + (p.h + o[j].h) / 2 + gap : lo + o[j].h / 2; if (o[j].y < min) o[j].y = min; }
   const r = []; o.forEach(e => { r[e.i] = e.y; }); return r;
 }
-// 悬停提示：hits = [{p: Path2D | r: [x, y, w, h], tip: () => html}]，后画的先命中
-function fxHover(cv, tipEl, hits, e, extra){
+// 悬停提示：hits = [{p: Path2D | r: [x, y, w, h], tip: () => html}]，后画的先命中；pin = 钉在对角（用量页流转图）
+function fxHover(cv, tipEl, hits, e, extra, pin){
   if (!tipEl) return;
   const r = cv.getBoundingClientRect(), z = r.width / cv.clientWidth, px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
   let html = extra ? extra(px, py) : "";
@@ -2882,6 +3013,8 @@ function fxHover(cv, tipEl, hits, e, extra){
   if (tipEl.dataset.h !== html) { tipEl.dataset.h = html; tipEl.innerHTML = html; }
   tipEl.style.display = "block";
   const W = cv.clientWidth, H = cv.clientHeight, tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+  if (pin) {                                            // 0.5.2：钉在离鼠标最远的那个角，不挡住正在看的那条带子 / 卡片
+    tipEl.style.left = (px < W / 2 ? W - tw - 10 : 10) + "px"; tipEl.style.top = (py < H / 2 ? H - th - 30 : 30) + "px"; return; }
   tipEl.style.left = Math.max(4, Math.min(W - tw - 4, px + 14 > W - tw - 4 ? px - tw - 14 : px + 14)) + "px";
   tipEl.style.top = Math.max(4, Math.min(H - th - 4, py + 14 > H - th - 4 ? py - th - 12 : py + 14)) + "px";
 }
@@ -3367,36 +3500,49 @@ const ufAt = (m, j, p) => { const i = Math.min(m.N, Math.floor(p)), f = p - i; r
 function ufCum(m, p){ const i = Math.min(m.N, Math.floor(p)), f = p - i, a = m.cst[i], b = m.st[i], r = {};
   for (const k in a) r[k] = a[k] + (b && i < m.N ? f * b[k] : 0);
   r.tok = r.inp + r.cr + r.cw + r.out; const P = r.inp + r.cr + r.cw; r.hit = P ? r.cr / P : null; return r; }
+// 0.5.2：四列都是圆角卡片（图标 + 名字 + 数字）。带子粗细 = 真实 tokens × 比例尺 s（输出侧 × k），卡片边上的色条就是这个高度、带子从那里接出去；
+// 卡片太小放不下字时按最小高度 mc 画（只是标签，不按比例，图上和图例里都写明）。比例尺按「最高一列 ≈ 画布的 86%」定，留白，不撑满。
+// 时间轴不再画在这张图里，挪到下面自己的画布（ufTl）。
 function ufGeo(W, H, m, x, fs, FN){
-  const strip = 54, top = 22, Hf = H - strip - top - 20, nw = 10, F = m.full, L = m.L;
+  const top = 26, foot = 24, Hf = H - top - foot - 4, F = m.full, L = m.L, k = ufK(m);
   const sum = f => { let v = 0; L.forEach((l, j) => { if (f(l)) v += F[j]; }); return v; };
   const va = d3(m.A, a => sum(l => l.kind === "ab" && l.s === a)), vc = UF_CAT.map(c => sum(l => l.kind === "bc" && l.s === c)),
         vm = d3(m.M, i => sum(l => l.kind === "bc" && l.t === i)), vo = UF_OUT.map(o => sum(l => l.kind === "cd" && l.t === o));
   function d3(n, f){ return Array.from({length: n}, (_, i) => f(i)); }
-  x.font = `600 ${fs + 1}px ${FN}`;
-  const aw = Math.max(40, ...m.d.apps.map(a => x.measureText(ufApp(a)).width)), ow = Math.max(60, x.measureText(tr("思考") + " 000.00M").width);
-  const xA = Math.round(Math.min(W * .24, Math.max(70, aw + 16))), xD = Math.round(W - Math.min(W * .24, Math.max(84, ow + 18)) - nw);
-  // 模型列的标签（图标 + 名字 + 数字）占一条自己的空当，输出带子从空当后面才开始：标签不再压在带子上
+  const cols = [va, vc, vm, vo.map(v => v * k)], G = Math.round(Math.max(6, Math.min(14, Hf * .035))), Hb = Hf * .86;
+  const mc = Math.round(Math.max(16, Math.min(40, ...cols.map(v => (Hb - (v.length - 1) * G) / Math.max(1, v.length)))));
+  // 一列放得下：大的按 v × s，小的按 mc，加上间隔 ≤ Hb
+  const fit = v => { let S = new Set(), s = Infinity;
+    for (let it = 0; it <= v.length; it++) { let big = 0; v.forEach((y, i) => { if (!S.has(i)) big += y; });
+      s = big > 0 ? Math.max(1e-12, (Hb - (v.length - 1) * G - mc * S.size) / big) : Infinity;
+      const S2 = new Set(); v.forEach((y, i) => { if (y * s < mc) S2.add(i); }); if (S2.size === S.size) break; S = S2; }
+    return s; };
+  let s = Math.min(...cols.map(fit)); if (!isFinite(s)) s = Hb;
+  // 卡片宽度：按名字量，放不下就一起缩；剩下的三段空当画带子
+  const pad = 4, isz = fs + 3;
   x.font = `600 ${fs + .5}px ${FN}`;
-  const isz = fs + 3, mw = Math.max(36, ...m.d.models.map(s => x.measureText(ufMod(s)).width)), lw = Math.round(Math.min(Math.max(90, (xD - xA) * .24), 7 + isz + 5 + mw + 14));
-  const span = xD - xA - lw - 12, xB = Math.round(xA + span * .34), xC = Math.round(xA + span * .68);
-  const P = vc.reduce((a, b) => a + b, 0) || 1, G = Math.max(8, Math.min(22, Hf * .07));
-  const s = Math.max(1e-12, Math.min(...[va, vc, vm].map(v => (Hf - (v.length - 1) * G - v.length * 2) / P)));
-  const k = ufK(m);
-  const stack = (vals, sc, xx, w) => { const hs = vals.map(v => Math.max(2, v * sc)), tot = hs.reduce((a, b) => a + b, 0) + G * (vals.length - 1); let y = top + (Hf - tot) / 2;
-    return hs.map(h => { const r = {x: xx, y, h, w}; y += h + G; return r; }); };
-  const N = {a: stack(va, s, xA - nw, nw), c: stack(vc, s, xB, nw), m: stack(vm, s, xC, 12), o: stack(vo, s * k, xD, nw)};
-  const off = {}, take = (key, node, h) => { const o = off[key] || 0; off[key] = o + h; return node.y + o; };
+  const tw = ss => Math.max(0, ...ss.map(t => x.measureText(t).width));
+  const cw = (names, vals, icon, lo, hi) => Math.round(Math.max(lo, Math.min(hi, Math.max(tw(names), tw(vals.map(fmtN))) + 24 + (icon ? isz + 6 : 0))));
+  let w = {a: cw(m.d.apps.map(ufApp), va, 1, 84, W * .16), c: cw(UF_CAT.map(ufCat), vc, 0, 84, W * .13), m: cw(m.d.models.map(ufMod), vm, 1, 100, W * .2),
+           o: cw([tr("回复"), tr("思考")], vo, 0, 84, W * .15) + (k > 1 ? Math.round(x.measureText("×" + k).width + 22) : 0)};
+  const tot = w.a + w.c + w.m + w.o, room = W - 2 * pad - 3 * Math.max(36, W * .1);
+  if (tot > room) { const f = Math.max(.4, room / tot); for (const c in w) w[c] = Math.round(w[c] * f); }
+  const gap = (W - 2 * pad - (w.a + w.c + w.m + w.o)) / 3;
+  const xA = pad, xB = Math.round(xA + w.a + gap), xC = Math.round(xB + w.c + gap), xD = Math.round(W - pad - w.o);
+  const stack = (vals, mul, xx, ww) => { const ths = vals.map(v => v * s * mul), hs = ths.map(t => Math.max(mc, t)), T = hs.reduce((a, b) => a + b, 0) + G * (vals.length - 1);
+    let y = top + (Hf - T) / 2; return hs.map((h, i) => { const r = {x: xx, y, w: ww, h, th: ths[i], ty: y + (h - ths[i]) / 2}; y += h + G; return r; }); };
+  const N = {a: stack(va, 1, xA, w.a), c: stack(vc, 1, xB, w.c), m: stack(vm, 1, xC, w.m), o: stack(vo, k, xD, w.o)};
+  const off = {}, take = (key, node, h) => { const o = off[key] || 0; off[key] = o + h; return node.ty + o; };
   const LG = L.map(() => null);
-  // 每个节点里带子的先后：跟另一端节点的先后一致，减少交叉
-  L.forEach((l, j) => { if (l.kind !== "ab") return; const h = F[j] * s; LG[j] = {x1: xA, y1: take("a" + l.s, N.a[l.s], h), h1: h, x2: xB, y2: 0, h2: h}; });
+  // 每张卡片里带子的先后：跟另一端卡片的先后一致，减少交叉
+  L.forEach((l, j) => { if (l.kind !== "ab") return; const h = F[j] * s; LG[j] = {x1: xA + w.a, y1: take("a" + l.s, N.a[l.s], h), h1: h, x2: xB, y2: 0, h2: h}; });
   UF_CAT.forEach((c, ci) => L.forEach((l, j) => { if (l.kind === "ab" && l.t === c) LG[j].y2 = take("ci" + c, N.c[ci], LG[j].h2); }));
-  L.forEach((l, j) => { if (l.kind !== "bc") return; const ci = UF_CAT.indexOf(l.s), h = F[j] * s; LG[j] = {x1: xB + nw, y1: take("co" + l.s, N.c[ci], h), h1: h, x2: xC, y2: 0, h2: h}; });
+  L.forEach((l, j) => { if (l.kind !== "bc") return; const ci = UF_CAT.indexOf(l.s), h = F[j] * s; LG[j] = {x1: xB + w.c, y1: take("co" + l.s, N.c[ci], h), h1: h, x2: xC, y2: 0, h2: h}; });
   for (let mi = 0; mi < m.M; mi++) UF_CAT.forEach(c => { const j = m.idx[`${c}|m${mi}`]; LG[j].y2 = take("mi" + mi, N.m[mi], LG[j].h2); });
-  for (let mi = 0; mi < m.M; mi++) { const nd = N.m[mi], hs = UF_OUT.map(o => F[m.idx[`m${mi}|${o}`]] * s * k), tot = hs[0] + hs[1]; let y = nd.y + nd.h / 2 - tot / 2;
-    UF_OUT.forEach((o, oi) => { const j = m.idx[`m${mi}|${o}`]; LG[j] = {x1: xC + 12 + lw, y1: y, h1: hs[oi], x2: xD, y2: 0, h2: hs[oi]}; y += hs[oi]; }); }
+  for (let mi = 0; mi < m.M; mi++) { const nd = N.m[mi], hs = UF_OUT.map(o => F[m.idx[`m${mi}|${o}`]] * s * k), t = hs[0] + hs[1]; let y = nd.y + nd.h / 2 - t / 2;
+    UF_OUT.forEach((o, oi) => { const j = m.idx[`m${mi}|${o}`]; LG[j] = {x1: xC + w.m, y1: y, h1: hs[oi], x2: xD, y2: 0, h2: hs[oi]}; y += hs[oi]; }); }
   UF_OUT.forEach((o, oi) => { for (let mi = 0; mi < m.M; mi++) { const j = m.idx[`m${mi}|${o}`]; LG[j].y2 = take("o" + o, N.o[oi], LG[j].h2); } });
-  return {W, H, top, Hf, s, k, N, LG, va, vc, vm, vo, xA, xB, xC, xD, nw, lw, isz, sy: H - strip - 2, sh: strip - 8, sx: 12, sw: W - 24, fs};
+  return {W, H, top, Hf, foot, s, k, mc, G, N, LG, va, vc, vm, vo, xA, xB, xC, xD, w, isz, fs};
 }
 // 输出侧放大倍数（1-2-5 序列）：放大后输出最多 ≈ 输入的一半；「真实比例」时 ×1。只看数据，不看画布大小（粒子单位跟着它，换窗口大小不变）
 function ufK(m){
@@ -3444,21 +3590,10 @@ function ufTipNode(m, col, i){
 function ufLabelT(ts, step){ const d = new Date(ts * 1000); return step === "h" ? `${pad(d.getHours())}:00` : `${d.getMonth() + 1}/${d.getDate()}`; }
 function ufTitleT(ts, step){ const d = new Date(ts * 1000); return step === "h" ? `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:00` : step === "w" ? tr("周") + " " + `${d.getMonth() + 1}/${d.getDate()}` : d.toLocaleDateString(LANG_TAG()); }
 const LANG_TAG = () => document.documentElement.lang === "en" ? "en-US" : "zh-CN";
-function ufStrip(cv, m, g, C){
-  const key = [cv.width, cv.height, m.N, UF.sv, C.cr, C.panel2].join("|");
-  if (UF.strip && UF.strip.key === key) return UF.strip.c;
-  const dpr = cv.width / g.W, o = document.createElement("canvas"); o.width = cv.width; o.height = Math.ceil((g.sh + 14) * dpr);
-  const x = o.getContext("2d"); x.scale(dpr, dpr);
-  const N = Math.max(1, m.N), bw = g.sw / N, hh = g.sh - 4, mx = Math.max(1, ...m.st.map(s => s.inp + s.cr + s.cw + s.out));
-  m.st.forEach((s, i) => { const x1 = g.sx + i * bw + (bw > 6 ? 1 : 0), w = Math.max(.8, bw - (bw > 6 ? 2 : bw > 3 ? 1 : 0)); let y = g.sh;
-    for (const k of UF_CAT) { const h = s[k] / mx * hh; if (h > 0) { x.fillStyle = C[k]; x.fillRect(x1, y - h, w, h); y -= h; } }
-    const ho = s.out / mx * hh; if (s.out > 0) { x.fillStyle = C.out; x.fillRect(x1, y - Math.max(1, ho), w, Math.max(1, ho)); } });
-  x.fillStyle = C.faint; x.font = `10px ${C.font}`; x.textBaseline = "top"; let lx = -99;
-  m.d.buckets.forEach((b, i) => { const px = g.sx + i * bw; const s = ufLabelT(b.t, m.d.step), w = x.measureText(s).width;
-    if (px - lx > w + 12 && px + w < g.sx + g.sw) { x.fillText(s, px + 1, g.sh + 2); lx = px; } });
-  UF.strip = {key, c: o};
-  return o;
-}
+// 1-2-5 里不超过 x 的最大值（比例尺用）
+function ufFloor125(x){ if (!(x > 0)) return 0; const p = Math.pow(10, Math.floor(Math.log10(x) + 1e-9)); for (const n of [5, 2, 1]) if (n * p <= x * (1 + 1e-12)) return n * p; return p; }
+const ufSN = v => v >= 1e9 ? +(v / 1e9).toPrecision(3) + "B" : v >= 1e6 ? +(v / 1e6).toPrecision(3) + "M" : v >= 1e3 ? +(v / 1e3).toPrecision(3) + "K" : String(+v.toPrecision(3));
+const UF_MINB = 1.5;                                  // 细到看不见的带子最少画 1.5px（不按比例；图例里写明）
 function ufDraw(){
   const cv = $("#ufCv"), m = UF.m; if (!cv || !m) return;
   const F = fxCanvas(cv); if (!F) return;
@@ -3468,60 +3603,86 @@ function ufDraw(){
   if (!m.T.n) { fxText(x, tr("这段时间没有用量"), W / 2, g.top + g.Hf / 2, "center", C.muted, `${fs + 1}px ${FN}`); }
   else {
     const cur = new Float64Array(m.nl); for (let j = 0; j < m.nl; j++) cur[j] = ufAt(m, j, p);
+    const dh = h => h > 0 ? Math.max(UF_MINB, h) : 0;
     // 带子：浅色底是整段时间，实色是累计到播放位置
     m.L.forEach((l, j) => { const G = g.LG[j], f = m.full[j]; if (!f || !G) return;
-      const [c1, c2] = ufLinkCols(C, m, l), r = Math.min(1, cur[j] / f);
-      const ghost = fxBand(x, G.x1, G.y1, G.h1, G.x2, G.y2, G.h2, c1, c2, C.gA, C.gA * .8);
-      if (r > 0) fxBand(x, G.x1, G.y1, G.h1 * r, G.x2, G.y2, G.h2 * r, c1, c2, C.bA, C.bB);
+      const [c1, c2] = ufLinkCols(C, m, l), r = Math.min(1, cur[j] / f), h1 = dh(G.h1), h2 = dh(G.h2);
+      const ghost = fxBand(x, G.x1, G.y1, h1, G.x2, G.y2, h2, c1, c2, C.gA * 1.15, C.gA);
+      if (r > 0) fxBand(x, G.x1, G.y1, h1 * r, G.x2, G.y2, h2 * r, c1, c2, C.bA, C.bB);
       HITS.push({p: ghost, tip: () => ufTipLink(m, j)}); });
-    // 节点
-    const nodeCur = (col, i) => { let v = 0; m.L.forEach((l, j) => { if ((col === "a" && l.kind === "ab" && l.s === i) || (col === "c" && l.kind === "ab" && l.t === UF_CAT[i]) ||
-      (col === "m" && l.kind === "bc" && l.t === i) || (col === "o" && l.kind === "cd" && l.t === UF_OUT[i])) v += cur[j]; }); return v; };
-    const full = {a: g.va, c: g.vc, m: g.vm, o: g.vo}, active = UF.play || UF.P.length;
-    for (const col of ["a", "c", "m", "o"]) g.N[col].forEach((nd, i) => {
-      const color = col === "a" ? ufAppCol(C, m.d.apps[i]) : col === "c" ? C[UF_CAT[i]] : col === "m" ? C.text : (i ? C.rs : C.out);
-      const fv = full[col][i], r = fv ? Math.min(1, nodeCur(col, i) / fv) : 0;
-      x.fillStyle = fxA(color, C.gA * 1.6); x.fillRect(nd.x, nd.y, nd.w, Math.max(2, nd.h));
-      if (r > 0) fxNode(x, nd.x, nd.y, nd.w, Math.max(2, nd.h * r), color, active && col !== "m" ? .4 : 0);
-      HITS.push({r: [nd.x - 3, nd.y - 2, nd.w + 6, Math.max(6, nd.h) + 4], tip: () => ufTipNode(m, col, i)}); });
     // 粒子
     const glow = !tfRM();
     for (const P of UF.P) { const q = (UF.clock - P.b) / P.dur; if (q < 0 || q > 1) continue;
       const segs = P.j2 == null ? 1 : 2, u = q * segs, j = u < 1 || segs === 1 ? P.j1 : P.j2, w = fxE(segs === 1 ? q : u < 1 ? u : u - 1), G = g.LG[j]; if (!G) continue;
-      const r = m.full[j] ? Math.min(1, cur[j] / m.full[j]) : 0, h1 = Math.max(1, G.h1 * r), h2 = Math.max(1, G.h2 * r);
+      const r = m.full[j] ? Math.min(1, cur[j] / m.full[j]) : 0, h1 = Math.max(1, dh(G.h1) * r), h2 = Math.max(1, dh(G.h2) * r);
       const px = tfBx(G.x1, G.x2, w), y1 = G.y1 + P.l * h1, y2 = G.y2 + P.l * h2, py = y1 + (y2 - y1) * tfE(w);
       fxDot(x, px, py, P.r, P.col, dpr, glow); }
-    // 标签（每列避让，不重叠）
-    const F1 = `${fs}px ${FN}`, F2 = `600 ${fs + .5}px ${FN}`, two = (col, n) => g.Hf / Math.max(1, n) >= 30;
-    const labs = (col, names, vals, side, colr, icon) => { const nds = g.N[col], tw = two(col, nds.length), hh = tw ? 30 : 15;
-      const ys = fxSpread(nds.map(nd => ({y: nd.y + nd.h / 2, h: hh})), g.top - 18, g.top + g.Hf + 14, 1);
-      nds.forEach((nd, i) => { let lx = side === "l" ? nd.x - 7 : nd.x + nd.w + 7; const al = side === "l" ? "right" : "left";
-        if (icon) { const isz = tw ? g.isz : g.isz - 2; fxIcon(x, icon(i), lx, (tw ? ys[i] - 7 : ys[i]) - isz / 2, isz, C, dpr); lx += isz + 5; }
-        const mx = icon ? g.lw - (lx - nd.x - nd.w) - 8 : 1e9;
-        if (tw) { fxText(x, fxFit(x, names[i], mx, F2), lx, ys[i] - 7, al, colr ? colr(i) : C.text, F2, C.panel2); fxText(x, vals[i], lx, ys[i] + 8, al, C.muted, F1, C.panel2); }
-        else fxText(x, fxFit(x, names[i] + "  " + vals[i], mx, F1), lx, ys[i], al, C.text, F1, C.panel2); }); };
-    labs("a", m.d.apps.map(ufApp), g.va.map((v, i) => fmtN(nodeCur("a", i))), "l");
-    labs("c", UF_CAT.map(ufCat), UF_CAT.map((k, i) => fmtN(nodeCur("c", i))), "r");
-    labs("m", m.d.models.map(ufMod), g.vm.map((v, i) => fmtN(nodeCur("m", i))), "r", null, i => m.d.models[i]);
-    labs("o", [tr("输出") + " · " + ufCat("rp") + (g.k > 1 ? ` ×${g.k}` : ""), ufCat("rs")], UF_OUT.map((o, i) => fmtN(nodeCur("o", i))), "r", i => i ? C.rs : C.out);
+    // 卡片：圆角底 + 边上的色条（色条高度 = 真实比例，带子从这里接；实色部分 = 播放到的累计）+ 图标 / 名字 / 数字
+    const nodeCur = (col, i) => { let v = 0; m.L.forEach((l, j) => { if ((col === "a" && l.kind === "ab" && l.s === i) || (col === "c" && l.kind === "ab" && l.t === UF_CAT[i]) ||
+      (col === "m" && l.kind === "bc" && l.t === i) || (col === "o" && l.kind === "cd" && l.t === UF_OUT[i])) v += cur[j]; }); return v; };
+    const full = {a: g.va, c: g.vc, m: g.vm, o: g.vo}, active = UF.play || UF.P.length;
+    const F1 = `${fs}px ${FN}`, F2 = `600 ${fs + .5}px ${FN}`, FB = `600 ${fs - 1.5}px ${FN}`;
+    for (const col of ["a", "c", "m", "o"]) g.N[col].forEach((nd, i) => {
+      const color = col === "a" ? ufAppCol(C, m.d.apps[i]) : col === "c" ? C[UF_CAT[i]] : col === "m" ? (modelBrand(m.d.models[i]) === "claude" ? C.claude || C.text : C.text) : (i ? C.rs : C.out);
+      const fv = full[col][i], r = fv ? Math.min(1, nodeCur(col, i) / fv) : 0, rr = Math.min(9, nd.h / 2), cp = new Path2D();
+      cp.roundRect ? cp.roundRect(nd.x, nd.y, nd.w, nd.h, rr) : cp.rect(nd.x, nd.y, nd.w, nd.h);
+      x.fillStyle = C.panel; x.fill(cp); x.fillStyle = fxA(color, C.dark ? .13 : .09); x.fill(cp);
+      x.strokeStyle = fxA(color, C.dark ? .5 : .42); x.lineWidth = 1; x.stroke(cp);
+      x.save(); x.clip(cp);
+      const ports = col === "a" ? [nd.x + nd.w - 4] : col === "o" ? [nd.x] : [nd.x, nd.x + nd.w - 4], th = Math.max(2, nd.th), ty = nd.y + (nd.h - th) / 2;
+      for (const px of ports) { x.fillStyle = fxA(color, .3); x.fillRect(px, ty, 4, th); if (r > 0) fxNode(x, px, ty, 4, th * r, color, active && col !== "m" ? .45 : 0); }
+      x.restore();
+      // 文字（卡片里面，不会互相压住）
+      const name = col === "a" ? ufApp(m.d.apps[i]) : col === "c" ? ufCat(UF_CAT[i]) : col === "m" ? ufMod(m.d.models[i]) : ufCat(UF_OUT[i]);
+      const val = fmtN(nodeCur(col, i)), two = nd.h >= 34, cy = nd.y + nd.h / 2, icon = col === "a" ? m.d.apps[i] : col === "m" ? m.d.models[i] : null;
+      const badge = col === "o" && g.k > 1 ? "×" + g.k : "";
+      let lx = nd.x + (col === "o" ? 11 : 9), rx = nd.x + nd.w - (col === "a" || col === "o" ? 11 : 9);
+      if (icon) { const isz = two ? g.isz : g.isz - 2; fxIcon(x, icon, lx, (two ? cy - 8 : cy) - isz / 2, isz, C, dpr); lx += isz + 5; }
+      if (badge) { x.font = FB; const bw = x.measureText(badge).width + 8, bh = fs + 3, by = (two ? cy - 8 : cy) - bh / 2, bp = new Path2D();
+        bp.roundRect ? bp.roundRect(rx - bw, by, bw, bh, bh / 2) : bp.rect(rx - bw, by, bw, bh); x.fillStyle = fxA(color, .22); x.fill(bp);
+        fxText(x, badge, rx - bw / 2, by + bh / 2 + .5, "center", color, FB); rx -= bw + 4; }
+      const ncol = col === "o" ? color : C.text;
+      if (two) { fxText(x, fxFit(x, name, rx - lx, F2), lx, cy - 8, "left", ncol, F2); fxText(x, fxFit(x, val, nd.x + nd.w - 9 - lx, F1), lx, cy + 9, "left", C.muted, F1); }
+      else { x.font = F1; const vw = x.measureText(val).width; fxText(x, fxFit(x, name, rx - lx - vw - 6, F2), lx, cy, "left", ncol, F2); fxText(x, val, rx, cy, "right", C.muted, F1); }
+      HITS.push({r: [nd.x - 2, nd.y - 2, nd.w + 4, nd.h + 4], tip: () => ufTipNode(m, col, i)}); });
     // 列标题
     const hf = `${fs - 1}px ${FN}`;
-    [[g.xA - g.nw / 2, tr("来源")], [g.xB + g.nw / 2, tr("输入种类")], [g.xC + 6 + Math.min(40, g.lw / 3), tr("模型")], [g.xD + g.nw / 2, tr("输出")]].forEach(([hx, s]) => fxText(x, s, hx, 8, "center", C.faint, hf));
+    [[g.xA + g.w.a / 2, tr("来源")], [g.xB + g.w.c / 2, tr("输入种类")], [g.xC + g.w.m / 2, tr("模型")], [g.xD + g.w.o / 2, tr("输出")]].forEach(([hx, s]) => fxText(x, s, hx, 12, "center", C.faint, hf));
+    // 比例尺：一根竖条 = 多少 tokens（带子粗细就是按它算的）；卡片高度不按比例
+    const sv = ufFloor125(16 / g.s), sh = sv * g.s, fy = H - g.foot / 2 - 2, ff = `${fs - 1}px ${FN}`;
+    if (sv > 0) { x.fillStyle = C.muted; x.fillRect(10, fy - sh / 2, 3, sh); x.fillRect(8, fy - sh / 2, 7, 1); x.fillRect(8, fy + sh / 2 - 1, 7, 1);
+      const t1 = tr("比例尺") + " " + ufSN(sv) + " tokens" + (g.k > 1 ? " · " + tr("输出") + " ×" + g.k : "");
+      fxText(x, t1, 21, fy, "left", C.muted, ff); x.font = ff; const t1w = x.measureText(t1).width;
+      fxText(x, fxFit(x, tr("卡片只是标签，高度不按比例；比例看带子和卡片边上的色条"), W - 21 - t1w - 24, ff), W - 10, fy, "right", C.faint, ff); }
   }
-  // 时间轴
-  if (m.N) {
-    x.drawImage(ufStrip(cv, m, g, C), 0, g.sy, W, g.sh + 14);
-    const bw = g.sw / m.N, ph = g.sx + Math.min(m.N, p) * bw;
-    x.fillStyle = fxA(C.panel2, .62); x.fillRect(ph, g.sy, g.sx + g.sw - ph, g.sh + 1);
-    x.fillStyle = C.text; x.fillRect(ph - 1, g.sy - 3, 2, g.sh + 5);
-  }
+  ufTl();
 }
-function ufStripTip(px, py){
-  const m = UF.m, g = UF.g; if (!m || !g || !m.N || py < g.sy - 2 || px < g.sx || px > g.sx + g.sw) return "";
-  const i = Math.min(m.N - 1, Math.floor((px - g.sx) / (g.sw / m.N))), s = m.st[i], b = m.d.buckets[i], C = UF.col; if (!s) return "";
-  const P = s.inp + s.cr + s.cw;
-  return `<b>${esc(ufTitleT(b.t, m.d.step))}</b>${fxRow("", tr("请求数"), fmtFull(s.n))}${fxRow(C.cr, tr("缓存读"), fmtFull(s.cr))}${fxRow(C.cw, tr("缓存写"), fmtFull(s.cw))}${fxRow(C.inp, tr("新输入"), fmtFull(s.inp))}${fxRow(C.out, tr("输出"), fmtFull(s.out))}${fxRow("", tr("缓存命中率"), P ? (s.cr / P * 100).toFixed(1) + "%" : "—")}${fxRow("", tr("费用"), fmtCF(s.cost))}`;
+// 时间轴：自己一张画布（不跟流转图叠在一起），每根柱 = 一个时间桶，竖线是播放位置；点 / 拖动跳过去
+function ufTl(){
+  const cv = $("#ufTl"), m = UF.m; if (!cv || !m) return;
+  const F = fxCanvas(cv); if (!F) return;
+  const {x, W, H} = F, C = UF.col || (UF.col = tfColors()), sx = 10, sw = W - 20, lh = 14, sh = H - lh - 6, y0 = 4;
+  UF.tg = {sx, sw};
+  if (!m.N) return;
+  const N = m.N, bw = sw / N, mx = Math.max(1, ...m.st.map(s => s.inp + s.cr + s.cw + s.out));
+  m.st.forEach((s, i) => { const x1 = sx + i * bw + (bw > 6 ? 1 : 0), w = Math.max(.8, bw - (bw > 6 ? 2 : bw > 3 ? 1 : 0)); let y = y0 + sh;
+    for (const k of UF_CAT) { const h = s[k] / mx * sh; if (h > 0) { x.fillStyle = C[k]; x.fillRect(x1, y - h, w, h); y -= h; } }
+    if (s.out > 0) { const ho = Math.max(1, s.out / mx * sh); x.fillStyle = C.out; x.fillRect(x1, y - ho, w, ho); } });
+  x.fillStyle = C.faint; x.font = `10px ${C.font}`; x.textBaseline = "top"; x.textAlign = "left"; let lx = -99;
+  m.d.buckets.forEach((b, i) => { const px = sx + i * bw, s = ufLabelT(b.t, m.d.step), w = x.measureText(s).width;
+    if (px - lx > w + 12 && px + w < sx + sw) { x.fillText(s, px + 1, y0 + sh + 3); lx = px; } });
+  const ph = sx + Math.min(N, UF.pos) * bw;
+  x.fillStyle = fxA(C.panel2, .62); x.fillRect(ph, y0, sx + sw - ph, sh + 1);
+  x.fillStyle = C.text; x.fillRect(ph - 1, 0, 2, sh + y0 + 3);
+  if (UF.tlh != null) { x.fillStyle = fxA(C.text, .12); x.fillRect(sx + UF.tlh * bw, y0, Math.max(1, bw), sh); }
 }
+// 时间轴上悬停：那一段的准确数字写在时间轴上方那一行（不弹出来挡住图）
+function ufTlInfo(i){
+  const m = UF.m, s = m && m.st[i], b = m && m.d.buckets[i], C = UF.col || tfColors(); if (!s) return "";
+  const P = s.inp + s.cr + s.cw, it = (col, name, v) => `<span>${col ? `<i style="background:${col}"></i>` : ""}${name} <b>${v}</b></span>`;
+  return `<span><b>${esc(ufTitleT(b.t, m.d.step))}</b></span>${it("", tr("请求数"), fmtFull(s.n))}${it(C.cr, tr("缓存读"), fmtFull(s.cr))}${it(C.cw, tr("缓存写"), fmtFull(s.cw))}${it(C.inp, tr("新输入"), fmtFull(s.inp))}${it(C.out, tr("输出"), fmtFull(s.out))}${it("", tr("缓存命中率"), P ? (s.cr / P * 100).toFixed(1) + "%" : "—")}${it("", tr("费用"), fmtCF(s.cost))}`;
+}
+function ufTlHead(){ const m = UF.m; return m ? `<span class="dim">${tr("时间轴")} · ${tr("每根柱")} = ${tr({h: "一个小时", d: "一天", w: "一周"}[m.d.step] || "")} · ${tr("点 / 拖动跳到那个时间")}</span>` : ""; }
 // 粒子：按粒子计划发（见 ufPlan）。输入粒子走 来源→种类→模型 两段；同一个粒子位置上的输出粒子要等输入走到模型才出发（先读输入、再出输出），走 模型→输出 一段
 function ufDur(bdr){ const din = Math.max(.5, Math.min(2.2, 4 * bdr)); return [din, din * .6]; }
 function ufPush(P){ if (UF.P.length < UF_MAXP) UF.P.push(P); else UF.drop = (UF.drop || 0) + 1; }
@@ -3576,7 +3737,8 @@ function ufLegend(){
   const st = {h: "一个小时", d: "一天", w: "一周"}[d.step] || "";
   return `按当前筛选汇总「用量」页同一份记录：${fmtFull(T.n)} 次请求、合计 ${fmtN(T.real)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${T.hit != null ? `、缓存命中率 ${(T.hit * 100).toFixed(1)}%` : ""}。
     带子宽度、粒子个数都按真实 token 数换算：输入 1 个粒子 = <b>${(UF.u || 0).toLocaleString()}</b> tokens${UF.k > 1 ? `；输出侧放大 <b>×${UF.k}</b>（带子宽度也 ×${UF.k}），1 个粒子 = <b>${(+(UF.u / UF.k).toPrecision(3)).toLocaleString()}</b> tokens。按真实比例，输出只占这段时间 tokens 的 <b>${fxPct(m.T.out, m.T.inp + m.T.cr + m.T.cw + m.T.out)}</b>，可以切到「真实比例」看` : `；输出侧和输入侧同一比例（真实比例，不放大）`}。
-    浅色底是整段时间的总量，实色是播放到当前位置的累计；每段时间的粒子按那段时间每条路径的真实用量算好个数，先输入进模型、再出输出。没有用量就没有粒子。底部每根柱是${st}。悬停看准确数字。`;
+    卡片只是放名字和数字的标签，高度不按比例（太小的也画成能放下字的高度）；比例看带子粗细和卡片边上的色条，左下角是比例尺。细到看不见的带子最少画 ${UF_MINB}px。
+    浅色底是整段时间的总量，实色是播放到当前位置的累计；每段时间的粒子按那段时间每条路径的真实用量算好个数，先输入进模型、再出输出。没有用量就没有粒子。下面时间轴每根柱是${st}。悬停看准确数字。`;
 }
 function ufRender(){
   const box = $("#ufBody"), m = UF.m; if (!box || !m) return;
@@ -3588,19 +3750,26 @@ function ufRender(){
       <select id="ufSp" title="播放速度">${[.5, 1, 2, 4].map(v => `<option value="${v}" ${v === UF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
       <span class="tfpos" id="ufPos"></span><span class="tfsep"></span>${fxSeg("ufSc")}<span class="tfunit" id="ufUnit"></span></div>
     <div class="tfcv"><canvas id="ufCv"></canvas><div class="fxtip" id="ufTip"></div></div>
+    <div class="tfcv uftl"><div class="ufth" id="ufTh"></div><canvas id="ufTl" title="点 / 拖动跳到那个时间"></canvas></div>
     <div class="tfacc">${card("ufAt", "合计 Tokens", "", "tfk1")}${card("ufAi", "新输入", "--u2")}${card("ufAcr", "缓存读", "--u1")}${card("ufAcw", "缓存写", "--u4")}${card("ufAo", "输出", "--u3")}${card("ufArs", "其中思考", "--u5")}${card("ufAn", "请求数")}${card("ufAh", "缓存命中率")}${card("ufAc", "费用")}</div>
     <div class="dim tfleg" id="ufLeg"></div></div>`;
   ufSetPlay(false);
   $("#ufPlay").onclick = () => ufSetPlay(!UF.play);
   $("#ufSp").onchange = e => { UF.speed = +e.target.value; store.set("ccss.ufspeed", String(UF.speed)); };
   const sl = $("#ufSl"); sl.oninput = () => { UF.drag = true; ufSeek(+sl.value); }; sl.onchange = () => { UF.drag = false; ufStats(); };
-  const cv = $("#ufCv"), tip = $("#ufTip");
-  const seekAt = e => { const g = UF.g; if (!g || !UF.m.N) return false; const r = cv.getBoundingClientRect(), z = r.width / cv.clientWidth, px = (e.clientX - r.left) / z, py = (e.clientY - r.top) / z;
-    if (py < g.sy - 8 && !UF.drag) return false; ufSeek(Math.max(0, Math.min(UF.m.N, Math.round((px - g.sx) / (g.sw / UF.m.N))))); return true; };
-  cv.onmousedown = e => { if (!seekAt(e)) return; UF.drag = true; const mv = ev => seekAt(ev), up = () => { UF.drag = false; ufStats(); document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
+  const cv = $("#ufCv"), tip = $("#ufTip"), tl = $("#ufTl"), th = $("#ufTh");
+  const tlAt = e => { const t = UF.tg, r = tl.getBoundingClientRect(), z = r.width / tl.clientWidth, px = (e.clientX - r.left) / z; return t && UF.m.N ? (px - t.sx) / (t.sw / UF.m.N) : null; };
+  const seekAt = e => { const f = tlAt(e); if (f == null) return; ufSeek(Math.max(0, Math.min(UF.m.N, Math.round(f)))); };
+  tl.onmousedown = e => { if (!UF.m.N) return; UF.drag = true; seekAt(e); const mv = ev => seekAt(ev), up = () => { UF.drag = false; ufStats(); document.removeEventListener("mousemove", mv); document.removeEventListener("mouseup", up); };
     document.addEventListener("mousemove", mv); document.addEventListener("mouseup", up); };
-  cv.onmousemove = e => fxHover(cv, tip, UF.hits, e, ufStripTip);
+  const thSet = h => { if (th.dataset.h !== h) { th.dataset.h = h; th.innerHTML = h; } };
+  tl.onmousemove = e => { const f = tlAt(e), i = f == null ? null : Math.floor(f); const ok = i != null && i >= 0 && i < UF.m.N;
+    UF.tlh = ok ? i : null; thSet(ok ? ufTlInfo(i) : ufTlHead()); if (!UF.raf) ufTl(); };
+  tl.onmouseleave = () => { UF.tlh = null; thSet(ufTlHead()); if (!UF.raf) ufTl(); };
+  thSet(ufTlHead());
+  cv.onmousemove = e => fxHover(cv, tip, UF.hits, e, null, true);
   cv.onmouseleave = () => { tip.style.display = "none"; };
+  fxResize(tl, () => { if (!UF.raf) ufTl(); });
   fxResize(cv, () => { UF.strip = null; if (!UF.raf) ufDraw(); });
   fxSegWire("ufSc", () => { ufScale(); UF.g = null; UF.strip = null; UF.P = []; UF.drop = 0; ufScaleUI(); if (!UF.raf) ufDraw(); ufStats(); });
   ufDraw(); ufStats(); ufLiveUI(); ufScaleUI();
@@ -3714,7 +3883,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { UF
 async function ssView(agent, id, lim){
   lim = lim || 300;
   const same = SS.cur && SS.cur.agent === agent && SS.cur.id === id;
-  SS.cur = {agent, id};
+  SS.cur = {agent, id}; ssLayout();
   $$("#ssList tr[data-k]").forEach(tr => tr.classList.toggle("sel", tr.dataset.k === agent + ":" + id));
   let x = SS.d.items.find(i => i.agent === agent && i.id === id) || {};
   const box = $("#ssView"); if (!(same && lim > 300)) box.innerHTML = '<div class="empty">读取…</div>';
@@ -3728,6 +3897,7 @@ async function ssView(agent, id, lim){
   const tfOn = TF_AG.includes(agent), mode = tfOn && store.get("ccss.svmode") === "flow" ? "flow" : "chat";
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
       ${tfOn ? `<span class="seg svmode" id="svMode" title="对话内容，或者按真实用量回放每一次模型调用的 token 流转"><button data-m="chat" class="${mode === "chat" ? "on" : ""}">对话</button><button data-m="flow" class="${mode === "flow" ? "on" : ""}">Token 流转</button></span>` : ""}
+      <span class="menu" id="svRd"><button class="ghost" id="svRdB" title="阅读设置：气泡样式、文本宽度">${ic("type")}</button><div class="list rdpop">${rdPop()}</div></span>
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
@@ -3755,6 +3925,9 @@ async function ssView(agent, id, lim){
   }
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svHist").onclick = () => tlOpen(agent, id);
+  $("#svRdB").onclick = e => { e.stopPropagation(); $$(".menu.open").forEach(m => m !== $("#svRd") && m.classList.remove("open")); $("#svRd").classList.toggle("open"); };
+  $("#svRd .list").onclick = e => e.stopPropagation();          // 在里面点不收起
+  rdBind($("#svRd"));
   if (agent === "opencode" || agent === "zcode") $("#svOpen").onclick = () => cvOpen(agent, [id]);
   else if (agent === "cursor") $("#svOpen").onclick = () => { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); };
   else if (agent === "dsh") $("#svOpen").onclick = () => { copyText(x.resume || id); toast("已复制 dsh 命令行的继续命令。用桌面版的话，在 DeepSeek Harness 的会话列表里点开它就能接着聊（本程序不改 dsh 的会话）", 7000); };
@@ -4393,6 +4566,8 @@ R.settings = async () => {
       ${setRow("globe", "界面语言 · Language", `缺省跟随系统（现在系统是${s.lang_system === "en" ? "英文" : "中文"}）。切换后界面马上重新载入；你的会话内容不会被翻译`, `<span class="seg" id="stLang" translate="no">${[["auto", s.lang_now === "en" ? "System" : "跟随系统"], ["zh", "中文"], ["en", "English"]].map(([v, t]) => `<button data-v="${v}" class="${(s.lang || "auto") === v ? "on" : ""}">${t}</button>`).join("")}</span>`)}
       ${setRow("contrast", "主题", "跟随系统，或固定浅色 / 深色", `<span class="seg" id="stTheme">${[["system","跟随系统"],["light","浅色"],["dark","深色"]].map(([v,t]) => `<button data-v="${v}" class="${th===v?"on":""}">${t}</button>`).join("")}</span>`)}
       ${setRow("type", "字号", "整个界面的文字大小（缺省「标准」）", `<span class="seg" id="stFont">${FKS.map(([v, t]) => `<button data-v="${v}" class="${Math.abs(+v - fontK()) < 0.005 ? "on" : ""}">${t}</button>`).join("")}</span>`)}
+      ${setRow("bubble", "对话气泡样式", "缺省「跟随应用」：Codex 的会话是绿色气泡、Claude 是米色气泡、Cursor / DeepSeek Harness / OpenCode / ZCode 各照自己的样子（浅色 / 深色都有）。「统一样式」= 都用 Claude 那种", rdStyleCtl())}
+      ${setRow("width", "对话文本宽度", "看会话时正文和气泡最宽多少（跟着字号放大）。会话页标题栏的 <b>T</b> 按钮里也能随手改", rdWidthCtl())}
       ${setRow("zoom", "界面缩放", "整体放大 / 缩小（80%–200%）。快捷键 <kbd>Ctrl</kbd>+<kbd>=</kbd> 放大、<kbd>Ctrl</kbd>+<kbd>-</kbd> 缩小、<kbd>Ctrl</kbd>+<kbd>0</kbd> 还原，也可以按住 Ctrl 滚滚轮。会记住；Windows 的显示缩放（125% / 150%）另外照常生效",
         `<span class="zoomc"><button class="ghost" id="stZm" title="缩小">−</button><b id="stZoomV">${Math.round(zoomK() * 100)}%</b><button class="ghost" id="stZp" title="放大">+</button><button class="ghost" id="stZ0">还原</button></span>`)}
       ${setRow("x", "关窗口时缩到托盘", "关掉窗口后留在通知区域继续自动同步 / 检测账号切换；托盘菜单里「退出」才真正退出" + (win ? "" : "（只有 Windows 桌面版有托盘）"), sw("stTray", s.tray_close, dis))}
@@ -4419,6 +4594,7 @@ R.settings = async () => {
       <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">目录认错了：到「诊断」里手动指定。</div></div>`;
   $$("#stTheme button").forEach(b => b.onclick = () => { applyTheme(b.dataset.v); $$("#stTheme button").forEach(x => x.classList.toggle("on", x === b)); });
   $$("#stFont button").forEach(b => b.onclick = () => applyUi(b.dataset.v, null));
+  rdBind(pg);
   $$("#stLang button").forEach(b => b.onclick = async () => { await saveSetting({lang: b.dataset.v}); location.reload(); });
   $("#stAbout").onclick = e => { e.preventDefault(); go("about"); };
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);

@@ -66,6 +66,11 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.5
 
+- **Per-app chat bubbles, adjustable text width, a clearer usage flow (0.5.2):** the Conversation view now styles bubbles after the app
+  the session came from (Claude, Codex, Cursor, DeepSeek Harness, OpenCode, ZCode; light and dark; original CSS), or one unified style
+  (T button in the session header, or Settings → Appearance). Text width: narrow / standard (860px, default) / wide / full, or a 520–1600px
+  slider, remembered. Opening a session no longer shows a second session list next to it (*Show list side by side* brings it back).
+  The usage page's token flow uses cards, a scale bar and a separate timeline.
 - **Token flow animation and an About page (0.5.1):** the session detail view gets a *Conversation | Token flow* switch (Claude Code, Codex,
   DeepSeek Harness). It replays **every model call** of the session from the real usage in its records — Claude Code `message.usage`
   (streamed lines deduped, subagents included), Codex `token_count` / `token_usage_record` deltas, DeepSeek Harness `usage` — the same
