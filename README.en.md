@@ -93,10 +93,24 @@ anything that can be dry-run is dry-run first.
   pause, scrubbing, 0.5×–4× speed, counting-up running totals (tokens, cache, output, reasoning, requests, hit rate, cost) and hover
   tooltips with exact numbers. *● Live* long-polls the data version and merges new usage as it lands. The card loads only when it
   scrolls into view.
-  **Polished visuals for both flows:** gradient bands with edges, glowing nodes and particles, eased band transitions, a HiDPI canvas
+  **Polished visuals for both flows:** gradient bands with edges, glowing nodes and particles, a HiDPI canvas
   that re-lays out with its container, labels that spread out instead of overlapping (with a halo for contrast in light and dark), and
   colours from the theme. Reduced motion means no autoplay and no particles. Particles are capped, animation runs on
   `requestAnimationFrame` and stops while the page is hidden. No new dependencies or CDN.
+  **Model icons and a faithful flow:** model nodes, tooltips, the legend and the current-call panel show a Claude icon for Claude
+  models, an OpenAI icon for GPT / o-series / Codex models, a DeepSeek icon for DeepSeek and a neutral chip otherwise (inline SVG from
+  Simple Icons, CC0, also drawn on the canvas from SVG). A *Magnify output | True proportions* switch sits in both toolbars next to a
+  "1 dot = N tokens" chip; when magnified, the factor, the output unit and output's real share are stated. The order matches reality:
+  the whole input reaches the model before output starts (reasoning first), tool calls follow, and tool results loop into the next
+  input. Band widths are always the current call's real numbers (no tween). Usage-page dots are no longer sampled at random: each
+  bucket's dots per path are computed from real usage so they sum to total ÷ unit, empty periods emit none, and live bursts are
+  exact deltas (`tests/scenarios/s_flow_fidelity.py` checks this in node). Model labels get their own gutter instead of covering the
+  output bands.
+
+  ![Usage token flow with model icons](docs/screenshots/v052-usageflow-en-dark.png)
+
+  ![Session token flow](docs/screenshots/v052-sessionflow-en-dark.png)
+
   The new **About** page (ⓘ in the top bar, a link in Settings, *About…* in the tray) shows the version, author
   [helefee](https://github.com/helefee), the repository [helefee/CC-SessionSync](https://github.com/helefee/CC-SessionSync), the MIT
   license, issue / release links, system and data folder.

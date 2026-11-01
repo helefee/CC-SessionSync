@@ -579,6 +579,30 @@ td.nw,th.nw{white-space:nowrap}
 .fxtip i{display:inline-block;width:8px;height:8px;border-radius:2px;flex:none}
 #usFlow .ct{gap:8px}#usFlow .tfbar .ic{width:1.1em;height:1.1em}#usFlow #ufBody{margin-top:8px}
 .uf .tfcv canvas{height:calc(400px*var(--fk))}.uf .tfacc{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+/* 0.5.2：模型品牌图标（内联 SVG）+ 两个流转图的版式：8px 网格、工具条、统计卡片 */
+.ic.mbi{width:1.1em;height:1.1em;fill:currentColor;stroke:none;flex:none;vertical-align:-.2em;margin-right:5px}
+.mb-claude{color:#d97757}.mb-openai{color:var(--text)}.mb-deepseek{color:var(--dsh,#4d6bfe)}.mb-other{color:var(--muted)}
+.fxtip b .mbi{margin-right:4px}.tfmod{display:inline-flex;align-items:center;font-size:calc(14.5px*var(--fk))}
+.tf{gap:16px}
+.tfbar{gap:8px;padding:8px 10px;border:1px solid var(--line2);border-radius:14px;background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tfbar>button,.tfbar select{height:32px;border-radius:9px}
+.tfbar #tfPlay,.tfbar #ufPlay{padding:0 16px;border-radius:999px;font-weight:600}
+.tfsep{width:1px;height:20px;background:var(--line2);margin:0 2px;flex:none}
+.tfseg{display:inline-flex;padding:2px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);flex:none}
+.tfseg button{border:0;background:transparent;color:var(--muted);padding:3px 10px;border-radius:8px;font-size:calc(12.5px*var(--fk));line-height:1.5;cursor:pointer;box-shadow:none}
+.tfseg button.on{background:var(--panel);color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 1px var(--line2)}
+.tfunit{display:inline-flex;align-items:center;gap:8px;font-size:calc(12px*var(--fk));color:var(--muted);white-space:nowrap}
+.tfunit>i{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}.tfunit b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.tfux{padding-left:8px;border-left:1px solid var(--line2)}
+.tfcv{border-radius:16px;border-color:var(--line2);box-shadow:var(--shadow)}
+.tfacc{gap:10px;grid-template-columns:repeat(auto-fill,minmax(136px,1fr))}.uf .tfacc{grid-template-columns:repeat(auto-fit,minmax(106px,1fr))}
+.tfacc>div{padding:12px 14px;border-radius:12px;gap:6px;background:var(--panel);border-color:var(--line2)}
+.tfacc span{font-size:calc(12px*var(--fk));letter-spacing:.01em}
+.tfacc b{font-size:calc(20px*var(--fk));font-weight:650;line-height:1.1;letter-spacing:-.01em}
+.tfacc>.tfk1{background:var(--accent-weak);border-color:color-mix(in srgb,var(--accent) 22%,var(--line2))}.tfacc>.tfk1 b{color:var(--accent)}
+.tfcur{padding:14px 16px;border-radius:12px;gap:10px;border-color:var(--line2)}
+.tfnums{gap:6px 18px}
+.tfleg{color:var(--muted);line-height:1.7;padding:0 4px}.tfleg b{color:var(--text);font-weight:600}
 @media (max-width:700px){.tfcv canvas{height:calc(300px*var(--fk))}.uf .tfcv canvas{height:calc(340px*var(--fk))}}
 .ab{max-width:760px}
 .abhd{display:flex;align-items:center;gap:16px;margin:6px 0 14px}.abhd img{width:64px;height:64px}
@@ -790,6 +814,42 @@ Object.assign(ICON, {
 });
 function ic(name, cls){ return `<svg class="ic${cls ? " " + cls : ""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[name] || ""}</svg>`; }
 const logo = agent => ic({claude: "claude", codex: "codex", dsh: "dsh", cursor: "cursor", opencode: "opencode", zcode: "zcode"}[agent] || "user", "logo" + ({dsh: " dshc", cursor: " curc", opencode: " occ", zcode: " zcc"}[agent] || ""));
+// 0.5.2：模型的品牌标识（SVG 矢量）。Claude / OpenAI / DeepSeek 用官方标识：路径取自 Simple Icons（CC0 1.0；Claude、DeepSeek 取自 simple-icons 16.36.0，
+// OpenAI 沿用上面 codex 那个、取自 Simple Icons 早先收录的 OpenAI 标识）；商标归各公司，这里只在本机工具里作识别用。其他模型：自己画的通用芯片图形。
+Object.assign(ICON, {
+  openai: ICON.codex,
+  deepseek: '<path d="M23.748 4.651c-.254-.124-.364.113-.512.233-.051.04-.094.09-.137.137-.372.397-.806.657-1.373.626-.829-.046-1.537.214-2.163.848-.133-.782-.575-1.248-1.247-1.548-.352-.155-.708-.311-.955-.65-.172-.24-.219-.509-.305-.774-.055-.16-.11-.323-.293-.35-.2-.031-.278.136-.356.276-.313.572-.434 1.202-.422 1.84.027 1.436.633 2.58 1.838 3.393.137.094.172.187.129.323-.082.28-.18.553-.266.833-.055.179-.137.218-.328.14a5.5 5.5 0 0 1-1.737-1.179c-.857-.828-1.631-1.743-2.597-2.46a12 12 0 0 0-.689-.47c-.985-.957.13-1.743.387-1.836.27-.098.094-.433-.778-.428-.872.003-1.67.295-2.687.685a3 3 0 0 1-.465.136 9.6 9.6 0 0 0-2.883-.101c-1.885.21-3.39 1.1-4.497 2.622C.082 8.776-.231 10.854.152 13.02c.403 2.284 1.568 4.175 3.36 5.653 1.857 1.533 3.997 2.284 6.438 2.14 1.482-.085 3.132-.284 4.994-1.86.47.234.962.328 1.78.398.629.058 1.235-.031 1.705-.129.735-.155.684-.836.418-.961-2.155-1.004-1.682-.595-2.112-.926 1.095-1.295 2.768-3.598 3.284-6.733.05-.346.115-.834.108-1.114-.004-.171.035-.238.23-.257a4.2 4.2 0 0 0 1.545-.475c1.397-.763 1.96-2.016 2.093-3.517.02-.23-.004-.467-.247-.588M11.58 18.168c-2.088-1.642-3.101-2.183-3.52-2.16-.39.024-.32.472-.234.763.09.288.207.487.371.74.114.167.192.416-.113.603-.673.416-1.842-.14-1.897-.168-1.361-.801-2.5-1.86-3.301-3.306-.775-1.393-1.225-2.888-1.299-4.482-.02-.385.094-.522.477-.592a4.7 4.7 0 0 1 1.53-.038c2.131.311 3.946 1.264 5.467 2.774.868.86 1.525 1.887 2.202 2.89.72 1.066 1.494 2.082 2.48 2.915.348.291.626.513.892.677-.802.09-2.14.109-3.055-.615zm1.001-6.44a.306.306 0 0 1 .415-.287.3.3 0 0 1 .113.074.3.3 0 0 1 .086.214c0 .17-.136.307-.308.307a.303.303 0 0 1-.306-.307m3.11 1.596c-.2.081-.4.151-.591.16a1.25 1.25 0 0 1-.798-.254c-.274-.23-.47-.358-.551-.758a1.7 1.7 0 0 1 .015-.588c.07-.327-.007-.537-.238-.727-.188-.156-.426-.199-.689-.199a.6.6 0 0 1-.254-.078.253.253 0 0 1-.114-.358 1 1 0 0 1 .192-.21c.356-.202.767-.136 1.146.016.352.144.618.408 1.001.782.392.451.462.576.685.915.176.264.336.536.446.848.066.194-.02.353-.25.45"/>',
+  model: '<path fill-rule="evenodd" d="M9 1.5h2v3h2v-3h2v3h1.5A2.5 2.5 0 0 1 19 7v1.5h3.5v2H19v3h3.5v2H19V17a2.5 2.5 0 0 1-2.5 2.5H15v3h-2v-3h-2v3H9v-3H7.5A2.5 2.5 0 0 1 5 17v-1.5H1.5v-2H5v-3H1.5v-2H5V7a2.5 2.5 0 0 1 2.5-2.5H9zm-1.5 5a1 1 0 0 0-1 1v9.5a1 1 0 0 0 1 1H16.5a1 1 0 0 0 1-1V7.5a1 1 0 0 0-1-1zm2.5 3h4v5h-4z"/>'
+});
+// 模型名 → 品牌：claude-* / sonnet / opus / haiku → claude；gpt-* / o1 / o3 / o4… / *codex* → openai；deepseek-* → deepseek；其他（含「其他模型」）→ other
+function modelBrand(name){
+  const m = String(name || "").toLowerCase().trim().replace(/^(anthropic|openai|deepseek|azure|bedrock|vertex|openrouter)[/:]/, "").replace(/^[\w.-]+\//, "");
+  if (!m || m === "\x00other") return "other";
+  if (/claude|anthropic|(^|[^a-z])(sonnet|opus|haiku)([^a-z]|$)/.test(m)) return "claude";
+  if (/^(gpt|chatgpt)|(^|[^a-z0-9])o[1-9](?![0-9])|codex|openai|(^|[^a-z])gpt-/.test(m)) return "openai";
+  if (/deepseek/.test(m)) return "deepseek";
+  return "other";
+}
+const MB_ICON = {claude: "claude", openai: "openai", deepseek: "deepseek", other: "model"};
+const MB_NAME = {claude: "Claude", openai: "OpenAI", deepseek: "DeepSeek", other: ""};
+// DOM 里用：内联 <svg>（提示框 / 当前调用 / 图例）
+const mic = name => { const b = modelBrand(name); return `<svg class="ic mbi mb-${b}" viewBox="0 0 24 24" aria-hidden="true"${MB_NAME[b] ? ` aria-label="${MB_NAME[b]}"` : ""}>${ICON[MB_ICON[b]]}</svg>`; };
+// 画布里用：把同一份 SVG 做成 data URL 的 Image，按 设备像素 渲染（HiDPI 下也是清楚的），按 品牌|颜色|像素 缓存；载入好了重画一次
+const FXI = new Map();
+let fxIR = 0;
+function fxIconImg(b, col, px){
+  const key = b + "|" + col + "|" + px; let e = FXI.get(key);
+  if (!e) { const img = new Image(); e = {img, ok: false}; FXI.set(key, e);
+    img.onload = () => { e.ok = true; if (fxIR) return; fxIR = requestAnimationFrame(() => { fxIR = 0;
+      if (typeof TF !== "undefined" && $("#tfCv") && !TF.raf) tfDraw(); if (typeof UF !== "undefined" && $("#ufCv") && !UF.raf) ufDraw(); }); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 24 24" fill="${col}">${ICON[MB_ICON[b]]}</svg>`); }
+  return e.ok ? e.img : null;
+}
+function fxIcon(x, name, x0, y0, sz, C, dpr){
+  const b = modelBrand(name), col = b === "claude" ? "#D97757" : b === "openai" ? C.text : b === "deepseek" ? (C.dsh || "#4D6BFE") : C.muted;
+  const img = fxIconImg(b, col, Math.max(8, Math.round(sz * dpr))); if (img) x.drawImage(img, x0, y0, sz, sz);
+  return b;
+}
 const EMO = {"✅": "ok", "❌": "err", "⚠": "warn", "🔄": "sync", "📥": "download"};
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function emoIcons(t){ let out = esc(String(t)); for (const [e, n] of Object.entries(EMO)) out = out.split(e).join(ic(n)); return out.replace(/\uFE0F/g, ""); }
@@ -2798,6 +2858,10 @@ function fxText(x, s, tx, ty, al, col, font, halo){
   if (halo) { x.lineJoin = "round"; x.lineWidth = 3.5; x.strokeStyle = halo; x.strokeText(s, tx, ty); }
   x.fillStyle = col; x.fillText(s, tx, ty);
 }
+// 放不下就截短加「…」
+function fxFit(x, s, w, font){ if (font) x.font = font; if (!(w > 0) || x.measureText(s).width <= w) return s;
+  let lo = 0, hi = s.length; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (x.measureText(s.slice(0, mid) + "…").width <= w) lo = mid; else hi = mid - 1; }
+  return s.slice(0, lo) + "…"; }
 // 标签避让：想放的中心 y + 高度 → 不重叠、不出界的中心 y（保持原来的先后顺序）
 function fxSpread(items, lo, hi, gap){
   const o = items.map((it, i) => ({i, y: it.y, h: it.h})).sort((a, b) => a.y - b.y || a.i - b.i);
@@ -2851,7 +2915,11 @@ document.addEventListener("visibilitychange", () => {
   if (typeof UF !== "undefined" && (UF.play || UF.P.length) && $("#ufCv")) ufKick();
 });
 const TF = {d: null, m: null, k: 0, t: 0, play: false, speed: 1, raf: 0, last: 0, key: "", parts: null, strip: null, col: null, drag: false, lv: null, lvOff: new Set(), sv: 0};
-const TF_PH = {inS: 0, inE: .42, inT: .3, outS: .5, outE: .8, outT: .2, tlS: .6, tlE: .84, tlT: .16, lpT: .26};
+// 一次调用里的先后（和真实顺序一致）：先把整段输入（缓存读 / 缓存写 / 新输入）送进模型，到齐了才开始出输出（先思考、后回复），
+// 输出出完才是工具调用，工具结果沿着虚线回到下一次调用的输入。数字是这次调用 0..1 里的时间点；t 跑到 1.08 再换下一次（回路的尾巴）。
+const TF_PH = {inS: 0, inE: .3, inT: .24, outS: .55, outE: .72, outT: .13, tlS: .85, tlE: .88, tlT: .08, lpT: .12};
+// 「真实比例」：输出侧不放大（×1），带子宽度、粒子单位两边一样；默认放大输出（输出通常只有输入的百分之几，不放大几乎看不见），放大多少写在图上
+const fxTrue = () => store.get("ccss.fxtrue") === "1";
 const TF_SPAN = 2.4;                                    // 1x 时每次调用放 2.4 秒
 function tfNice(x){ if (!(x > 0)) return 1; const p = Math.pow(10, Math.floor(Math.log10(x) + 1e-9)); for (const n of [1, 2, 5]) if (n * p >= x * (1 - 1e-12)) return n * p; return 10 * p; }
 function tfModel(d, o){
@@ -2861,7 +2929,7 @@ function tfModel(d, o){
   for (const c of calls) { maxP = Math.max(maxP, c.inp + c.cr + c.cw); maxO = Math.max(maxO, c.out); }
   const uIn = tfNice(maxP / (o.cap || 240));           // 最大那次调用的输入最多 ~240 个粒子
   let k = 1;
-  const lim = .6 * maxP / maxO;                          // 输出侧放大到最多 ≈ 输入侧最宽处的 60%
+  const lim = o.real ? 1 : .6 * maxP / maxO;                          // 输出侧放大到最多 ≈ 输入侧最宽处的 60%
   for (const s of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]) if (s <= lim) k = s;
   const uOut = uIn / k, S = ["cr", "cw", "inp", "out"];
   const acc = {cr: 0, cw: 0, inp: 0, out: 0}, cum = {inp: 0, cr: 0, cw: 0, out: 0, reasoning: 0, tot: 0, cost: 0, priced: 0, tools: 0};
@@ -2891,10 +2959,12 @@ function tfCum(m, i, t){
 }
 function tfRand(seed){ let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 // 这次调用的粒子：发出时间、在带子里的位置（固定种子：拖动 / 暂停 / 重放看到的一样）
+// 粒子个数 = m.cnt（按单位换算的真实 token 数）；输出里前 思考/输出 那一部分是思考（模型先想、后答），按发出先后上色
 function tfParts(m, i){
-  const n = m.cnt[i], rnd = tfRand(i * 2654435761 + 7), P = [];
+  const n = m.cnt[i], c = m.calls[i] || {}, rnd = tfRand(i * 2654435761 + 7), P = [];
   for (const s of ["cr", "cw", "inp"]) for (let j = 0; j < n[s]; j++) P.push({s, e: TF_PH.inS + (TF_PH.inE - TF_PH.inS) * (j + rnd()) / n[s], l: rnd()});
-  for (let j = 0; j < n.out; j++) P.push({s: "out", e: TF_PH.outS + (TF_PH.outE - TF_PH.outS) * (j + rnd()) / n.out, l: rnd()});
+  const nr = c.out > 0 ? Math.round(n.out * Math.min(1, (c.reasoning || 0) / c.out)) : 0;
+  for (let j = 0; j < n.out; j++) P.push({s: "out", rs: j < nr, e: TF_PH.outS + (TF_PH.outE - TF_PH.outS) * (j + rnd()) / n.out, l: rnd()});
   for (let j = 0; j < n.tools; j++) P.push({s: "tool", e: TF_PH.tlS + (TF_PH.tlE - TF_PH.tlS) * (j + .5) / n.tools, l: rnd()});
   return P;
 }
@@ -2937,7 +3007,7 @@ function tfStrip(cv, m, g, C){                         // 底下的时间轴（�
   m.calls.forEach((c, i) => {
     const x1 = g.sx + i * bw, w = Math.max(.8, bw - (bw > 4 ? 1 : 0)); let y = g.sh;
     for (const k of ["cr", "cw", "inp"]) { const h = c[k] / m.maxP * hh; if (h > 0) { x.fillStyle = C[k]; x.fillRect(x1, y - h, w, h); y -= h; } }
-    const ho = Math.min(hh * .5, c.out * m.k / m.maxP * hh); x.fillStyle = C.out; x.fillRect(x1, y - ho - .5, w, Math.max(.8, ho));
+    const ho = Math.min(hh * .6, c.out * m.k / m.maxP * hh); x.fillStyle = C.out; x.fillRect(x1, y - ho - .5, w, Math.max(.8, ho));
     if (c.sub) { x.fillStyle = C.sub; x.fillRect(x1, g.sh + 2, w, 3); }
   });
   x.fillStyle = C.faint; x.font = `10px ${C.font}`; let lx = -99;
@@ -2950,17 +3020,15 @@ function tfDraw(){
   const F = fxCanvas(cv); if (!F) return;
   const {x, W, H, dpr} = F;
   const C = TF.col || (TF.col = tfColors()), c = m.calls[TF.k], t = TF.t, fs = W < 560 ? 11 : 12, FN = C.font;
-  // 换到下一次调用时，带子宽度从上一次的宽度缓缓过渡过来（不是一下跳变）
-  const pc = TF.k ? m.calls[TF.k - 1] : null, e = pc && TF.play && !tfRM() && t < .22 ? fxE(Math.max(0, t) / .22) : 1;
-  const cg = e >= 1 ? c : Object.assign({}, c, ...["cr", "cw", "inp", "out"].map(k => ({[k]: pc[k] + (c[k] - pc[k]) * e})));
-  const g = tfGeo(W, H, m, cg), nw = g.nw;
+  // 带子宽度始终 = 这次调用的真实 token 数 × 比例尺（不做从上一次过渡过来的插值，免得画出不存在的中间值）
+  const cg = c, g = tfGeo(W, H, m, cg), nw = g.nw;
   if (!TF.parts || TF.parts.i !== TF.k) TF.parts = Object.assign(tfParts(m, TF.k), {i: TF.k});
   const NM = {cr: tr("缓存读"), cw: tr("缓存写"), inp: tr("新输入")}, HITS = TF.hits = [], ctx = c.inp + c.cr + c.cw;
   const pct = v => ctx ? ` <span class="dim">${(v / ctx * 100).toFixed(1)}%</span>` : "";
   // 带子（宽度 = token 数 × 比例尺）：起点浓、终点淡的渐变
   for (const k of ["cr", "cw", "inp"]) if (cg[k] > 0) {
     const P = fxBand(x, g.x0 + nw, g.src[k].y, g.src[k].h, g.xm, g.mi[k].y, g.mi[k].h, C[k], C[k], C.bA, C.bB);
-    HITS.push({p: P, tip: () => `<b>${NM[k]} → ${esc(tfShort(c.model) || tr("模型"))}</b>${fxRow(C[k], "Tokens", fmtFull(c[k]) + pct(c[k]))}`}); }
+    HITS.push({p: P, tip: () => `<b>${NM[k]} → ${mic(c.model)}${esc(tfShort(c.model) || tr("模型"))}</b>${fxRow(C[k], "Tokens", fmtFull(c[k]) + pct(c[k]))}`}); }
   if (cg.out > 0) { const P = fxBand(x, g.xm + 14, g.cy - g.ho / 2, g.ho, g.xo, g.oy, g.ho, C.text, C.out, C.bB * .8, C.bA);
     HITS.push({p: P, tip: () => `<b>${tr("输出")}</b>${fxRow(C.out, "Tokens", fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}`}); }
   if (c.ntools) { x.strokeStyle = fxA(C.tool, .5); x.lineWidth = 2; x.beginPath(); x.moveTo(g.xm + 14, g.cy + g.ho / 2 + 6);
@@ -2972,7 +3040,7 @@ function tfDraw(){
   for (let p = 0; p <= 1.0001; p += .04) { const [a, b] = loop(p); p ? x.lineTo(a, b) : x.moveTo(a, b); } x.stroke(); x.setLineDash([]);
   // 节点
   for (const k of ["cr", "cw", "inp"]) HITS.push({p: fxNode(x, g.x0, g.src[k].y, nw, g.src[k].h, C[k]), tip: () => `<b>${NM[k]}</b>${fxRow(C[k], "Tokens", fmtFull(c[k]) + pct(c[k]))}`});
-  const mtip = () => `<b>${esc(c.model || tr("模型"))}</b>${fxRow("", tr("上下文"), fmtFull(ctx))}${fxRow(C.out, tr("输出"), fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}${fxRow("", tr("缓存命中率"), ctx ? (c.cr / ctx * 100).toFixed(1) + "%" : "—")}${c.cost != null ? fxRow("", tr("费用"), fmtCF(c.cost)) : ""}`;
+  const mtip = () => `<b>${mic(c.model)}${esc(c.model || tr("模型"))}</b>${fxRow("", tr("上下文"), fmtFull(ctx))}${fxRow(C.out, tr("输出"), fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}${fxRow("", tr("缓存命中率"), ctx ? (c.cr / ctx * 100).toFixed(1) + "%" : "—")}${c.cost != null ? fxRow("", tr("费用"), fmtCF(c.cost)) : ""}`;
   HITS.push({p: fxNode(x, g.xm, g.ym, 14, g.hm, C.text, t > 0 && t < TF_PH.outE ? .35 : 0), tip: mtip});
   const otip = () => `<b>${tr("输出")}${m.k > 1 ? ` ×${m.k}` : ""}</b>${fxRow(C.out, "Tokens", fmtFull(c.out))}${c.reasoning ? fxRow(C.rs, tr("其中思考"), fmtFull(c.reasoning)) : ""}`;
   HITS.push({p: fxNode(x, g.xo, g.oy, nw, g.ho, C.out, t > TF_PH.outS && t < 1 ? .45 : 0), tip: otip});
@@ -2993,14 +3061,17 @@ function tfDraw(){
     const p = fxE(p0); let px, py;
     if (isIn) { const a = g.src[P.s], b = g.mi[P.s], y1 = a.y + P.l * a.h, y2 = b.y + P.l * b.h; px = tfBx(g.x0 + nw, g.xm, p); py = y1 + (y2 - y1) * tfE(p); }
     else { const y1 = g.cy - g.ho / 2 + P.l * g.ho, y2 = g.oy + P.l * g.ho; px = tfBx(g.xm + 14, g.xo, p); py = y1 + (y2 - y1) * tfE(p); }
-    fxDot(x, px, py, isIn ? 1.8 : 2.2, P.s === "out" && c.out && P.l * c.out < c.reasoning ? C.rs : C[P.s], dpr, glow);
+    fxDot(x, px, py, isIn ? 1.8 : 2.2, P.rs ? C.rs : C[P.s], dpr, glow);
   }
   // 文字：左边三组标签按需要错开，不重叠
   const F1 = `${fs}px ${FN}`, F2 = `600 ${fs + 1}px ${FN}`;
   const lab = (s, n, lx, ly, al, col) => { fxText(x, s, lx, ly - 8, al, col || C.muted, F1); fxText(x, n, lx, ly + 8, al, C.text, F2); };
   const ys = fxSpread(st.map(k => ({y: g.src[k].y + g.src[k].h / 2, h: 32})), 4, g.Hf, 2);
   st.forEach((k, i) => lab(NM[k], fmtN(c[k]), g.x0 - 8, ys[i], "right"));
-  fxText(x, tfShort(c.model) || tr("模型"), g.xm + 7, g.ym - 26, "center", C.text, `600 ${fs + .5}px ${FN}`, C.panel2);
+  { const MF = `600 ${fs + .5}px ${FN}`, nm = tfShort(c.model) || tr("模型"), isz = fs + 4; x.font = MF;
+    const tw = x.measureText(nm).width, x0 = g.xm + 7 - (isz + 5 + tw) / 2;
+    fxIcon(x, c.model, x0, g.ym - 26 - isz / 2, isz, C, dpr);
+    fxText(x, nm, x0 + isz + 5, g.ym - 26, "left", C.text, MF, C.panel2); }
   fxText(x, tr("上下文") + " " + fmtN(c.inp + c.cr + c.cw), g.xm + 7, g.ym - 11, "center", C.muted, F1, C.panel2);
   const oys = fxSpread([{y: g.oy + g.ho / 2, h: 32}, {y: g.ty, h: 32}], 4, g.Hf, 2);
   lab(tr("输出") + (m.k > 1 ? ` ×${m.k}` : ""), fmtN(c.out) + (c.reasoning ? ` · ${tr("思考")} ${fmtN(c.reasoning)}` : ""), g.xo + nw + 8, oys[0], "left");
@@ -3018,7 +3089,7 @@ function tfDraw(){
 function tfStripTip(px, py){
   const m = TF.m, g = TF.geo; if (!m || !g || py < g.sy - 2 || px < g.sx || px > g.sx + g.sw) return "";
   const i = Math.floor((px - g.sx) / (g.sw / m.calls.length)), c = m.calls[i]; if (!c) return "";
-  return `<b>#${i + 1} · ${esc(tfShort(c.model) || "—")}</b>${c.ts ? `<div class="dim">${esc(when(c.ts))}</div>` : ""}${fxRow(TF.col.cr, tr("缓存读"), fmtFull(c.cr))}${fxRow(TF.col.cw, tr("缓存写"), fmtFull(c.cw))}${fxRow(TF.col.inp, tr("新输入"), fmtFull(c.inp))}${fxRow(TF.col.out, tr("输出"), fmtFull(c.out))}${c.cost != null ? fxRow("", tr("费用"), fmtCF(c.cost)) : ""}`;
+  return `<b>#${i + 1} · ${mic(c.model)}${esc(tfShort(c.model) || "—")}</b>${c.ts ? `<div class="dim">${esc(when(c.ts))}</div>` : ""}${fxRow(TF.col.cr, tr("缓存读"), fmtFull(c.cr))}${fxRow(TF.col.cw, tr("缓存写"), fmtFull(c.cw))}${fxRow(TF.col.inp, tr("新输入"), fmtFull(c.inp))}${fxRow(TF.col.out, tr("输出"), fmtFull(c.out))}${c.cost != null ? fxRow("", tr("费用"), fmtCF(c.cost)) : ""}`;
 }
 function tfStats(){
   const m = TF.m; if (!m || !m.calls.length) return;
@@ -3031,7 +3102,7 @@ function tfStats(){
   const sl = $("#tfSl"); if (sl && !TF.drag && +sl.value !== TF.k) sl.value = TF.k;
   if (TF.cur !== TF.k) { TF.cur = TF.k; const box = $("#tfCur"); if (!box) return;
     const tu = (TF.d.turns || [])[c.turn], gap = TF.k ? c.ts - m.calls[TF.k - 1].ts : 0;
-    box.innerHTML = `<div class="tfch"><b>${esc(tfShort(c.model) || "—")}</b>${c.sub ? ` <span class="tag">子代理</span>` : ""}${c.est ? ` <span class="tag" title="这次的输出数是按文字长度估的（记录里没有完整用量）">估算</span>` : ""}<span class="sp"></span><span class="dim">${c.ts ? esc(when(c.ts)) : ""}${gap > 0 ? ` · +${gap < 60 ? gap.toFixed(1) + "s" : gap < 3600 ? (gap / 60).toFixed(1) + "m" : (gap / 3600).toFixed(1) + "h"}` : ""}</span></div>
+    box.innerHTML = `<div class="tfch"><b class="tfmod" title="${esc(c.model || "")}">${mic(c.model)}${esc(tfShort(c.model) || "—")}</b>${c.sub ? ` <span class="tag">子代理</span>` : ""}${c.est ? ` <span class="tag" title="这次的输出数是按文字长度估的（记录里没有完整用量）">估算</span>` : ""}<span class="sp"></span><span class="dim">${c.ts ? esc(when(c.ts)) : ""}${gap > 0 ? ` · +${gap < 60 ? gap.toFixed(1) + "s" : gap < 3600 ? (gap / 60).toFixed(1) + "m" : (gap / 3600).toFixed(1) + "h"}` : ""}</span></div>
       <div class="tfnums"><span><i style="background:var(--u1)"></i>缓存读 <b>${c.cr.toLocaleString()}</b></span><span><i style="background:var(--u4)"></i>缓存写 <b>${c.cw.toLocaleString()}</b></span><span><i style="background:var(--u2)"></i>新输入 <b>${c.inp.toLocaleString()}</b></span><span><i style="background:var(--u3)"></i>输出 <b>${c.out.toLocaleString()}</b>${c.reasoning ? `（思考 ${c.reasoning.toLocaleString()}）` : ""}</span>${c.cost != null ? `<span>费用 <b>${fmtC(c.cost)}</b></span>` : ""}</div>
       ${c.tools.length ? `<div class="tftools">${c.tools.map(t => `<span class="tfchip">${ic("tool")}${esc(t)}</span>`).join("")}${c.ntools > c.tools.length ? `<span class="dim">…共 ${c.ntools} 个</span>` : ""}</div>` : `<div class="dim tftools">这次调用没有调用工具</div>`}
       ${tu ? `<div class="tfturn" title="${esc(tu.text)}"><span class="dim">第 ${c.turn + 1} 轮 · 你说：</span>${esc(tu.text)}</div>` : ""}`; }
@@ -3057,9 +3128,19 @@ function tfLoop(ts){
 function tfLegend(){
   const d = TF.d, m = TF.m, T = d.totals || {}, agent = d.agent;
   return `累计到播放位置为止；整个会话：${(T.calls ?? m.calls.length).toLocaleString()} 次调用、合计 ${fmtN(T.tot)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${d.cut ? `（只回放最后 ${m.calls.length} 次，前面还有 ${d.cut} 次）` : ""}。
-      带子宽度和粒子个数按真实 token 数换算：输入侧每个粒子 ≈ <b>${m.uIn.toLocaleString()}</b> tokens${m.k > 1 ? `；输出侧放大 ${m.k} 倍，每个粒子 ≈ <b>${(+m.uOut.toPrecision(3)).toLocaleString()}</b> tokens` : ""}。
+      带子宽度和粒子个数都按真实 token 数换算：输入侧 1 个粒子 = <b>${m.uIn.toLocaleString()}</b> tokens${m.k > 1 ? `；输出侧放大 <b>×${m.k}</b>（带子宽度也 ×${m.k}），1 个粒子 = <b>${(+m.uOut.toPrecision(3)).toLocaleString()}</b> tokens。按真实比例，输出只占整个会话 tokens 的 <b>${fxPct(m.total.out, m.total.inp + m.total.cr + m.total.cw + m.total.out)}</b>，可以切到「真实比例」看` : `；输出侧和输入侧同一比例（真实比例，不放大）`}。工具调用每个点 = 1 次调用（一次最多画 24 个）。
+      先后和真实顺序一样：整段输入进模型 → 输出（先思考、后回复）→ 工具调用 → 工具结果回到下一次调用的输入。
       数据和「用量」页同一套口径（${agent === "codex" ? "Codex 的 token_count / token_usage_record" : agent === "dsh" ? "DeepSeek Harness 记录里的 usage" : "Claude Code 记录里每次回复的 message.usage，含子代理"}）；底部时间轴每根柱是一次调用，竖线是你说话的轮次。`;
 }
+const fxPct = (a, b) => !b ? "—" : (a / b * 100 < 1 ? (a / b * 100).toFixed(2) : (a / b * 100).toFixed(1)) + "%";
+// 比例切换（两个流转图共用一个设置）+ 单位说明
+const fxSeg = id => `<span class="tfseg" id="${id}" role="group" title="输出侧的比例：放大才看得见；真实比例下两边同一个比例尺"><button type="button" data-v="0">放大输出</button><button type="button" data-v="1">真实比例</button></span>`;
+function fxSegSync(id){ const e = document.getElementById(id); if (!e) return; const v = fxTrue() ? "1" : "0"; e.querySelectorAll("button").forEach(b => { b.classList.toggle("on", b.dataset.v === v); b.setAttribute("aria-pressed", b.dataset.v === v); }); }
+function fxSegWire(id, cb){ const e = document.getElementById(id); if (!e) return; fxSegSync(id);
+  e.onclick = ev => { const b = ev.target.closest("button"); if (!b || (b.dataset.v === "1") === fxTrue()) return; store.set("ccss.fxtrue", b.dataset.v); fxSegSync(id); cb(); }; }
+const fxUnit = (u, k, uo) => `<i></i><span>1 粒 = <b>${(+(+u).toPrecision(3)).toLocaleString()}</b> tokens</span>${k > 1 ? `<span class="tfux">输出 ×${k} · 1 粒 = <b>${(+(+uo).toPrecision(3)).toLocaleString()}</b></span>` : ""}`;
+function tfScaleUI(){ const m = TF.m, e = $("#tfUnit"); fxSegSync("tfSc"); if (!e || !m) return; const h = fxUnit(m.uIn, m.k, m.uOut); if (e.dataset.h !== h) { e.dataset.h = h; e.innerHTML = h; }
+  const lg = $("#tfLeg"); if (lg) { const h2 = tfLegend(); if (lg.dataset.h !== h2) { lg.dataset.h = h2; lg.innerHTML = h2; } } }
 const TF_LVBTN = `<button class="ghost tflive" id="tfLive"><i class="tfdot"></i><span>实时</span></button><span class="tfls" id="tfLs"></span>`;
 async function tfView(agent, id, host){
   const key = agent + ":" + id;
@@ -3070,7 +3151,7 @@ async function tfView(agent, id, host){
   if (d.ok === false) { host.innerHTML = `<div class="miss">${esc(d.error || "读不了")}</div>`; return; }
   const same = TF.key === key;
   if (TF.lv) { TF.lv.on = false; if (TF.lv.ac) TF.lv.ac.abort(); }
-  Object.assign(TF, {d, m: tfModel(d), key, parts: null, strip: null, col: null, cur: -1});
+  Object.assign(TF, {d, m: tfModel(d, {real: fxTrue()}), key, parts: null, strip: null, col: null, cur: -1});
   if (!same) { TF.k = 0; TF.t = 0; }
   // 实时：记录文件最近改过（会话还在进行）就默认打开；自己关掉的这次打开期间不再自动开
   const can = !!d.gen, auto = can && !TF.lvOff.has(key) && d.age != null && d.age < (d.live_s || 120);
@@ -3092,17 +3173,19 @@ function tfRender(host, same){
       <button class="ghost" id="tfPrev" title="上一次调用（←）"><span class="flip">${ic("chev")}</span></button><button class="ghost" id="tfNext" title="下一次调用（→）">${ic("chev")}</button>
       <input type="range" id="tfSl" min="0" max="${m.calls.length - 1}" value="${TF.k}" title="拖动到某一次调用">
       <select id="tfSp" title="播放速度">${[.5, 1, 2, 4, 8, 16].map(v => `<option value="${v}" ${v === TF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
-      <span class="tfpos">调用 <b id="tfK"></b> · 轮次 <b id="tfTn"></b></span>${TF.lv ? TF_LVBTN : ""}</div>
+      <span class="tfpos">调用 <b id="tfK"></b> · 轮次 <b id="tfTn"></b></span><span class="tfsep"></span>${fxSeg("tfSc")}<span class="tfunit" id="tfUnit"></span>${TF.lv ? `<span class="tfsep"></span>${TF_LVBTN}` : ""}</div>
     <div class="tfcv"><canvas id="tfCv"></canvas><div class="fxtip" id="tfTip"></div></div>
     <div class="tfacc">
-      <div><span><i style="background:var(--u2)"></i>新输入</span><b id="tfAi"></b></div><div><span><i style="background:var(--u1)"></i>缓存读</span><b id="tfAcr"></b></div>
+      <div class="tfk1"><span>合计</span><b id="tfAt"></b></div><div><span><i style="background:var(--u2)"></i>新输入</span><b id="tfAi"></b></div><div><span><i style="background:var(--u1)"></i>缓存读</span><b id="tfAcr"></b></div>
       <div><span><i style="background:var(--u4)"></i>缓存写</span><b id="tfAcw"></b></div><div><span><i style="background:var(--u3)"></i>输出</span><b id="tfAo"></b></div>
-      <div><span><i style="background:var(--u5)"></i>其中思考</span><b id="tfArs"></b></div><div><span>合计</span><b id="tfAt"></b></div>
+      <div><span><i style="background:var(--u5)"></i>其中思考</span><b id="tfArs"></b></div>
       <div><span>缓存命中率</span><b id="tfAh"></b></div><div><span>工具调用</span><b id="tfAtl"></b></div><div><span>费用</span><b id="tfAc"></b></div></div>
     <div class="tfcur" id="tfCur"></div>
     <div class="dim tfleg" id="tfLeg">${tfLegend()}</div>
   </div>`;
   tfSetPlay(false);
+  tfScaleUI();
+  fxSegWire("tfSc", () => { if (!TF.d) return; TF.m = tfModel(TF.d, {real: fxTrue()}); Object.assign(TF, {parts: null, strip: null, cur: -1, sv: (TF.sv || 0) + 1}); tfScaleUI(); tfDraw(); tfStats(); });
   $("#tfPlay").onclick = () => { tfSetPlay(!TF.play); tfUser(!TF.play); };
   $("#tfPrev").onclick = () => { tfSetPlay(false); tfSeek(TF.k - 1, 1); tfUser(); };
   $("#tfNext").onclick = () => { tfSetPlay(false); tfSeek(TF.k + 1, 1); tfUser(); };
@@ -3213,14 +3296,14 @@ function tfMerge(r){
     d.calls.forEach((c, i) => { c.i = i; });
     d.turns = (d.turns || []).slice(0, r.nt0 ?? d.turns.length).concat(r.turns || []);
   }
-  const m = TF.m = tfModel(d), n = m.calls.length;
+  const m = TF.m = tfModel(d, {real: fxTrue()}), n = m.calls.length;
   Object.assign(TF, {parts: null, strip: null, cur: -1, sv: (TF.sv || 0) + 1});
   if (!n) { if (host && n0) tfRender(host, true); tfLiveUI(); return; }
   if (!n0 || !$("#tfCv")) { TF.k = 0; TF.t = 1; if (host) tfRender(host, true); if (L && L.on && L.follow) tfFollowNew(-1); return; }
   const k = curId ? m.calls.findIndex(c => c.id === curId) : -1;
   TF.k = k >= 0 ? k : Math.min(TF.k, n - 1);
   const sl = $("#tfSl"); if (sl) sl.max = n - 1;
-  const lg = $("#tfLeg"); if (lg) { const h = tfLegend(); if (lg.dataset.h !== h) { lg.dataset.h = h; lg.innerHTML = h; } }
+  tfScaleUI();
   if (L && L.on && L.follow && n > n0) tfFollowNew(TF.k);
   else { tfDraw(); tfStats(); }
   tfLiveUI();
@@ -3248,7 +3331,7 @@ async function tfGlobalLive(){
 const UF = {d: null, m: null, g: null, pos: 0, play: false, speed: 1, raf: 0, last: 0, clock: 0, P: [], emit: 0, qk: "", seen: false, io: null, ac: null,
             lv: {on: false, ac: null, busy: false, err: "", at: 0}, hits: [], strip: null, col: null, sv: 0, drag: false};
 const UF_APP = {"claude-code": "Claude Code", "claude-desktop": "Claude 桌面", codex: "Codex", dsh: "DeepSeek Harness"};
-const UF_CAT = ["cr", "cw", "inp"], UF_OUT = ["rp", "rs"], UF_WAIT = 15, UF_MAXP = 700;
+const UF_CAT = ["cr", "cw", "inp"], UF_OUT = ["rp", "rs"], UF_WAIT = 15, UF_MAXP = 2400, UF_BUD = 60;
 const ufCat = k => tr({cr: "缓存读", cw: "缓存写", inp: "新输入", rp: "回复", rs: "思考"}[k]);
 const ufMod = s => s === "\x00other" ? tr("其他模型") : tfShort(s);
 const ufApp = a => tr(UF_APP[a] || a || "?");
@@ -3293,10 +3376,13 @@ function ufGeo(W, H, m, x, fs, FN){
   x.font = `600 ${fs + 1}px ${FN}`;
   const aw = Math.max(40, ...m.d.apps.map(a => x.measureText(ufApp(a)).width)), ow = Math.max(60, x.measureText(tr("思考") + " 000.00M").width);
   const xA = Math.round(Math.min(W * .24, Math.max(70, aw + 16))), xD = Math.round(W - Math.min(W * .24, Math.max(84, ow + 18)) - nw);
-  const xB = Math.round(xA + (xD - xA) * .31), xC = Math.round(xA + (xD - xA) * .63);
+  // 模型列的标签（图标 + 名字 + 数字）占一条自己的空当，输出带子从空当后面才开始：标签不再压在带子上
+  x.font = `600 ${fs + .5}px ${FN}`;
+  const isz = fs + 3, mw = Math.max(36, ...m.d.models.map(s => x.measureText(ufMod(s)).width)), lw = Math.round(Math.min(Math.max(90, (xD - xA) * .24), 7 + isz + 5 + mw + 14));
+  const span = xD - xA - lw - 12, xB = Math.round(xA + span * .34), xC = Math.round(xA + span * .68);
   const P = vc.reduce((a, b) => a + b, 0) || 1, G = Math.max(8, Math.min(22, Hf * .07));
   const s = Math.max(1e-12, Math.min(...[va, vc, vm].map(v => (Hf - (v.length - 1) * G - v.length * 2) / P)));
-  const O = vo[0] + vo[1]; let k = 1; for (const q of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]) if (O * q * s <= .55 * Hf) k = q;
+  const k = ufK(m);
   const stack = (vals, sc, xx, w) => { const hs = vals.map(v => Math.max(2, v * sc)), tot = hs.reduce((a, b) => a + b, 0) + G * (vals.length - 1); let y = top + (Hf - tot) / 2;
     return hs.map(h => { const r = {x: xx, y, h, w}; y += h + G; return r; }); };
   const N = {a: stack(va, s, xA - nw, nw), c: stack(vc, s, xB, nw), m: stack(vm, s, xC, 12), o: stack(vo, s * k, xD, nw)};
@@ -3308,10 +3394,33 @@ function ufGeo(W, H, m, x, fs, FN){
   L.forEach((l, j) => { if (l.kind !== "bc") return; const ci = UF_CAT.indexOf(l.s), h = F[j] * s; LG[j] = {x1: xB + nw, y1: take("co" + l.s, N.c[ci], h), h1: h, x2: xC, y2: 0, h2: h}; });
   for (let mi = 0; mi < m.M; mi++) UF_CAT.forEach(c => { const j = m.idx[`${c}|m${mi}`]; LG[j].y2 = take("mi" + mi, N.m[mi], LG[j].h2); });
   for (let mi = 0; mi < m.M; mi++) { const nd = N.m[mi], hs = UF_OUT.map(o => F[m.idx[`m${mi}|${o}`]] * s * k), tot = hs[0] + hs[1]; let y = nd.y + nd.h / 2 - tot / 2;
-    UF_OUT.forEach((o, oi) => { const j = m.idx[`m${mi}|${o}`]; LG[j] = {x1: xC + 12, y1: y, h1: hs[oi], x2: xD, y2: 0, h2: hs[oi]}; y += hs[oi]; }); }
+    UF_OUT.forEach((o, oi) => { const j = m.idx[`m${mi}|${o}`]; LG[j] = {x1: xC + 12 + lw, y1: y, h1: hs[oi], x2: xD, y2: 0, h2: hs[oi]}; y += hs[oi]; }); }
   UF_OUT.forEach((o, oi) => { for (let mi = 0; mi < m.M; mi++) { const j = m.idx[`m${mi}|${o}`]; LG[j].y2 = take("o" + o, N.o[oi], LG[j].h2); } });
-  return {W, H, top, Hf, s, k, N, LG, va, vc, vm, vo, xA, xB, xC, xD, nw, sy: H - strip - 2, sh: strip - 8, sx: 12, sw: W - 24, fs};
+  return {W, H, top, Hf, s, k, N, LG, va, vc, vm, vo, xA, xB, xC, xD, nw, lw, isz, sy: H - strip - 2, sh: strip - 8, sx: 12, sw: W - 24, fs};
 }
+// 输出侧放大倍数（1-2-5 序列）：放大后输出最多 ≈ 输入的一半；「真实比例」时 ×1。只看数据，不看画布大小（粒子单位跟着它，换窗口大小不变）
+function ufK(m){
+  const P = m.T.inp + m.T.cr + m.T.cw, O = m.T.out; let k = 1;
+  if (fxTrue() || !(O > 0)) return 1;
+  for (const q of [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]) if (O * q <= .5 * P) k = q;
+  return k;
+}
+// 粒子计划：每个时间桶里每条路径（应用→种类→模型 / 模型→回复|思考）发几个粒子。按真实 token 数用累计取整换算成整数个：
+// 输入 1 粒 = u tokens，输出 1 粒 = u / k tokens；每条路径整段加起来正好 = floor(合计 / 单位)。不抽样、不凑数，没用量的桶一个粒子也没有。
+function ufPaths(m){
+  return m.d.buckets.map(b => { const row = new Map(), add = (key, j1, j2, v, out) => { if (!(v > 0)) return; const e = row.get(key); if (e) e.v += v; else row.set(key, {key, j1, j2, v, out}); };
+    for (const [a, mi, n, inp, cr, cw, out, rs] of b.cells) { const v = {inp, cr, cw}, an = m.d.apps[a], mn = m.d.models[mi];
+      for (const c of UF_CAT) add(`${an}|${c}|${mn}`, m.idx[`a${a}|${c}`], m.idx[`${c}|m${mi}`], v[c], 0);
+      add(`${mn}|rp`, m.idx[`m${mi}|rp`], null, out - rs, 1); add(`${mn}|rs`, m.idx[`m${mi}|rs`], null, rs, 1); }
+    return [...row.values()]; });
+}
+function ufUnit(m, k){ let mx = 0; m.st.forEach(s => { mx = Math.max(mx, s.inp + s.cr + s.cw + s.out * k); }); return tfNice(Math.max(1, mx) / UF_BUD); }   // 最多那段时间 ≈ 60 个粒子
+function ufPlan(m, u, k){
+  const acc = new Map(), fl = (v, un) => Math.floor(v / un + 1e-7);
+  return ufPaths(m).map(row => row.map(p => { const un = p.out ? u / k : u, a = acc.get(p.key) || 0; acc.set(p.key, a + p.v);
+    return {key: p.key, j1: p.j1, j2: p.j2, out: p.out, v: p.v, n: fl(a + p.v, un) - fl(a, un)}; }).filter(p => p.n > 0));
+}
+function ufScale(){ const m = UF.m; if (!m) return; UF.k = ufK(m); UF.u = ufUnit(m, UF.k); UF.plan = ufPlan(m, UF.u, UF.k); }
 function ufColors(){ return tfColors(); }
 function ufLinkCols(C, m, l){
   if (l.kind === "ab") return [ufAppCol(C, m.d.apps[l.s]), C[l.cat]];
@@ -3320,15 +3429,15 @@ function ufLinkCols(C, m, l){
 }
 function ufTipLink(m, j){
   const l = m.L[j], C = UF.col, v = ufAt(m, j, UF.pos), f = m.full[j];
-  const a = l.kind === "ab" ? ufApp(m.d.apps[l.s]) : l.kind === "bc" ? ufCat(l.s) : ufMod(m.d.models[l.s]);
-  const b = l.kind === "ab" ? ufCat(l.t) : l.kind === "bc" ? ufMod(m.d.models[l.t]) : ufCat(l.t);
-  return `<b>${esc(a)} → ${esc(b)}</b>${fxRow(ufLinkCols(C, m, l)[1], tr("累计"), fmtFull(v))}${UF.pos < m.N ? fxRow("", tr("整段时间"), fmtFull(f)) : ""}`;
+  const a = l.kind === "ab" ? esc(ufApp(m.d.apps[l.s])) : l.kind === "bc" ? esc(ufCat(l.s)) : mic(m.d.models[l.s]) + esc(ufMod(m.d.models[l.s]));
+  const b = l.kind === "ab" ? esc(ufCat(l.t)) : l.kind === "bc" ? mic(m.d.models[l.t]) + esc(ufMod(m.d.models[l.t])) : esc(ufCat(l.t));
+  return `<b>${a} → ${b}</b>${fxRow(ufLinkCols(C, m, l)[1], tr("累计"), fmtFull(v))}${UF.pos < m.N ? fxRow("", tr("整段时间"), fmtFull(f)) : ""}`;
 }
 function ufTipNode(m, col, i){
   const C = UF.col, T = m.T;
   if (col === "a" || col === "m") { const t = (col === "a" ? m.appT : m.modT)[i], P = t.inp + t.cr + t.cw;
     const name = col === "a" ? ufApp(m.d.apps[i]) : m.d.models[i] === "\x00other" ? tr("其他模型") : m.d.models[i];
-    return `<b>${esc(name)}</b><div class="dim">${tr("整段时间")}</div>${fxRow("", tr("请求数"), fmtFull(t.n))}${fxRow(C.cr, tr("缓存读"), fmtFull(t.cr))}${fxRow(C.cw, tr("缓存写"), fmtFull(t.cw))}${fxRow(C.inp, tr("新输入"), fmtFull(t.inp))}${fxRow(C.out, tr("输出"), fmtFull(t.out))}${t.rs ? fxRow(C.rs, tr("其中思考"), fmtFull(t.rs)) : ""}${fxRow("", tr("缓存命中率"), P ? (t.cr / P * 100).toFixed(1) + "%" : "—")}${fxRow("", tr("费用"), fmtCF(t.cost))}`; }
+    return `<b>${col === "m" ? mic(m.d.models[i]) : ""}${esc(name)}</b><div class="dim">${tr("整段时间")}</div>${fxRow("", tr("请求数"), fmtFull(t.n))}${fxRow(C.cr, tr("缓存读"), fmtFull(t.cr))}${fxRow(C.cw, tr("缓存写"), fmtFull(t.cw))}${fxRow(C.inp, tr("新输入"), fmtFull(t.inp))}${fxRow(C.out, tr("输出"), fmtFull(t.out))}${t.rs ? fxRow(C.rs, tr("其中思考"), fmtFull(t.rs)) : ""}${fxRow("", tr("缓存命中率"), P ? (t.cr / P * 100).toFixed(1) + "%" : "—")}${fxRow("", tr("费用"), fmtCF(t.cost))}`; }
   if (col === "c") { const k = UF_CAT[i], P = T.inp + T.cr + T.cw; return `<b>${ufCat(k)}</b>${fxRow(C[k], "Tokens", fmtFull(T[k]))}${fxRow("", tr("占输入"), P ? (T[k] / P * 100).toFixed(1) + "%" : "—")}`; }
   const o = UF_OUT[i]; return `<b>${ufCat(o)}</b>${fxRow(o === "rs" ? C.rs : C.out, "Tokens", fmtFull(o === "rs" ? T.rs : T.out - T.rs))}${UF.g && UF.g.k > 1 ? `<div class="dim">${tr("输出侧放大")} ×${UF.g.k}</div>` : ""}`;
 }
@@ -3384,18 +3493,20 @@ function ufDraw(){
       fxDot(x, px, py, P.r, P.col, dpr, glow); }
     // 标签（每列避让，不重叠）
     const F1 = `${fs}px ${FN}`, F2 = `600 ${fs + .5}px ${FN}`, two = (col, n) => g.Hf / Math.max(1, n) >= 30;
-    const labs = (col, names, vals, side, colr) => { const nds = g.N[col], tw = two(col, nds.length), hh = tw ? 30 : 15;
+    const labs = (col, names, vals, side, colr, icon) => { const nds = g.N[col], tw = two(col, nds.length), hh = tw ? 30 : 15;
       const ys = fxSpread(nds.map(nd => ({y: nd.y + nd.h / 2, h: hh})), g.top - 18, g.top + g.Hf + 14, 1);
-      nds.forEach((nd, i) => { const lx = side === "l" ? nd.x - 7 : nd.x + nd.w + 7, al = side === "l" ? "right" : "left";
-        if (tw) { fxText(x, names[i], lx, ys[i] - 7, al, colr ? colr(i) : C.text, F2, C.panel2); fxText(x, vals[i], lx, ys[i] + 8, al, C.muted, F1, C.panel2); }
-        else fxText(x, names[i] + "  " + vals[i], lx, ys[i], al, C.text, F1, C.panel2); }); };
+      nds.forEach((nd, i) => { let lx = side === "l" ? nd.x - 7 : nd.x + nd.w + 7; const al = side === "l" ? "right" : "left";
+        if (icon) { const isz = tw ? g.isz : g.isz - 2; fxIcon(x, icon(i), lx, (tw ? ys[i] - 7 : ys[i]) - isz / 2, isz, C, dpr); lx += isz + 5; }
+        const mx = icon ? g.lw - (lx - nd.x - nd.w) - 8 : 1e9;
+        if (tw) { fxText(x, fxFit(x, names[i], mx, F2), lx, ys[i] - 7, al, colr ? colr(i) : C.text, F2, C.panel2); fxText(x, vals[i], lx, ys[i] + 8, al, C.muted, F1, C.panel2); }
+        else fxText(x, fxFit(x, names[i] + "  " + vals[i], mx, F1), lx, ys[i], al, C.text, F1, C.panel2); }); };
     labs("a", m.d.apps.map(ufApp), g.va.map((v, i) => fmtN(nodeCur("a", i))), "l");
     labs("c", UF_CAT.map(ufCat), UF_CAT.map((k, i) => fmtN(nodeCur("c", i))), "r");
-    labs("m", m.d.models.map(ufMod), g.vm.map((v, i) => fmtN(nodeCur("m", i))), "r");
+    labs("m", m.d.models.map(ufMod), g.vm.map((v, i) => fmtN(nodeCur("m", i))), "r", null, i => m.d.models[i]);
     labs("o", [tr("输出") + " · " + ufCat("rp") + (g.k > 1 ? ` ×${g.k}` : ""), ufCat("rs")], UF_OUT.map((o, i) => fmtN(nodeCur("o", i))), "r", i => i ? C.rs : C.out);
     // 列标题
     const hf = `${fs - 1}px ${FN}`;
-    [[g.xA - g.nw / 2, tr("来源")], [g.xB + g.nw / 2, tr("输入种类")], [g.xC + 6, tr("模型")], [g.xD + g.nw / 2, tr("输出")]].forEach(([hx, s]) => fxText(x, s, hx, 8, "center", C.faint, hf));
+    [[g.xA - g.nw / 2, tr("来源")], [g.xB + g.nw / 2, tr("输入种类")], [g.xC + 6 + Math.min(40, g.lw / 3), tr("模型")], [g.xD + g.nw / 2, tr("输出")]].forEach(([hx, s]) => fxText(x, s, hx, 8, "center", C.faint, hf));
   }
   // 时间轴
   if (m.N) {
@@ -3411,18 +3522,19 @@ function ufStripTip(px, py){
   const P = s.inp + s.cr + s.cw;
   return `<b>${esc(ufTitleT(b.t, m.d.step))}</b>${fxRow("", tr("请求数"), fmtFull(s.n))}${fxRow(C.cr, tr("缓存读"), fmtFull(s.cr))}${fxRow(C.cw, tr("缓存写"), fmtFull(s.cw))}${fxRow(C.inp, tr("新输入"), fmtFull(s.inp))}${fxRow(C.out, tr("输出"), fmtFull(s.out))}${fxRow("", tr("缓存命中率"), P ? (s.cr / P * 100).toFixed(1) + "%" : "—")}${fxRow("", tr("费用"), fmtCF(s.cost))}`;
 }
-// 粒子：按当前时间桶里各条带子的真实 token 数抽样（输入走 来源→种类→模型 两段，输出走 模型→输出 一段）
-function ufPick(arr){ let t = 0; for (const [, w] of arr) t += w; if (!(t > 0)) return null; let r = Math.random() * t; for (const [v, w] of arr) { r -= w; if (r <= 0) return v; } return arr[arr.length - 1][0]; }
-function ufSpawn(m, vals, n, spread){
-  const C = UF.col || (UF.col = tfColors()), inB = [], outB = []; let tin = 0, tout = 0;
-  m.L.forEach((l, j) => { const v = vals(j); if (!(v > 0)) return; if (l.kind === "bc") { inB.push([j, v]); tin += v; } else if (l.kind === "cd") { outB.push([j, v * (UF.g ? UF.g.k : 1)]); tout += v * (UF.g ? UF.g.k : 1); } });
-  for (let q = 0; q < n && UF.P.length < UF_MAXP; q++) {
-    const isIn = Math.random() * (tin + tout) < tin, j2 = ufPick(isIn ? inB : outB); if (j2 == null) continue;
-    const l = m.L[j2], b = UF.clock + Math.random() * spread;
-    if (isIn) { const ab = []; m.L.forEach((x, j) => { if (x.kind === "ab" && x.t === l.s) ab.push([j, vals(j)]); }); const j1 = ufPick(ab); if (j1 == null) continue;
-      UF.P.push({j1, j2, l: Math.random(), b, dur: 2.2, r: 1.9, col: C[l.s]}); }
-    else UF.P.push({j1: j2, j2: null, l: Math.random(), b, dur: 1.3, r: 2.2, col: l.t === "rs" ? C.rs : C.out});
-  }
+// 粒子：按粒子计划发（见 ufPlan）。输入粒子走 来源→种类→模型 两段；同一个粒子位置上的输出粒子要等输入走到模型才出发（先读输入、再出输出），走 模型→输出 一段
+function ufDur(bdr){ const din = Math.max(.5, Math.min(2.2, 4 * bdr)); return [din, din * .6]; }
+function ufPush(P){ if (UF.P.length < UF_MAXP) UF.P.push(P); else UF.drop = (UF.drop || 0) + 1; }
+function ufMk(m, p, b, din, dout, C){
+  const l = m.L[p.out ? p.j1 : p.j2];
+  if (!p.out) ufPush({j1: p.j1, j2: p.j2, l: Math.random(), b, dur: din, r: 1.9, col: C[l.s]});
+  else ufPush({j1: p.j1, j2: null, l: Math.random(), b: b + din, dur: dout, r: 2.2, col: l.t === "rs" ? C.rs : C.out});
+}
+// 播放位置从 p0 走到 p1：落在这一段里的粒子都发出去（第 q 个粒子在桶里的位置 = (q + .5) / n，整桶均匀）
+function ufEmit(m, p0, p1, bdr){
+  const C = UF.col || (UF.col = tfColors()), [din, dout] = ufDur(bdr), plan = UF.plan || [];
+  for (let i = Math.max(0, Math.floor(p0)); i < Math.min(m.N, Math.ceil(p1)); i++) for (const p of plan[i] || [])
+    for (let q = 0; q < p.n; q++) { const f = i + (q + .5) / p.n; if (f >= p0 && f < p1) ufMk(m, p, UF.clock + (f - p1) * bdr, din, dout, C); }
 }
 const ufBD = m => Math.max(.12, Math.min(.9, 14 / Math.max(1, m.N)));          // 1× 时每个时间桶放多久（整段 ≈ 14 秒）
 function ufLoop(ts){
@@ -3432,23 +3544,22 @@ function ufLoop(ts){
   if (document.hidden) return;                                                     // 切到后台：停，回来接着放
   const dt = UF.last ? Math.min(.1, (ts - UF.last) / 1000) : 0; UF.last = ts; UF.clock += dt;
   if (UF.play) {
-    const bd = ufBD(m), i = Math.min(m.N - 1, Math.floor(UF.pos)), s = m.st[i];
-    UF.pos += dt * UF.speed / bd;
-    if (s && !tfRM() && UF.u) { UF.emit += dt * UF.speed / bd * ((s.inp + s.cr + s.cw) + s.out * (UF.g ? UF.g.k : 1)) / UF.u;
-      const n = Math.floor(UF.emit); if (n > 0) { UF.emit -= n; ufSpawn(m, j => m.vals[i * m.nl + j], Math.min(n, 40), dt); } }
+    const bd = ufBD(m), p0 = UF.pos;
+    UF.pos = Math.min(m.N, UF.pos + dt * UF.speed / bd);
+    if (!tfRM() && UF.pos > p0) ufEmit(m, p0, UF.pos, bd / UF.speed);
     if (UF.pos >= m.N) { UF.pos = m.N; ufSetPlay(false); }
   }
-  if (UF.P.length) UF.P = UF.P.filter(P => UF.clock - P.b < P.dur);
+  if (UF.P.length) UF.P = UF.P.filter(P => UF.clock - P.b < P.dur);           // 还没出发的（等输入到模型的输出粒子）也留着
   ufDraw(); ufStats();
   if (UF.play || UF.P.length) UF.raf = requestAnimationFrame(ufLoop);
 }
 function ufKick(){ if (!UF.raf) { UF.last = 0; UF.raf = requestAnimationFrame(ufLoop); } }
 function ufSetPlay(on){
   UF.play = on; const b = $("#ufPlay"); if (b) b.innerHTML = ic(on ? "pause" : "play") + `<span>${on ? "暂停" : "播放"}</span>`;
-  if (on && UF.m && UF.pos >= UF.m.N) { UF.pos = 0; UF.P = []; }
+  if (on && UF.m && UF.pos >= UF.m.N) { UF.pos = 0; UF.P = []; UF.drop = 0; }
   if (on) ufKick();
 }
-function ufSeek(p){ const m = UF.m; if (!m) return; UF.pos = Math.max(0, Math.min(m.N, p)); if (!UF.raf) { ufDraw(); } ufStats(); }
+function ufSeek(p){ const m = UF.m; if (!m) return; UF.pos = Math.max(0, Math.min(m.N, p)); UF.P = []; if (!UF.raf) { ufDraw(); } ufStats(); }
 function ufStats(){
   const m = UF.m; if (!m) return; const r = ufCum(m, UF.pos), inst = UF.play || UF.drag, g = id => document.getElementById(id);
   fxCount(g("ufAt"), r.tok, fmtN, inst); fxCount(g("ufAi"), r.inp, fmtN, inst); fxCount(g("ufAcr"), r.cr, fmtN, inst); fxCount(g("ufAcw"), r.cw, fmtN, inst);
@@ -3464,19 +3575,20 @@ function ufLegend(){
   const m = UF.m, g = UF.g, d = m.d, T = d.totals || {};
   const st = {h: "一个小时", d: "一天", w: "一周"}[d.step] || "";
   return `按当前筛选汇总「用量」页同一份记录：${fmtFull(T.n)} 次请求、合计 ${fmtN(T.real)} tokens${T.cost != null ? `、${fmtC(T.cost)}` : ""}${T.hit != null ? `、缓存命中率 ${(T.hit * 100).toFixed(1)}%` : ""}。
-    带子宽度按真实 token 数换算${g && g.k > 1 ? `（输出侧放大 ${g.k} 倍）` : ""}；浅色底是整段时间的总量，实色是播放到当前位置的累计；粒子按每段时间的真实用量发出。底部每根柱是${st}。悬停看准确数字。`;
+    带子宽度、粒子个数都按真实 token 数换算：输入 1 个粒子 = <b>${(UF.u || 0).toLocaleString()}</b> tokens${UF.k > 1 ? `；输出侧放大 <b>×${UF.k}</b>（带子宽度也 ×${UF.k}），1 个粒子 = <b>${(+(UF.u / UF.k).toPrecision(3)).toLocaleString()}</b> tokens。按真实比例，输出只占这段时间 tokens 的 <b>${fxPct(m.T.out, m.T.inp + m.T.cr + m.T.cw + m.T.out)}</b>，可以切到「真实比例」看` : `；输出侧和输入侧同一比例（真实比例，不放大）`}。
+    浅色底是整段时间的总量，实色是播放到当前位置的累计；每段时间的粒子按那段时间每条路径的真实用量算好个数，先输入进模型、再出输出。没有用量就没有粒子。底部每根柱是${st}。悬停看准确数字。`;
 }
 function ufRender(){
   const box = $("#ufBody"), m = UF.m; if (!box || !m) return;
   const sp = +(store.get("ccss.ufspeed") || 1); UF.speed = [.5, 1, 2, 4].includes(sp) ? sp : 1;
-  const card = (id, name, col) => `<div><span>${col ? `<i style="background:var(${col})"></i>` : ""}${name}</span><b id="${id}">—</b></div>`;
+  const card = (id, name, col, cls) => `<div${cls ? ` class="${cls}"` : ""}><span>${col ? `<i style="background:var(${col})"></i>` : ""}${name}</span><b id="${id}">—</b></div>`;
   box.innerHTML = `<div class="tf uf">
     <div class="tfbar"><button class="primary" id="ufPlay"></button>
       <input type="range" id="ufSl" min="0" max="${m.N}" step="1" value="${Math.round(UF.pos)}" title="拖动到某个时间" ${m.N ? "" : "disabled"}>
       <select id="ufSp" title="播放速度">${[.5, 1, 2, 4].map(v => `<option value="${v}" ${v === UF.speed ? "selected" : ""}>${v}×</option>`).join("")}</select>
-      <span class="tfpos" id="ufPos"></span></div>
+      <span class="tfpos" id="ufPos"></span><span class="tfsep"></span>${fxSeg("ufSc")}<span class="tfunit" id="ufUnit"></span></div>
     <div class="tfcv"><canvas id="ufCv"></canvas><div class="fxtip" id="ufTip"></div></div>
-    <div class="tfacc">${card("ufAt", "合计 Tokens")}${card("ufAi", "新输入", "--u2")}${card("ufAcr", "缓存读", "--u1")}${card("ufAcw", "缓存写", "--u4")}${card("ufAo", "输出", "--u3")}${card("ufArs", "其中思考", "--u5")}${card("ufAn", "请求数")}${card("ufAh", "缓存命中率")}${card("ufAc", "费用")}</div>
+    <div class="tfacc">${card("ufAt", "合计 Tokens", "", "tfk1")}${card("ufAi", "新输入", "--u2")}${card("ufAcr", "缓存读", "--u1")}${card("ufAcw", "缓存写", "--u4")}${card("ufAo", "输出", "--u3")}${card("ufArs", "其中思考", "--u5")}${card("ufAn", "请求数")}${card("ufAh", "缓存命中率")}${card("ufAc", "费用")}</div>
     <div class="dim tfleg" id="ufLeg"></div></div>`;
   ufSetPlay(false);
   $("#ufPlay").onclick = () => ufSetPlay(!UF.play);
@@ -3490,14 +3602,16 @@ function ufRender(){
   cv.onmousemove = e => fxHover(cv, tip, UF.hits, e, ufStripTip);
   cv.onmouseleave = () => { tip.style.display = "none"; };
   fxResize(cv, () => { UF.strip = null; if (!UF.raf) ufDraw(); });
-  ufDraw(); ufStats(); ufLiveUI();
-  const lg = $("#ufLeg"); if (lg) lg.innerHTML = ufLegend();
+  fxSegWire("ufSc", () => { ufScale(); UF.g = null; UF.strip = null; UF.P = []; UF.drop = 0; ufScaleUI(); if (!UF.raf) ufDraw(); ufStats(); });
+  ufDraw(); ufStats(); ufLiveUI(); ufScaleUI();
 }
+function ufScaleUI(){ fxSegSync("ufSc"); const e = $("#ufUnit"); if (e && UF.u) { const h = fxUnit(UF.u, UF.k, UF.u / UF.k); if (e.dataset.h !== h) { e.dataset.h = h; e.innerHTML = h; } }
+  const lg = $("#ufLeg"); if (lg && UF.m) { const h = ufLegend(); if (lg.dataset.h !== h) { lg.dataset.h = h; lg.innerHTML = h; } } }
 // 拿到（新的）聚合：new = 换了筛选，从头放一遍；refresh = 同一筛选的新数据，停在末尾就留在末尾
 function ufSet(d, mode){
   const old = UF.m, atEnd = !old || UF.pos >= old.N;
   UF.d = d; UF.m = ufModel(d); UF.g = null; UF.strip = null; UF.sv++; UF.col = null;
-  UF.u = tfNice(Math.max(1, UF.m.maxP + UF.m.maxO) / 70);                       // 最多那段时间 ≈ 70 个粒子
+  ufScale();
   if (mode === "new" || !$("#ufCv")) {
     const auto = mode === "new" && !tfRM() && UF.m.N > 1 && UF.m.T.n;
     UF.pos = auto ? 0 : UF.m.N; UF.P = [];
@@ -3506,7 +3620,7 @@ function ufSet(d, mode){
   } else {
     UF.pos = atEnd ? UF.m.N : Math.min(UF.pos, UF.m.N);
     const sl = $("#ufSl"); if (sl) { sl.max = UF.m.N; sl.disabled = !UF.m.N; }
-    const lg = $("#ufLeg"); if (lg) lg.innerHTML = ufLegend();
+    ufScaleUI();
     if (!UF.raf) ufDraw(); ufStats();
   }
   const sub = $("#ufSub"); if (sub) sub.textContent = tr({h: "按小时", d: "按天", w: "按周"}[d.step] || "");
@@ -3576,18 +3690,24 @@ async function ufLivePoll(){
     }
   } finally { L.busy = false; L.ac = null; ufLiveUI(); }
 }
+// 实时新增的部分：每条路径 新合计 − 旧合计，按同一个单位（累计取整）换成粒子个数，1.6 秒里放完；没有新增就不动
+function ufPathTot(m){ const t = new Map(), e = new Map(); ufPaths(m).forEach(row => row.forEach(p => { t.set(p.key, (t.get(p.key) || 0) + p.v); e.set(p.key, p); })); return {t, e}; }
+function ufDelta(old, m, u, k){
+  const a = ufPathTot(old).t, b = ufPathTot(m), out = [], fl = (v, un) => Math.floor(v / un + 1e-7);
+  for (const [key, v] of b.t) { const p = b.e.get(key), un = p.out ? u / k : u, n = fl(v, un) - fl(a.get(key) || 0, un); if (n > 0) out.push({key, j1: p.j1, j2: p.j2, out: p.out, n}); }
+  return out;
+}
 function ufMerge(r){
-  const old = UF.m, ov = old ? Object.fromEntries(old.L.map((l, j) => [ufKey(old, l), old.full[j]])) : {};
+  const old = UF.m;
   ufSet(r, "refresh");
   const m = UF.m; UF.lv.at = Date.now();
   if (!old || !$("#ufCv")) return;
   UF.pos = m.N;
-  const dv = m.L.map((l, j) => Math.max(0, m.full[j] - (ov[ufKey(m, l)] || 0)));
-  const tot = dv.reduce((a, b, j) => a + (m.L[j].kind !== "ab" ? b : 0), 0);
-  if (tot > 0 && !tfRM()) { ufSpawn(m, j => dv[j], Math.min(160, Math.max(12, Math.round(tot / tfNice(tot / 90)))), 1.6); ufKick(); }
+  const dl = ufDelta(old, m, UF.u, UF.k);
+  if (dl.length && !tfRM()) { const C = UF.col || (UF.col = tfColors()), [din, dout] = ufDur(.4);
+    for (const p of dl) for (let q = 0; q < p.n; q++) ufMk(m, p, UF.clock + 1.6 * (q + .5) / p.n, din, dout, C); ufKick(); }
   else { ufDraw(); ufStats(); }
 }
-const ufKey = (m, l) => l.kind === "ab" ? `${m.d.apps[l.s]}|${l.t}` : l.kind === "bc" ? `${l.s}|${m.d.models[l.t]}` : `${m.d.models[l.s]}|${l.t}`;
 new MutationObserver(() => { UF.col = null; UF.strip = null; if ($("#ufCv") && !UF.raf) ufDraw(); }).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { UF.col = null; UF.strip = null; if ($("#ufCv") && !UF.raf) ufDraw(); });
 // ---------- /用量页的 Token 流转 ----------
