@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""0.5.3：对话气泡按来源应用换样式（Claude / Codex / Cursor / DeepSeek Harness / OpenCode / ZCode，浅色 / 深色各一套），可改成「统一样式」；
+"""0.5.2：对话气泡按来源应用换样式（Claude / Codex / Cursor / DeepSeek Harness / OpenCode / ZCode，浅色 / 深色各一套），可改成「统一样式」；
 对话文本宽度可调（窄 / 标准 / 宽 / 全宽 + 滑块，记在本机和 settings.json）。只看页面源码 + 调后端设置接口，不开浏览器。"""
 import json, os, pathlib, re, sys, tempfile
 from pathlib import Path

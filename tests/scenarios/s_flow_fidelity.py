@@ -73,7 +73,7 @@ for (const real of [false, true]) { FXT = real ? "1" : "0";
   const perB = plan.map(row => row.reduce((a, p) => a + p.n, 0));
   const geos = [[900, 420], [1400, 520], [520, 360]].map(([W, H]) => { const g = ufGeo(W, H, m, CTX, 12, "x");
     return {k: g.k, s: g.s, chk: m.L.map((l, j) => { const G = g.LG[j]; if (!G) return null; const f = m.full[j] * g.s * (l.kind === "cd" ? g.k : 1); return Math.abs(G.h1 - f) < 1e-6 && Math.abs(G.h2 - f) < 1e-6; }),
-            // 0.5.3：卡片在各自一列里不重叠、不出画布；卡片高度 ≥ 真实高度（太小的按最小高度当标签画）；带子从卡片边上真实高度的色条接出；时间轴不在这张画布里
+            // 0.5.2：卡片在各自一列里不重叠、不出画布；卡片高度 ≥ 真实高度（太小的按最小高度当标签画）；带子从卡片边上真实高度的色条接出；时间轴不在这张画布里
             lay: ["a", "c", "m", "o"].every(c => g.N[c].every((n, i) => n.y >= g.top - 1e-6 && n.y + n.h <= g.top + g.Hf + 1e-6 && n.h >= n.th - 1e-9 && n.h >= Math.min(g.mc, n.h) && n.w > 0 &&
                    (i === 0 || n.y >= g.N[c][i - 1].y + g.N[c][i - 1].h - 1e-6))) &&
                  g.xA + g.w.a < g.xB && g.xB + g.w.c < g.xC && g.xC + g.w.m < g.xD && g.xD + g.w.o <= W &&

@@ -8,7 +8,7 @@
 <script>try { var t = localStorage.getItem("ccss.theme"); if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
 <script>try { var r = document.documentElement, f = +localStorage.getItem("ccss.fk"), z = +localStorage.getItem("ccss.zoom");   // 字号 / 界面缩放（0.2.6）：先套上，免得闪一下
   if (f >= 0.8 && f <= 1.5) r.style.setProperty("--fk", f); if (z >= 0.8 && z <= 2) { r.style.zoom = z; r.style.setProperty("--z", z); }
-  var w = localStorage.getItem("ccss.chatw"); w = w === null || w === "" ? 860 : +w;   // 对话文本宽度（0.5.3）：0 = 全宽
+  var w = localStorage.getItem("ccss.chatw"); w = w === null || w === "" ? 860 : +w;   // 对话文本宽度（0.5.2）：0 = 全宽
   r.style.setProperty("--chatw", w === 0 ? "100%" : "calc(" + Math.min(1600, Math.max(520, w || 860)) + "px*var(--fk))"); } catch (e) {}</script>
 <style>
 @font-face{font-family:"SS Inter";src:url(/fonts/inter-regular.woff2) format("woff2");font-weight:100 449;font-display:swap;unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02C6,U+02DA,U+02DC,U+2000-2013,U+2015-2017,U+201E-2025,U+2027-206F,U+2074,U+20AC,U+2122,U+2190-2199,U+2212,U+2215}
@@ -210,7 +210,7 @@ table.t td.n{text-align:right;white-space:nowrap}
 .cthink .tbody{background:transparent;color:var(--muted);border-left:2px solid var(--line);border-radius:0;font-family:var(--sans);margin:2px 0 4px 10px;max-height:360px}
 .cthink .tbody .md{font-size:calc(13px*var(--fk))}
 .chatpv{gap:0}
-/* 0.5.3：对话气泡跟着来源应用换样式（变量由 CHTH 生成，没设就是上面的统一样式）+ 可调的文本宽度 --chatw */
+/* 0.5.2：对话气泡跟着来源应用换样式（变量由 CHTH 生成，没设就是上面的统一样式）+ 可调的文本宽度 --chatw */
 .chat{width:100%;max-width:var(--chatw,100%);margin:0 auto;box-sizing:border-box}
 .chat .cm.u{align-self:var(--cu-al,flex-end);align-items:var(--cu-al,flex-end);max-width:var(--cu-mw,min(600px,85%))}
 .chat .cm.u .cmeta{align-self:flex-end}
@@ -1274,7 +1274,7 @@ function treeRender(){
   foldBind(box, () => { treeRender(); ssList(); });
   $$("#tree [data-tw]").forEach(t => t.onclick = e => { e.stopPropagation(); const id = t.dataset.tw; TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id); trSave(); treeRender(); });
   $$("#tree .tn[data-sel]").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel); if (TR.sel && t.dataset.id) { TR.open.add(t.dataset.id); trSave(); }
-    if (PAGE === "sessions" && $("#pg-sessions .split2.focus")) ssClose();   // 0.5.3：点分组 = 想看这组的列表，先把占满中间的会话收起来
+    if (PAGE === "sessions" && $("#pg-sessions .split2.focus")) ssClose();   // 0.5.2：点分组 = 想看这组的列表，先把占满中间的会话收起来
     treeRender(); trApply(); });
   $$("#tree .tn[data-sk]").forEach(t => t.onclick = () => { const [a, ...i] = t.dataset.sk.split(":"); SS.cur = {agent: a, id: i.join(":")};
     if (PAGE !== "sessions") go("sessions"); else { ssList(); ssView(a, i.join(":")); } treeRender(); });
@@ -2588,7 +2588,7 @@ R.sessions = async (keep) => {
   dragGrip($("#ssGrip"), () => $("#pg-sessions .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-sessions .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
   if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else { SS.cur = null; ssLayout(); }
 };
-// 0.5.3：左侧面板已经是会话列表了，打开一个会话时中间不再重复一份列表——会话占满；
+// 0.5.2：左侧面板已经是会话列表了，打开一个会话时中间不再重复一份列表——会话占满；
 // 「← 会话列表」回到列表（多选、批量导出 / 删除都在那里，已选的保留），「并排显示列表」恢复旧的左右分栏（记住选择）。
 // 左侧面板收起时（Ctrl+B）中间的列表就是唯一的列表，照旧并排。
 const SS_EMPTY = () => `<div class="emp">${ic("messages")}点左边一个会话，在这里看记录（只读）</div>`;
@@ -2787,7 +2787,7 @@ function toolRowHtml(t, i){
   return `<details class="tcall${t.err ? " bad" : ""}" data-ci="${i}"><summary class="tsm">${head}</summary><div class="tbody"></div></details>`;
 }
 const cpBtn = (i, tip) => `<button class="ccp" data-ccp="${i}" title="${tip || "复制"}">${ic("clipboard")}</button>`;
-// ---------- 0.5.3：对话气泡跟着来源应用换样式 ----------
+// ---------- 0.5.2：对话气泡跟着来源应用换样式 ----------
 // 每个应用一套浅色 / 深色变量 + 形状。参考各家自己界面的公开样式（配色、圆角、字体、工具行的样子），在这里自己重写成 CSS；
 // 不用对方的图片、字体文件或代码，标识沿用上面 ICON 里已有的 SVG。来源见 README「对话样式」。
 // l / d：浅色 / 深色的颜色；s：两种模式共用的形状。mark：工具行前面的小圆点（成功 ok 色、出错 bad 色），tic：要不要工具小图标
@@ -3013,7 +3013,7 @@ function fxHover(cv, tipEl, hits, e, extra, pin){
   if (tipEl.dataset.h !== html) { tipEl.dataset.h = html; tipEl.innerHTML = html; }
   tipEl.style.display = "block";
   const W = cv.clientWidth, H = cv.clientHeight, tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
-  if (pin) {                                            // 0.5.3：钉在离鼠标最远的那个角，不挡住正在看的那条带子 / 卡片
+  if (pin) {                                            // 0.5.2：钉在离鼠标最远的那个角，不挡住正在看的那条带子 / 卡片
     tipEl.style.left = (px < W / 2 ? W - tw - 10 : 10) + "px"; tipEl.style.top = (py < H / 2 ? H - th - 30 : 30) + "px"; return; }
   tipEl.style.left = Math.max(4, Math.min(W - tw - 4, px + 14 > W - tw - 4 ? px - tw - 14 : px + 14)) + "px";
   tipEl.style.top = Math.max(4, Math.min(H - th - 4, py + 14 > H - th - 4 ? py - th - 12 : py + 14)) + "px";
@@ -3500,7 +3500,7 @@ const ufAt = (m, j, p) => { const i = Math.min(m.N, Math.floor(p)), f = p - i; r
 function ufCum(m, p){ const i = Math.min(m.N, Math.floor(p)), f = p - i, a = m.cst[i], b = m.st[i], r = {};
   for (const k in a) r[k] = a[k] + (b && i < m.N ? f * b[k] : 0);
   r.tok = r.inp + r.cr + r.cw + r.out; const P = r.inp + r.cr + r.cw; r.hit = P ? r.cr / P : null; return r; }
-// 0.5.3：四列都是圆角卡片（图标 + 名字 + 数字）。带子粗细 = 真实 tokens × 比例尺 s（输出侧 × k），卡片边上的色条就是这个高度、带子从那里接出去；
+// 0.5.2：四列都是圆角卡片（图标 + 名字 + 数字）。带子粗细 = 真实 tokens × 比例尺 s（输出侧 × k），卡片边上的色条就是这个高度、带子从那里接出去；
 // 卡片太小放不下字时按最小高度 mc 画（只是标签，不按比例，图上和图例里都写明）。比例尺按「最高一列 ≈ 画布的 86%」定，留白，不撑满。
 // 时间轴不再画在这张图里，挪到下面自己的画布（ufTl）。
 function ufGeo(W, H, m, x, fs, FN){
