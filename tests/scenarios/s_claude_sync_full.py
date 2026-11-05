@@ -134,7 +134,7 @@ ok(not CS.verify("../x")["ok"], "bad backup id rejected")
 
 # 页面 / 接口
 page = (ROOT / "cc_sessionsync" / "index.html").read_text(encoding="utf-8")
-ok("/api/sync/verify" in page and "data-bkv" in page and "syVerifyDlg" in page and "skip_gone" in page and "撤回前的备份" in page, "UI: verify button + dialog, skipped-deleted note, pre-undo label")
+ok("/api/sync/verify" in page and "data-syv" in page and "syVerifyDlg" in page and "skip_gone" in page and "撤销前的备份" in page, "UI: verify button + dialog, skipped-deleted note, pre-undo label (0.5.3 sync history)")
 ui = (ROOT / "cc_sessionsync" / "ui.py").read_text(encoding="utf-8")
 ok('"/api/sync/verify"' in ui, "GET /api/sync/verify wired")
 

@@ -259,6 +259,15 @@ pre.rep{white-space:pre-wrap;font:calc(13px*var(--fk))/1.5 var(--mono);backgroun
 .dlg.pvw .box{width:min(840px,100%)}
 .dlg.wide .box{width:min(1100px,100%);height:calc(88*var(--vh));max-height:calc(88*var(--vh))}
 .dlg pre{white-space:pre-wrap;font-family:var(--mono);font-size:calc(13.5px*var(--fk));margin:0}
+.syHero{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.syHeroL{min-width:0;flex:1 1 360px}.syBig{font-size:calc(20px*var(--fk));font-weight:650;margin-bottom:2px}
+.primary.big{padding:9px 18px;font-size:calc(15px*var(--fk))}.syProgBox{flex-basis:100%}.syProgBox:empty{display:none}
+.syProg{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}.syProgH{display:flex;gap:6px;align-items:baseline;margin-bottom:6px;min-width:0}
+.syBar{height:6px;border-radius:4px;background:var(--line);overflow:hidden}.syBar i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.syProg.done .syBar i{background:var(--ok)}.syProg.error .syBar i{background:var(--bad)}
+.syStepRow{display:flex;gap:8px;margin-top:6px;font-size:calc(12.5px*var(--fk));color:var(--muted)}.syStep.on{color:var(--accent);font-weight:600}.syStep.ok{color:var(--ok)}
+.syErr{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.syMini{position:fixed;right:16px;bottom:16px;z-index:39;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px 12px;width:260px;cursor:pointer;font-size:calc(12.5px*var(--fk));display:flex;flex-direction:column;gap:6px}
+details.card>summary{cursor:pointer}.syHistT .dimrow td{opacity:.6}
 .toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:10px;padding:8px 16px;font-size:calc(14px*var(--fk));z-index:40;display:none;max-width:calc(90*var(--vw));align-items:center;gap:8px}
 .toast[style*="block"]{display:flex!important}
 .menu{position:relative}
@@ -900,6 +909,11 @@ async function api(path, body, more){
   return j;
 }
 let toastT; function toast(t, ms=2800){ const el=$("#toast"); el.innerHTML=emoIcons(t); el.style.display="block"; clearTimeout(toastT); toastT=setTimeout(()=>el.style.display="none", ms); }
+// 0.5.3：带一个动作按钮的提示（「已同步 N 个会话 · 撤销」），停 10 秒；鼠标放上去不消失
+function toastAct(t, label, fn, ms=10000){ const el=$("#toast"); el.innerHTML=`<span>${emoIcons(t)}</span><button class="primary" id="toastAct" style="padding:3px 10px">${esc(label)}</button>`; el.style.display="flex"; clearTimeout(toastT);
+  const hide = () => { toastT = setTimeout(() => el.style.display = "none", ms); }; hide();
+  el.onmouseenter = () => clearTimeout(toastT); el.onmouseleave = () => { el.onmouseenter = el.onmouseleave = null; ms = 3000; hide(); };
+  $("#toastAct").onclick = () => { el.style.display = "none"; fn(); }; }
 function openDlg(title, html, footer){ $("#dlgTitle").innerHTML=emoIcons(title); $("#dlgBody").innerHTML=html; $("#dlgFt").innerHTML=footer||'<button onclick="closeDlg()">关闭</button>'; $("#dlg").classList.add("open"); }
 function closeDlg(){ $("#dlg").classList.remove("open", "wide", "pvw"); setOpen = false; }
 $("#dlg").onclick = e => { if (e.target.id === "dlg") closeDlg(); };
@@ -1351,8 +1365,9 @@ async function poll(){
         ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, time: e.time, title: e.title, text: e.text, open: e.open, old: e.old, new: e.new, old_rid: e.old_rid, new_rid: e.new_rid, mode: e.mode_switch});
         RV.loaded = false; if (RV.on) rvLoad().then(rvPaint).catch(() => {}); if (!first) { SS.d = null; treeLoad(); }
       } else if (e.kind === "job") jobDone = true;
-      else if (e.kind === "auto-sync" && !first && !e.manual) toast("🔄 " + e.title);
+      else if (e.kind === "auto-sync" && !first && !e.manual) { if (e.backup) toastAct("🔄 " + e.title, "撤销", () => syUndo(e.backup)); else toast("🔄 " + e.title); if (PAGE === "sync") R.sync(); }
     }
+    syMini(t.sync_prog);
     const hd = t.acct_handled || {};          // 同步过 / 不缺会话了：这条切换算处理完，提示条收起
     ST.acct = ST.acct.filter(a => !(hd[a.k] && hd[a.k] >= (a.time || 0)));
     ST.jobs = t.jobs; ST.jobKinds = t.job_kinds || ["claude"]; ST.cr = t.closerun || null;
@@ -1892,22 +1907,28 @@ R.sync = async () => {
   pg.innerHTML = `<h2>${ic("users")}账号同步</h2>
     <p class="sub">Claude 桌面端换了账号，以前的会话就看不到了（会话记录其实还在 <code>~/.claude/projects</code>）。这里把别的账号下的会话补进当前账号的列表；先备份，可以撤回。</p>
     <div class="grid2">${acctCard("Claude 桌面端当前账号", st.accounts.desktop, st.running.claude)}${acctCard("Claude Code 命令行当前账号", st.accounts.cli, null)}</div>
-    <div class="card"><h3>${SY.source === "api" ? "可以补进 API 模式的会话" : "可以补进当前账号的会话"} <span class="tag acc">${rows.length}</span><span class="sp"></span>
-      <span class="seg" id="sySrc"><button data-s="desktop" class="${SY.source === "desktop" ? "on" : ""}">按桌面端账号</button><button data-s="cli" class="${SY.source === "cli" ? "on" : ""}">按命令行账号</button>${st.api && (st.api.base || st.api.mode === "3p") ? `<button data-s="api" class="${SY.source === "api" ? "on" : ""}" title="同步到桌面端 API 模式（第三方供应商 / 网关）的会话列表；所有供应商共用一个">API 模式</button>` : ""}</span>
-      <button class="ghost" id="syRef" title="重新看一遍">${ic("refresh")}</button></h3>
+    <div class="card syHero"><div class="syHeroL"><div class="syBig">${!pl.ok ? "认不出当前账号" : rows.length ? `${rows.length} 个会话可以补进来` : "都齐了"}</div>
+      <div class="dim">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${SY.source === "api" ? "（API 模式）" : ""} · 同步前自动备份，同步完一键撤销${st.running.claude ? " · 桌面端开着：会排队，退出后自动做" : ""}</div>
+      ${pl.warns || pl.rel_warns || pl.skip_gone ? `<div class="dim" style="font-size:calc(13px*var(--fk))">${pl.warns ? `<span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span> · ` : ""}${pl.skip_gone ? `${pl.skip_gone} 个在别的号里删过，不会带回来 · ` : ""}${pl.rel_warns ? `<span style="color:var(--warn)">${pl.rel_warns} 个子会话的父会话带不过来</span>` : ""}</div>` : ""}</div>
+      <span class="sp"></span><span class="seg" id="sySrc"><button data-s="desktop" class="${SY.source === "desktop" ? "on" : ""}">按桌面端账号</button><button data-s="cli" class="${SY.source === "cli" ? "on" : ""}">按命令行账号</button>${st.api && (st.api.base || st.api.mode === "3p") ? `<button data-s="api" class="${SY.source === "api" ? "on" : ""}" title="同步到桌面端 API 模式（第三方供应商 / 网关）的会话列表；所有供应商共用一个">API 模式</button>` : ""}</span>
+      <button class="ghost" id="syRef" title="重新看一遍">${ic("refresh")}</button>
+      <button class="primary big" id="syGo" ${SY.sel.size ? "" : "disabled"}>${ic("sync")} ${SY.sel.size === rows.length ? "立即同步" : "同步选中的"} ${SY.sel.size} 个</button>
+      <div id="syProgBox" class="syProgBox"></div></div>
+    ${rows.length ? `<details class="card syPick" ${SY.pickOpen ? "open" : ""}><summary><b>挑选要同步的会话</b> <span class="dim">（缺省全选；已选 <span id="sySelN">${SY.sel.size}</span> / ${rows.length}）</span></summary>
       ${!pl.ok ? `<div class="miss">${esc(pl.error || "认不出当前账号")}</div>` : rows.length ? `<div class="scroll" style="max-height:340px"><table class="t"><tr><th style="width:28px"><input type="checkbox" id="syAll" ${SY.sel.size === rows.length ? "checked" : ""}></th><th>会话</th><th>来自账号</th><th>项目</th><th>最近</th><th></th></tr>
         ${rows.map(r => `<tr><td><input type="checkbox" data-n="${esc(r.name)}" ${SY.sel.has(r.name) ? "checked" : ""}></td>
           <td class="tl"><div class="ell" style="padding-left:${(r.depth || 0) * 18}px">${r.depth ? '<span class="dim">↳ </span>' : ""}${esc(r.title || "（无标题）")}${r.rel ? ` <span class="tag acc" title="${esc(r.rel.parent_title ? "父会话：" + r.rel.parent_title : "")}">子会话 · ${esc(r.rel.kind_label)}</span>` : ""}${kids.has(r.name) ? ` <span class="tag">${kids.get(r.name).length} 个子会话</span>` : ""}</div>${r.warn ? `<div class="s" style="color:var(--warn)" title="${esc(r.warn)}">⚠ ${esc(r.warn)}</div>` : ""}${r.rel && r.rel.warn ? `<div class="s" style="color:var(--warn);padding-left:${(r.depth || 0) * 18}px">⚠ ${esc(r.rel.warn)}${r.rel.parent_title ? `（${esc(r.rel.parent_title)}）` : ""}</div>` : ""}</td><td>${r.from_profile === "3p" ? '<span class="tag">API 模式</span>' : `<code>${esc(short(r.from))}</code>`}</td>
           <td class="ell" title="${esc(r.cwd)}">${esc(projName(r.cwd))}</td><td class="n">${when(r.last)}</td>
           <td>${r.k === "add" ? '<span class="tag ok">补进来</span>' : '<span class="tag warn">刷新</span>'}${r.archived ? ' <span class="tag">已归档</span>' : ""}</td></tr>`).join("")}</table></div>`
-        : '<div class="okbox">都齐了：当前账号已经能看到所有会话。</div>'}
-      <div class="bar" style="margin:10px 0 0"><span class="dim" style="font-size:calc(13px*var(--fk))">目标：${(pl.target || {}).label ? `<b>${esc(pl.target.label)}</b>` : `<code>${esc(short(cur))}…</code>`}${pl.warns ? ` · <span style="color:var(--warn)">${pl.warns} 个会话用的模型在那边可能没有</span>` : ""}${pl.children ? ` · ${pl.children} 个子会话会跟着父会话一起补` : ""}${pl.skip_gone ? ` · ${pl.skip_gone} 个在别的号里删过，不会带回来` : ""}${pl.rel_warns ? ` · <span style="color:var(--warn)">${pl.rel_warns} 个子会话的父会话带不过来（会显示为独立会话）</span>` : ""}${st.running.claude ? " · 桌面端开着：会排队，退出桌面端后自动做" : ""}</span><span class="sp"></span>
-        <button class="primary" id="syGo" ${SY.sel.size ? "" : "disabled"}>${ic("sync")} 同步选中的 ${SY.sel.size} 个</button></div></div>
-    <div class="card"><h3>各账号的会话文件夹</h3><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
+        : ""}</details>` : ""}
+    <div class="card"><h3>${ic("sync")}自动同步</h3>
+      <div class="setrow"><div class="sl">${ic("users")}<div><b>切换 Claude 账号后自动同步</b><div class="sd">检测到 Claude 桌面端 / Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号，弹通知「已同步 N 个会话」，可一键撤销。缺省开。</div></div></div>${sw("sySwitch", st.settings.claude_auto_sync_on_account_switch !== false)}</div>
+      <div class="setrow" style="border:0"><div class="sl">${ic("refresh")}<div><b>持续自动同步</b><div class="sd">桌面端没开的时候，把别的账号新出现的会话也随时补进当前账号。缺省关；CC Msg 也开了的话开一个就够。</div></div></div>${sw("syAuto", st.settings.auto_sync)}</div></div>
+    <div class="card" id="syHist"><div class="empty">读取同步记录…</div></div>
+    <details class="card syAdv"><summary><b>高级：各账号的会话文件夹</b></summary><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
       ${(pl.folders || st.folders || []).map(f => `<tr><td>${f.profile === "3p" ? '<span class="tag acc">API 模式（所有供应商共用）</span> ' : ""}<code>${esc(f.key)}</code></td><td class="n">${f.count}</td><td>${when(f.latest)}</td>
-        <td>${f.key === (st.accounts.desktop || {}).key ? '<span class="tag acc">桌面端当前</span> ' : ""}${f.key === (st.accounts.cli || {}).key ? '<span class="tag">命令行当前</span>' : ""}</td></tr>`).join("")}</table></div>
-    <div class="card"><div class="setrow" style="border:0;padding:2px"><div class="sl">${ic("sync")}<div><b>自动同步</b><div class="sd">桌面端没开的时候，把别的账号新出现的会话自动补进当前账号（会弹通知）。缺省关；CC Msg 也开了自动同步的话两边都会补，开一个就够。</div></div></div>${sw("syAuto", st.settings.auto_sync)}</div>
-      ${st.auto && st.auto.last ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:4px">上次自动同步：${when(st.auto.last.time)} · 补 ${st.auto.last.added} / 刷新 ${st.auto.last.updated}</div>` : ""}</div>`;
+        <td>${f.key === (st.accounts.desktop || {}).key ? '<span class="tag acc">桌面端当前</span> ' : ""}${f.key === (st.accounts.cli || {}).key ? '<span class="tag">命令行当前</span>' : ""}</td></tr>`).join("")}</table></details>
+</div>`;
   $$("#sySrc button").forEach(b => b.onclick = () => { SY.source = b.dataset.s; SY.touched = false; R.sync(); });
   $("#syRef").onclick = () => { SY.touched = false; R.sync(); };
   $$("#pg-sync [data-n]").forEach(c => c.onchange = () => { SY.touched = true; c.checked ? SY.sel.add(c.dataset.n) : SY.sel.delete(c.dataset.n);
@@ -1917,16 +1938,92 @@ R.sync = async () => {
     syBtn(); });
   const all = $("#syAll"); if (all) all.onchange = () => { SY.touched = true; rows.forEach(r => all.checked ? SY.sel.add(r.name) : SY.sel.delete(r.name)); $$("#pg-sync [data-n]").forEach(c => c.checked = all.checked); syBtn(); };
   const g = $("#syGo"); if (g) g.onclick = () => syncSelected(false);
+  const pk = $("#pg-sync .syPick"); if (pk) pk.ontoggle = () => { SY.pickOpen = pk.open; };
   $("#syAuto").onchange = e => saveSetting({auto_sync: e.target.checked});
+  $("#sySwitch").onchange = e => saveSetting({claude_auto_sync_on_account_switch: e.target.checked});
+  syHist($("#syHist"));
 };
-function syBtn(){ const g = $("#syGo"); if (g) { g.disabled = !SY.sel.size; g.innerHTML = `${ic("sync")} 同步选中的 ${SY.sel.size} 个`; } }
-async function syncSelected(all){
-  try {
-    const only = all ? null : [...SY.sel];
-    const r = await api("/api/sync", {source: SY.source, only});
-    if (r.note) toast(r.note); else if (doneOrQueued(r, r.verify && !r.verify.ok ? null : `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个${(r.auto_parents || []).length ? `（含自动带上的 ${r.auto_parents.length} 个父会话）` : ""}${r.tasks && r.tasks.merged ? `，合并了 ${r.tasks.merged} 条任务记录` : ""}。核对：${r.verify ? r.verify.summary : "—"}`) && r.verify && !r.verify.ok) syVerifyDlg(r.verify, "同步完了，但核对时有对不上的");
-    SY.touched = false; R.sync();
+function syBtn(){ const g = $("#syGo"), n = $("#sySelN"), all = SY.sel.size === (SY.byN ? SY.byN.size : -1); if (n) n.textContent = SY.sel.size;
+  if (g) { g.disabled = !SY.sel.size; g.innerHTML = `${ic("sync")} ${all ? "立即同步" : "同步选中的"} ${SY.sel.size} 个`; } }
+// ---------- 0.5.3：同步记录（每次同步前的自动备份 + 撤销 + 清理，合在一张表）----------
+const SYT = {manual: ["", "手动"], auto: ["acc", "自动"], "account-switch": ["acc", "换号后自动"], restore: ["", "撤销前的备份"], legacy: ["", "旧备份"]};
+const SYS = {synced: ["ok", "已同步"], undone: ["", "已撤销"], restore: ["", "—"], legacy: ["warn", "旧版本备份"]};
+async function syHist(el, max){
+  if (!el) return;
+  let h; try { h = await api("/api/sync/history"); } catch(e){ el.innerHTML = `<div class="miss">读不到同步记录：${esc(e.message)}</div>`; return; }
+  const items = h.items.filter(x => x.state !== "restore" || SY.showAll), shown = max ? items.slice(0, max) : items;
+  el.innerHTML = `<h3>${ic("history")}同步记录 <span class="tag">${items.length}</span><span class="sp"></span>
+      ${max ? `<a href="#" id="syHistAll">全部…</a>` : `<label class="chk" title="撤销之前也会先备份一次"><input type="checkbox" id="syHistRst" ${SY.showAll ? "checked" : ""}> 显示撤销前的备份</label>
+      <button id="syHistClean" title="把旧记录连同备份挪进回收站；最新 ${h.keep_min} 条永远留着">${ic("trash")} 清理旧记录</button>`}</h3>
+    ${shown.length ? `<table class="t syHistT">${shown.map(x => `<tr class="${x.state === "undone" ? "dimrow" : ""}"><td class="nw">${x.time ? when(x.time) : esc(x.id)}</td>
+      <td><span class="tag ${(SYT[x.trigger] || [""])[0]}">${(SYT[x.trigger] || ["", x.trigger || "—"])[1]}</span></td>
+      <td class="tl"><div class="ell">${x.state === "restore" ? "撤销之前给当时的列表拍的快照" : `补进 <code>${esc(x.account)}</code> ${x.added ?? x.count ?? 0} 个${x.updated ? `、刷新 ${x.updated} 个` : ""}${x.titles.length ? `：${esc(x.titles.join("、"))}${x.more ? ` 等 ${x.titles.length + x.more} 个` : ""}` : ""}`}</div></td>
+      <td><span class="tag ${(SYS[x.state] || [""])[0]}">${(SYS[x.state] || ["", x.state])[1]}</span></td>
+      <td class="nw">${x.undoable ? `<button data-syu="${esc(x.id)}">${ic("undo")} 撤销</button>` : ""}${x.verifiable ? ` <button class="ghost" data-syv="${esc(x.id)}" title="逐个文件核对：同步的还在不在 / 撤销干不干净">核对</button>` : ""} <button class="ghost" data-syp="${esc(x.path)}" title="复制这次备份的文件夹路径：${esc(x.path)}">${ic("folder")}</button></td></tr>`).join("")}</table>`
+      : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。每次同步（手动、自动、换号后自动）都会记在这里，同步前自动备份，点「撤销」就回到同步前。</div>'}
+    <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">每次同步前都自动备份目标账号的会话列表；撤销 = 补进来的挪进回收站、刷新过的换回原样，之后你自己新开的不动。共 ${h.count} 条，占 ${kb(h.bytes)} · <code>${esc(h.root)}</code></div>`;
+  [...el.querySelectorAll("[data-syu]")].forEach(b => b.onclick = () => { b.disabled = true; syUndo(b.dataset.syu); });
+  [...el.querySelectorAll("[data-syv]")].forEach(b => b.onclick = () => syVerify(b.dataset.syv));
+  [...el.querySelectorAll("[data-syp]")].forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.syp); toast("已复制备份文件夹路径"); } catch(e){ toast(b.dataset.syp, 6000); } });
+  const a = el.querySelector("#syHistAll"); if (a) a.onclick = e => { e.preventDefault(); go("sync"); };
+  const r = el.querySelector("#syHistRst"); if (r) r.onchange = () => { SY.showAll = r.checked; syHist(el, max); };
+  const c = el.querySelector("#syHistClean"); if (c) c.onclick = () => syClean(el);
+}
+async function syUndo(id){       // 一键撤销：不再弹确认（撤销前也会先备份，撤错了能在记录里找回）
+  try { const r = await api("/api/restore", {backup: id}); const v = r.verify;
+    if (doneOrQueued(r, r.already ? r.note : v && !v.ok ? null : `已撤销：挪走 ${r.removed || 0} 个、换回 ${r.restored || 0} 个`) && v && !v.ok) syVerifyDlg(v, "撤销做完了，但核对时有对不上的");
   } catch(e){ toast("❌ " + e.message, 5000); }
+  if (PAGE === "sync") { SY.touched = false; R.sync(); } else if (PAGE === "timeline") R.timeline();
+}
+async function syClean(el){
+  const days = 30;
+  let pv; try { pv = await api("/api/sync/history/clean", {days, dry: true}); } catch(e){ return toast("❌ " + e.message); }
+  if (!pv.count) return toast(`没有 ${days} 天前的记录要清（最新的几条永远留着）`);
+  confirmDlg("清理旧同步记录", `把 <b>${pv.count}</b> 条 ${days} 天前的同步记录连同备份（${kb(pv.bytes)}）挪进回收站目录。清掉的那几次就不能再一键撤销了；最新的记录永远留着。<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">不碰 Claude 的会话文件，只动 CC Session Sync 自己的备份。</div>`, "清理", async () => {
+    try { const r = await api("/api/sync/history/clean", {days, dry: false}); closeDlg(); toast(`✅ 清掉 ${r.count} 条（挪进 ${r.trash || "回收站"}）`, 6000); syHist(el); } catch(e){ toast("❌ " + e.message); } });
+}
+// 0.5.3：同步进度——后端 run() 每做一步写一次（检查 → 备份 → 逐个写入 N/M → 核对），这里轮询 /api/sync/progress 画出来
+const SYP = {plan: "检查要补哪些", backup: "备份当前列表", sync: "写入会话", verify: "核对结果", done: "完成", error: "出错了"};
+function syProgHtml(p, mini){
+  if (!p || !p.phase) return "";
+  const tot = p.total || 0, dn = p.phase === "verify" || p.phase === "done" ? tot : (p.done || 0);
+  const pct = p.phase === "done" ? 100 : p.phase === "plan" ? 3 : p.phase === "backup" ? 8 : p.phase === "verify" ? 96 : tot ? 10 + Math.round(85 * dn / tot) : 50;
+  const steps = ["backup", "sync", "verify"].map(k => { const order = {plan: 0, backup: 1, sync: 2, verify: 3, done: 4, error: -1}; const me = {backup: 1, sync: 2, verify: 3}[k];
+    return `<span class="syStep ${order[p.phase] > me ? "ok" : order[p.phase] === me ? "on" : ""}">${order[p.phase] > me ? "✓ " : ""}${SYP[k]}</span>`; }).join('<span class="dim">→</span>');
+  if (mini) return `<div class="syBar"><i style="width:${pct}%"></i></div><span>${p.trigger === "account-switch" ? "换号后自动同步" : p.trigger === "auto" ? "自动同步" : "同步"} · ${SYP[p.phase] || p.phase}${tot ? ` ${dn}/${tot}` : ""}</span>`;
+  return `<div class="syProg ${p.phase}"><div class="syProgH"><b>${SYP[p.phase] || p.phase}</b>${tot ? ` <span class="n">${dn} / ${tot} 个会话</span>` : ""}${p.title && p.phase === "sync" ? ` <span class="dim ell">· ${esc(p.title)}</span>` : ""}</div>
+    <div class="syBar"><i style="width:${pct}%"></i></div><div class="syStepRow">${steps}</div></div>`;
+}
+async function syncSelected(all, retry){
+  const only = all ? null : [...SY.sel], box = $("#syProgBox"), g = $("#syGo");
+  if (g) { g.disabled = true; g.innerHTML = `${ic("sync")} 同步中…`; }
+  SY.busy = true; let last = 0;
+  const paint = p => { if (box && p && p.seq !== last) { last = p.seq; box.innerHTML = syProgHtml(p); } };
+  paint({phase: "plan", total: only ? only.length : 0, done: 0});
+  const tm = setInterval(() => api("/api/sync/progress").then(p => p.active && paint(p)).catch(() => {}), 250);
+  try {
+    const r = await api("/api/sync", {source: SY.source, only});
+    clearInterval(tm); SY.busy = false;
+    const bid = r.backup ? String(r.backup).split(/[\\/]/).pop() : null;
+    const skip = r.skip_gone ? `；${r.skip_gone} 个在别的号里删过，没带回来` : "", warn = r.warns ? `；${r.warns} 个会话的模型在这个号可能没有` : "";
+    if (r.ok === false) throw new Error(r.error || "没做成");
+    if (!r.note && !r.deferred && bid && !(r.verify && !r.verify.ok)) toastAct(`✅ 已同步 ${r.done || 0} 个会话${r.updated ? `、刷新 ${r.updated} 个` : ""}${skip}${warn}`, "撤销", () => syUndo(bid), skip || warn ? 14000 : 10000);
+    else if (r.note) toast(r.note); else if (doneOrQueued(r, r.verify && !r.verify.ok ? null : `补了 ${r.done || 0} 个、刷新 ${r.updated || 0} 个${(r.auto_parents || []).length ? `（含自动带上的 ${r.auto_parents.length} 个父会话）` : ""}${r.tasks && r.tasks.merged ? `，合并了 ${r.tasks.merged} 条任务记录` : ""}。核对：${r.verify ? r.verify.summary : "—"}`) && r.verify && !r.verify.ok) syVerifyDlg(r.verify, "同步完了，但核对时有对不上的");
+    SY.touched = false; SY.err = null; R.sync();
+  } catch(e){
+    clearInterval(tm); SY.busy = false; SY.err = e.message;
+    if (box) { box.innerHTML = `<div class="miss syErr"><b>同步没做成</b>：${esc(e.message)}<div class="dim" style="font-size:calc(13px*var(--fk))">什么都没改坏：写之前已经备份；已经写进去的可以在下面「同步记录」里撤销。</div><button class="primary" id="syRetry">${ic("refresh")} 重试</button></div>`;
+      $("#syRetry").onclick = () => syncSelected(all, true); }
+    if (g) { g.disabled = false; g.innerHTML = `${ic("sync")} 立即同步`; }
+    toast("❌ 同步没做成：" + e.message, 6000);
+  }
+}
+// 后台（自动 / 换号后）同步时右下角的小进度条，不挡操作
+function syMini(p){
+  let el = $("#syMini");
+  if (!p || !p.active || SY.busy) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "syMini"; el.className = "syMini"; el.title = "点开「账号同步」看详情"; el.onclick = () => go("sync"); document.body.appendChild(el); }
+  el.innerHTML = syProgHtml(p, true);
 }
 // 0.5.0：同步 / 撤回之后核对一遍（逐个文件对指纹），有对不上的列出来
 function syVerifyDlg(v, head){
@@ -4475,9 +4572,8 @@ async function bkRender(pg, tab){
     <div class="card"><h3>${ic("list")}会话操作记录（可撤回）</h3>
       ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
         <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}</div>
-    <div class="grid2"><div class="card"><h3>${ic("users")}Claude 账号同步备份</h3>
-      ${bk.length ? `<table class="t">${bk.slice(0, 20).map(b => `<tr><td><code>${esc(b.id)}</code></td><td>${b.added != null ? `补 ${b.added} / 刷新 ${b.updated}` : `${b.count} 个文件`}</td><td class="nw">${b.what === "restore" ? '<span class="tag">撤回前的备份</span>' : b.restored ? '<span class="tag">已撤回</span>' : `<button data-bk="${esc(b.id)}">撤回</button>`}${b.verifiable ? ` <button class="ghost" data-bkv="${esc(b.id)}" title="逐个文件核对：同步的还在不在 / 撤回干不干净">核对</button>` : ""}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有同步过。</div>'}</div>
-      <div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
+    <div class="card" id="bkSyHist"></div>
+      <div class="grid2"><div class="card"><h3>${ic("codex", "logo")}Codex 导入账本</h3>
       ${led.length ? `<table class="t">${led.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.threads} 个对话 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-led="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}</div></div>
     <div class="card"><h3>${ic("dsh", "logo dshc")}DeepSeek Harness 导入账本</h3>
       ${dled.length ? `<table class="t">${dled.slice(0, 20).map(l => `<tr><td><code>${esc(l.id)}</code></td><td>${l.what === "claude-to-dsh" ? "Claude Code → dsh" : "dsh → Claude Code"} · ${l.items} 个 · 新建 ${l.created} / 更新 ${l.updated}</td><td>${l.undone ? '<span class="tag">已撤回</span>' : `<button data-dled="${esc(l.id)}">撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有导入过。</div>'}
@@ -4518,6 +4614,7 @@ async function bkRender(pg, tab){
       if (r.ok === false) return toast("❌ " + r.error, 5000);
       doneOrQueued(r, `已撤回（挪走 ${r.moved || 0}、换回 ${r.restored || 0}${(r.kept || []).length ? `，${r.kept.length} 个没动` : ""}）`); R.timeline(); } catch(e){ toast("❌ " + e.message); } }));
   $$("[data-vled]").forEach(b => b.onclick = () => cvUndo(b.dataset.vled));
+  syHist($("#bkSyHist"), 8);
   $("#bkImp").onclick = () => imDlg();
   $("#bkToTl").onclick = () => { tbSetTab("tl"); TL.cur = null; R.timeline(); };
   $$("[data-crj]").forEach(b => b.onclick = () => crAsk({kind: b.dataset.k, jobs: [b.dataset.crj], banner: true}));
@@ -4575,6 +4672,7 @@ R.settings = async () => {
       ${setRow("power", "开机自动启动", win ? "登录 Windows 后自动在托盘里运行（写 HKCU\\…\\Run，卸载时会删掉）" : "只有 Windows 桌面版支持", sw("stAuto", s.autostart, s.autostart_supported ? "" : "disabled"))}
       ${setRow("bell", "系统通知", "同步 / 导入做完、排队的改动做完、检测到账号切换、有新版本时在右下角弹通知", sw("stNotify", s.notify))}</div></div>
     <div class="card"><h3>同步与导入</h3><div class="setlist">
+      ${setRow("users", "切换 Claude 账号后自动同步对话历史", "检测到 Claude 桌面端或 Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号（先备份、只补缺的、不覆盖；桌面端开着时等它关掉再做）。缺省开，关掉后只提醒不同步", sw("stSwitchSync", s.claude_auto_sync_on_account_switch !== false))}
       ${setRow("sync", "自动同步 Claude 会话", "桌面端没开时把别的账号新出现的会话补进当前账号。CC Msg 里也开了的话开一个就够", sw("stSync", s.auto_sync))}
       ${setRow("shield", "导入 Codex 时登记进 Codex 导入记录", "防止 Codex 桌面端把导过去的会话再导回来（会改 ~/.codex 里那个文件，先备份）", sw("stMark", s.codex_mark_imported))}
       ${setRow("history", "会话自动备份", "把 Claude Code / Codex 的会话增量备份进 sessions.sqlite（时间线、恢复都靠它）。缺省开、每 10 分钟，最短 5 分钟；失败才弹通知", `<span class="numu"><input type="number" id="stBkE" min="1" value="${esc(s.session_backup_every ?? 10)}" ${s.session_backup_auto ? "" : "disabled"}><select id="stBkU" ${s.session_backup_auto ? "" : "disabled"}>${Object.entries(BK_UNIT).map(([k, v]) => `<option value="${k}" ${s.session_backup_unit === k ? "selected" : ""}>${v}</option>`).join("")}</select></span>${sw("stBk", s.session_backup_auto)}`)}</div></div>
@@ -4599,7 +4697,7 @@ R.settings = async () => {
   $("#stAbout").onclick = e => { e.preventDefault(); go("about"); };
   $("#stZm").onclick = () => applyUi(null, zoomK() - 0.1); $("#stZp").onclick = () => applyUi(null, zoomK() + 0.1); $("#stZ0").onclick = () => applyUi(null, 1);
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
-  bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync");
+  bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync"); bind("#stSwitchSync", "claude_auto_sync_on_account_switch");
   bind("#stMark", "codex_mark_imported"); bind("#stUpd", "update_auto"); bind("#stSkipPv", "convert_skip_preview");
   $("#stBk").onchange = e => { $("#stBkE").disabled = $("#stBkU").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
   const stEv = async () => { const r = await saveSetting({session_backup_every: +$("#stBkE").value, session_backup_unit: $("#stBkU").value}); if (!r) R.settings(); };

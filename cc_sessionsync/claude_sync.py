@@ -1118,9 +1118,58 @@ def _atomic_write(dst: Path, text: str) -> None:
     os.replace(tmp, dst)
 
 
+# ---------- 同步进度（0.5.3）：run() 边做边写，界面 / 托盘轮询 progress() ----------
+# phase：plan 检查 → backup 备份 → sync 写入（done/total 按会话算）→ verify 核对 → done 完成 / error 出错。
+PROG: dict = {}
+_SLOW = float(os.environ.get("CC_SESSIONSYNC_SYNC_DELAY") or 0)     # 只给演示 / 测试用：每个会话停一下，好看清进度
+
+
+def _prog(phase: str, **kw) -> None:
+    import time
+    if phase == "plan":
+        PROG.clear()
+        PROG.update(started=time.time(), seq=PROG.get("seq", 0))
+    PROG.update(phase=phase, at=time.time(), **kw)
+    PROG["seq"] = PROG.get("seq", 0) + 1
+    if _SLOW and phase == "sync":
+        time.sleep(_SLOW)
+
+
+def progress() -> dict:
+    """最近一次同步的进度；active=True 表示正在做。做完 / 出错后保留 60 秒给界面显示结果。"""
+    import time
+    p = dict(PROG)
+    if not p:
+        return {"active": False}
+    p["active"] = p.get("phase") not in ("done", "error")
+    if not p["active"] and time.time() - p.get("at", 0) > 60:
+        return {"active": False, "last": p}
+    return p
+
+
 def run(target: str | None = None, dry: bool = False, only: list[str] | None = None,
-        source: str = "desktop", what: str = "sync") -> dict:
-    """only：只补这几个（local_*.json 文件名）；不给就全补。source：补到桌面端（缺省）还是命令行登的那个号。"""
+        source: str = "desktop", what: str = "sync", trigger: str = "manual") -> dict:
+    if dry:
+        return _run(target, dry, only, source, what, trigger)
+    _prog("plan", trigger=trigger, done=0, total=0)
+    try:
+        r = _run(target, dry, only, source, what, trigger)
+    except Exception as e:
+        _prog("error", error=f"{type(e).__name__}: {e}")
+        raise
+    if not r.get("ok"):
+        _prog("error", error=r.get("error") or "认不出当前账号")
+    else:
+        v = r.get("verify") or {}
+        _prog("done", added=r.get("done", 0), updated=r.get("updated", 0), backup=Path(r["backup"]).name if r.get("backup") else None,
+              skipped=len(r.get("skipped") or []), verify_ok=v.get("ok", True), account=(r.get("target") or {}).get("label"))
+    return r
+
+
+def _run(target: str | None = None, dry: bool = False, only: list[str] | None = None,
+         source: str = "desktop", what: str = "sync", trigger: str = "manual") -> dict:
+    """trigger（0.5.3，只记进账本给「同步记录」看）：manual 手动 / auto 自动同步 / account-switch 换号后自动同步。
+    only：只补这几个（local_*.json 文件名）；不给就全补。source：补到桌面端（缺省）还是命令行登的那个号。"""
     p = plan(target, source)
     if p.get("ok") and only is not None:
         keep = set(only)
@@ -1146,10 +1195,15 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
             _switch_handled(p)
         return dict(p, done=0, updated=0, dry=dry)
     tdir = Path(p["target"]["path"])
+    total = len(p["add"]) + len(p["update"])
+    _prog("backup", done=0, total=total, account=(p.get("target") or {}).get("label"))
     bak = _backup(tdir)
     files: dict[str, dict] = {}                 # 0.5.0：逐个文件记「改之前 / 改之后」的指纹，撤回和核对都按这个来
     done = 0
+    step = 0
     for a in p["add"]:
+        step += 1
+        _prog("sync", done=step - 1, total=total, title=a.get("title"))
         dst = tdir / a["name"]
         if dst.exists():
             continue
@@ -1158,6 +1212,8 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
         done += 1
     updated = 0
     for a in p["update"]:
+        step += 1
+        _prog("sync", done=step - 1, total=total, title=a.get("title"))
         dst = tdir / a["name"]
         before = _sha(dst)
         cur = json.loads(dst.read_text(encoding="utf-8"))
@@ -1180,7 +1236,8 @@ def run(target: str | None = None, dry: bool = False, only: list[str] | None = N
         files[n] = {"before": task_before.get(n), "after": _sha(tdir / n)}
     _write_ledger(bak, tdir, what, source=source, added=[a["name"] for a in p["add"]], updated=[a["name"] for a in p["update"]],
                   task_files_added=tasks["files_added"], task_files_updated=tasks["files_updated"], tasks_merged=tasks["merged"],
-                  files=files, v=2)
+                  files=files, v=2, trigger=trigger)
+    _prog("verify", done=total, total=total)
     if only is None or not [x for x in plan(target, source).get("add", [])]:
         _switch_handled(p)
     return dict(p, done=done, updated=updated, dry=False, backup=str(bak), tasks=tasks, verify=verify(bak.name))
@@ -1237,6 +1294,72 @@ def list_backups() -> list[dict]:
                     "what": led.get("what") if led else None, "restored": _undone(led),
                     "verifiable": bool(led and isinstance(led.get("files"), dict))})
     return out
+
+
+# ---------- 同步记录（0.5.3）：备份 + 账本合成一张表，一键撤销、按天数清理 ----------
+HISTORY_KEEP_MIN = 10          # 清理时最新的这么多条永远留着
+
+
+def _bak_time(name: str) -> float | None:
+    try:
+        return datetime.strptime(name[:15], "%Y%m%d-%H%M%S").timestamp()
+    except ValueError:
+        return None
+
+
+def _dir_bytes(d: Path) -> int:
+    n = 0
+    for f in d.rglob("*"):
+        try:
+            if f.is_file():
+                n += f.stat().st_size
+        except OSError:
+            pass
+    return n
+
+
+def history(limit: int = 200) -> dict:
+    """每次同步（手动 / 自动 / 换号后自动）一条：什么时候、谁触发的、补进哪个号、补了哪些（标题）、现在的状态、能不能撤销。
+    每次同步前自动备份的那份文件夹快照就是这条记录本身（path 指向它，能直接打开看）。老版本没账本的备份也列出来（legacy）。"""
+    items = []
+    for b in list_backups()[:limit]:
+        led = b.get("ledger") or {}
+        what = b.get("what")
+        trig = led.get("trigger") or ("auto" if what == "auto-sync" else "manual" if what == "sync" else None)
+        files = led.get("files") if isinstance(led.get("files"), dict) else {}
+        added = [f.get("title") or n for n, f in files.items() if n.startswith("local_") and f.get("before") is None] \
+            or list(led.get("added") or [])
+        state = "restore" if what == "restore" else "undone" if b.get("restored") else "legacy" if not led else "synced"
+        d = BAK_ROOT / b["id"]
+        items.append({"id": b["id"], "time": _bak_time(b["id"]), "trigger": trig if state not in ("restore", "legacy") else state,
+                      "key": b.get("key"), "account": _short(str(b.get("key") or "").replace(API_PREFIX, "").partition("/")[0]),
+                      "profile": led.get("profile") or "1p", "added": b.get("added"), "updated": b.get("updated"),
+                      "titles": added[:5], "more": max(0, len(added) - 5), "state": state,
+                      "undoable": state in ("synced", "legacy"), "verifiable": b.get("verifiable"),
+                      "undone_by": b.get("restored"), "bytes": _dir_bytes(d), "path": str(d)})
+    return {"items": items, "count": len(items), "bytes": sum(i["bytes"] for i in items), "root": str(BAK_ROOT),
+            "keep_min": HISTORY_KEEP_MIN}
+
+
+def clean_history(days: float, dry: bool = True, now: float | None = None) -> dict:
+    """清理 days 天以前的同步记录（连同那次的备份）。最新的 HISTORY_KEEP_MIN 条永远留着；
+    不直接删，挪进回收站目录 <数据目录>/trash/sync-history-<时间>/，手滑了还能拿回来。dry=True 只算会清掉哪些。"""
+    import time
+    now = now or time.time()
+    try:
+        days = max(1.0, float(days))
+    except (TypeError, ValueError):
+        return {"ok": False, "error": "days 应该是数字"}
+    hs = history(limit=100000)["items"]
+    old = [h for h in hs[HISTORY_KEEP_MIN:] if h["time"] and now - h["time"] > days * 86400]
+    out = {"ok": True, "dry": dry, "days": days, "count": len(old), "bytes": sum(h["bytes"] for h in old), "ids": [h["id"] for h in old]}
+    if dry or not old:
+        return out
+    trash = paths.HOME / "trash" / f"sync-history-{datetime.now():%Y%m%d-%H%M%S}"
+    trash.mkdir(parents=True, exist_ok=True)
+    for h in old:
+        shutil.move(str(BAK_ROOT / h["id"]), str(trash / h["id"]))
+    return dict(out, trash=str(trash))
 
 
 def _bak_ctx(backup_id: str) -> tuple[Path | None, Path | None, dict | None, Path | None, str | None]:
@@ -1634,7 +1757,7 @@ def auto_tick(now: float | None = None, force: bool = False, debounce: float = 2
         if now - newest < quiet:
             AUTO["changed"] = now                        # 刚有写入：过一会儿再来
             return None
-        r = run(p["target"]["key"], source=p["source"], what="auto-sync", only=[a["name"] for a in p["add"]])
+        r = run(p["target"]["key"], source=p["source"], what="auto-sync", only=[a["name"] for a in p["add"]], trigger="auto")
         _prune_auto()
         AUTO["pending"] = False
         ev = {"id": f"{int(now)}", "time": now, "added": r.get("done", 0), "updated": r.get("updated", 0),
@@ -1645,6 +1768,44 @@ def auto_tick(now: float | None = None, force: bool = False, debounce: float = 2
     except Exception as e:
         AUTO["error"] = f"{type(e).__name__}: {e}"
         return None
+
+
+def switch_sync(source: str = "desktop", now: float | None = None) -> dict:
+    """0.5.3：检测到 Claude 账号切换后做一次同步（设置 claude_auto_sync_on_account_switch，缺省开）。
+    和「立即同步」/ 自动同步是同一套：plan() 算出新号缺的 → run() 先整个备份目标文件夹、只补缺的（同名已有就跳过，不覆盖、不删）、
+    记账本能撤回；在新号里删过的、自动同步里跳过的不补回来。桌面端开着就不写（它会把列表写回去），等它退出再做。
+    source：'desktop'（桌面端换号；API 模式时自动换成 'api'）或 'cli'（Claude Code 命令行换号）。
+    返回 {"state": "wait", "why": "running" / "lock"} / {"state": "done", "added", "updated", ...} / {"state": "error", "error"}。"""
+    import time
+    from . import apps
+    now = now or time.time()
+    if not _auto_lock(now):                              # 另一个进程正在做自动同步：下一轮再来
+        return {"state": "wait", "why": "lock"}
+    try:
+        running = bool(apps.running("claude"))
+    except Exception:
+        running = True                                   # 认不出来就当开着：宁可不写
+    if running:
+        return {"state": "wait", "why": "running"}
+    try:
+        forget()
+        src = default_source() if source == "desktop" else source
+        p = plan(source=src)
+        if not p.get("ok"):
+            return {"state": "error", "error": p.get("error") or "认不出当前账号"}
+        skip = set(_skip_load().get(p["target"]["key"], []))
+        add = [a for a in p["add"] if a["name"] not in skip]
+        acct = _short(p["target"]["key"].partition("/")[0])
+        if not (add or p["update"]):
+            _switch_handled(p)
+            return {"state": "done", "added": 0, "updated": 0, "account": acct, "titles": [], "backup": None, "key": p["target"]["key"]}
+        r = run(p["target"]["key"], source=src, what="auto-sync", only=[a["name"] for a in add], trigger="account-switch")
+        _prune_auto()
+        _switch_handled(p)
+        return {"state": "done", "added": r.get("done", 0), "updated": r.get("updated", 0), "account": acct, "key": p["target"]["key"],
+                "titles": [a["title"] for a in add[:5]], "backup": Path(r["backup"]).name if r.get("backup") else None}
+    except Exception as e:
+        return {"state": "error", "error": f"{type(e).__name__}: {e}"}
 
 
 SKIP_FILE = paths.HOME / "claude-autosync-skip.json"

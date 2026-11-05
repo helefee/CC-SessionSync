@@ -138,6 +138,7 @@ def tray_state(since: int = -1) -> dict:
             "job_kinds": sorted({j.get("kind") or "claude" for j in wq}), "closerun": appclose._active(),
             "update": {"badge": u.get("badge"), "latest": u.get("latest")},
             "acct_handled": watch.handled_since(),
+            "sync_prog": claude_sync.progress(),
             "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600
                              and not (watch.handled_since().get(e.get("who")) or 0) >= e["time"] for e in events.recent(10))}
 
@@ -169,7 +170,8 @@ def sync_now(to: str | None = None, only=None, source: str | None = None) -> dic
     r = apps.run_or_defer("claude", "claude-sync", {"target": to or pl["target"]["key"], "only": only, "source": source},
                           "同步 Claude 会话到 API 模式" if source == "api" else "同步 Claude 会话到当前账号")
     if not r.get("deferred"):
-        events.add("auto-sync", "同步完成", f"补了 {r.get('done', 0)} 个、刷新 {r.get('updated', 0)} 个会话", {"page": "sync"}, manual=True)
+        events.add("auto-sync", "同步完成", f"补了 {r.get('done', 0)} 个、刷新 {r.get('updated', 0)} 个会话", {"page": "sync"}, manual=True,
+                   backup=Path(r["backup"]).name if r.get("backup") else None)
     return r
 
 
@@ -407,6 +409,10 @@ class H(BaseHTTPRequestHandler):
             return claude_sync.run(q.get("to") or None, True, None, q.get("source") or claude_sync.default_source())
         if p == "/api/backups":
             return claude_sync.list_backups()
+        if p == "/api/sync/progress":                          # 0.5.3：同步进度（界面边同步边轮询）
+            return claude_sync.progress()
+        if p == "/api/sync/history":                           # 0.5.3：同步记录（备份 + 撤销合在一起）
+            return claude_sync.history()
         if p == "/api/sync/verify":                            # 0.5.0：核对一次同步 / 撤回到没到位
             return claude_sync.verify(q.get("backup") or "")
         if p == "/api/codex/plan":
@@ -615,6 +621,8 @@ class H(BaseHTTPRequestHandler):
             pass
         if p == "/api/sync":
             return sync_now(b.get("to") or None, b.get("only"), b.get("source") or None)
+        if p == "/api/sync/history/clean":                     # 0.5.3：清理旧同步记录（挪进回收站）；dry 只预览
+            return claude_sync.clean_history(b.get("days", 30), dry=bool(b.get("dry", True)))
         if p == "/api/restore":
             return apps.run_or_defer("claude", "claude-restore", {"backup": b["backup"]}, f"撤回 Claude 同步 {b['backup']}")
         if p == "/api/codex/import":
@@ -712,7 +720,7 @@ class H(BaseHTTPRequestHandler):
                 return apps.run_or_defer("claude", "codex-undo", {"ledger": b["ledger"]}, f"撤回 Codex 导入 {b['ledger']}")
             return codex_import.undo(str(b.get("ledger")))
         if p == "/api/settings":
-            ch = {k: b[k] for k in ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
+            ch = {k: b[k] for k in ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
                                     "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
                                     "show_full_accounts", "retention_all_days", "retention_daily_days", "convert_skip_preview",
                                     "backup_clean_auto", "backup_clean_days", "backup_clean_mb") if k in b}
@@ -958,7 +966,12 @@ def start_background(auto_sync: bool | None = None) -> None:
                     ev = claude_sync.auto_tick()
                     if ev and (ev.get("added") or ev.get("updated")):
                         events.add("auto-sync", f"已自动同步 {ev['added']} 个会话到当前账号",
-                                   "、".join(ev.get("titles") or [])[:180] or f"账号 {ev.get('account')}", {"page": "sync"})
+                                   "、".join(ev.get("titles") or [])[:180] or f"账号 {ev.get('account')}", {"page": "sync"},
+                                   backup=ev.get("backup"))
+                try:                                            # 0.5.3：Claude 换号后自动同步（设置里可关）
+                    watch.switch_tick()
+                except Exception:
+                    pass
                 events.poll_jobs()
                 if time.time() - fmt_at > 6 * 3600 and not os.environ.get("CC_SESSIONSYNC_NO_FORMATS"):
                     fmt_at = time.time()

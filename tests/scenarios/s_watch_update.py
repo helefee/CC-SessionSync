@@ -14,6 +14,7 @@ H = T / "home"
 FAILS = []
 def ok(c, m): print(("PASS " if c else "FAIL ") + m); c or FAILS.append(m)
 from cc_sessionsync import apps, events, settings, ui, update, watch
+from cc_sessionsync import settings as _S; _S.update(claude_auto_sync_on_account_switch=False)  # 0.5.3: this scenario covers the plain reminder path (auto-sync off)
 
 # 设置
 ok(settings.load()["auto_sync"] is False and settings.get("notify") is True, "settings defaults (auto_sync off, notify on)")
