@@ -23,7 +23,7 @@ from pathlib import Path
 
 from . import events, paths
 
-STATE = {"claude-desktop": None, "claude-cli": None, "codex": None, "last": [], "error": None, "handled": {}, "notes": []}
+STATE = {"claude-desktop": None, "claude-cli": None, "codex": None, "last": [], "error": None, "handled": {}, "notes": [], "pending": {}}
 _cand: dict[str, tuple] = {}
 _sig: dict[str, tuple] = {}
 NAMES = {"claude-desktop": "Claude 桌面端", "claude-cli": "Claude Code 命令行", "codex": "Codex"}
@@ -167,6 +167,7 @@ def _load() -> None:
         if isinstance(j.get(k), dict) and j[k].get("id") is not None and STATE.get(k) is None:
             STATE[k] = j[k]
     STATE["handled"] = j.get("handled") or {}
+    STATE["pending"] = {k: v for k, v in (j.get("pending") or {}).items() if k in ("claude-desktop", "claude-cli") and isinstance(v, dict)}
 
 
 def _save() -> None:
@@ -174,7 +175,8 @@ def _save() -> None:
         f = _state_file()
         f.parent.mkdir(parents=True, exist_ok=True)
         tmp = f.with_suffix(".tmp")
-        tmp.write_text(json.dumps({**{k: STATE.get(k) for k in NAMES}, "handled": STATE.get("handled") or {}}, ensure_ascii=False), encoding="utf-8")
+        tmp.write_text(json.dumps({**{k: STATE.get(k) for k in NAMES}, "handled": STATE.get("handled") or {},
+                                   "pending": STATE.get("pending") or {}}, ensure_ascii=False), encoding="utf-8")
         os.replace(tmp, f)
     except Exception:
         pass
@@ -285,6 +287,12 @@ def tick(now: float | None = None, stable: float = 9) -> list[dict]:
             prov_only = k == "codex" and _split_codex(cur["id"])[0] == _split_codex(v["id"])[0]
             title = f"检测到 {NAMES[k]} 供应商已切换" if prov_only else f"检测到 {NAMES[k]} 账号已切换"
             text = f"{cur['label']} → {v['label']}"
+        if not mode_switch and k.startswith("claude") and _auto_on():
+            # 0.5.3：自动同步开着 → 不弹「检测到切换」，记成待同步，后台下一轮（switch_tick）补进新号再说一声
+            STATE.setdefault("pending", {})[k] = {"id": v["id"], "label": v["label"], "old": cur["label"], "at": now}
+            STATE["notes"] = (STATE.get("notes", []) + [{"time": now, "who": k, "text": text + "：自动同步"}])[-10:]
+            _save()
+            continue
         if not mode_switch and _nothing_to_sync(k):
             STATE.setdefault("handled", {})[k] = {"id": v["id"], "at": now}
             STATE["notes"] = (STATE.get("notes", []) + [{"time": now, "who": k, "text": text + "：当前账号已经不缺会话，不提醒"}])[-10:]
@@ -299,10 +307,65 @@ def tick(now: float | None = None, stable: float = 9) -> list[dict]:
     return out
 
 
+def _auto_on() -> bool:
+    try:
+        from . import settings
+        return bool(settings.get("claude_auto_sync_on_account_switch", True))
+    except Exception:
+        return False
+
+
+def switch_tick(now: float | None = None) -> list[dict]:
+    """0.5.3：把待同步的 Claude 换号补完（后台每 ~15 秒）。返回这轮发出的事件。
+    - 开关关了：待同步的改成以前那样的「检测到切换」提醒（不写任何东西）；
+    - 桌面端开着 / 别的进程在同步：先说一次「关掉桌面端后自动同步」，之后安静等；
+    - 同步完：「检测到 Claude 账号切换为 X，已同步 N 个会话」（0 个时说已经不缺），记成处理完；
+    - 出错：退回以前的提醒，让人去「账号同步」页手动看。"""
+    _load()
+    now = now or time.time()
+    out = []
+    for k in list((STATE.get("pending") or {}).keys()):
+        pd = STATE["pending"][k]
+        cur = STATE.get(k) or {}
+        if cur.get("id") != pd.get("id"):                # 之后又换了号：按现在这个号来
+            pd.update(id=cur.get("id"), label=cur.get("label", pd.get("label")))
+        who = NAMES[k]
+        if not _auto_on():
+            STATE["pending"].pop(k)
+            _save()
+            out.append(events.add("account", f"检测到 {who} 账号已切换", f"{pd.get('old')} → {pd['label']}", {"page": "sync", "account_switch": k},
+                                  who=k, old=pd.get("old"), new=pd["label"], new_id=pd["id"]))
+            continue
+        from . import claude_sync
+        r = claude_sync.switch_sync("cli" if k == "claude-cli" else "desktop", now=now)
+        if r["state"] == "wait":
+            if r["why"] == "running" and not pd.get("told"):
+                pd["told"] = now
+                _save()
+                out.append(events.add("auto-sync", f"检测到 Claude 账号切换为 {pd['label']}", "Claude 桌面端还开着，关掉后自动把别的账号的会话同步过来",
+                                      {"page": "sync"}, who=k, new=pd["label"]))
+            continue
+        STATE["pending"].pop(k)
+        if r["state"] == "done":
+            STATE.setdefault("handled", {})[k] = {"id": pd["id"], "at": now}
+            n = r["added"]
+            body = ("、".join(r.get("titles") or [])[:180] or f"账号 {r.get('account')}") if n or r.get("updated") else "新账号已经不缺会话"
+            if r.get("updated"):
+                body = f"另外刷新了 {r['updated']} 个；" + body
+            _save()
+            out.append(events.add("auto-sync", f"检测到 Claude 账号切换为 {pd['label']}，已同步 {n} 个会话", body, {"page": "sync"},
+                                  who=k, new=pd["label"], added=n, updated=r.get("updated", 0), backup=r.get("backup")))
+        else:
+            _save()
+            out.append(events.add("account", f"检测到 {who} 账号已切换", f"{pd.get('old')} → {pd['label']}（自动同步没做成：{r.get('error')}，请在「账号同步」页看看）",
+                                  {"page": "sync", "account_switch": k}, who=k, old=pd.get("old"), new=pd["label"], new_id=pd["id"]))
+    return out
+
+
 def status() -> dict:
     _load()
     return {k: STATE[k] for k in NAMES} | {"last": STATE["last"], "error": STATE["error"], "handled": STATE.get("handled") or {},
-                                         "notes": STATE.get("notes", [])}
+                                         "notes": STATE.get("notes", []), "pending": STATE.get("pending") or {}}
 
 
 def handled_since() -> dict:

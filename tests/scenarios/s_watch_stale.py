@@ -14,6 +14,7 @@ os.environ.update(HOME=str(H), USERPROFILE=str(H), CC_SESSIONSYNC_HOME=str(T / "
 for k in ("CODEX_HOME", "CC_SESSIONSYNC_FAKE_APPS", "CLAUDE_USER_DATA_DIR"): os.environ.pop(k, None)
 (T / "procs.json").write_text("[]")
 from cc_sessionsync import claude_sync as C, events, ui, watch
+from cc_sessionsync import settings as _S; _S.update(claude_auto_sync_on_account_switch=False)  # 0.5.3: this scenario covers the plain reminder path (auto-sync off)
 FAILS = []
 def ok(c, m): print(("PASS " if c else "FAIL ") + m); c or FAILS.append(m)
 P1 = AD / "Claude"; L = P1 / "Local Storage/leveldb"; L.mkdir(parents=True)

@@ -3,6 +3,7 @@
 
 键（缺省值见 DEFAULTS）：
     auto_sync            切 Claude 账号后自动同步会话（桌面版开着时做；缺省关）
+    claude_auto_sync_on_account_switch  检测到 Claude 账号切换（桌面端 / Claude Code 命令行）就把别的号的会话补进新号（缺省开，0.5.3）
     tray_close           关窗口时藏到托盘（Windows）
     start_min            启动时藏到托盘
     notify               系统通知（自动同步 / 排队的活做完 / 导入完成 / 有新版本）
@@ -28,7 +29,7 @@ import threading
 from . import paths
 
 FILE = paths.HOME / "settings.json"
-DEFAULTS = {"auto_sync": False, "tray_close": True, "start_min": False, "notify": True, "update_auto": True,
+DEFAULTS = {"auto_sync": False, "claude_auto_sync_on_account_switch": True, "tray_close": True, "start_min": False, "notify": True, "update_auto": True,
             "codex_mark_imported": False, "selfcheck_done": False,
             "show_full_accounts": False,
             "convert_skip_preview": False,          # 高级：转换前不弹预览直接做（0.3.6）
@@ -38,7 +39,7 @@ DEFAULTS = {"auto_sync": False, "tray_close": True, "start_min": False, "notify"
             "retention_all_days": 7, "retention_daily_days": 90, "ui_font": 1, "ui_zoom": 1,
             "lang": "auto",                         # 界面语言（0.4.3）
             "chat_style": "app", "chat_width": 860}  # 对话气泡样式 / 文本宽度（0.5.2）
-BOOL_KEYS = ("auto_sync", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
+BOOL_KEYS = ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
              "tray_hint_shown", "show_full_accounts", "session_backup_auto", "convert_skip_preview", "backup_clean_auto")
 _lock = threading.Lock()
 
