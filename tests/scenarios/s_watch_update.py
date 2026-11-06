@@ -31,8 +31,8 @@ def switch_cli(email):
 switch_cli.n = 5
 switch_cli("wang.fang@example.com")
 ok(watch.tick(1010) == [], "change seen once → only a candidate (debounce)")
-ok(watch.tick(1015) == [], "still within the stable window")
-ev = watch.tick(1021)
+ok(watch.tick(1011) == [], "still within the stable window")
+ev = watch.tick(1014)
 ok(len(ev) == 1 and ev[0]["text"] == "z***@example.com → w***@example.com" and ev[0]["open"]["page"] == "sync", "switch confirmed → one event, masked old → new")
 ok(ev[0]["title"] == "检测到 Claude Code 命令行 账号已切换", "event title")
 switch_cli("tmp.user@example.com"); watch.tick(1030)

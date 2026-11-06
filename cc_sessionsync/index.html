@@ -1295,6 +1295,22 @@ function renderBans(){
   for (const a of ST.acct)
     out.push(`<div class="ban warn" data-ak="${esc(a.k)}">${ic("users")}<div class="tx"><b>${esc(a.title)}</b>：${a.old != null && a.new != null ? `${acm(a.old_rid, a.old)} → ${acm(a.new_rid, a.new)} ${eyeB()}` : esc(a.text)}</div>
       <div class="acts"><button class="primary" data-a="sync">立即同步</button><button data-a="open">打开</button><button class="ghost" data-a="x" title="知道了">${ic("x")}</button></div></div>`);
+  // 0.5.5：已检测到换号、在等桌面端 / 锁 — 粘性提示，避免误以为「检查不到」
+  for (const [pk, pd] of Object.entries(ST.pendingAcct || {})) {
+    if (!pd || !pd.label) continue;
+    const phase = pd.phase || pd.reason || "";
+    if (phase !== "waiting_desktop" && phase !== "waiting_lock" && phase !== "detected") continue;
+    const title = phase === "waiting_desktop"
+      ? `已检测到账号切换为 ${pd.label}，等待 Claude 桌面端退出后再同步`
+      : phase === "waiting_lock"
+        ? `已检测到账号切换为 ${pd.label}，等待同步锁释放`
+        : `已检测到账号切换为 ${pd.label}，准备自动同步`;
+    const text = phase === "waiting_desktop"
+      ? "账号切换已经认出（不是没检查到）；Claude 桌面端还开着，关掉后会自动把别的账号的会话同步过来。"
+      : phase === "waiting_lock" ? "另一轮自动同步还在进行，稍后会继续。" : "正在排队自动同步。";
+    out.push(`<div class="ban warn" data-pk="${esc(pk)}">${ic("users")}<div class="tx"><b>${esc(title)}</b><div class="dim">${esc(text)}</div></div>
+      <div class="acts"><button class="primary" data-pnd="open">打开账号同步</button><button class="ghost" data-pnd="x" title="知道了">${ic("x")}</button></div></div>`);
+  }
   const lg = ST.legacy;                     // 0.3.5：供应商功能拿掉后，第一次启动把配置恢复原样 → 提示一次
   if (lg) out.unshift(`<div class="ban acc" id="banLegacy">${ic("check")}<div class="tx"><b>供应商功能已移除，已把 Codex / Claude Code 配置恢复原样</b>
       <ul class="lglist">${(lg.done || []).slice(0, 8).map(x => `<li>${esc(x)}</li>`).join("")}${(lg.done || []).length > 8 ? `<li class="dim">还有 ${lg.done.length - 8} 项…</li>` : ""}</ul>
@@ -1325,6 +1341,11 @@ function renderBans(){
     if (b.dataset.a === "open") return goTo(page, a && a.open);
     go("sync"); syncSelected(true);
   });
+  $$("#bans [data-pnd]").forEach(b => b.onclick = () => {
+    const box = b.closest("[data-pk]"), k = box && box.dataset.pk;
+    if (b.dataset.pnd === "x") { if (k && ST.pendingAcct) delete ST.pendingAcct[k]; renderBans(); return; }
+    go("sync");
+  });
   $$("#bans [data-fm]").forEach(b => b.onclick = async () => { if (b.dataset.fm === "diag") return goTo("diag", {fmt: 1});
     ST.fmt = null; renderBans(); try { await api("/api/formats/seen", {}); } catch(e){} });
   $$("#bans [data-lg]").forEach(b => b.onclick = async () => { ST.legacy = null; renderBans(); try { await api("/api/legacy/seen", {}); } catch(e){} });
@@ -1347,11 +1368,17 @@ async function poll(){
         ST.acct = ST.acct.filter(x => x.k !== k); ST.acct.unshift({k, time: e.time, title: e.title, text: e.text, open: e.open, old: e.old, new: e.new, old_rid: e.old_rid, new_rid: e.new_rid, mode: e.mode_switch});
         RV.loaded = false; if (RV.on) rvLoad().then(rvPaint).catch(() => {}); if (!first) { SS.d = null; treeLoad(); }
       } else if (e.kind === "job") jobDone = true;
-      else if (e.kind === "auto-sync" && !first && !e.manual) { if (e.backup) toastAct("🔄 " + e.title, "撤销", () => syUndo(e.backup)); else toast("🔄 " + e.title); if (PAGE === "sync") R.sync(); }
+      else if (e.kind === "auto-sync" && !first && !e.manual) {
+        if (e.waiting) toast("⏳ " + e.title, 8000);
+        else if (e.backup) toastAct("🔄 " + e.title, "撤销", () => syUndo(e.backup));
+        else toast("🔄 " + e.title);
+        if (PAGE === "sync") R.sync();
+      }
     }
     syMini(t.sync_prog);
     const hd = t.acct_handled || {};          // 同步过 / 不缺会话了：这条切换算处理完，提示条收起
     ST.acct = ST.acct.filter(a => !(hd[a.k] && hd[a.k] >= (a.time || 0)));
+    ST.pendingAcct = t.acct_pending || {};
     ST.jobs = t.jobs; ST.jobKinds = t.job_kinds || ["claude"]; ST.cr = t.closerun || null;
     if (!ST.upd || (t.update && (t.update.badge !== ST.upd.badge || t.update.latest !== ST.upd.latest))) ST.upd = await api("/api/update");
     setBadge(ST.upd && ST.upd.badge);
@@ -1904,7 +1931,8 @@ R.sync = async () => {
           <td>${r.k === "add" ? '<span class="tag ok">补进来</span>' : '<span class="tag warn">刷新</span>'}${r.archived ? ' <span class="tag">已归档</span>' : ""}</td></tr>`).join("")}</table></div>`
         : ""}</details>` : ""}
     <div class="card"><h3>${ic("sync")}自动同步</h3>
-      <div class="setrow"><div class="sl">${ic("users")}<div><b>切换 Claude 账号后自动同步</b><div class="sd">检测到 Claude 桌面端 / Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号，弹通知「已同步 N 个会话」，可一键撤销。缺省开。</div></div></div>${sw("sySwitch", st.settings.claude_auto_sync_on_account_switch !== false)}</div>
+      <div class="setrow"><div class="sl">${ic("users")}<div><b>切换 Claude 账号后自动同步</b><div class="sd">检测到 Claude 桌面端 / Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号，弹通知「已同步 N 个会话」，可一键撤销。缺省开。桌面端开着时会提示「已检测到…等待退出后再同步」，不是没检查到。</div></div></div>${sw("sySwitch", st.settings.claude_auto_sync_on_account_switch !== false)}</div>
+      <div id="syPend" class="dim" style="font-size:calc(13.5px*var(--fk));margin:4px 0 8px"></div>
       <div class="setrow" style="border:0"><div class="sl">${ic("refresh")}<div><b>持续自动同步</b><div class="sd">桌面端没开的时候，把别的账号新出现的会话也随时补进当前账号。缺省关；CC Msg 也开了的话开一个就够。</div></div></div>${sw("syAuto", st.settings.auto_sync)}</div></div>
     <div class="card" id="syHist"><div class="empty">读取同步记录…</div></div>
     <details class="card syAdv"><summary><b>高级：各账号的会话文件夹</b></summary><table class="t"><tr><th>账号 / 组织</th><th class="n">会话</th><th>最近</th><th></th></tr>
@@ -1924,6 +1952,17 @@ R.sync = async () => {
   $("#syAuto").onchange = e => saveSetting({auto_sync: e.target.checked});
   $("#sySwitch").onchange = e => saveSetting({claude_auto_sync_on_account_switch: e.target.checked});
   syHist($("#syHist"));
+  (function syPendPaint(){ const el = $("#syPend"); if (!el) return;
+    const pend = ST.pendingAcct || {}; const rows = Object.entries(pend).filter(([,v]) => v && v.label);
+    if (!rows.length) { el.innerHTML = ""; return; }
+    el.innerHTML = rows.map(([k,v]) => {
+      const ph = v.phase || v.reason || "";
+      const msg = ph === "waiting_desktop" ? `已检测到账号切换为 ${esc(v.label)}，等待 Claude 桌面端退出后再同步`
+        : ph === "waiting_lock" ? `已检测到账号切换为 ${esc(v.label)}，等待同步锁释放`
+        : `已检测到账号切换为 ${esc(v.label)}，准备自动同步`;
+      return `<div class="miss">${ic("users")} ${msg}</div>`;
+    }).join("");
+  })();
 };
 function syBtn(){ const g = $("#syGo"), n = $("#sySelN"), all = SY.sel.size === (SY.byN ? SY.byN.size : -1); if (n) n.textContent = SY.sel.size;
   if (g) { g.disabled = !SY.sel.size; g.innerHTML = `${ic("sync")} ${all ? "立即同步" : "同步选中的"} ${SY.sel.size} 个`; } }
@@ -3643,7 +3682,7 @@ R.settings = async () => {
       ${setRow("power", "开机自动启动", win ? "登录 Windows 后自动在托盘里运行（写 HKCU\\…\\Run，卸载时会删掉）" : "只有 Windows 桌面版支持", sw("stAuto", s.autostart, s.autostart_supported ? "" : "disabled"))}
       ${setRow("bell", "系统通知", "同步 / 导入做完、排队的改动做完、检测到账号切换、有新版本时在右下角弹通知", sw("stNotify", s.notify))}</div></div>
     <div class="card"><h3>同步与导入</h3><div class="setlist">
-      ${setRow("users", "切换 Claude 账号后自动同步对话历史", "检测到 Claude 桌面端或 Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号（先备份、只补缺的、不覆盖；桌面端开着时等它关掉再做）。缺省开，关掉后只提醒不同步", sw("stSwitchSync", s.claude_auto_sync_on_account_switch !== false))}
+      ${setRow("users", "切换 Claude 账号后自动同步对话历史", "检测到 Claude 桌面端或 Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号（先备份、只补缺的、不覆盖；桌面端开着时会明确提示「已检测到…等待退出后再同步」，不是没检查到）。缺省开，关掉后只提醒不同步", sw("stSwitchSync", s.claude_auto_sync_on_account_switch !== false))}
       ${setRow("sync", "自动同步 Claude 会话", "桌面端没开时把别的账号新出现的会话补进当前账号。CC Msg 里也开了的话开一个就够", sw("stSync", s.auto_sync))}</div></div>
     <div class="card"><h3>隐私</h3><div class="setlist">
       ${setRow("eye", "总是显示完整账号", "缺省关：账号打码显示，点眼睛临时显示（不记住，重开就又打码）。打开后每次启动都直接显示。完整账号只从本机接口（127.0.0.1 + 口令）取，不写日志；诊断报告里永远是打码的", sw("stFull", s.show_full_accounts))}</div></div>
@@ -3768,7 +3807,11 @@ R.diag = async () => {
         ${accRow("Claude 桌面端", (acc.desktop || {}).email_masked || short((acc.desktop || {}).accountUuid), (acc.desktop || {}).via && "认自 " + acc.desktop.via, (acc.desktop || {}).rid)}
         ${accRow("Claude Code 命令行", (acc.cli || {}).email_masked || short((acc.cli || {}).accountUuid), (acc.cli || {}).via && "认自 " + acc.cli.via, (acc.cli || {}).rid)}
         ${accRow("Codex", (w.codex || {}).label, "auth.json + config.toml", (w.codex || {}).rid)}</table>
-        <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "在后台每 10 秒看一眼（只看文件修改时间，变了才读）"}${(w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : ""}</div></div>
+        <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">账号切换检测：${w.error ? esc(w.error) : "后台轮询（有候选时约 1.5 秒，平时约 10 秒）；看 .claude.json / 桌面端 Local Storage / 凭据文件指纹（不读密文）"}${(() => { const det = w.detect || {}, pend = w.pending || {}; const bits = [];
+          for (const [k, v] of Object.entries(pend)) bits.push(`${k}:已检测到 ${v.label || ""}（${v.phase || v.reason || "pending"}）`);
+          for (const [k, v] of Object.entries(det)) if (v && v.reason && v.reason !== "stable") bits.push(`${k}:${v.reason}`);
+          return bits.length ? "；" + esc(bits.join(" · ")) : ((w.last || []).length ? "；最近一次：" + esc(w.last[0].text || "") : "");
+        })()}</div></div>
       <div class="card">${ag("claude", "Claude")}${ag("codex", "Codex")}</div></div></div>
     <div class="card"><h3>${ic("folder")}数据目录</h3>
       ${dirRow("Claude Code", "claude_dir", d.claude_home || "")}${dirRow("Codex", "codex_dir", d.codex_home || "")}${dirRow("Claude 桌面端", "claude_app_dir", (d.app_dirs || {}).override || "")}${dirRow("DeepSeek Harness", "dsh_home", d.dsh_home || "")}${dirRow("Cursor（User）", "cursor_user_dir", d.cursor_user_dir || "")}${dirRow("Cursor（~/.cursor）", "cursor_home", d.cursor_home || "")}${dirRow("OpenCode", "opencode_dir", d.opencode_dir || "")}${dirRow("ZCode", "zcode_dir", d.zcode_dir || "")}

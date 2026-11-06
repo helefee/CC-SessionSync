@@ -134,13 +134,17 @@ def tray_state(since: int = -1) -> dict:
     from . import appclose
     wq = [j for j in apps.pending() if j["state"] == "waiting"]
     jobs = len(wq)
+    wst = watch.status()
     return {"seq": seq, "events": evs, "settings": s, "auto_sync": bool(s.get("auto_sync")), "jobs": jobs,
             "job_kinds": sorted({j.get("kind") or "claude" for j in wq}), "closerun": appclose._active(),
             "update": {"badge": u.get("badge"), "latest": u.get("latest")},
             "acct_handled": watch.handled_since(),
+            "acct_pending": wst.get("pending") or {},
+            "acct_detect": wst.get("detect") or {},
             "sync_prog": claude_sync.progress(),
             "attention": any(e["kind"] == "account" and time.time() - e["time"] < 600
-                             and not (watch.handled_since().get(e.get("who")) or 0) >= e["time"] for e in events.recent(10))}
+                             and not (watch.handled_since().get(e.get("who")) or 0) >= e["time"] for e in events.recent(10))
+                        or any((v or {}).get("phase") in ("detected", "waiting_desktop", "waiting_lock") for v in (wst.get("pending") or {}).values())}
 
 
 def api_brief() -> dict:
