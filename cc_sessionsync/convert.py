@@ -33,10 +33,12 @@ EXPORTS = paths.HOME / "exports" / "convert"
 AGENTS = ir.AGENTS
 NATIVE = ("claude", "codex", "dsh", "opencode")
 EXPORT_ONLY = {"cursor": "Cursor 的对话在它自己的 SQLite 里（state.vscdb / store.db），格式没公开、还带校验，写进去不安全",
-               "zcode": "ZCode 是闭源的，会话库还连着迁移账本和桌面端的任务索引，写进去没法验证它认不认"}
+               "zcode": "ZCode 是闭源的，会话库还连着迁移账本和桌面端的任务索引，写进去没法验证它认不认",
+               "antigravity": "Antigravity 的会话读 brain/*/transcript_full.jsonl（对照 CC Switch）；写入库不安全，只导出上下文文件"}
 PASTE = {
     "cursor": "在 Cursor 的聊天框里输入 @ 选中这个文件（或把文件拖进去），然后发：「请先读完这份之前的对话记录，再接着做最后一个没做完的事。」",
     "zcode": "在 ZCode 里新建一个任务，把这个文件拖进对话框（或用 @ 引用它），然后发：「请先读完这份之前的对话记录，再接着做最后一个没做完的事。」",
+    "antigravity": "在 Antigravity 里新开对话，把这个文件拖进去（或 @ 引用），然后发：「请先读完这份之前的对话记录，再接着做最后一个没做完的事。」",
 }
 PASTE_ANY = "在目标应用里新开一个对话，把这个文件拖进去（或 @ 引用），然后发：「请先读完这份之前的对话记录，再接着做最后一个没做完的事。」"
 
@@ -89,7 +91,8 @@ def matrix() -> dict:
                     "dsh": "写新的 dsh 会话目录，`dsh --session-id` 能接着聊",
                     "opencode": "用 OpenCode 自己的命令行导入新会话，`opencode --session` 能接着聊",
                     "cursor": "导出上下文文件 + 粘贴提示（不写 Cursor 的库）",
-                    "zcode": "导出上下文文件 + 粘贴提示（不写 ZCode 的库）"}}
+                    "zcode": "导出上下文文件 + 粘贴提示（不写 ZCode 的库）",
+                    "antigravity": "导出上下文文件 + 粘贴提示（不写 Antigravity 的库）"}}
 
 
 # ---------- 来源：列表 / 读成中间格式 ----------
@@ -107,6 +110,13 @@ def sources(agent: str, names: dict | None = None) -> list[dict]:
     elif agent in ("opencode", "zcode"):
         try:
             rows = ocstore.sessions(agent, names if names is not None else S._aliases())
+        except Exception:
+            rows = []
+    elif agent == "antigravity":
+        from . import antigravity as AG
+        try:
+            AG.refresh()
+            rows = AG.sessions(names if names is not None else S._aliases())
         except Exception:
             rows = []
     else:
@@ -308,7 +318,7 @@ def load_ir(agent: str, sid: str, row: dict | None = None) -> tuple[dict, list[d
     h["id"] = h.get("id") or sid
     h["title"] = row.get("tool_title") or row.get("title") or h.get("title") or ir.title_of(items)
     h["cwd"] = h.get("cwd") or row.get("cwd")
-    if agent == "cursor" and row.get("source_name"):
+    if agent in ("cursor", "antigravity") and row.get("source_name"):
         h["source_name"] = row["source_name"]
     return h, items
 

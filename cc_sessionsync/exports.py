@@ -279,10 +279,10 @@ def _records_from_turns(turns: list[tuple[str, str]], cwd: str, title: str) -> b
 
 IMPORT_EXT = (".md", ".markdown", ".html", ".htm", ".jsonl", ".jsonl.zstd")
 MAX_IMPORT = None                     # 0.4.8：不再限制大小（大文件流式处理，见 bigimport）
-APP_NAME = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}
+APP_NAME = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode", "antigravity": "Antigravity"}
 CODEX_TYPES = {"session_meta", "response_item", "event_msg", "turn_context", "compacted"}
 JSONL_OK = ("能导入的是本程序「导出原始 jsonl」得到的文件："
-            "Claude Code 会话、Codex 对话（rollout）、DeepSeek Harness 会话（.jsonl / .jsonl.zstd）、Cursor / OpenCode / ZCode 的镜像")
+            "Claude Code 会话、Codex 对话（rollout）、DeepSeek Harness 会话（.jsonl / .jsonl.zstd）、Cursor / OpenCode / ZCode / Antigravity 的镜像")
 UNKNOWN_JSONL = "认不出这个 .jsonl 是哪个应用的会话记录。" + JSONL_OK
 
 

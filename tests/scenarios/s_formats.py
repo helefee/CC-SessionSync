@@ -18,7 +18,7 @@ os.environ.update(HOME=str(H), USERPROFILE=str(H), CC_SESSIONSYNC_HOME=str(T / "
                   CC_SESSIONSYNC_FAKE_PROCS=str(T / "procs.json"), CC_SESSIONSYNC_FAKE_APP=str(T / "running"), CC_SESSIONSYNC_FAKE_DSH_PROCS=str(T / "procs.json"),
                   CC_SESSIONSYNC_FAKE_CURSOR_PROCS=str(T / "procs.json"), CC_SESSIONSYNC_FAKE_OPENCODE_PROCS=str(T / "procs.json"),
                   CC_SESSIONSYNC_FAKE_ZCODE_PROCS=str(T / "procs.json"), CC_SESSIONSYNC_NO_WATCH="1", CC_SESSIONSYNC_NO_USAGE="1", CC_SESSIONSYNC_NO_BACKUP="1",
-                  CC_SESSIONSYNC_NO_WATCHER="1")
+                  CC_SESSIONSYNC_NO_WATCHER="1", GEMINI_HOME=str(T/"gemini"))
 os.environ.pop("XDG_DATA_HOME", None)
 (T / "procs.json").write_text("[]")
 import oc_fixture as OF, codex_fixture as CF
@@ -43,6 +43,9 @@ CSID = str(uuid.uuid4())
 cxf, TID = CF.rollout(H / ".codex", CWD)
 DSID = str(uuid.uuid4()); DF.rich(DSID, CWD, DH).write(DH / "sessions")
 CUD = T / "cu"; CuF.rich(CUD, CWD, CuF.ws_storage(CUD, CWD)).write(CUD)
+# Antigravity transcript (read-only)
+AGL = T/"gemini"/"antigravity-ide"/"brain"/"ag1"/".system_generated"/"logs"; AGL.mkdir(parents=True)
+(AGL/"transcript_full.jsonl").write_text(json.dumps({"step_index":0,"type":"USER_INPUT","content":"<USER_REQUEST>hi</USER_REQUEST>","created_at":"2026-10-13T17:26:12Z"})+"\n"+json.dumps({"step_index":1,"type":"PLANNER_RESPONSE","status":"DONE","content":"ok","input_tokens":10,"output_tokens":2})+"\n", encoding="utf-8")
 
 def by(r): return {x["agent"]: x for x in r["items"]}
 def evs(): return [e for e in events.recent(100) if e["kind"] == "format"]
@@ -50,7 +53,7 @@ def evs(): return [e for e in events.recent(100) if e["kind"] == "format"]
 # ---------- 都认识 ----------
 r = F.check_all(force=True)
 b = by(r)
-ok(all(b[a]["status"] == "ok" for a in F.PROBES), "all six formats recognised: " + ", ".join(f"{a}={b[a]['status']}{b[a]['issues']}" for a in F.PROBES))
+ok(all(b[a]["status"] == "ok" for a in F.PROBES), "all formats recognised: " + ", ".join(f"{a}={b[a]['status']}{b[a]['issues']}" for a in F.PROBES))
 ok(b["opencode"]["read"] >= 3 and b["opencode"]["unread"] == 0 and "2.x" in b["opencode"]["format"] and "1.x" in b["opencode"]["format"], f"opencode: {b['opencode']['format']} read {b['opencode']['read']}")
 ok(b["codex"]["read"] == 1 and "0.130.0" in b["codex"]["format"], f"codex: {b['codex']['format']}")
 ok(b["dsh"]["read"] == 1 and "v4" in b["dsh"]["format"] and b["cursor"]["read"] >= 1 and b["claude"]["read"] == 1, "dsh / cursor / claude read counts")
@@ -119,7 +122,7 @@ sc = selfcheck.run(net=False)
 it = {x["id"]: x for x in sc["items"]}
 ok(it["format-zcode"]["status"] == "fail" and "format-opencode" not in it and it["format-codex"]["fix"], "selfcheck has per-app format items (absent apps skipped)")
 a = ui.H._get(None, "/api/formats", {"force": "1"})
-ok(len(a["items"]) == 6 and ui.H._get(None, "/api/formats/banner", {})["banner"], "GET /api/formats + banner")
+ok(len(a["items"]) == 7 and ui.H._get(None, "/api/formats/banner", {})["banner"], "GET /api/formats + banner")
 ok(ui.H._post(None, "/api/formats/seen", {})["ok"] and ui.H._get(None, "/api/formats/banner", {})["banner"] is None, "POST /api/formats/seen")
 html = (ROOT / "cc_sessionsync" / "index.html").read_text(encoding="utf-8")
 ok("存储格式自检" in html and "/api/formats/banner" in html and 'id="banFmt"' in html, "UI: diag card + banner")

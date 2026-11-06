@@ -6,6 +6,7 @@
   合成一条、留最完整的那份；子代理（<会话>/subagents/agent-*.jsonl）的调用也算进来，标成子代理。
 - Codex：token_usage_record（新版）或 event_msg/token_count 的累计差值（老版）；新输入 = input − 缓存读 − 缓存写，reasoning 含在输出里。
 - DeepSeek Harness：assistant/message 的 usage。
+- Antigravity：conversations/*.db 的 gen_metadata（ModelUsageStats，真实 token）；配套 transcript 提供轮次 / 工具名。
 - Cursor / OpenCode / ZCode 的本地记录里没有逐次的 token 用量：返回空列表和原因，不编数字。
 只读：不写任何应用的文件；大会话只留最后 MAX_CALLS 次调用。"""
 from __future__ import annotations
@@ -344,7 +345,68 @@ class _DshSess(_Sess):
         self.C, self.turns = C, turns
 
 
-_KIND = {"claude": _ClaudeSess, "codex": _CodexSess, "dsh": _DshSess}
+
+class _AgSess(_Sess):
+    """Antigravity：用量来自 transcript PLANNER_RESPONSE；文件变了整份重读（对齐 CC Switch）。"""
+    def __init__(self, sid, pt, mults):
+        super().__init__("antigravity", sid, pt, mults)
+        from . import antigravity as AG
+        info = next((x for x in AG.discover() if x["id"] == sid and x.get("transcript")), None)
+        if not info:
+            raise FileNotFoundError("找不到这个 Antigravity 会话的 transcript（无逐次用量）")
+        self.info = info
+        self.file = Path(info["transcript"])
+        self.sig = None
+        self._mt = 0.0
+
+    def mtime(self):
+        return self._mt
+
+    def step(self):
+        from . import antigravity as AG
+        from . import usage as U
+        try:
+            st = os.stat(self.file)
+        except OSError:
+            return
+        sig = (st.st_ino, st.st_size, st.st_mtime_ns)
+        if sig == self.sig:
+            return
+        self.sig, self._mt = sig, st.st_mtime
+        rows = []
+        for u in AG.iter_usage(self.info):
+            t = (u["inp"], u["cr"], u["cw"], 0, u["out"])
+            if not sum(t):
+                continue
+            rows.append(U.mkrow(u["id"], "antigravity", "flow", float(u["ts"] or st.st_mtime), self.sid, "google", 0,
+                                u.get("model") or "unknown", t, u.get("think") or 0, 0, "flow", stop=1,
+                                prompt=u["inp"] + u["cr"] + u["cw"], pt=self.pt, mults=self.mults))
+        items, _ = AG._items_from_transcript(self.file)
+        turns, tools_by_turn, cur_tools = [], [], []
+        for it in items:
+            if it.get("role") == "user" and it.get("kind") == "text" and it.get("text"):
+                if cur_tools and turns:
+                    tools_by_turn.append(cur_tools); cur_tools = []
+                turns.append({"i": len(turns), "ts": (it.get("ts") or 0) / 1000, "text": _brief(it["text"])})
+            elif it.get("kind") == "tool":
+                cur_tools.append(it.get("tool") or "tool")
+        if cur_tools:
+            tools_by_turn.append(cur_tools)
+        C = _Calls(); C.v = self.C.v
+        for i, row in enumerate(rows):
+            turn = min(i, max(0, len(turns) - 1))
+            tools = tools_by_turn[turn] if turn < len(tools_by_turn) else []
+            C.add(row, tools, turn)
+        for k, c in C.by.items():
+            o = self.C.by.get(k)
+            if o and o["_r"]["tot"] == c["_r"]["tot"] and o["tools"] == c["tools"] and o["turn"] == c["turn"]:
+                c["_v"] = o["_v"]
+        if len(turns) < len(self.turns) or any(a["text"] != b["text"] for a, b in zip(turns, self.turns)):
+            raise _Reset()
+        self.C, self.turns = C, turns
+
+
+_KIND = {"claude": _ClaudeSess, "codex": _CodexSess, "dsh": _DshSess, "antigravity": _AgSess}
 _GEN = itertools.count(1)
 _CACHE: "OrderedDict[tuple, _Sess]" = OrderedDict()
 _CLOCK = threading.Lock()

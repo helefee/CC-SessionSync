@@ -223,9 +223,12 @@ def agent_file(agent: str, sid: str) -> Path | None:
     if agent == "dsh":
         from . import dsh
         return dsh.find_file(sid)
-    if agent == "cursor":                       # Cursor：本程序的镜像（~/.cc-sessionsync/cursor-mirror），不是 Cursor 自己的文件
+    if agent == "cursor":                        # Cursor：本程序的镜像，不是对方自己的文件
         from . import cursor
         return cursor.find_file(sid)
+    if agent == "antigravity":
+        from . import antigravity as AG
+        return AG.find_file(sid)
     if agent in ("opencode", "zcode"):          # OpenCode / ZCode：本程序的镜像（~/.cc-sessionsync/mirror/<应用>）
         from . import ocstore
         return ocstore.find_file(agent, sid)
@@ -240,6 +243,9 @@ def parse_bytes(agent: str, data: bytes) -> list[dict]:
     if agent == "cursor":
         from . import cursor
         return cursor.entries_from_bytes(data)
+    if agent == "antigravity":
+        from . import ir
+        return ir.entries_from_bytes(data)
     if agent in ("opencode", "zcode"):
         from . import ir
         return ir.entries_from_bytes(data)
@@ -254,6 +260,15 @@ def parse_bytes(agent: str, data: bytes) -> list[dict]:
             continue
     return out
 
+
+
+def antigravity_sessions(names: dict | None = None) -> list[dict]:
+    """Antigravity：本程序的镜像（~/.cc-sessionsync/antigravity-mirror）。"""
+    from . import antigravity as AG
+    try:
+        return AG.sessions(names)
+    except Exception:
+        return []
 
 def cursor_sessions(names: dict | None = None) -> list[dict]:
     try:
@@ -537,7 +552,8 @@ def list_all(agent: str | None = None) -> dict:
             (dsh_sessions(names) if agent in (None, "", "dsh") else []) + \
             (cursor_sessions(names) if agent in (None, "", "cursor") else []) + \
             (oc_sessions("opencode", names) if agent in (None, "", "opencode") else []) + \
-            (oc_sessions("zcode", names) if agent in (None, "", "zcode") else [])
+            (oc_sessions("zcode", names) if agent in (None, "", "zcode") else []) + \
+            (antigravity_sessions(names) if agent in (None, "", "antigravity") else [])
     items.sort(key=lambda x: -(x["last"] or 0))
     bk = backup_index()
     for x in items:
@@ -788,6 +804,14 @@ def account_groups(items: list[dict]) -> list[dict]:
                         "hint": "Cursor 的对话（编辑器 / agent 记录 / cursor-agent 命令行），按工作区分" + (f"：{w}" if w else "")}
             g[k]["n"] += 1
             x["gacct"] = k
+        elif x["agent"] == "antigravity":
+            k = "ag:" + (x.get("cwd") or x.get("source") or "antigravity")
+            if k not in g:
+                g[k] = {"key": k, "kind": "antigravity", "rid": "", "provider": None, "cwd": x.get("cwd"),
+                        "masked": x.get("source_name") or "Antigravity", "tags": [], "current": False, "folders": [], "n": 0,
+                        "hint": "Antigravity 会话（只读）"}
+            g[k]["n"] += 1
+            x["gacct"] = k
         elif x["agent"] in ("opencode", "zcode"):   # OpenCode / ZCode：按项目（工作目录）分，记录里没有账号
             w = x.get("cwd") or ""
             k = x["agent"] + ":" + (w or "-")
@@ -850,7 +874,7 @@ def _account_labels(prefixes: list[str]) -> dict:
 
 def find(agent: str, sid: str) -> dict | None:
     rows = claude_sessions() if agent == "claude" else dsh_sessions() if agent == "dsh" else cursor_sessions() if agent == "cursor" \
-        else oc_sessions(agent) if agent in ("opencode", "zcode") else codex_sessions()
+        else oc_sessions(agent) if agent in ("opencode", "zcode") else antigravity_sessions() if agent == "antigravity" else codex_sessions()
     return next((x for x in rows if x["id"] == sid), None)
 
 
@@ -862,6 +886,9 @@ def read(agent: str, sid: str, limit: int = 400) -> dict:
     if agent == "cursor":
         from . import cursor
         return cursor.read(sid, limit)
+    if agent == "antigravity":
+        from . import antigravity as AG
+        return AG.read(sid, limit)
     if agent in ("opencode", "zcode"):
         from . import ocstore
         return ocstore.read(agent, sid, limit)
@@ -897,6 +924,8 @@ def fulltext(q: str, limit_s: float = 15) -> dict:
     try:
         from . import cursor
         files += [("cursor", Path(r["file"])) for r in cursor.refresh()]
+        from . import antigravity as AG
+        files += [("antigravity", Path(r["file"])) for r in AG.refresh()]
     except Exception:
         pass
     try:
@@ -1092,6 +1121,8 @@ def backup(full: bool = False, only: list[tuple[str, str]] | None = None, why: s
         try:
             from . import cursor                  # 镜像先更新（只读 Cursor 的数据），再按文件备份
             files += [("cursor", r["id"], Path(r["file"])) for r in cursor.refresh()]
+            from . import antigravity as AG
+            files += [("antigravity", r["id"], Path(r["file"])) for r in AG.refresh()]
         except Exception:
             pass
         try:
@@ -1260,6 +1291,8 @@ def rename(agent: str, sid: str, name: str, write_tool: bool = False) -> dict:
                 errors.append("Cursor 的对话不改它的数据库，只改了本程序里的显示名")
             elif agent in ("opencode", "zcode"):
                 errors.append(("OpenCode" if agent == "opencode" else "ZCode") + " 的会话不改它的数据库，只改了本程序里的显示名")
+            elif agent == "antigravity":
+                errors.append("Antigravity 的会话不改它的数据库，只改了本程序里的显示名")
             else:
                 _rename_codex(sid, name, d, led)
         except Exception as e:
@@ -1557,7 +1590,7 @@ def restore_snapshot(snap_id: int) -> dict:
     data = _blob(r["sha"])
     dst = Path(r["path"])
     od, led = _new_op("restore-snapshot", items=[{"agent": r["agent"], "id": r["sid"]}], snap=r["id"])
-    if not dst.exists() and r["agent"] not in ("dsh", "cursor", "opencode", "zcode"):   # dsh / Cursor：本程序从不写它们的数据      # dsh 的目录本程序从不写：一律另存到导出目录
+    if not dst.exists() and r["agent"] not in ("dsh", "cursor", "opencode", "zcode", "antigravity"):   # dsh / Cursor：本程序从不写它们的数据      # dsh 的目录本程序从不写：一律另存到导出目录
         _atomic(dst, data)
         led["steps"].append({"t": "created", "path": str(dst)})
         res = {"ok": True, "path": str(dst), "how": "original"}
@@ -1574,7 +1607,8 @@ def restore_snapshot(snap_id: int) -> dict:
                "note": "另存到了 exports 目录，没有动 DeepSeek Harness 的文件（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
                if r["agent"] == "dsh" else "另存到了 exports 目录，没有动 Cursor 的数据（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
                if r["agent"] == "cursor" else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话，或用「会话转换」）"
-               if r["agent"] in ("opencode", "zcode") else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
+               if r["agent"] in ("opencode", "zcode") else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话，或用「会话转换」）"
+               if r["agent"] == "antigravity" else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
     led["summary"] = f"从备份库恢复（{ {'original': '写回原处', 'copy': '另存为新会话', 'export': '另存到导出目录'}[res['how']] }）"
     _save_led(od, led)
     return dict(res, op=od.name)

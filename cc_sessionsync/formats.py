@@ -21,7 +21,7 @@ from pathlib import Path
 from . import paths
 
 STATE = paths.HOME / "formats.json"
-NAMES = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}
+NAMES = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode", "antigravity": "Antigravity"}
 SAMPLE = 120                  # 每个应用最多看最近的多少个文件
 HEAD = 256 * 1024             # 每个文件最多读开头多少字节
 
@@ -378,7 +378,29 @@ def probe_zcode() -> dict:
     return _oc("zcode")
 
 
-PROBES = {"claude": probe_claude, "codex": probe_codex, "dsh": probe_dsh, "cursor": probe_cursor, "opencode": probe_opencode, "zcode": probe_zcode}
+def probe_antigravity() -> dict:
+    from . import antigravity as AG
+    st = AG.status()
+    roots = st.get("roots") or []
+    n = st.get("sessions") or 0
+    if not st.get("found") and not roots:
+        return _r("antigravity", "absent")
+    issues = []
+    opaque = 0
+    try:
+        for info in AG.discover():
+            if info.get("opaque"):
+                opaque += 1
+    except Exception as e:
+        issues.append(f"枚举会话出错：{type(e).__name__}: {e}")
+    if opaque:
+        issues.append(f"{opaque} 个只有索引 / 旧 .pb、没有可读 transcript（用量与对话会跳过）")
+    detail = "、".join(f"{r['product']}={r['path']}" for r in roots) or "（仅 IDE User 目录）"
+    status = "warn" if issues else "ok"
+    return _r("antigravity", status, detail, n, None, issues, "")
+
+
+PROBES = {"claude": probe_claude, "codex": probe_codex, "dsh": probe_dsh, "cursor": probe_cursor, "opencode": probe_opencode, "zcode": probe_zcode, "antigravity": probe_antigravity}
 
 
 def check(agent: str) -> dict:
