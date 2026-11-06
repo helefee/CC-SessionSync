@@ -135,9 +135,8 @@ def check_claude(f: Path, want: dict | None = None) -> dict:
         issues.append("没有标题记录")
     if want is None and Path(f).stat().st_size > READBACK_MAX:
         return {"ok": not issues, "issues": issues[:30], "by": "按 Claude Code 的会话规矩", "streamed": True}
-    from . import convert
     try:
-        _h, items = convert._claude_ir(Path(f))
+        _h, items = ir._claude_ir(Path(f))
         got = {"user": sum(1 for x in items if x["role"] == "user"), "tools": sum(1 for x in items if x.get("kind") == "tool"),
                "images": sum(len(x.get("image_data") or []) for x in items)}
         _cmp(issues, got, want)
@@ -223,9 +222,8 @@ def check_codex(f: Path, want: dict | None = None, index: Path | None = None) ->
                 issues.append("session_index.jsonl 里没有这个线程")
         except OSError:
             issues.append("读不到 session_index.jsonl")
-    from . import convert
     try:
-        _h, items = convert._codex_ir(f)
+        _h, items = ir._codex_ir(f)
         got = {"user": sum(1 for x in items if x["role"] == "user"), "tools": sum(1 for x in items if x.get("kind") == "tool"),
                "images": sum(len(x.get("image_data") or []) for x in items)}
         _cmp(issues, got, want)
@@ -259,8 +257,7 @@ def check_dsh(f: Path, want: dict | None = None) -> dict:
                     data, why = dsh._attachment(b.get("attachment") or {})
                     if data is None:
                         issues.append(f"seq {e.get('seq')}：图片 {why}")
-        from . import convert
-        _h, items = convert._dsh_ir(Path(f))
+        _h, items = ir._dsh_ir(Path(f))
         got = {"user": sum(1 for x in items if x["role"] == "user"), "tools": sum(1 for x in items if x.get("kind") == "tool"),
                "images": sum(len(x.get("image_data") or []) for x in items)}
         _cmp(issues, got, want)

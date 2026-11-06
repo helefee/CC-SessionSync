@@ -112,10 +112,8 @@ def relaunch(info: dict | None) -> bool:
     return appclose.relaunch(info)[0]
 
 
-VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "codex-import": "导入", "codex-undo": "撤回导入",
-         "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
-         "timeline-replace": "恢复", "convert-run": "转换", "convert-batch": "批量转换", "convert-undo": "撤回转换",
-         "route-card-enable": "恢复", "route-card-disable": "恢复", "legacy-codex": "恢复"}
+VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
+         "timeline-replace": "恢复", "route-card-enable": "恢复", "route-card-disable": "恢复", "legacy-codex": "恢复"}
 
 
 def verb(op: str, args: dict | None = None) -> str:
@@ -167,15 +165,6 @@ def _timeline():
     return timeline
 
 
-def _cursor():
-    from . import cursor
-    return cursor
-
-
-def _dsh():
-    from . import dsh
-    return dsh
-
 
 def _legacy_route_job(**a) -> dict:
     """0.3.4 以前排队的「供应商卡片 启用/停用」：功能已经拿掉，改成跑一遍收尾（还原配置），不再报错。"""
@@ -184,26 +173,13 @@ def _legacy_route_job(**a) -> dict:
     return {"ok": not r.get("errors"), "skipped": True, "note": "供应商功能已移除：改为把配置恢复原样", "done": r.get("done") or []}
 
 
-def _convert():
-    from . import convert
-    return convert
-
 
 def _ops():
     """op 名 → 函数(**args) -> dict。放在函数里导入，免得循环引用。"""
-    from . import claude_sync, codex_import
+    from . import claude_sync
     ops = {
         "claude-sync": lambda **a: claude_sync.run(a.get("target"), only=a.get("only"), source=a.get("source") or "desktop"),
         "claude-restore": lambda **a: claude_sync.restore(a["backup"]),
-        "codex-import": lambda **a: codex_import.run(dry=False, **a),
-        "codex-undo": lambda **a: codex_import.undo(a["ledger"]),
-        "dsh-to-claude": lambda **a: _dsh().run_to_claude(dry=False, **a),
-        "dsh-undo": lambda **a: _dsh().undo(a["ledger"]),
-        "cursor-to-claude": lambda **a: _cursor().run_to_claude(dry=False, **a),
-        "cursor-undo": lambda **a: _cursor().undo(a["ledger"]),
-        "convert-run": lambda **a: _convert().run(dry=False, **a),
-        "convert-batch": lambda **a: _convert().batch_run(**a),
-        "convert-undo": lambda **a: _convert().undo(a["ledger"]),
         "sessions-batch": lambda **a: _sessions().batch(a["action"], a["items"]),
         "sessions-rename": lambda **a: _sessions().rename(a["agent"], a["id"], a["name"], bool(a.get("write_tool"))),
         "sessions-trash-restore": lambda **a: _sessions().trash_restore(a["batch"], a.get("only")),

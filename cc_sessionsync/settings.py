@@ -8,7 +8,6 @@
     start_min            启动时藏到托盘
     notify               系统通知（自动同步 / 排队的活做完 / 导入完成 / 有新版本）
     update_auto          后台检查更新（6 小时最多一次）
-    codex_mark_imported  导入 Codex 对话时登记进 Codex 的导入记录（0.1.1）
     selfcheck_done       第一次启动的自检做过了
     claude_dir / codex_dir / claude_app_dir   手动指定的数据目录（诊断里选）
     dsh_home                                  DeepSeek Harness 的数据目录（缺省 ~/.dsh；环境变量 DSH_HOME 优先）
@@ -31,17 +30,16 @@ from . import paths
 
 FILE = paths.HOME / "settings.json"
 DEFAULTS = {"auto_sync": False, "claude_auto_sync_on_account_switch": True, "tray_close": True, "start_min": False, "notify": True, "update_auto": True,
-            "codex_mark_imported": False, "selfcheck_done": False,
+            "selfcheck_done": False,
             "show_full_accounts": False,
-            "convert_skip_preview": False,          # 高级：转换前不弹预览直接做（0.3.6）
             "backup_clean_auto": False, "backup_clean_days": 90, "backup_clean_mb": 0,   # 高级：自动清理旧的配置备份（0.3.9）
             # 会话自动备份（0.2.1 起缺省开，每 10 分钟；最少 5 分钟）+ 保留规则
             "session_backup_auto": True, "session_backup_every": 10, "session_backup_unit": "min",
             "retention_all_days": 7, "retention_daily_days": 90, "ui_font": 1, "ui_zoom": 1,
             "lang": "auto",                         # 界面语言（0.4.3）
             "chat_style": "app", "chat_width": 860}  # 对话气泡样式 / 文本宽度（0.5.2）
-BOOL_KEYS = ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported", "selfcheck_done",
-             "tray_hint_shown", "show_full_accounts", "session_backup_auto", "convert_skip_preview", "backup_clean_auto")
+BOOL_KEYS = ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto", "selfcheck_done",
+             "tray_hint_shown", "show_full_accounts", "session_backup_auto", "backup_clean_auto")
 _lock = threading.Lock()
 
 

@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, apps, claude_sync, codex_import, detect, events, paths, settings
+from . import __version__, apps, claude_sync, detect, events, paths, settings
 
 TOKEN = secrets.token_urlsafe(18)
 PAGE = Path(__file__).with_name("index.html")
@@ -190,16 +190,6 @@ def _settings_get(k: str):
     except Exception:
         return ""
 
-
-def _codex_kw(q: dict) -> dict:
-    only = q.get("only")
-    if isinstance(only, str):
-        only = [x for x in only.split(",") if x.strip()]
-    return {"days": float(q.get("days") or 30), "cwd": q.get("cwd") or None, "only": only or None,
-            "include_all": bool(q.get("all")) and q.get("all") not in ("0", "false"),
-            "desktop": q.get("desktop") not in (False, "0", "false"), "target": q.get("to") or None,
-            "reasoning": bool(q.get("reasoning")) and q.get("reasoning") not in ("0", "false"),
-            "mark": None if q.get("mark") in (None, "") else q.get("mark") not in (False, "0", "false")}
 
 
 def diag() -> dict:
@@ -415,70 +405,6 @@ class H(BaseHTTPRequestHandler):
             return claude_sync.history()
         if p == "/api/sync/verify":                            # 0.5.0：核对一次同步 / 撤回到没到位
             return claude_sync.verify(q.get("backup") or "")
-        if p == "/api/codex/plan":
-            return codex_import.run(dry=True, **_codex_kw(q))
-        if p == "/api/codex/preview":
-            return codex_import.preview(q.get("id") or "", reasoning=q.get("reasoning") in ("1", "true"))
-        if p == "/api/codex/ledgers":
-            return codex_import.ledgers()
-        if p.startswith("/api/dsh/"):
-            from . import dsh
-            if p == "/api/dsh/detect":
-                return dsh.detect()
-            if p == "/api/dsh/plan":                     # 两个方向都只演练
-                only = [x for x in (q.get("only") or "").split(",") if x.strip()] or None
-                if q.get("dir") == "from-claude":
-                    return dsh.run_to_dsh(only, dry=True, again=q.get("again") in ("1", "true"))
-                return dsh.run_to_claude(only, dry=True, reasoning=q.get("reasoning") in ("1", "true"),
-                                         images="embed" if q.get("images") in ("1", "true") else "placeholder")
-            if p == "/api/dsh/ledgers":
-                return dsh.ledgers()
-            if p == "/api/dsh/validate":
-                f = dsh.find_file(q.get("id") or "")
-                return dsh.validate(f) if f else {"ok": False, "errors": ["找不到这个会话"]}
-        if p.startswith("/api/cursor/"):
-            from . import cursor
-            if p == "/api/cursor/detect":
-                return cursor.detect()
-            if p == "/api/cursor/plan":                  # Cursor → Claude Code 只演练
-                only = [x for x in (q.get("only") or "").split(",") if x.strip()] or None
-                return cursor.run_to_claude(only, dry=True, reasoning=q.get("reasoning") in ("1", "true"),
-                                            subagents=q.get("subagents") in ("1", "true"))
-            if p == "/api/cursor/context":               # 任意会话 → 给 Cursor 的上下文文件：演练
-                return cursor.run_context(q.get("agent") or "claude", q.get("id") or "", into_project=q.get("project") in ("1", "true"), dry=True)
-            if p == "/api/cursor/ledgers":
-                return cursor.ledgers()
-        if p.startswith("/api/convert/"):
-            from . import convert, ocstore
-            if p == "/api/convert/matrix":
-                return dict(convert.matrix(), detect={k: ocstore.detect(k) for k in ("opencode", "zcode")})
-            if p == "/api/convert/sources":
-                a = q.get("agent") or "claude"
-                org = convert.origins()
-                rows = convert.sources(a)
-                rows.sort(key=lambda x: -(x.get("last") or 0))
-                return {"agent": a, "rows": [{"id": x["id"], "title": x.get("title"), "cwd": x.get("cwd"), "last": x.get("last"), "msgs": x.get("msgs"), "size": x.get("size"),
-                                              "subagent": bool(x.get("subagent")), "archived": bool(x.get("archived")), "source_name": x.get("source_name"),
-                                              "origin": convert.origin_of(a, x["id"], x.get("tool_title") or x.get("title"), org)} for x in rows]}
-            if p == "/api/convert/plan":                 # 只演练
-                ids = [x for x in (q.get("ids") or "").split(",") if x.strip()]
-                return convert.run(q.get("src") or "", ids, q.get("dst") or "", dry=True, again=q.get("again") in ("1", "true"),
-                                   export=q.get("export") in ("1", "true"))
-            if p == "/api/convert/preview":              # 转换前预览（0.3.6）：写到哪、多少条、会丢 / 会变什么
-                ids = [x for x in (q.get("ids") or "").split(",") if x.strip()]
-                yes = lambda k: q.get(k) in ("1", "true")
-                return convert.preview(q.get("src") or "", ids, q.get("dst") or "", again=yes("again"), reasoning=yes("reasoning"),
-                                       project=yes("project"), export=yes("export"), desktop=q.get("desktop") not in ("0", "false"))
-            if p == "/api/convert/batch/status":
-                return convert.batch_status(q.get("id") or "")
-            if p == "/api/convert/ledgers":
-                return convert.ledgers()
-        if p == "/api/xsearch":                          # 跨应用搜索（0.3.7）
-            from . import xsearch
-            num = lambda k: float(q[k]) if (q.get(k) or "").strip() else None
-            return xsearch.search(q.get("q") or "", [a for a in (q.get("agents") or "").split(",") if a] or None, q.get("project") or "",
-                                  num("since"), num("until"), q.get("content") in ("1", "true"), q.get("sub") in ("1", "true"),
-                                  int(q.get("limit") or 500), q.get("force") in ("1", "true"))
         if p == "/api/backups/clean":                          # 清理配置备份（0.3.9）：?days=&mb= 给预览；不带就是现状
             from . import bakclean
             if "days" in q or "mb" in q:
@@ -625,104 +551,10 @@ class H(BaseHTTPRequestHandler):
             return claude_sync.clean_history(b.get("days", 30), dry=bool(b.get("dry", True)))
         if p == "/api/restore":
             return apps.run_or_defer("claude", "claude-restore", {"backup": b["backup"]}, f"撤回 Claude 同步 {b['backup']}")
-        if p == "/api/codex/import":
-            kw = _codex_kw(b)
-            if kw["mark"] is None:
-                kw["mark"] = codex_import.mark_setting()
-            if kw["desktop"] and apps.running("claude"):
-                return apps.run_or_defer("claude", "codex-import", kw, "把 Codex 对话导进 Claude Code")
-            r = dict(codex_import.run(dry=False, **kw), deferred=False)
-            if r.get("done"):
-                events.add("import", f"已把 {r['done']} 个 Codex 对话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（Codex）」）",
-                           {"page": "convert", "src": "codex", "dst": "claude"})
-            return r
-        if p == "/api/dsh/import":
-            from . import dsh
-            only = b.get("only") or None
-            if b.get("dir") == "from-claude":           # Claude Code → dsh：只新建会话目录，不碰 Claude 的文件，不用等谁退出
-                r = dsh.run_to_dsh(only, dry=False, again=bool(b.get("again")))
-                if r.get("done"):
-                    events.add("import", f"已把 {r['done']} 个 Claude Code 会话导进 DeepSeek Harness",
-                               "标题带「（Claude Code）」；dsh 桌面版重开一下会话列表就能看到", {"page": "sessions"})
-                return dict(r, deferred=False)
-            kw = {"only": only, "reasoning": bool(b.get("reasoning")), "images": "embed" if b.get("images") else "placeholder",
-                  "desktop": b.get("desktop", True) is not False, "target": b.get("to") or None}
-            if kw["desktop"] and apps.running("claude"):
-                return apps.run_or_defer("claude", "dsh-to-claude", kw, "把 DeepSeek Harness 会话导进 Claude Code")
-            r = dict(dsh.run_to_claude(dry=False, **kw), deferred=False)
-            if r.get("done"):
-                events.add("import", f"已把 {r['done']} 个 DeepSeek Harness 会话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（DeepSeek）」）",
-                           {"page": "sessions"})
-            return r
-        if p == "/api/cursor/import":                    # Cursor → Claude Code
-            from . import cursor
-            kw = {"only": b.get("only") or None, "reasoning": bool(b.get("reasoning")), "subagents": bool(b.get("subagents")),
-                  "desktop": b.get("desktop", True) is not False, "target": b.get("to") or None}
-            if kw["desktop"] and apps.running("claude"):
-                return apps.run_or_defer("claude", "cursor-to-claude", kw, "把 Cursor 对话导进 Claude Code")
-            r = dict(cursor.run_to_claude(dry=False, **kw), deferred=False)
-            if r.get("done"):
-                events.add("import", f"已把 {r['done']} 个 Cursor 对话导进 Claude Code", "在 Claude Code 里 /resume 能看到（标题带「（Cursor）」）",
-                           {"page": "sessions"})
-            return r
-        if p == "/api/convert/run":                      # 任意 → 任意（目标应用开着就排队，等它退出后做）
-            from . import convert, ir
-            kw = {"src": str(b.get("src") or ""), "ids": [str(x) for x in (b.get("ids") or [])], "dst": str(b.get("dst") or ""),
-                  "again": bool(b.get("again")), "reasoning": bool(b.get("reasoning")), "desktop": b.get("desktop", True) is not False,
-                  "to": b.get("to") or None, "project": bool(b.get("project")), "export": bool(b.get("export"))}
-            k = None if kw["export"] else convert.needs_close(kw["dst"], kw["desktop"])
-            if k:
-                return apps.run_or_defer(k, "convert-run", kw, f"把 {len(kw['ids'])} 个 {ir.LABEL.get(kw['src'], kw['src'])} 会话转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
-            return dict(convert.run(dry=False, **kw), deferred=False)
-        if p in ("/api/convert/batch/preview", "/api/convert/batch/run"):     # 好几个应用的会话一起转（0.3.7）
-            from . import convert, ir
-            its = [{"agent": str(x.get("agent") or ""), "id": str(x.get("id") or "")} for x in (b.get("items") or []) if isinstance(x, dict)]
-            kw = {"items": its, "dst": str(b.get("dst") or ""), "again": bool(b.get("again")), "reasoning": bool(b.get("reasoning")),
-                  "project": bool(b.get("project")), "export": bool(b.get("export")), "desktop": b.get("desktop", True) is not False}
-            if p.endswith("preview"):
-                return convert.batch_preview(**kw)
-            k = None if kw["export"] else convert.needs_close(kw["dst"], kw["desktop"])
-            if k:
-                return apps.run_or_defer(k, "convert-batch", kw, f"把 {len(its)} 个会话批量转成 {ir.LABEL.get(kw['dst'], kw['dst'])} 的")
-            return convert.batch_start(**kw)
-        if p == "/api/backups/clean":
-            from . import bakclean
-            names = b.get("names")
-            return bakclean.apply(b.get("days"), b.get("mb"), names=list(names) if isinstance(names, list) else None)
-        if p == "/api/formats/seen":
-            from . import formats
-            return formats.seen()
-        if p == "/api/convert/undo":
-            from . import convert
-            k = convert.undo_needs_close(str(b.get("ledger")))
-            if k:
-                return apps.run_or_defer(k, "convert-undo", {"ledger": str(b.get("ledger"))}, f"撤回会话转换 {b.get('ledger')}")
-            return dict(convert.undo(str(b.get("ledger"))), deferred=False)
-        if p == "/api/cursor/context":                   # 写上下文文件（不碰 Cursor 的数据库，不用等谁退出）
-            from . import cursor
-            r = cursor.run_context(str(b.get("agent") or "claude"), str(b.get("id") or ""), into_project=bool(b.get("project")), dry=False)
-            return r
-        if p == "/api/cursor/undo":
-            from . import cursor
-            led = cursor._load(cursor.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
-            if led.get("desktop") and apps.running("claude"):
-                return apps.run_or_defer("claude", "cursor-undo", {"ledger": b["ledger"]}, f"撤回 Cursor 导入 {b['ledger']}")
-            return dict(cursor.undo(str(b.get("ledger"))), deferred=False)
-        if p == "/api/dsh/undo":
-            from . import dsh
-            led = dsh._load(dsh.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
-            if led.get("desktop") and apps.running("claude"):
-                return apps.run_or_defer("claude", "dsh-undo", {"ledger": b["ledger"]}, f"撤回 dsh 导入 {b['ledger']}")
-            return dict(dsh.undo(str(b.get("ledger"))), deferred=False)
-        if p == "/api/codex/undo":
-            led = codex_import._load(codex_import.LEDGERS / str(b.get("ledger")) / "ledger.json", {}) or {}
-            if led.get("desktop"):
-                return apps.run_or_defer("claude", "codex-undo", {"ledger": b["ledger"]}, f"撤回 Codex 导入 {b['ledger']}")
-            return codex_import.undo(str(b.get("ledger")))
         if p == "/api/settings":
-            ch = {k: b[k] for k in ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto", "codex_mark_imported",
+            ch = {k: b[k] for k in ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto",
                                     "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
-                                    "show_full_accounts", "retention_all_days", "retention_daily_days", "convert_skip_preview",
+                                    "show_full_accounts", "retention_all_days", "retention_daily_days",
                                     "backup_clean_auto", "backup_clean_days", "backup_clean_mb") if k in b}
             for k, lo, hi in (("ui_font", 0.8, 1.5), ("ui_zoom", 0.8, 2.0)):      # 字号 / 界面缩放（0.2.6）
                 if k in b:
@@ -831,6 +663,13 @@ class H(BaseHTTPRequestHandler):
                 return bigimport.cancel(str(b.get("id") or ""))
         if p == "/api/import":
             return _import(b)
+        if p == "/api/backups/clean":
+            from . import bakclean
+            names = b.get("names")
+            return bakclean.apply(b.get("days"), b.get("mb"), names=list(names) if isinstance(names, list) else None)
+        if p == "/api/formats/seen":
+            from . import formats
+            return formats.seen()
         return None
 
     def _sessions(self, act: str, b: dict):

@@ -17,9 +17,7 @@ anything that can be dry-run is dry-run first.
    bin, never deleted directly); **export to .md / .html / raw .jsonl and import back** losslessly.
 4. **Timeline & backups:** sessions are **backed up incrementally every 10 minutes** by default; pick a point in time, preview that
    version and compare it with now, then **Restore to Claude** as a new session (or replace, or restore to Codex).
-5. **Any-to-any conversion** between all six apps: native targets (Claude Code, Codex, dsh, OpenCode) get a new session they can resume;
-   Cursor and ZCode get a context file + paste prompt. Since 0.4.1 tool calls, images and reasoning are kept where the target supports
-   them, and every written session is self-checked.
+5. **Cross-app session list**: browse Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode / Antigravity sessions in one UI (read-only; `.md` / `.html` / `.jsonl` file import can become a new Claude Code session).
 6. **Usage**, **Diagnostics / self-check**, **Check for updates** (never installs by itself), tray icon and system notifications.
 7. **Chinese or English UI** (0.4.3): follows the system language by default; change it in 设置 / Settings → Language.
 
@@ -49,7 +47,7 @@ anything that can be dry-run is dry-run first.
 ## Desktop app
 
 - Single instance: launching it again brings the open window to the front. Closing the window minimizes to the tray by default
-  (changeable in Settings). Tray menu: show / hide window, sync Claude sessions now, auto sync, session conversion, sessions, timeline &
+  (changeable in Settings). Tray menu: show / hide window, sync Claude sessions now, auto sync, sessions, timeline &
   backups, usage, queued changes (when there are any), start at login, minimize to tray on close, start minimized, notifications, check for
   updates, diagnostics, quit.
 - The UI listens on `127.0.0.1:8766` only and every request needs the one-time token embedded in the page.
@@ -66,7 +64,7 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.5
 
-- **Antigravity conversion & usage (0.5.4):** read-only from `~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/brain/<id>/…/transcript_full.jsonl` (same layout as CC Switch). Real token fields on completed `PLANNER_RESPONSE` steps; export-only as a conversion target (never writes Antigravity’s store). Opaque `.pb` / index-only sessions are listed without invented tokens.
+- **Antigravity sessions & usage (0.5.4):** list/view/usage read-only from `~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/brain/<id>/…/transcript_full.jsonl` (same layout as CC Switch). Real token fields on completed `PLANNER_RESPONSE` steps; never writes Antigravity’s store. This app does not rewrite Antigravity sessions into other apps. Opaque `.pb` / index-only sessions are listed without invented tokens.
 - **Auto-sync on Claude account switch, one-click undo from sync history, and real sync progress (0.5.3):** when Claude desktop (leveldb `accountUuid` / `organizationUuid`) or the Claude Code CLI (`oauthAccount` in `~/.claude.json`, also under `CLAUDE_CONFIG_DIR`) signs in to a different account, the other accounts' sessions are added to the new one after a short debounce, with a notification *Synced N sessions* and one-click undo. First run only records the current account; only missing sessions are added and nothing is overwritten; a backup is taken first; while the desktop app is open the sync waits. Toggle off in Settings → Sync & import (on by default) and you only get a reminder. The Account sync page now has one primary *Sync N now* button (all selected by default), a shared sync history for manual / continuous / account-switch syncs (any entry can be undone without a confirm dialog; cleanup moves old entries to the trash and always keeps the newest 10), and a real progress bar (backup → writing N/M → verify) with success / warning / error prompts and a small non-blocking indicator for background syncs. **Limitation:** restart the Claude desktop app to see the synced sessions in its sidebar.
 - **Per-app chat bubbles, adjustable text width, a clearer usage flow (0.5.2):** the Conversation view now styles bubbles after the app
   the session came from (Claude, Codex, Cursor, DeepSeek Harness, OpenCode, ZCode; light and dark; original CSS), or one unified style
@@ -169,8 +167,8 @@ anything that can be dry-run is dry-run first.
   session” warning; task records referenced by `taskId` (`tasks.json` / `scheduled-tasks.json`) are merged by id, backed up and undone with the rest.
 - **Import raw .jsonl (0.4.7):** files from *Export raw jsonl* (`.jsonl`, or `.jsonl.zstd` for compressed DeepSeek Harness sessions) can now be
   imported back with *Import .md / .html / .jsonl*. The app recognises the source automatically: Claude Code sessions come back as-is (only a new
-  session id and title); Codex conversations, DeepSeek Harness sessions and Cursor / OpenCode / ZCode mirrors go through the same converters as
-  *Session conversion* into a new Claude Code session. Same flow as .md / .html: preview first, undoable from the operation log, a native-format
+  session id and title); Codex conversations, DeepSeek Harness sessions and Cursor / OpenCode / ZCode mirrors import as
+  Import as a new Claude Code session. Same flow as .md / .html: undoable from the operation log, a native-format
   self-check after writing; mix .jsonl with .md / .html in one batch; an unrecognised .jsonl gets a clear message about what is supported.
 
 - **Faster Usage page (0.4.6):** the matrix view reads a small per-day rollup table (kept up to date incrementally, rebuilt after price changes)
@@ -200,11 +198,6 @@ anything that can be dry-run is dry-run first.
   check of the new one (files intact, modules import, WebView present, local UI server answers) and, if it fails, restores the previous
   version automatically, fixes the version shown in Apps & features and notifies you; your data is untouched. The Check-for-updates dialog
   then shows a "rolled back" note for 30 days. Updates are still never installed automatically.
-- **Conversion fidelity (0.4.1):** common tool calls (shell, read/write/edit, grep/glob, web fetch/search) are written as the target's own native tool calls with paired results
-  (Claude Code Bash/Read/…, Codex `exec_command`, dsh `bash`/`read`/…, OpenCode 2.x `shell`/`read`, 1.x `bash`/`read`); tools a target lacks stay as text.
-  Real images (PNG/JPEG/GIF/WebP, ≤5 MB each, ≤30 MB per session) are carried over (dsh attachments store, OpenCode inline files, Cursor images read from their local path).
-  Reasoning becomes native reasoning for dsh/OpenCode. After each write the session is re-read with the target app's own rules (OpenCode via its CLI export) and the result dialog
-  shows "自检通过" or the issues. Verified with the real CLIs against a local mock model; round-trip tests in `tests/scenarios/s_fidelity.py`.
 - **Faster startup, capped memory (0.4.0):** the session list from last time is shown instantly on launch (tagged 上次的列表 · 正在刷新…)
   and refreshed in the background; only session files whose mtime/size changed are re-read (disk head cache in `~/.cc-sessionsync/cache/`).
   The list is slim; a session's content and resume command load when you open it. Cache capped at 60k entries and released after 3 min idle.
@@ -252,7 +245,7 @@ anything that can be dry-run is dry-run first.
   per-project distribution charts; timeline grouped by day with a growth sparkline and ←/→ keys.
 - **DeepSeek Harness ⇄ Claude Code (0.2.5):** reads DeepSeek Harness (dsh, MIT) v4 session logs (`$DSH_HOME/sessions/--project--/<id>/session.v4.jsonl[.zstd]`,
   independent checksummed zstd frames; profile `session-persistence-jsonl` root/compression overrides honoured), lists them read-only in
-  session management (source filter + group), backs them up, and converts both ways with dry-run, ledger + hash-checked undo and idempotency.
+  session management (source filter + group), backs them up, with dry-run, ledger + hash-checked undo and idempotency where applicable.
   dsh → Claude Code applies `surfaceOp` (compaction), renders tools as text, drops reasoning (opt-in as text), images as placeholders (opt-in
   base64 from the attachment store), skips system prompt / runtime context. Claude Code → dsh only ever creates a new session dir (text only,
   atomic write, validated in memory first, contiguous seq, refuses format ≠ 4, mixed encodings, duplicate ids, locked/existing sessions).
@@ -266,13 +259,7 @@ anything that can be dry-run is dry-run first.
   credential tables) for Claude Code, Codex, Cursor, DeepSeek Harness, OpenCode and ZCode detect when an app changed how it stores sessions
   (new OpenCode tables, renamed ZCode columns, a newer Cursor `_v`, unknown Codex rollout records, broken files). Instead of sessions silently
   missing, a dismissible banner names the apps and how many sessions can't be read, 诊断自检 gets a "存储格式自检" card and per-app self-check
-  items, and the conversion page shows "另有 N 个读不出来". Runs 1 min after start and every 6 h; notifies once per distinct problem.
-- **Cross-app search + batch convert (0.3.7):** a 全部应用 source searches all six apps by keyword, app, project and time range (optionally
-  inside conversation text via an incremental background index, `search-index.sqlite`), and converts / exports many sessions at once with a
-  combined preview, a background job with progress, and one undo ledger per source app. Session lists are cached (stale-while-refresh) and
-  rendered in pages.
-- **Conversion preview (0.3.6):** before writing, shows target paths, message counts and what is lost / changed (images, attachments,
-  reasoning, tool output, model names); "skip preview" lives under 设置 → 高级 (off by default).
+  items. Runs 1 min after start and every 6 h; notifies once per distinct problem.
 - **Providers removed (0.3.5):** the 供应商 page (Agent / 服务商 / 高级), the model-routing proxy (Anthropic ⇄ OpenAI Responses / Chat
   conversion, key rotation), the generated Codex model catalogs, config warnings / one-click fixes, the tray entry and the `route` CLI are
   gone — too heavy. On the first launch of 0.3.5 the app undoes what 0.3.0–0.3.4 wrote, once: Codex `config.toml` and Claude Code
@@ -286,22 +273,10 @@ anything that can be dry-run is dry-run first.
 - **Timeline & backups (0.2.9):** the Timeline and Backups pages are merged into one top-bar page "时间线与备份" with sub-tabs
   时间线 (timeline: segment bars, point-in-time picking, preview, restore to Claude, account/project grouping, growth curve) | 备份 (session
   backup DB: schedule, back up now, retention, location/size, recent versions; recycle bin; export/import .md/.html) | 撤销记录 (queued changes,
-  session-operation log, account-sync backups, Codex/dsh/Cursor import ledgers and conversion ledgers, all with undo). `?page=backups`,
-  `#backups`, the remembered last page, tray, notifications and the 会话转换 undo link open the right sub-tab (`?page=timeline&tab=bk|undo`).
-- **Navigation (0.2.8):** the top bar no longer has per-pair pages; "Codex→Claude" is merged into "会话转换" (Codex → Claude Code
-  embeds the Codex importer with its day/project/state filters, include-subagents, preview, in-place update and the anti-reimport switch).
-  The old Codex / dsh / Cursor pages are only linked at the bottom of 会话转换; tray item, notifications, `?page=codex` deep links and the
-  remembered last page open 会话转换 with the direction preselected.
-- **Any-to-any session conversion + OpenCode / ZCode (0.2.7):** a unified "会话转换" page (and `cc-sessionsync convert …`) converts sessions
-  between Claude Code, Codex, DeepSeek Harness, Cursor, OpenCode and ZCode through a common intermediate model (`ccss-ir/1`). Native
-  targets write a **new** session the target can resume: Claude Code (jsonl, optional desktop registration), Codex (rollout + session index),
-  dsh (new session dir) and OpenCode (imported through OpenCode's own CLI: `opencode session import --standalone` on 2.x, `opencode import`
-  on 1.x, incl. the desktop app's bundled `opencode-cli`). Cursor and ZCode are export-only (Markdown context file + paste prompt), as is
-  OpenCode when no CLI is found. Dry-run, ledgers + undo (sessions continued after conversion are kept), idempotency (same / changed /
-  again), loop protection, origin title prefixes. OpenCode (`~/.local/share/opencode/opencode.db`, 1.x `session/message/part` and 2.x
-  `session_v2/session_message`) and ZCode (`~/.zcode/cli/db/db.sqlite` + `v2/tasks-index.sqlite`) are read from a temp copy (db + wal),
-  listed read-only in session management grouped by project, backed up and shown in the timeline; credential/account tables are never read.
-  CI resumes converted sessions with the real CLIs: `claude --resume`, `codex exec resume`, `dsh --session-id`, `opencode run -s` (1.x and 2.x).
+  session-operation log, account-sync backups, Codex/dsh/Cursor import ledgers , all with undo). `?page=backups`,
+  `#backups`, the remembered last page, tray, notifications open the right sub-tab (`?page=timeline&tab=bk|undo`).
+
+
 - **Cursor ⇄ Claude Code (0.2.6):** reads Cursor's editor DB (`User/globalStorage/state.vscdb`: `cursorDiskKV` `composerData:<id>` +
   `bubbleId:<id>:<bubble>`, `composerHeaders`; `workspaceStorage/<hash>/workspace.json` for grouping), agent transcripts
   (`~/.cursor/projects/*/agent-transcripts`) and `cursor-agent` CLI stores (`~/.cursor/chats/<md5(cwd)>/<id>/store.db`) strictly read-only
@@ -334,32 +309,6 @@ The original two features:
    transcripts are still on disk. `cc-sessionsync sync` copies the missing entries into the current account's folder (Desktop or CLI
    login, MSIX/Store install supported). It never deletes, keeps tombstoned (deleted) sessions deleted, backs up the target folder
    first, and `restore` undoes a sync.
-2. **Import Codex conversations into Claude Code.** `cc-sessionsync codex import` converts Codex rollouts
-   (`~/.codex/sessions/**/rollout-*.jsonl`) into new Claude Code transcripts (`~/.claude/projects/<slug>/<uuid>.jsonl`) plus,
-   optionally, a Claude Desktop session-list entry, so you can `claude --resume <id>` or open it in Desktop. Codex files are only
-   read. It is a dry run unless you pass `--apply`; every run writes a ledger and `codex undo <ledger>` moves created files to a
-   trash folder and restores updated ones.
-
-**Optional `--mark-codex-imported` (default off):** also records each imported session in Codex's own
-`<CODEX_HOME>/external_agent_session_imports.json` (same schema Codex writes: `records[]` with `source_path` in Rust-canonical form,
-`content_sha256`, `imported_thread_id` = the original Codex thread, `imported_at`, `source_modified_at` in ns, `connector_names`, `title`),
-so Codex Desktop's "import from Claude Code" does not re-import it as a duplicate. Enable per run with the flag, persistently with
-`cc-sessionsync settings --codex-mark-imported on`, or with the toggle in the UI. It is the only Codex file ever written: the original is
-backed up into the import ledger, the write is atomic, existing records and keys are preserved, and a malformed file is left untouched
-(the import is refused with a clear error). `codex undo` restores the file byte-for-byte if it has not changed since, otherwise it reverts
-only our records.
-
-Changes to Claude Desktop's data are deferred while Desktop is running (it would overwrite them on exit): the job is queued,
-a background process waits for Desktop to quit, applies it and relaunches Desktop.
-
-Run `cc-sessionsync` for the desktop window (falls back to the browser without pywebview) or see the command list below.
-
-**Conversion limitations:** before 0.4.1 tool calls were rendered as text; since 0.4.1 common tools, images and reasoning are kept
-natively where the target supports them (see What's new), other tools stay as text (command + truncated output); Codex reasoning is
-mostly encrypted and dropped by default (`--reasoning` keeps plaintext summaries);
-Codex-injected context (AGENTS.md, environment) is skipped; sub-agent / `codex exec` / imported-from-Claude threads are skipped
-unless `--all`. The Claude Code transcript format is undocumented; CI verifies with the latest Claude Code that an imported
-session opens with `claude --resume` (against a local mock API).
 
 ## Command line
 
@@ -400,16 +349,6 @@ cc-sessionsync cursor to-claude [--only <last digits>] [--reasoning] [--subagent
 cc-sessionsync cursor context <claude|codex|dsh|cursor> <id> [--project] [--apply]   # context file for Cursor
 cc-sessionsync cursor ledgers
 cc-sessionsync cursor undo 20261018-201957
-# ⑤ any-to-any conversion (0.2.7)
-cc-sessionsync convert matrix                          # which directions are native, which export-only
-cc-sessionsync convert detect                          # where OpenCode / ZCode are, sessions, opencode CLI
-cc-sessionsync convert list <claude|codex|dsh|cursor|opencode|zcode> [-n 50]
-cc-sessionsync convert run --from opencode --to claude --id <id>[,<id>] [--apply] [--again] [--reasoning] [--no-desktop] [--export] [--project]
-cc-sessionsync convert ledgers
-cc-sessionsync convert undo 20261021-042339
-cc-sessionsync jobs [--cancel ID]         # jobs waiting for Desktop to quit
-cc-sessionsync diag                       # diagnostics report (home dir masked, safe to share)
-cc-sessionsync selfcheck [--offline] [--json]   # self-check; exit 1 if anything fails
 # ⑥ sessions (read-only on the CLI; rename / delete / restore in the window)
 cc-sessionsync sessions list [--agent claude|codex] [-n 50]
 cc-sessionsync sessions backup            # incremental backup into ~/.cc-sessionsync/sessions.sqlite
@@ -427,8 +366,8 @@ The CLI output stays in Chinese; the language setting applies to the window, tra
 - **Never write Claude Desktop's data while it runs** (it keeps the list in memory and overwrites it on exit). The app offers to close
   Desktop gracefully and relaunch it afterwards, or queues the job until you quit it yourself (`jobs` shows / cancels them).
 - **Backups + undo:** every sync copies the target account folder to `~/.cc-sessionsync/claude-sync-bak/<time>/` with a ledger;
-  imports and conversions keep ledgers with the previous versions; undo moves new files to `~/.cc-sessionsync/trash/` (never deletes)
-  and restores updated ones. Sessions you continued after converting are kept.
+  imports keep ledgers with the previous versions; undo moves new files to `~/.cc-sessionsync/trash/` (never deletes)
+  and restores updated ones. Sessions you continued after an import are kept.
 - **Add, never delete:** sync only adds missing and refreshes outdated entries; sessions you deleted in the current account stay deleted.
 - All writes go to a temp file first and are swapped in atomically.
 

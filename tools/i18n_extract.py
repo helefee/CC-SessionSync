@@ -10,8 +10,8 @@ EN = PKG / "i18n" / "en.json"
 CJK = re.compile(r"[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]")
 # 一个片段：从第一个中文字开始，到引号 / 标签 / 插值 / 换行为止；去掉两头的空白和不成对的标点
 FRAG = re.compile(r"[^`'\"<>{}$\n\\]*[\u4e00-\u9fff][^`'\"<>{}$\n\\]*")
-PY = ["convert.py", "tokenflow.py", "update.py", "sessions.py", "selfcheck.py", "ui.py", "bakclean.py", "formats.py", "timeline.py", "events.py",
-      "exports.py", "settings.py", "apps.py", "claude_sync.py", "codex_import.py", "dsh.py", "cursor.py", "ocstore.py", "xsearch.py",
+PY = ["tokenflow.py", "update.py", "sessions.py", "selfcheck.py", "ui.py", "bakclean.py", "formats.py", "timeline.py", "events.py",
+      "exports.py", "settings.py", "apps.py", "claude_sync.py", "codex_import.py", "dsh.py", "cursor.py", "ocstore.py",
       "usage.py", "watch.py", "appclose.py", "tray.py", "desktop.py", "keystore.py", "detect.py", "legacy.py", "launch.py", "health.py", "nativecheck.py",
       "bigimport.py", "bundle.py", "chatview.py"]
 

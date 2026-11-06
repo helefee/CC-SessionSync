@@ -319,7 +319,7 @@ def restore(snaps: list[int], mode: str = "copy", target: str = "claude", deskto
     if (mode == "replace" or target == "codex") and any(r["agent"] == "cursor" for r in rs):
         return {"ok": False, "error": "Cursor 的对话不在原处替换（本程序不写 Cursor 的数据库）；用「另存为新的 Claude Code 会话」"}
     if (mode == "replace" or target == "codex") and any(r["agent"] in ("opencode", "zcode") for r in rs):
-        return {"ok": False, "error": "OpenCode / ZCode 的会话不在原处替换（本程序不改它们的数据库）；用「另存为新的 Claude Code 会话」或「会话转换」"}
+        return {"ok": False, "error": "OpenCode / ZCode 的会话不在原处替换（本程序不改它们的数据库）"}
     if mode == "replace" or target == "codex":
         kinds = {r["agent"] for r in rs}
         if target == "codex" and kinds != {"codex"}:
