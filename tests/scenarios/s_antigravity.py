@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Antigravity：transcript 发现/去重、对话读取、真实 token 用量、导出-only 转换。临时目录。
+"""Antigravity：transcript 发现/去重、对话读取、真实 token 用量、只读列表与用量。临时目录。
 对照 CC Switch session_manager/providers/agy.rs + session_usage_agy.rs。"""
 import json, os, sys, tempfile, pathlib, sqlite3
 T = pathlib.Path(tempfile.mkdtemp())
@@ -9,7 +9,7 @@ os.environ.update(HOME=str(T/"home"), USERPROFILE=str(T/"home"), XDG_CONFIG_HOME
                   CC_SESSIONSYNC_FAKE_PROCS=str(T/"noprocs.json"))
 (T/"noprocs.json").write_text("[]")
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
-from cc_sessionsync import antigravity as AG, convert, usage as U
+from cc_sessionsync import antigravity as AG, usage as U
 fails=[]
 def P(c,m): print(("PASS " if c else "FAIL ")+m); c or fails.append(m)
 
@@ -52,14 +52,6 @@ P(len(us)==2 and us[0]["inp"]==11830 and us[0]["cr"]==25 and us[0]["cw"]==10 and
 P(us[0]["model"]=="gemini-3.8-flash-high" and us[0]["display"].startswith("Gemini"), f"model from settings change {us[0]}")
 
 AG.refresh()
-srcs = convert.sources("antigravity")
-P(any(r["id"]=="sess-demo-1" for r in srcs), "convert sources lists session")
-mat = convert.matrix()
-P(mat["targets"]["antigravity"]["mode"]=="export", "antigravity is export-only target")
-plan = convert.plan("antigravity", ["sess-demo-1"], "claude")
-P(bool(plan.get("ok") and plan.get("rows")), f"plan antigravity→claude {plan.get('counts')}")
-r = convert.run("antigravity", ["sess-demo-1"], "claude", dry=True)
-P(bool(r.get("ok")), f"dry convert ok={r.get('ok')}")
 
 U.scan(full=True)
 c = U._conn()

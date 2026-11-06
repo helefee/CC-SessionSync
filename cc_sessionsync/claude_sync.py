@@ -379,10 +379,35 @@ def _short(a: str | None) -> str:
     return (a or "")[:8]
 
 
+def claude_json_candidates() -> list[Path]:
+    """可能出现的 .claude.json 位置（去重、保序）：CLAUDE_CONFIG_DIR 内 → ~/.claude.json。"""
+    out: list[Path] = []
+    seen: set[str] = set()
+    def add(p: Path) -> None:
+        k = str(p)
+        if k not in seen:
+            seen.add(k); out.append(p)
+    c = os.environ.get("CLAUDE_CONFIG_DIR")
+    if c:
+        add(Path(c) / ".claude.json")
+    add(Path.home() / ".claude.json")
+    return out
+
+
+def claude_json_path() -> Path:
+    """Claude Code 登录身份文件。优先已存在的候选；都没有时回落到 ~/.claude.json（默认布局），
+    这样 CLAUDE_CONFIG_DIR=~/.claude 且身份在 ~/.claude.json 时不会认成未登录。"""
+    cands = claude_json_candidates()
+    for p in cands:
+        if p.exists():
+            return p
+    return Path.home() / ".claude.json"
+
+
 def cli_account() -> dict:
-    """命令行（Claude Code CLI）登录的号：~/.claude.json 的 oauthAccount。"""
+    """命令行（Claude Code CLI）登录的号：claude_json_path() 的 oauthAccount。"""
     try:
-        o = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8")).get("oauthAccount") or {}
+        o = json.loads(claude_json_path().read_text(encoding="utf-8")).get("oauthAccount") or {}
     except Exception:
         o = {}
     a, g = o.get("accountUuid"), o.get("organizationUuid")

@@ -1606,8 +1606,8 @@ def restore_snapshot(snap_id: int) -> dict:
         res = {"ok": True, "path": str(f), "how": "export",
                "note": "另存到了 exports 目录，没有动 DeepSeek Harness 的文件（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
                if r["agent"] == "dsh" else "另存到了 exports 目录，没有动 Cursor 的数据（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
-               if r["agent"] == "cursor" else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话，或用「会话转换」）"
-               if r["agent"] in ("opencode", "zcode") else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话，或用「会话转换」）"
+               if r["agent"] == "cursor" else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
+               if r["agent"] in ("opencode", "zcode") else "另存到了 exports 目录，没有动它的数据库（要接着聊可以在时间线里另存为新的 Claude Code 会话）"
                if r["agent"] == "antigravity" else "原位置已有这个线程的记录，另存到了 exports 目录，没有动 Codex 的文件"}
     led["summary"] = f"从备份库恢复（{ {'original': '写回原处', 'copy': '另存为新会话', 'export': '另存到导出目录'}[res['how']] }）"
     _save_led(od, led)

@@ -116,7 +116,6 @@ if (-not $NoTest) {
     try {
         $v = Native $exe --version; if ($LASTEXITCODE -or ("$v" -notmatch [regex]::Escape($ver))) { throw "--version: $v" }
         Native $exe status | Out-Null; Check "status"
-        Native $exe codex list --days 0 | Out-Null; Check "codex list"
         Native $exe sessions list | Out-Null; Check "sessions list"
         $hc = Native $exe health --timeout 60; if ($LASTEXITCODE) { throw "health: $hc" }
         Write-Host "    health: $(("$hc" | ConvertFrom-Json).checks | ForEach-Object { $_.id + '=' + $_.ok })"

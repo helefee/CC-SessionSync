@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""会话转换的公共中间格式（0.2.7）：一个会话 = 头 + 一串条目，和应用无关。
+"""会话公共中间格式（供读取 / 文件导入 / 自检）：一个会话 = 头 + 一串条目，和应用无关。
 
 头：{"format": "ccss-ir/1", "agent": 来源应用, "id", "title", "cwd", "created"(毫秒), "updated", "model", "source", ...}
 条目：{"role": "user" | "assistant", "kind": "text" | "thinking" | "tool", "text", "tool", "input", "output", "status",
@@ -597,3 +597,139 @@ def context_md(h: dict, items: list[dict], target: str = "cursor") -> dict:
             L += [f"- 〔工具〕`{' '.join(t.split())[:200]}`", ""]
     L += ["---", "", "（导出到此为止。请先读完上面的对话，再接着做最后一个没做完的事。）", ""]
     return {"text": "\n".join(L), "title": title, "cwd": cwd, "msgs": n, "app": app}
+
+# ---------- 从各应用原始文件读成 IR（供 nativecheck / 导入自检）----------
+
+def _claude_ir(f: Path) -> tuple[dict, list[dict]]:
+    items, calls = [], {}
+    h = {"agent": "claude", "id": f.stem, "cwd": None, "title": None, "created": None}
+    SKIP = ("<command-name>", "<command-message>", "<local-command-", "Caveat: The messages below", "<system-reminder>")
+    for ln in f.read_bytes().splitlines():
+        d = _json(ln)
+        if not isinstance(d, dict):
+            continue
+        if d.get("type") == "custom-title" and d.get("customTitle"):
+            h["title"] = d["customTitle"]
+            continue
+        if d.get("type") not in ("user", "assistant") or d.get("isMeta") or d.get("isSidechain"):
+            continue
+        h["cwd"] = h["cwd"] or d.get("cwd")
+        ts = to_ms(d.get("timestamp"))
+        h["created"] = h["created"] or ts
+        m = d.get("message") or {}
+        c = m.get("content")
+        if d["type"] == "user":
+            if isinstance(c, str):
+                if c.strip() and not c.lstrip().startswith(SKIP):
+                    items.append({"role": "user", "kind": "text", "text": c, "ts": ts})
+                continue
+            texts, imgs, fls, data = [], 0, 0, []
+            for b in c or []:
+                if not isinstance(b, dict):
+                    continue
+                if b.get("type") == "text" and b.get("text") and not b["text"].lstrip().startswith(SKIP):
+                    texts.append(b["text"])
+                elif b.get("type") == "image":
+                    imgs += 1
+                    srcb = b.get("source") or {}
+                    im = img(srcb.get("media_type"), srcb.get("data")) if srcb.get("type") == "base64" else None
+                    if im:
+                        data.append(im)
+                elif b.get("type") == "document":
+                    fls += 1
+                elif b.get("type") == "tool_result":
+                    it = calls.get(b.get("tool_use_id"))
+                    if it is not None:
+                        rc = b.get("content")
+                        it["output"] = rc if isinstance(rc, str) else "\n".join(
+                            x.get("text", "") if x.get("type") == "text" else "[图片]" for x in rc or [] if isinstance(x, dict))
+                        if b.get("is_error"):
+                            it["status"] = "error"
+            if texts or imgs or fls:
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": imgs or None, "files": fls or None,
+                              "image_data": data or None})
+        else:
+            mdl = m.get("model") if m.get("model") not in (None, "<synthetic>") else None
+            for b in c if isinstance(c, list) else [{"type": "text", "text": c}] if isinstance(c, str) else []:
+                if not isinstance(b, dict):
+                    continue
+                if b.get("type") == "text" and b.get("text"):
+                    items.append({"role": "assistant", "kind": "text", "text": b["text"], "ts": ts, "model": mdl})
+                elif b.get("type") == "thinking" and b.get("thinking"):
+                    items.append({"role": "assistant", "kind": "thinking", "text": b["thinking"], "ts": ts, "model": mdl})
+                elif b.get("type") == "tool_use":
+                    it = {"role": "assistant", "kind": "tool", "tool": b.get("name"), "input": b.get("input"), "ts": ts, "model": mdl,
+                          "status": "completed"}
+                    items.append(it)
+                    calls[b.get("id")] = it
+    return h, items
+
+def _codex_ir(f: Path) -> tuple[dict, list[dict]]:
+    from . import codex_import as CI
+    p = CI.parse(f, reasoning=True, images=True)
+    meta = p["meta"] or {}
+    h = {"agent": "codex", "id": meta.get("id") or f.stem[-36:], "cwd": CI.norm_cwd(meta.get("cwd")) or None,
+         "created": to_ms(meta.get("timestamp"))}
+    items = []
+    for x in p["items"]:
+        ts = to_ms(x.get("ts"))
+        if x["role"] == "user":
+            items.append({"role": "user", "kind": "text", "text": x["text"], "ts": ts, "images": len(x.get("images") or []) or None,
+                          "image_data": [im for im in (img_url(u) for u in x.get("images") or []) if im] or None})
+        elif x["role"] == "assistant":
+            items.append({"role": "assistant", "kind": "text", "text": x["text"], "ts": ts})
+        elif x["role"] == "reasoning":
+            items.append({"role": "assistant", "kind": "thinking", "text": x["text"], "ts": ts})
+        elif x["role"] == "tool":
+            items.append({"role": "assistant", "kind": "tool", "tool": x.get("name"), "input": x.get("args"), "output": x.get("output"),
+                          "ts": ts})
+    return h, items
+
+def _dsh_ir(f: Path) -> tuple[dict, list[dict]]:
+    from . import dsh
+    L = dsh.load(f)
+    hd = L["header"]
+    h = {"agent": "dsh", "id": hd.get("id"), "cwd": hd.get("cwd"), "created": to_ms(hd.get("createdAt"))}
+    h["title"] = next((e["data"].get("title") for e in reversed(L["events"])
+                       if e.get("type") == "session/title" and (e.get("data") or {}).get("title")), None)
+    items, open_calls = [], {}
+    for e in dsh.surface(L["events"]):
+        t, ts = e.get("type"), to_ms(e.get("time"))
+        m = dsh._msg(e)
+        if t == "user/message":
+            if (m.get("source") or {}).get("kind") != "user":
+                continue
+            texts = [b["text"] for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "text" and b.get("text")]
+            imgs = [b for b in m.get("content") or [] if isinstance(b, dict) and b.get("type") == "image"]
+            data = []
+            for b in imgs:
+                raw, mt = dsh._attachment(b.get("attachment") or {})
+                im = img(mt, raw) if raw is not None else None
+                if im:
+                    data.append(im)
+            if texts or imgs:
+                items.append({"role": "user", "kind": "text", "text": "\n\n".join(texts), "ts": ts, "images": len(imgs) or None,
+                              "image_data": data or None})
+        elif t == "assistant/message":
+            mdl = m.get("model") if isinstance(m.get("model"), str) else None
+            for b in m.get("content") or []:
+                if not isinstance(b, dict):
+                    continue
+                if b.get("type") == "text" and b.get("text"):
+                    items.append({"role": "assistant", "kind": "text", "text": b["text"], "ts": ts, "model": mdl})
+                elif b.get("type") == "reasoning" and b.get("text"):
+                    items.append({"role": "assistant", "kind": "thinking", "text": b["text"], "ts": ts, "model": mdl})
+                elif b.get("type") == "tool-call":
+                    a = b.get("arguments")
+                    it = {"role": "assistant", "kind": "tool", "tool": b.get("name"), "input": _json(a) if isinstance(a, str) and _json(a) is not None else a,
+                          "ts": ts, "model": mdl, "status": "completed"}
+                    items.append(it)
+                    open_calls[b.get("id")] = it
+        elif t == "tool/result":
+            it = open_calls.get(m.get("toolCallId"))
+            if it is not None:
+                it["output"] = dsh._txt(m.get("content"))
+                if m.get("isError"):
+                    it["status"] = "error"
+    return h, items
+

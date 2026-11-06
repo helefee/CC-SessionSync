@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
-"""端到端验证：造一个 Codex 对话 → cc-sessionsync 导入 → 真的 Claude Code 命令行 `claude --resume` 打开它。
+"""端到端验证：造一个 Codex 对话 → 写成 Claude Code 会话 → 真的 Claude Code 命令行 `claude --resume` 打开它。
 
 全部在临时目录里（HOME / CLAUDE_CONFIG_DIR / CODEX_HOME 都指过去），Claude Code 连的是本机的假 API（tools/mock_anthropic.py），
 不联网、不用登录、不花额度。检查：
-  1. claude -p --resume <会话号> 能打开导入的会话（退出码 0、拿到假 API 的回复）；
-  2. 发给 API 的历史消息里真有导入的内容（用户原话、助手回复、工具摘要）；
+  1. 用库把 Codex rollout 写成 Claude Code 会话后，claude -p --resume 能打开（退出码 0、拿到假 API 的回复）；
+  2. 发给 API 的历史消息里真有原内容（用户原话、助手回复、工具摘要）；
   3. Claude Code 把新的一轮接着写进了同一个会话文件（以后还能接着 resume）；
-  4. 0.2.1：时间线「恢复到 Claude」（Claude 版本 + Codex 版本经转换）和「导出 .md / .html → 导入」得到的新会话也都能 resume，
-     历史里带着原来的内容。
+  4. 「导出 .md / .html → 导入」得到的新会话也都能 resume，历史里带着原来的内容。
 
     python tools/verify_resume.py [claude 可执行文件] [端口]
 """
@@ -47,14 +46,36 @@ def main() -> int:
                CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1", DISABLE_AUTOUPDATER="1", DISABLE_TELEMETRY="1",
                PYTHONPATH=str(ROOT))
     (T / "procs.json").write_text("[]")
-    _, tid = rollout(H / ".codex", str(proj), title="验证用的 Codex 对话", secret_marker=MARK)
+    path, tid = rollout(H / ".codex", str(proj), title="验证用的 Codex 对话", secret_marker=MARK)
     nw = 0x08000000 if os.name == "nt" else 0
-    r = subprocess.run([sys.executable, "-m", "cc_sessionsync", "codex", "import", "--days", "0", "--apply", "--no-desktop"],
-                       env=env, capture_output=True, text=True, encoding="utf-8", creationflags=nw)
-    print(r.stdout[-1500:], r.stderr[-1500:])
-    mp = json.loads((T / "ss" / "codex-import-map.json").read_text(encoding="utf-8"))
-    sid, jf = mp[tid]["session"], Path(mp[tid]["file"])
+    # 会话转换 CLI 已移除：用库把 Codex rollout 写成 Claude Code 会话（与时间线恢复同一套 builder）
+    env["CCSS_VERIFY_CODEX"] = str(path)
+    helper0 = (
+        "import json, uuid, os\n"
+        "from pathlib import Path\n"
+        "from cc_sessionsync import codex_import as CI\n"
+        "p = Path(os.environ['CCSS_VERIFY_CODEX'])\n"
+        "sid = str(uuid.uuid4())\n"
+        "b = CI.build(p, sid, CI.claude_version(), title='验证用的 Codex 对话')\n"
+        "cwd = CI.norm_cwd(b.get('cwd')) or str(Path.home())\n"
+        "pdir = CI.claude_home() / 'projects' / CI.project_slug(cwd)\n"
+        "pdir.mkdir(parents=True, exist_ok=True)\n"
+        "f = pdir / f'{sid}.jsonl'\n"
+        "f.write_text('\\n'.join(json.dumps(r, ensure_ascii=False) for r in b['records']) + '\\n', encoding='utf-8')\n"
+        "print('JSON' + json.dumps({'sid': sid, 'file': str(f)}))\n"
+    )
+    r0 = subprocess.run([sys.executable, "-c", helper0], env=env, capture_output=True, text=True, encoding="utf-8", creationflags=nw)
+    print(r0.stdout[-800:], r0.stderr[-800:])
+    made0 = {}
+    for line in r0.stdout.splitlines():
+        if line.startswith("JSON"):
+            made0 = json.loads(line[4:])
+    if not made0:
+        print("FAIL build Claude session from Codex rollout")
+        return 1
+    sid, jf = made0["sid"], Path(made0["file"])
     n0 = len(jf.read_text(encoding="utf-8").splitlines())
+
     log = T / "requests.log"
     mock = subprocess.Popen([sys.executable, str(ROOT / "tools" / "mock_anthropic.py"), str(port), str(log)], creationflags=nw)
     fails = []
@@ -96,15 +117,11 @@ def main() -> int:
                             encoding="utf-8", timeout=180, stdin=subprocess.DEVNULL, creationflags=nw)
         if c2.returncode != 0 or "MOCK-OK" not in c2.stdout:
             fails.append("second resume failed")
-        # 4. 时间线恢复 + 导出 / 导入出来的新会话
+        # 4. 导出 / 导入出来的新会话也能 resume（时间线恢复已移除）
         helper = (
             "import json,sys\n"
-            "from cc_sessionsync import sessions as S, timeline as TL, exports as E\n"
-            "S.backup(why='verify')\n"
-            "snaps={r['agent']:r['id'] for r in S.snapshots(limit=50)}\n"
+            "from cc_sessionsync import exports as E\n"
             "out={}\n"
-            "r=TL.restore([snaps['claude']],'copy','claude',desktop=False); out['restore-claude']=r['made'][0]['id']\n"
-            "r=TL.restore([snaps['codex']],'copy','claude',desktop=False); out['restore-codex']=r['made'][0]['id']\n"
             f"sid={sid!r}\n"
             "for fmt in ('md','html'):\n"
             "    ex=E.export_many([{'agent':'claude','id':sid}],fmt)\n"
