@@ -113,7 +113,7 @@ def relaunch(info: dict | None) -> bool:
 
 
 VERBS = {"claude-sync": "同步", "claude-restore": "撤回同步", "sessions-rename": "改名", "sessions-trash-restore": "还原", "sessions-undo": "撤回", "desktop-register": "登记",
-         "timeline-replace": "恢复", "route-card-enable": "恢复", "route-card-disable": "恢复", "legacy-codex": "恢复"}
+         "route-card-enable": "恢复", "route-card-disable": "恢复", "legacy-codex": "恢复"}
 
 
 def verb(op: str, args: dict | None = None) -> str:
@@ -185,7 +185,6 @@ def _ops():
         "sessions-trash-restore": lambda **a: _sessions().trash_restore(a["batch"], a.get("only")),
         "sessions-undo": lambda **a: _sessions().undo(a["op"]),
         "desktop-register": lambda **a: _timeline().register_desktop(a["op"], a["regs"]),
-        "timeline-replace": lambda **a: _timeline().replace(a["snaps"]),
         "route-card-enable": _legacy_route_job,          # 0.3.5：供应商功能已移除，旧队列里的任务不再报错
         "route-card-disable": _legacy_route_job,
         "legacy-codex": _legacy_route_job,

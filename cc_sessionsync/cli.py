@@ -155,10 +155,6 @@ def cmd_sessions(a) -> int:
                   + (f"  [{x['why']}]" if x.get("why") else ""))
         print(f"\n共 {len(r['items'])} 个")
         return 0
-    if a.sess_cmd == "backup":
-        r = sessions.backup(full=a.full, why="cli")
-        print(f"✓ 看了 {r['files']} 个文件，没变跳过 {r['skipped']}，新快照 {r['snapshots']}，新内容 {r['new_blobs']}（{r['ms']} ms）→ {r['db']}")
-        return 0
     if a.sess_cmd == "export":
         r = sessions.export(a.agent, a.id, a.fmt)
         print(("✓ " + r["path"]) if r.get("ok") else ("✗ " + r["error"]))
@@ -283,8 +279,6 @@ def build_parser() -> argparse.ArgumentParser:
     x = ss.add_parser("list", help="列出 Claude Code / Codex 会话")
     x.add_argument("--agent", choices=("claude", "codex"))
     x.add_argument("-n", type=int, default=40)
-    x = ss.add_parser("backup", help="把会话记录增量备份进 ~/.cc-sessionsync/sessions.sqlite")
-    x.add_argument("--full", action="store_true", help="不看修改时间，全部重读")
     x = ss.add_parser("export", help="导出一个会话（md / jsonl）")
     x.add_argument("agent", choices=("claude", "codex"))
     x.add_argument("id")

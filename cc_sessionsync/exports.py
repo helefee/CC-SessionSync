@@ -191,7 +191,6 @@ def export_many(items: list[dict], fmt: str = "md", label: str = "") -> dict:
     """items=[{agent, id}] 或 [{snap}]（时间线上的某一版）。一个就写一个文件，多个放进一个文件夹。"""
     if fmt not in ("md", "html"):
         raise ValueError("格式只能是 md / html")
-    from . import timeline
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     out_dir = S.EXPORTS if len(items) == 1 else S.EXPORTS / f"{stamp}-{_safe(label or 'batch')}"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -199,11 +198,7 @@ def export_many(items: list[dict], fmt: str = "md", label: str = "") -> dict:
     for it in items:
         try:
             if it.get("snap"):
-                r = timeline._snap(int(it["snap"]))
-                raw, agent, sid = S._blob(r["sha"]), r["agent"], r["sid"]
-                m = S.find(agent, sid) or {}
-                meta = {"id": sid, "title": f"{m.get('title') or r.get('title') or '会话'}（{timeline._when(r['at'])} 的版本）",
-                        "cwd": m.get("cwd") or r.get("cwd")}
+                raise ValueError("时间线快照导出已移除；请导出会话的当前版本")
             else:
                 agent, sid = it["agent"], it["id"]
                 f = S.agent_file(agent, sid)

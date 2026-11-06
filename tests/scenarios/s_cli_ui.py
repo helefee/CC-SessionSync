@@ -42,7 +42,7 @@ rc, out = cli("diag"); ok(rc == 0 and "[Claude Code]" in out and str(H) not in o
 rc, out = cli("auto", "--once"); ok(rc == 0, "auto --once")
 rc, out = cli("selfcheck", "--offline"); ok("程序文件完整" in out and "数据目录可写" in out, "selfcheck --offline")
 rc, out = cli("sessions", "list"); ok(rc == 0 and "修登录页的 bug" in out, "sessions list")
-rc, out = cli("sessions", "backup"); ok(rc == 0 and "新快照" in out, "sessions backup")
+rc, out = cli("sessions", "backup"); ok(rc != 0, "sessions backup removed")
 rc, out = cli("usage"); ok(rc == 0 and "请求" in out, "usage")
 rc, out = cli("key", "list"); ok(rc == 0, "key list (file keystore)")
 rc, out = cli("--help"); ok("desktop" in out and "after-quit" not in out and "{key" not in out, "help hides internal commands")

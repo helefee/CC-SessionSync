@@ -33,8 +33,8 @@ DEFAULTS = {"auto_sync": False, "claude_auto_sync_on_account_switch": True, "tra
             "selfcheck_done": False,
             "show_full_accounts": False,
             "backup_clean_auto": False, "backup_clean_days": 90, "backup_clean_mb": 0,   # 高级：自动清理旧的配置备份（0.3.9）
-            # 会话自动备份（0.2.1 起缺省开，每 10 分钟；最少 5 分钟）+ 保留规则
-            "session_backup_auto": True, "session_backup_every": 10, "session_backup_unit": "min",
+            # 会话备份库（删除前仍可能写入；时间线 UI 已移除，自动备份缺省关）
+            "session_backup_auto": False, "session_backup_every": 10, "session_backup_unit": "min",
             "retention_all_days": 7, "retention_daily_days": 90, "ui_font": 1, "ui_zoom": 1,
             "lang": "auto",                         # 界面语言（0.4.3）
             "chat_style": "app", "chat_width": 860}  # 对话气泡样式 / 文本宽度（0.5.2）

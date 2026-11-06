@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""导航：会话转换已移除；顶栏为 时间线与备份 / 账号同步 / 用量 / …；无一对一转换页。"""
-import os, re, sys, pathlib, tempfile, json
+"""导航：会话转换与时间线与备份已移除；顶栏为 账号同步 / 用量 / …；会话页保留导入导出。"""
+import os, re, sys, pathlib, tempfile
 from pathlib import Path
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "tests"))
@@ -13,44 +13,19 @@ page = (ROOT / "cc_sessionsync" / "index.html").read_text(encoding="utf-8")
 top = page[page.index('<header class="top">'):page.index('</header>')]
 navp = re.findall(r'data-p="([\w-]+)"', top)
 ok("convert" not in navp and "会话转换" not in top, "nav has no 会话转换")
-ok(not any(p in navp for p in ("codex", "dsh", "cursor", "convert")), f"no convert / pair pages in nav ({navp})")
-ok("Codex→Claude" not in top and "DeepSeek⇄Claude" not in top and "Cursor⇄Claude" not in top, "no per-pair labels in the top bar")
-ok(set(navp) <= {"timeline", "sync", "usage", "models", "diag", "settings", "about"}, f"nav pages ok ({navp})")
-for p in ("codex", "dsh", "cursor", "convert"):
+ok("timeline" not in navp and "时间线与备份" not in top and "backups" not in navp, "nav has no 时间线与备份")
+ok(not any(p in navp for p in ("codex", "dsh", "cursor", "convert", "timeline")), f"no convert/timeline in nav ({navp})")
+ok(set(navp) <= {"sync", "usage", "models", "diag", "settings", "about"}, f"nav pages ok ({navp})")
+ok(navp[:2] == ["sync", "usage"], f"top bar starts 账号同步 / 用量 ({navp})")
+for p in ("codex", "dsh", "cursor", "convert", "timeline"):
     ok(f'id="pg-{p}"' not in page, f"page {p} removed")
-ok("PAGE_ALIAS" not in page and "R.convert" not in page and "R.codex" not in page, "convert JS gone")
-ok("function goTo(" in page, "goTo kept for timeline tabs / deep links")
-ok(navp[:2] == ["timeline", "sync"] and "backups" not in navp, f"top bar starts 时间线与备份 / 账号同步 ({navp})")
-# tray: no convert item
-from cc_sessionsync import tray
-class FakeApp:
-    def __init__(self): self.opened = []
-    def visible(self): return True
-    def hide(self): pass
-    def show(self): pass
-    def open(self, o): self.opened.append(o)
-    def check_update(self): pass
-    def quit(self): pass
-    port = 0
-app = FakeApp()
-# tray.Icon may need more; use menu_model via a stub if available
-try:
-    from cc_sessionsync.tray import Icon
-except Exception:
-    Icon = None
-if Icon:
-    # minimal state
-    class I:
-        pass
-    # Read menu_model source expectations from file
-    src = (ROOT / "cc_sessionsync" / "tray.py").read_text(encoding="utf-8")
-    ok("会话转换" not in src, "tray has no 会话转换 item")
-    ok('{"page": "convert"' not in src, "tray does not open convert")
-else:
-    ok(True, "tray Icon n/a")
-# timeline undo: no convert ledgers card
-ok("会话转换账本" not in page and "data-vled" not in page and "/api/convert/ledgers" not in page, "no convert ledgers in timeline")
-ok("bkNow" in page and "bkJobs" in page and "回收站" in page, "timeline backup / undo panes present")
+ok("PAGE_ALIAS" not in page and "R.convert" not in page and "R.timeline" not in page, "convert/timeline JS gone")
+ok("/api/timeline/" not in page and "/api/backup/now" not in page, "no timeline APIs in page")
+ok("imDlg" in page and "/api/import" in page and "/api/export" in page and 'id="ssImp"' in page, "import/export remain on sessions")
+ok("syHist" in page and "/api/sync/history" in page, "sync history remains on 账号同步")
+ok("会话自动备份" not in page and "stBkE" not in page, "no session auto-backup setting")
+src = (ROOT / "cc_sessionsync" / "tray.py").read_text(encoding="utf-8")
+ok("会话转换" not in src and "时间线与备份" not in src, "tray has no convert/timeline items")
 ok("convert_skip_preview" not in page, "no skip-convert-preview setting")
 print("FAILS", FAILS)
 sys.exit(1 if FAILS else 0)

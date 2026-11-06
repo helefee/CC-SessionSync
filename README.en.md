@@ -270,12 +270,7 @@ anything that can be dry-run is dry-run first.
   "CC Session Sync Route" Run entry and the local `route-token` are deleted. Every file is backed up to `~/.cc-sessionsync/backups` first;
   the result is logged (`legacy-0.3.5.json/.log`) and shown once in the window. Provider keys you stored and `key get` stay, because
   v0.2 provider switches / direct cards reference them from your configs.
-- **Timeline & backups (0.2.9):** the Timeline and Backups pages are merged into one top-bar page "时间线与备份" with sub-tabs
-  时间线 (timeline: segment bars, point-in-time picking, preview, restore to Claude, account/project grouping, growth curve) | 备份 (session
-  backup DB: schedule, back up now, retention, location/size, recent versions; recycle bin; export/import .md/.html) | 撤销记录 (queued changes,
-  session-operation log, account-sync backups, Codex/dsh/Cursor import ledgers , all with undo). `?page=backups`,
-  `#backups`, the remembered last page, tray, notifications open the right sub-tab (`?page=timeline&tab=bk|undo`).
-
+- **Session import / export:** keep `.md` / `.html` / `.jsonl` import and export on the Sessions page (batch export included). Timeline & snapshot restore UI has been removed; account-sync still keeps its own pre-sync backups and one-click undo under Sync history.
 
 - **Cursor ⇄ Claude Code (0.2.6):** reads Cursor's editor DB (`User/globalStorage/state.vscdb`: `cursorDiskKV` `composerData:<id>` +
   `bubbleId:<id>:<bubble>`, `composerHeaders`; `workspaceStorage/<hash>/workspace.json` for grouping), agent transcripts
@@ -296,8 +291,8 @@ anything that can be dry-run is dry-run first.
   watcher reported a switch (and later a switch back). Now: last-known desktop account guarded by timestamp, 2 consecutive stable reads,
   persisted baseline (`watch-state.json`), 3P mode changes reported as mode switches, and a switch is marked handled after a sync or when
   there is nothing to sync.
-- **Backups** (in 时间线与备份 since 0.2.9)**:** incremental, de-duplicated SQLite session backup (`~/.cc-sessionsync/sessions.sqlite`, optional schedule), recycle bin,
-  operation ledger with undo.
+- **Account-sync backups:** safety copies before each sync and Sync history one-click undo stay on the Account sync page (not the old Timeline page). Config backup cleanup remains under Settings.
+
 - **Usage** (session-log based, request de-dup, cache tokens, costs "at API prices", "—" for unpriced models), **Model & API** (Claude Code
   and Codex providers, keys in Windows Credential Manager, `apiKeyHelper` / `model_providers`, model list, mapping, connection test, backups
   before every config write), **Diagnostics / Self-check** (pass / warn / fail with suggested fixes; runs on first launch).

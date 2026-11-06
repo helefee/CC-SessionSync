@@ -486,26 +486,10 @@ class H(BaseHTTPRequestHandler):
                     from . import chatview
                     return chatview.read(q["agent"], q["id"], int(q.get("limit") or 300), q.get("sub") or None)
                 return sessions.read(q["agent"], q["id"], int(q.get("limit") or 400))
-            if p == "/api/sessions/snapshots":
-                return {"items": sessions.snapshots(q.get("agent") or None, q.get("id") or None)}
             if p == "/api/sessions/trash":
                 return {"items": sessions.trash_list()}
             if p == "/api/sessions/ops":
                 return {"items": sessions.ops_list()}
-            if p == "/api/sessions/backup-status":
-                return dict(sessions.backup_status(), sched=sessions.sched_status(backup_settings()))
-        if p.startswith("/api/timeline/"):
-            from . import timeline
-            if p == "/api/timeline/versions":
-                return timeline.versions(q["agent"], q["id"])
-            if p == "/api/timeline/view":
-                return timeline.view(int(q["snap"]), int(q.get("limit") or 400))
-            if p == "/api/timeline/growth":
-                return timeline.growth()
-            if p == "/api/timeline/runs":
-                return {"items": timeline.runs()}
-            if p == "/api/timeline/point":
-                return timeline.point(float(q["t"]))
         return None
 
     def do_POST(self):
@@ -553,9 +537,8 @@ class H(BaseHTTPRequestHandler):
             return apps.run_or_defer("claude", "claude-restore", {"backup": b["backup"]}, f"撤回 Claude 同步 {b['backup']}")
         if p == "/api/settings":
             ch = {k: b[k] for k in ("auto_sync", "claude_auto_sync_on_account_switch", "tray_close", "start_min", "notify", "update_auto",
-                                    "session_backup_auto", "session_backup_every", "session_backup_unit", "selfcheck_done",
-                                    "show_full_accounts", "retention_all_days", "retention_daily_days",
-                                    "backup_clean_auto", "backup_clean_days", "backup_clean_mb") if k in b}
+                                    "selfcheck_done",
+                                    "show_full_accounts", "backup_clean_auto", "backup_clean_days", "backup_clean_mb") if k in b}
             for k, lo, hi in (("ui_font", 0.8, 1.5), ("ui_zoom", 0.8, 2.0)):      # 字号 / 界面缩放（0.2.6）
                 if k in b:
                     try:
@@ -638,16 +621,6 @@ class H(BaseHTTPRequestHandler):
                 return usage.import_ccswitch()
         if p.startswith("/api/sessions/"):
             return self._sessions(p.rsplit("/", 1)[1], b)
-        if p == "/api/timeline/restore":
-            from . import timeline
-            return timeline.restore([int(x) for x in b.get("snaps") or []], b.get("mode") or "copy", b.get("target") or "claude",
-                                    b.get("desktop", True) is not False)
-        if p == "/api/backup/now":
-            from . import sessions
-            return sessions.backup_now()
-        if p == "/api/backup/prune":
-            from . import sessions
-            return sessions.prune(backup_settings(), vacuum=bool(b.get("vacuum", True)))
         if p == "/api/export":
             from . import exports
             return exports.export_many(list(b.get("items") or []), b.get("fmt") or "md", str(b.get("label") or ""))
@@ -681,16 +654,12 @@ class H(BaseHTTPRequestHandler):
                 from . import exports
                 return exports.export_many([{"agent": b["agent"], "id": b["id"]}], b.get("fmt") or "md")
             return sessions.export(b["agent"], b["id"], b.get("fmt") or "md")
-        if act == "backup":
-            return sessions.backup_now() if not b.get("full") else sessions.backup(full=True, why="manual")
         if act == "open":
             x = sessions.find(b["agent"], b["id"])
             if not x or not x.get("file"):
                 raise FileNotFoundError("找不到这个会话的记录文件")
             cwd = x.get("cwd") if x.get("cwd") and Path(x["cwd"]).is_dir() else str(Path.home())
             return launch.launch(b["agent"], cwd, b["id"], bool(b.get("dry")))
-        if act == "restore-snapshot":
-            return sessions.restore_snapshot(int(b["snap"]))
         if act == "trash-purge":
             return sessions.trash_purge(str(b["batch"]), str(b.get("confirm") or ""))
         # 下面这些会改桌面端的数据：开着就排队
@@ -836,7 +805,7 @@ def start_background(auto_sync: bool | None = None) -> None:
     watch.start()
     if not os.environ.get("CC_SESSIONSYNC_NO_USAGE"):
         usage.start_background()
-    sessions.start_auto(backup_settings)
+    # 时间线已移除：不再启动会话自动备份调度（sessions.sqlite 仍可因删除前备份而写入）
     update.auto_check_later(lambda: settings.get("update_auto", True))
     try:                                                    # 0.4.2：上次更新的结果（装坏了自动换回过的话说一声）
         u = update.after_start()

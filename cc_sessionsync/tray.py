@@ -435,7 +435,6 @@ class Tray:
                  (5, "立即同步 Claude 会话", {}),
                  (6, "自动同步（切号后补齐会话）", {"check": bool(s.get("auto_sync"))}),
                  (8, "会话管理…", {}),
-                 (14, "时间线与备份…", {}),
                  (3, "用量…", {})]
         if d.get("jobs"):
             items.append((9, f"{d['jobs']} 个活在等桌面端退出…", {}))
@@ -503,9 +502,8 @@ class Tray:
             elif cmd == 6:
                 settings.update(auto_sync=not settings.get("auto_sync", False))
                 self.refresh()
-            elif cmd in (3, 8, 9, 14, 22, 23):
-                self.app.open({"page": "timeline", "tab": "tl"} if cmd == 14 else
-                              {"page": {3: "usage", 8: "sessions", 9: "jobs", 22: "selfcheck", 23: "about"}[cmd]})
+            elif cmd in (3, 8, 9, 22, 23):
+                self.app.open({"page": {3: "usage", 8: "sessions", 9: "sync", 22: "selfcheck", 23: "about"}[cmd]})
             elif cmd == 10:
                 autostart_set(not autostart_get(), self.app.port)
             elif cmd in (11, 12, 13):

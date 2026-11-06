@@ -446,7 +446,7 @@ button.big{padding:8px 16px;font-size:calc(14.5px*var(--fk));font-weight:600;dis
 .cmdl code{flex:1;padding:4px 8px;font-size:calc(12.5px*var(--fk))}
 .mk{border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:8px 0}
 .vrow td{cursor:pointer}
-/* 0.2.4 时间线：按天分组的竖向时间线、增长曲线、差别条、骨架屏 */
+/* 0.2.4 历史：按天分组竖向列表、增长曲线、差别条、骨架屏（页面已移除） */
 .vtl{padding:4px 12px 12px}
 .vtl .day{position:sticky;top:0;z-index:1;background:var(--panel);font-size:calc(13px*var(--fk));font-weight:600;color:var(--muted);padding:10px 0 4px;display:flex;gap:8px;align-items:center}
 .vtl .day .dim{font-weight:400}
@@ -658,7 +658,6 @@ td.nw,th.nw{white-space:nowrap}
     <button class="tbx" id="tbSide" title="收起 / 展开会话列表（Ctrl+B）"><i data-ic="panelL"></i></button>
     <button class="brand" id="brand" title="回到会话"><img src="/icon.png" alt=""><span>CC Session Sync</span><span class="ver">v__VERSION__</span></button>
     <nav class="pnav" id="nav">
-      <button class="pb" data-p="timeline" title="时间线与备份：选时间点预览 / 恢复；自动备份、回收站；撤销记录（同步、导入、会话操作）"><i data-ic="history"></i><span>时间线与备份</span></button>
       <button class="pb" data-p="sync" title="账号同步"><i data-ic="users"></i><span>账号同步</span></button>
       <button class="pb" data-p="usage" title="用量统计"><i data-ic="chart"></i><span>用量</span></button>
       <button class="pb" data-p="diag" title="诊断与自检"><i data-ic="activity"></i><span>诊断自检</span><span class="cnt" id="diagCnt" hidden></span></button>
@@ -689,7 +688,6 @@ td.nw,th.nw{white-space:nowrap}
     <main class="main" id="main">
       <div id="bans"></div>
       <section class="page full" id="pg-sessions"></section>
-      <section class="page full" id="pg-timeline"></section>
       <section class="page" id="pg-sync"></section>
       <section class="page full" id="pg-usage"></section>
       <section class="page" id="pg-settings"></section>
@@ -1081,13 +1079,13 @@ let PAGE = "sessions";
 const R = {};          // 每个页面的 render
 function goTo(p, o){
   o = o || {};
-  if (p === "timeline" && o.tab) tbSetTab(o.tab);
   ST.goArgs = p === "diag" ? o : null;
   go(p);
 }
 function go(p){
-  // 0.2.9：「备份」并进「时间线与备份」：backups → 备份分栏；jobs / undo → 撤销记录分栏（排队中的改动在那里）
-  if (p === "backups" || p === "jobs" || p === "undo") { tbSetTab(p === "backups" ? "bk" : "undo"); p = "timeline"; }
+  // 旧 timeline/backups 深链接落到会话；jobs/undo 落到账号同步
+  if (p === "backups" || p === "timeline") p = "sessions";
+  if (p === "jobs" || p === "undo") p = "sync";
   if (!R[p]) return;
   if (PAGE !== p && $("#dlg").classList.contains("open")) closeDlg();
   PAGE = p;
@@ -1121,10 +1119,10 @@ document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "b") { e.preventDefault(); toggleSide(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); if ($("#app").classList.contains("noside")) toggleSide(); $("#gQ").focus(); $("#gQ").select(); }
 });
-// 会话列表里的搜索 / 筛选（会话页、时间线都跟着筛）
-function sdApply(){ if (PAGE === "sessions" && SS.d) { ssList(); ssChip(); } else if (PAGE === "timeline" && TL.pt) { tlList(); if (TL.regrow) TL.regrow(); } treeRender(); }
+// 会话列表里的搜索 / 筛选
+function sdApply(){ if (PAGE === "sessions" && SS.d) { ssList(); ssChip(); } treeRender(); }
 $("#gQ").oninput = e => { SS.q = e.target.value; sdApply(); };
-$("#gQ").onkeydown = e => { if (e.key !== "Enter") return; if (e.ctrlKey) { if (PAGE !== "sessions") go("sessions"); return ssFulltext(); } if (PAGE !== "sessions" && PAGE !== "timeline") go("sessions"); };
+$("#gQ").onkeydown = e => { if (e.key !== "Enter") return; if (e.ctrlKey) { if (PAGE !== "sessions") go("sessions"); return ssFulltext(); } if (PAGE !== "sessions") go("sessions"); };
 $("#sdFt").onclick = e => { e.preventDefault(); if (PAGE !== "sessions") go("sessions"); ssFulltext(); };
 $("#sdAg").onchange = e => { SS.agent = e.target.value; sdApply(); };
 $("#sdDate").onchange = e => { SS.date = e.target.value; sdApply(); };
@@ -1281,7 +1279,6 @@ function treeRender(){
   rvPaint();
 }
 function trApply(){
-  if (PAGE === "timeline") return TL.cur ? null : tlList();
   if (PAGE !== "sessions") return go("sessions");
   ssList(); ssChip();
 }
@@ -1958,7 +1955,7 @@ async function syUndo(id){       // 一键撤销：不再弹确认（撤销前�
   try { const r = await api("/api/restore", {backup: id}); const v = r.verify;
     if (doneOrQueued(r, r.already ? r.note : v && !v.ok ? null : `已撤销：挪走 ${r.removed || 0} 个、换回 ${r.restored || 0} 个`) && v && !v.ok) syVerifyDlg(v, "撤销做完了，但核对时有对不上的");
   } catch(e){ toast("❌ " + e.message, 5000); }
-  if (PAGE === "sync") { SY.touched = false; R.sync(); } else if (PAGE === "timeline") R.timeline();
+  if (PAGE === "sync") { SY.touched = false; R.sync(); }
 }
 async function syClean(el){
   const days = 30;
@@ -2016,7 +2013,7 @@ function syVerifyDlg(v, head){
   openDlg(v.ok ? "✅ 核对" : "⚠ 核对", `<div style="margin-bottom:8px">${esc(head || "")}</div><div class="${v.ok ? "okbox" : "miss"}">${esc(v.summary || v.error || "")}</div>
     ${rows ? `<div class="scroll" style="max-height:300px;margin-top:8px"><table class="t"><tr><th>会话 / 文件</th><th>哪里不一样</th></tr>${rows}</table></div>` : ""}
     ${(v.touched || []).length ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">${v.touched.length} 个同步后在 Claude 里又点开 / 接着聊过，Claude 改了登记，这是正常的。</div>` : ""}
-    ${!v.ok ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">Claude 桌面端开着的话，它可能还拿着旧的列表；退出桌面端再打开，然后在「时间线与备份 → 撤销记录」里再点一次「核对」。</div>` : ""}`);
+    ${!v.ok ? `<div class="dim" style="font-size:calc(13px*var(--fk));margin-top:8px">Claude 桌面端开着的话，它可能还拿着旧的列表；退出桌面端再打开，然后在「账号同步 → 同步记录」里再点一次「核对」。</div>` : ""}`);
 }
 async function syVerify(id){
   try { const v = await api("/api/sync/verify?backup=" + encodeURIComponent(id)); syVerifyDlg(v, v.state === "undone" ? "这次同步已经撤回，核对撤回得干不干净：" : v.state === "synced" ? "核对这次同步写的文件现在还在不在、是不是原样：" : ""); }
@@ -2089,12 +2086,11 @@ function ssList(){
     ${flat.map(nd => { const x = nd.x; return `<tr class="click${SS.cur && skey(SS.cur) === skey(x) ? " sel" : ""}${nd.ctx ? " ctx" : ""}" data-k="${esc(skey(x))}"${nd.ctx ? ' title="搜到的是它的子会话；这个是父会话，带出来看上下文"' : ""}><td><input type="checkbox" data-c="${esc(skey(x))}" ${SS.sel.has(skey(x)) ? "checked" : ""}></td>
       <td class="tl"><div class="tlr">${nd.d ? `<span class="kd" style="--d:${nd.d}"></span>` : ""}<div class="ell" title="${esc((x.title || "（无标题）") + relTip(x))}">${logo(x.agent)} ${esc(x.title || "（无标题）")}${x.alias ? ' <span class="tag" title="只在本程序里改的名字">别名</span>' : ""}</div>${kcHtml(nd)}${ktagHtml(nd)}</div><span class="s"${nd.d ? ` style="padding-left:${nd.d * 16 + 2}px"` : ""}>${esc(x.first || "")}</span></td>
       <td class="ell" title="${esc(x.cwd)}">${esc(projName(x.cwd))}</td><td class="n">${when(x.last)}</td><td class="n">${kb(x.size)}</td>
-      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? (x.agent === "dsh" ? '<span class="tag claude">从 Claude Code 导入</span> ' : '<span class="tag codex">Codex 导入</span> ') : ""}${x.agent === "dsh" ? '<span class="tag dsh">只读</span> ' : x.agent === "cursor" ? `<span class="tag cursor" title="${esc(x.source_name || "Cursor")}">只读</span> ` : x.agent === "opencode" || x.agent === "zcode" || x.agent === "antigravity" ? `<span class="tag ${x.agent}" title="${esc(x.source_name || "")}">只读</span> ` : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}${x.backups ? `<span class="tag ok" title="会话备份库里的版本数（点开看时间线）" data-tl="${esc(skey(x))}" style="cursor:pointer">${ic("history")}${x.backups}</span>` : ""}</td></tr>`; }).join("")}</table>`
+      <td>${x.archived ? '<span class="tag">已归档</span> ' : ""}${x.imported ? (x.agent === "dsh" ? '<span class="tag claude">从 Claude Code 导入</span> ' : '<span class="tag codex">Codex 导入</span> ') : ""}${x.agent === "dsh" ? '<span class="tag dsh">只读</span> ' : x.agent === "cursor" ? `<span class="tag cursor" title="${esc(x.source_name || "Cursor")}">只读</span> ` : x.agent === "opencode" || x.agent === "zcode" || x.agent === "antigravity" ? `<span class="tag ${x.agent}" title="${esc(x.source_name || "")}">只读</span> ` : ""}${x.why ? `<span class="tag warn" title="桌面端列表里为什么看不到">${esc(x.why)}</span> ` : ""}</td></tr>`; }).join("")}</table>`
     : `<div class="emp">${ic("search")}${SS.d.items.length ? "没有符合筛选的会话" + (TR.sel || SS.q ? "<div><button id='ssClr'>清除筛选</button></div>" : "") : "还没有 Claude Code / Codex 会话"}</div>`;
   $$("#ssList [data-c]").forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { c.checked ? SS.sel.add(c.dataset.c) : SS.sel.delete(c.dataset.c); ssBatch(); }; });
   $$("#ssList tr[data-k]").forEach(tr => tr.onclick = () => { const [a, ...i] = tr.dataset.k.split(":"); ssView(a, i.join(":")); treeRender(); });
   foldBind($("#ssList"), () => { ssList(); treeRender(); });
-  $$("#ssList [data-tl]").forEach(t => t.onclick = e => { e.stopPropagation(); const [a, ...i] = t.dataset.tl.split(":"); tlOpen(a, i.join(":")); });
   const cl = $("#ssClr"); if (cl) cl.onclick = () => { TR.sel = null; SS.q = ""; $("#gQ").value = ""; treeRender(); ssList(); ssChip(); };
   const a = $("#ssAllSel"); if (a) { a.checked = rows.length && rows.every(x => SS.sel.has(skey(x))); a.onchange = () => { rows.forEach(x => a.checked ? SS.sel.add(skey(x)) : SS.sel.delete(skey(x))); ssList(); }; }
   ssBatch();
@@ -3364,19 +3360,18 @@ async function ssView(agent, id, lim){
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
       ${tfOn ? `<span class="seg svmode" id="svMode" title="对话内容，或者按真实用量回放每一次模型调用的 token 流转"><button data-m="chat" class="${mode === "chat" ? "on" : ""}">对话</button><button data-m="flow" class="${mode === "flow" ? "on" : ""}">Token 流转</button></span>` : ""}
       <span class="menu" id="svRd"><button class="ghost" id="svRdB" title="阅读设置：气泡样式、文本宽度">${ic("type")}</button><div class="list rdpop">${rdPop()}</div></span>
-      <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：各个备份版本，预览、恢复">${ic("history")}</button>
+      <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="md">${ic("file")} 导出 Markdown</button><button data-v="html">${ic("file")} 导出 HTML</button><button data-v="jsonl">${ic("file")} 导出原始 jsonl</button>
-        <button data-v="conv">${ic("shuffle")} 转换到别的应用…</button>
         
         ${agent === "opencode" || agent === "zcode" ? (x.resume ? `<button data-v="copy">${ic("copy")} 复制继续命令（opencode 命令行）</button>` : "")
-          : agent === "dsh" ? `<button data-v="copy">${ic("copy")} 复制继续命令（dsh 命令行）</button><button data-v="tocc">${ic("claude", "logo")} 导进 Claude Code…</button>`
-          : agent === "cursor" ? `${x.resume ? `<button data-v="copy">${ic("copy")} 复制继续命令（cursor-agent）</button>` : ""}<button data-v="tocc">${ic("claude", "logo")} 导进 Claude Code…</button>`
+          : agent === "dsh" ? `<button data-v="copy">${ic("copy")} 复制继续命令（dsh 命令行）</button>`
+          : agent === "cursor" ? `${x.resume ? `<button data-v="copy">${ic("copy")} 复制继续命令（cursor-agent）</button>` : ""}`
           : `<button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button><button data-v="copy">${ic("copy")} 复制继续命令</button>
         <button data-v="del" class="danger">${ic("trash")} 删除（进回收站）</button>`}</div></span>
-      ${agent === "opencode" || agent === "zcode" ? `<button class="primary" id="svOpen" title="${APPN[agent]} 的会话本程序只读；可以转成别的应用的会话接着聊">${ic("shuffle")} 转换…</button>` :
+      ${agent === "opencode" || agent === "zcode" || agent === "antigravity" ? `<button class="primary" id="svOpen" title="${APPN[agent]} 的会话本程序只读；请用导出 / 导入">${ic("file")} 导出…</button>` :
         agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
-        agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；也可以导进 Claude Code 接着聊">${ic("claude", "logo")} 导进 Claude Code…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
+        agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；本程序可导出后再导入 Claude Code">${ic("file")} 导出…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : agent === "opencode" || agent === "zcode" ? `<span class="tag ${agent}">${esc(x.source_name || APPN[agent])} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
     ${tfOn ? `<div id="svFlow"${mode === "flow" ? "" : " hidden"}></div>` : ""}
     <div class="pv chatpv" id="svPv"${mode === "flow" ? " hidden" : ""}>${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
@@ -3390,12 +3385,10 @@ async function ssView(agent, id, lim){
     if (mode === "flow") tfView(agent, id, $("#svFlow"));
   }
   $("#svRen").onclick = () => ssRename(agent, id, x);
-  $("#svHist").onclick = () => tlOpen(agent, id);
   $("#svRdB").onclick = e => { e.stopPropagation(); $$(".menu.open").forEach(m => m !== $("#svRd") && m.classList.remove("open")); $("#svRd").classList.toggle("open"); };
   $("#svRd .list").onclick = e => e.stopPropagation();          // 在里面点不收起
   rdBind($("#svRd"));
-  if (agent === "opencode" || agent === "zcode" || agent === "antigravity") $("#svOpen").onclick = () => cvOpen(agent, [id]);
-  else if (agent === "cursor") $("#svOpen").onclick = () => { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); };
+  if (agent === "opencode" || agent === "zcode" || agent === "antigravity" || agent === "cursor") $("#svOpen").onclick = () => ssExport([{agent, id}], "md");
   else if (agent === "dsh") $("#svOpen").onclick = () => { copyText(x.resume || id); toast("已复制 dsh 命令行的继续命令。用桌面版的话，在 DeepSeek Harness 的会话列表里点开它就能接着聊（本程序不改 dsh 的会话）", 7000); };
   else $("#svOpen").onclick = async () => { try { const o = await api("/api/sessions/open", {agent, id}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } };
   $("#svMoreB").onclick = e => { e.stopPropagation(); $("#svMore").classList.toggle("open"); };
@@ -3403,16 +3396,13 @@ async function ssView(agent, id, lim){
     if (v === "md" || v === "jsonl" || v === "html") return ssExport([{agent, id}], v);
     if (v === "arch") return ssAct(x.archived ? "unarchive" : "archive", [{agent, id}]);
     if (v === "copy") return copyText(x.resume || id);
-    if (v === "tocc" && agent === "cursor") { CU.sel = new Set([id]); CU.touched = true; CU.plan = null; CU.sub = !!x.subagent; go("cursor"); return; }
-    if (v === "tocc") { DS.dir = "to-claude"; DS.sel = new Set([id]); DS.touched = true; DS.plan = null; go("dsh"); return; }
-    if (v === "conv") return cvOpen(agent, [id]);
     if (v === "del") return ssAct("delete", [{agent, id}]); });
 }
 // 列表里登记着、但对话文件已经没了（比如 API 模式里的旧条目）：照样显示，只给能做的操作
 function ssOrphan(agent, id, x, box){
   const g = trGroup(x.gacct);
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
-      <button class="ghost" id="svRen" title="改名（只改本程序里的显示名）">${ic("pencil")}</button><button class="ghost" id="svHist" title="时间线：要是以前备份过，可以从备份里恢复">${ic("history")}</button>
+      <button class="ghost" id="svRen" title="改名（只改本程序里的显示名）">${ic("pencil")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
         <button data-v="arch">${ic("archive")} ${x.archived ? "取消归档" : "归档"}</button>
         <button data-v="del" class="danger">${ic("trash")} 删掉这条登记（进回收站）</button></div></span>
@@ -3420,9 +3410,8 @@ function ssOrphan(agent, id, x, box){
     <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " · " : ""}${x.model ? esc(x.model) + " · " : ""}${esc(id)}</div>
     <div class="emp">${ic("file")}<b>无法打开（对话文件不存在）</b>
       <div style="max-width:440px">桌面端的会话列表里还登记着这一条，但本机找不到它的对话记录（可能是在别的电脑上、被清理了，或者 API 模式下从没写到本地）。
-      不能继续、导出、复制命令；可以改显示名、归档，或者把这条登记删掉（先进回收站，能撤回）。要是以前备份过，可以在「时间线」里从备份恢复。</div></div>`;
+      不能继续、导出、复制命令；可以改显示名、归档，或者把这条登记删掉（先进回收站，能撤回）。本程序不再提供快照恢复；可用导出的文件再导入。</div></div>`;
   $("#svRen").onclick = () => ssRename(agent, id, Object.assign({}, x, {registered: false}));
-  $("#svHist").onclick = () => tlOpen(agent, id);
   $("#svMoreB").onclick = e => { e.stopPropagation(); $("#svMore").classList.toggle("open"); };
   $$("#svMore [data-v]").forEach(b => b.onclick = () => { $("#svMore").classList.remove("open");
     if (b.dataset.v === "arch") return ssAct(x.archived ? "unarchive" : "archive", [{agent, id}]);
@@ -3458,7 +3447,7 @@ function ssAct(act, items){
   const names = items.map(i => (SS.d.items.find(x => x.agent === i.agent && x.id === i.id) || {}).title || i.id).slice(0, 8);
   const lab = {archive: "归档", unarchive: "取消归档", delete: "删除"}[act];
   const html = `<div>${lab} ${items.length} 个会话：</div><ul style="margin:6px 0;padding-left:20px;font-size:calc(13.5px*var(--fk))">${names.map(n => `<li>${esc(n)}</li>`).join("")}${items.length > 8 ? `<li>…还有 ${items.length - 8} 个</li>` : ""}</ul>
-    ${act === "delete" ? `<div class="miss">先把会话记录完整备份进会话备份库，再把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：可以在「时间线与备份 → 备份 → 回收站」还原，或在操作记录里撤回。</div>`
+    ${act === "delete" ? `<div class="miss">会把文件（和桌面端列表里那一条）挪进回收站 <code>~/.cc-sessionsync/trash</code>。不会直接删掉：先进回收站；导入完成对话框里可以撤回。</div>`
       : `<div class="dim" style="font-size:calc(13.5px*var(--fk))">${act === "archive" ? "Claude：桌面端列表里标成已归档；Codex：挪进 archived_sessions（和 Codex 自己归档一样）。" : "恢复到正常列表。"}改之前先备份，可以撤回。</div>`}
     <div class="dim" style="font-size:calc(13px*var(--fk));margin-top:6px">桌面端开着的话会排队：等它完全退出后再改（否则它退出时会把改动盖回去）。</div>`;
   confirmDlg(lab + "会话", html, lab, async () => {
@@ -3487,315 +3476,6 @@ function ssRename(agent, id, x){
       closeDlg(); doneOrQueued(r, "已改名（可以撤回）"); R.sessions(); } catch(e){ toast("❌ " + e.message, 5000); }
   };
 }
-async function snapRestore(sid){
-  try { const r = await api("/api/sessions/restore-snapshot", {snap: sid});
-    if (r.ok === false) return toast("❌ " + r.error, 5000);
-    closeDlg(); toast(r.how === "original" ? "✅ 已放回原位" : `✅ 原文件还在，另存了一份：${r.path}`, 6000); if (PAGE === "sessions") R.sessions(); else R[PAGE](); }
-  catch(e){ toast("❌ " + e.message, 5000); }
-}
-
-// ---------- 时间线：选一个时间点 → 预览对话 → 恢复到 Claude ----------
-const TL = {cur: null, vers: null, idx: -1, runs: null, ri: -1, t: null, pt: null, sel: new Set(), state: "changed", pv: null};
-const dtLocal = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const fullTime = ts => { const d = new Date(ts * 1000); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
-function tlOpen(agent, id){ tbSetTab("tl"); TL.cur = {agent, id}; TL.vers = null; TL.idx = -1; go("timeline"); }
-try { TL.spark = localStorage.getItem("ccss.tlspark") !== "0"; } catch(e){ TL.spark = true; }
-document.addEventListener("keydown", e => {        // 单个会话的时间线：← / → 切换版本（输入框里不管）
-  if (PAGE !== "timeline" || !TL.cur || !TL.step || $("#dlg").classList.contains("open")) return;
-  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && e.target.type !== "range" || e.target.isContentEditable) return;
-  if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); TL.step(e.key === "ArrowLeft" ? -1 : 1); }
-});
-function tlGacct(x){
-  const m = SS.d && SS.d.items.find(i => i.agent === x.agent && i.id === x.id);
-  if (m) return m.gacct;
-  return x.agent === "codex" ? "codex:" + (x.provider || "openai") : x.agent === "dsh" ? "dsh:" + (x.provider || (x.imported ? "imported" : "-")) : x.agent === "cursor" ? "cursor:" + (x.cwd || "-") : x.agent === "opencode" || x.agent === "zcode" ? x.agent + ":" + (x.cwd || "-") : ((x.accounts || [])[0] || "unknown");
-}
-// ---------- 时间线与备份（0.2.9：原来的「时间线」「备份」两页合成一页，三个分栏）----------
-// 时间线：选时间点 / 单个会话的版本，预览、恢复；备份：会话备份库（自动备份、立即备份、保留规则、位置大小、最近版本）、回收站、导出 / 导入；
-// 撤销记录：排队中的改动、会话操作记录、账号同步。
-const TB_TABS = [["tl", "时间线", "history"], ["bk", "备份", "download"], ["undo", "撤销记录", "undo"]];
-function tbSetTab(t){ if (TB_TABS.some(x => x[0] === t)) { TL.tab = t; store.set("ccss.tltab", t); } }
-const tbHead = () => `<div class="bar tbhd"><h2 style="margin:0">${ic("history")}时间线与备份</h2>
-  <span class="seg tbtabs" id="tbTab">${TB_TABS.map(([k, t, i]) => `<button data-t="${k}" class="${TL.tab === k ? "on" : ""}">${ic(i)} ${t}${k === "undo" && ST.jobs ? ` <span class="tag warn">${ST.jobs}</span>` : ""}</button>`).join("")}</span>
-  <span class="sp"></span><span class="tbmini" id="tbMini"></span></div>`;
-async function tbWire(){
-  $$("#tbTab button").forEach(b => b.onclick = () => { if (TL.tab === b.dataset.t) return; tbSetTab(b.dataset.t); R.timeline(); });
-  try { const bs = await api("/api/sessions/backup-status"), sc = bs.sched || {}, m = $("#tbMini"); if (!m) return;
-    m.innerHTML = `<span class="dim">上次备份 ${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没有"}${sc.auto ? ` · 下次 ${sc.next ? inTxt(sc.next) : "马上"}` : " · 自动备份已关"}</span>
-      <button id="tbBkNow" title="现在就把变过的会话备份进会话备份库">${ic("download")} 立即备份</button>`;
-    if (TL.tab === "bk") { $("#tbBkNow").remove(); return; }  // 备份页签里会话备份库卡片自己有「立即备份」
-    $("#tbBkNow").onclick = async () => { $("#tbBkNow").disabled = true; try { const r = await api("/api/backup/now", {}); toast(`✅ 看了 ${r.files} 个文件，新版本 ${r.snapshots} 个`); } catch(e){ toast("❌ " + e.message); } TL.runs = null; TL.vers = null; R.timeline(); };
-  } catch(e){}
-}
-R.timeline = async () => {
-  if (!TL.tab) TL.tab = store.get("ccss.tltab") || "tl";
-  const pg = $("#pg-timeline");
-  if (TL.tab !== "tl") { pg.innerHTML = tbHead() + '<div class="tbbody" id="tbBody"><div class="empty">读取…</div></div>'; tbWire(); return bkRender($("#tbBody"), TL.tab); }
-  if (!SS.d) await treeLoad();
-  return TL.cur ? tlSession() : tlGlobal();
-};
-R.backups = () => go("backups");        // 旧页面名：深链接 / 记住的上次页面 / 通知 → 备份分栏
-R.jobs = () => go("jobs"); R.undo = () => go("undo");   // ?page=jobs / ?page=undo → 撤销记录分栏
-const tlHead = sub => tbHead() + `<div class="bar" style="margin:4px 0 6px">
-  <span class="seg" id="tlMode"><button data-m="g" class="${TL.cur ? "" : "on"}">按时间点（全部会话）</button><button data-m="s" class="${TL.cur ? "on" : ""}" ${TL.cur ? "" : 'disabled title="在列表里点一个会话的「时间线」"'}>单个会话</button></span><span class="sp"></span>
-  <button class="ghost" id="tlRef" title="刷新">${ic("refresh")}</button></div><p class="sub">${sub}</p>`;
-function tlWireHead(){
-  tbWire();
-  $$("#tlMode button").forEach(b => b.onclick = () => { if (b.dataset.m === "g") { TL.cur = null; R.timeline(); } });
-  $("#tlRef").onclick = () => { TL.vers = null; TL.runs = null; R.timeline(); };
-}
-// 时间点选择：滑块（每一格是一次备份 / 一个版本）+ 日期时间
-function tlPicker(times, idx, label){
-  const t0 = times[0], t1 = times[times.length - 1], span = Math.max(1, t1 - t0);
-  return `<div class="tlpick"><button class="ghost" id="tlPrev" title="上一个" ${idx <= 0 ? "disabled" : ""}>${ic("back")}</button>
-      <input type="range" id="tlR" min="0" max="${times.length - 1}" value="${idx}" step="1">
-      <button class="ghost" id="tlNext" title="下一个" style="transform:scaleX(-1)" ${idx >= times.length - 1 ? "disabled" : ""}>${ic("back")}</button>
-      <input type="datetime-local" id="tlDT" value="${dtLocal(times[idx])}" title="选一个时间：取那之前最后一个版本"></div>
-    ${times.length <= 400 ? `<div class="tlx">${times.map((t, i) => `<i class="${i === idx ? "on" : ""}" style="left:${((t - t0) / span * 100).toFixed(2)}%"></i>`).join("")}</div>` : ""}
-    <div class="tlticks"><span>${fullTime(t0)}</span><span class="tlnow">${label}</span><span>${fullTime(t1)}</span></div>`;
-}
-function tlWirePicker(times, set){
-  const r = $("#tlR"); r.oninput = () => set(+r.value, true); r.onchange = () => set(+r.value);
-  $("#tlPrev").onclick = () => set(Math.max(0, +r.value - 1)); $("#tlNext").onclick = () => set(Math.min(times.length - 1, +r.value + 1));
-  $("#tlDT").onchange = e => { const t = new Date(e.target.value).getTime() / 1000; if (!t) return; let i = 0; times.forEach((x, k) => { if (x <= t + 59) i = k; }); set(i); };
-}
-
-const tlSkel = (n = 6) => `<div class="skel">${Array.from({length: n}, (_, i) => `<i style="width:${[92, 68, 80, 55, 74, 60][i % 6]}%"></i>`).join("")}</div>`;
-const tlDayLab = ts => { const d = new Date(ts * 1000), t = new Date(); t.setHours(0,0,0,0); const k = Math.round((t - new Date(d).setHours(0,0,0,0)) / 86400000);
-  return (k === 0 ? "今天" : k === 1 ? "昨天" : k === 2 ? "前天" : "") + ` <span class="dim">${d.getMonth()+1} 月 ${d.getDate()} 日 · 周${"日一二三四五六"[d.getDay()]}</span>`; };
-const TLS_K = "ccss.tlspark";
-// 对话增长曲线：x = 时间，y = 消息数；每个版本一个点；拖竖线选版本（松手才加载预览）
-function tlSpark(vs, idx){
-  const W = 1000, H = 64, P = 8, t0 = vs[0].at, t1 = vs[vs.length - 1].at, span = Math.max(1, t1 - t0);
-  const mx = Math.max(1, ...vs.map(r => r.msgs || 0)), X = t => P + (t - t0) / span * (W - 2*P), Y = m => H - 6 - (m || 0) / mx * (H - 14);
-  const pts = vs.map(r => [X(r.at), Y(r.msgs)]);
-  let d = ""; pts.forEach(([x, y], i) => d += i ? `H${x.toFixed(1)}V${y.toFixed(1)}` : `M${x.toFixed(1)},${y.toFixed(1)}`);   // 阶梯：两次备份之间对话不变
-  return `<div class="tlspark" id="tlSp"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path class="ln" d="${d}H${W - P}"/>
-    ${pts.map(([x, y], i) => `<circle class="mk${i === idx ? " on" : ""}" data-i="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"><title>${fullTime(vs[i].at)} · ${vs[i].msgs ?? "?"} 条</title></circle>`).join("")}
-    <line class="cur" x1="${pts[idx][0]}" x2="${pts[idx][0]}" y1="2" y2="${H}"/></svg><span class="knob" style="left:${(pts[idx][0] / W * 100).toFixed(2)}%">${vs[idx].msgs ?? "?"} 条</span></div>`;
-}
-function tlWireSpark(vs, set){
-  const box = $("#tlSp"); if (!box) return;
-  const svg = box.querySelector("svg"), W = 1000, P = 8, t0 = vs[0].at, span = Math.max(1, vs[vs.length - 1].at - t0);
-  const near = e => { const r = svg.getBoundingClientRect(), t = t0 + ((e.clientX - r.left) / r.width * W - P) / (W - 2*P) * span;
-    let b = 0; vs.forEach((v, i) => { if (Math.abs(v.at - t) < Math.abs(vs[b].at - t)) b = i; }); return b; };
-  const move = i => { const x = P + (vs[i].at - t0) / span * (W - 2*P), ln = svg.querySelector("line.cur");
-    ln.setAttribute("x1", x); ln.setAttribute("x2", x); box.querySelector(".knob").style.left = (x / W * 100).toFixed(2) + "%"; box.querySelector(".knob").textContent = `${vs[i].msgs ?? "?"} 条`;
-    svg.querySelectorAll("circle.mk").forEach(c => c.classList.toggle("on", +c.dataset.i === i)); };
-  let drag = false, last = -1;
-  svg.onpointerdown = e => { drag = true; svg.setPointerCapture(e.pointerId); last = near(e); move(last); set(last, true); };
-  svg.onpointermove = e => { if (!drag) return; const i = near(e); if (i !== last) { last = i; move(i); set(i, true); } };
-  svg.onpointerup = e => { if (!drag) return; drag = false; set(near(e)); };
-}
-// 单个会话
-async function tlSession(){
-  const pg = $("#pg-timeline"), {agent, id} = TL.cur;
-  if (!TL.vers) { pg.innerHTML = tlHead("读取这个会话的版本…") + `<div class="card">${tlSkel(3)}</div><div class="split2"><div class="l"><div class="card">${tlSkel(6)}</div></div><div class="grip"></div><div class="r"><div class="card">${tlSkel(8)}</div></div></div>`;
-    tlWireHead();
-    try { TL.vers = await api(`/api/timeline/versions?agent=${agent}&id=${encodeURIComponent(id)}`); }
-    catch(e){ pg.innerHTML = tlHead("") + `<div class="card"><div class="emp">${ic("history")}读不到这个会话的版本：${esc(e.message)}<div><button id="tlRetry">${ic("refresh")} 重试</button></div></div></div>`; tlWireHead(); $("#tlRetry").onclick = () => tlSession(); return; }
-    if (TL.idx < 0 || TL.idx >= TL.vers.items.length) TL.idx = TL.vers.items.length - 1; }
-  const v = TL.vers, vs = v.items;
-  const x = SS.d && SS.d.items.find(i => i.agent === agent && i.id === id) || {};
-  const g = trGroup(x.gacct || tlGacct({agent, id}));
-  pg.innerHTML = tlHead(`会话备份库里这个会话的每个版本。拖滑块或选时间 → 右边预览那时候的对话、和现在比 → 「恢复到 Claude」另存成新会话（不覆盖现在的）。`) +
-    `<div class="card"><h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(v.title || "（无标题）")}</span>${v.exists ? "" : '<span class="tag warn">现在这个会话已经没了</span>'}<span class="tag">${vs.length} 个版本</span></h3>
-      <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}<span title="${esc(v.cwd || "")}">${esc(projName(v.cwd))}</span> · ${esc(id)}</div>
-      ${vs.length ? (TL.spark && vs.length > 1 ? tlSpark(vs, TL.idx) : "") + tlPicker(vs.map(r => r.at), TL.idx, vs[TL.idx] ? `${fullTime(vs[TL.idx].at)} · ${vs[TL.idx].msgs ?? "?"} 条消息` : "") +
-        `<div class="bar" style="margin-top:6px;gap:12px"><label class="chk" style="font-size:calc(13px*var(--fk))"><input type="checkbox" id="tlSpOn" ${TL.spark ? "checked" : ""} ${vs.length > 1 ? "" : "disabled"}> 显示对话增长曲线</label><span class="sp"></span><span class="tlkeys"><kbd>←</kbd> <kbd>→</kbd> 切换版本</span></div>`
-        : `<div class="emp">${ic("history")}<b>这个会话还没有备份版本</b><div>会话备份库每次备份时会给有变化的会话存一个版本；也可以现在就备份一次。</div><div><button id="tlBk">${ic("download")} 立即备份</button></div></div>`}</div>
-    ${vs.length ? `<div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden"><div class="scroll" id="tlVers" style="border:0;border-radius:0;max-height:calc(calc(100*var(--vh)) - 380px)"></div></div></div>
-      <div class="grip" id="tlGrip"></div><div class="r"><div class="card" id="tlPv"></div></div></div>` : ""}`;
-  tlWireHead();
-  const bk = $("#tlBk"); if (bk) bk.onclick = async () => { bk.disabled = true; try { await api("/api/backup/now", {}); } catch(e){ toast("❌ " + e.message); } TL.vers = null; tlSession(); };
-  if (!vs.length) return rvPaint();
-  const list = () => {                          // 竖向时间线，新的在上，按天分组
-    let html = "", day = "";
-    const order = vs.map((r, i) => i).reverse();
-    order.forEach((i, k) => { const r = vs[i], dk = new Date(r.at * 1000).toDateString();
-      if (dk !== day) { day = dk; html += `<div class="day">${tlDayLab(r.at)}</div>`; }
-      const nextDay = k + 1 < order.length ? new Date(vs[order[k + 1]].at * 1000).toDateString() : null, prevDay = k ? new Date(vs[order[k - 1]].at * 1000).toDateString() : null;
-      html += `<div class="node vrow${i === TL.idx ? " sel" : ""}${r.current ? " cur" : ""}${prevDay !== dk ? " first" : ""}${nextDay !== dk ? " last" : ""}" data-i="${i}" title="${fullTime(r.at)}">
-        <i class="dot"></i><span class="t">${fullTime(r.at).slice(11, 16)}</span><span class="c">${esc(r.change || "")}${r.current ? ' <span class="tag ok">就是现在</span>' : ""}${r.why === "restored" ? ' <span class="tag">恢复出来的</span>' : ""}</span>
-        <span class="m">${r.msgs ?? "—"} 条 · ${kb(r.size)}</span></div>`; });
-    $("#tlVers").innerHTML = `<div class="vtl">${html}</div>`;
-    $$("#tlVers [data-i]").forEach(tr => tr.onclick = () => set(+tr.dataset.i));
-    const se = $("#tlVers .node.sel"); if (se) se.scrollIntoView({block: "nearest"}); };
-  const set = (i, quick) => { TL.idx = i; if (quick) { $(".tlnow").textContent = `${fullTime(vs[i].at)} · ${vs[i].msgs ?? "?"} 条消息`; if ($("#tlR")) $("#tlR").value = i; return; } tlSession(); };
-  TL.step = d => { const i = Math.max(0, Math.min(vs.length - 1, TL.idx + d)); if (i !== TL.idx) set(i); };
-  tlWirePicker(vs.map(r => r.at), set);
-  tlWireSpark(vs, set);
-  const so = $("#tlSpOn"); if (so) so.onchange = () => { TL.spark = so.checked; try { localStorage.setItem(TLS_K, so.checked ? "1" : "0"); } catch(e){} tlSession(); };
-  list();
-  dragGrip($("#tlGrip"), () => $("#pg-timeline .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-timeline .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
-  tlPreview(vs[TL.idx].id, $("#tlPv"), agent);
-}
-// 预览一个版本：聊天样式 + 和现在比 + 恢复按钮
-async function tlPreview(snap, box, agent){
-  box.innerHTML = tlSkel(9);
-  let r; try { r = await api(`/api/timeline/view?snap=${snap}&limit=300`); } catch(e){ box.innerHTML = `<div class="emp">读不到这个版本：${esc(e.message)}<div><button id="pvRetry">${ic("refresh")} 重试</button></div></div>`; $("#pvRetry").onclick = () => tlPreview(snap, box, agent); return; }
-  TL.pv = r; const s = r.snap, d = r.diff;
-  const smp = (xs, cls) => xs.map(e => `<div class="ln ${cls}" title="${esc(e.text)}">${e.role === "user" ? "你：" : e.role === "tool" ? "工具：" : ""}${esc(e.text.slice(0, 160))}</div>`).join("");
-  const tot = Math.max(1, d.same + d.only_then + d.only_now), pc = v => (v / tot * 100).toFixed(1) + "%";
-  box.innerHTML = `<h3>${logo(s.agent)} <span style="flex:1">${fullTime(s.at)} 的版本</span><span class="tag">${r.total} 条</span><span class="tag">${kb(s.size)}</span></h3>
-    <div class="restbar"><button class="primary big" id="pvClaude" title="另存成一个新的 Claude Code 会话（新 id，标题带「恢复 @时间」）；登记进桌面端当前账号">${ic("claude", "logo")} 恢复到 Claude</button>
-      <span class="h">另存成一个<b>新会话</b>，现在的会话不动。</span>
-      ${s.agent === "codex" ? `<button id="pvCodex" title="把 Codex 里这个会话换回这一版（先备份现在的）">${ic("codex", "logo")} 恢复到 Codex</button>` : ""}
-      ${d.exists && !d.identical && s.agent === "claude" ? `<button id="pvRep" title="用这一版替换现在的会话（先把现在的备份）">${ic("undo")} 替换当前…</button>` : ""}
-      <span class="menu" id="pvEx"><button class="ghost" id="pvExB" title="导出这一版">${ic("file")} 导出</button><div class="list"><button data-f="md">Markdown</button><button data-f="html">HTML</button></div></span></div>
-    <div class="diff">${d.identical ? `<span class="tag ok">${ic("check")} 和现在一模一样</span>` : !d.exists ? `<span class="tag warn">现在这个会话已经没了</span>：恢复就能找回来`
-      : `<div>和现在比：前 <b>${d.same}</b> 条一样${d.only_now ? `，现在多了 <b>${d.only_now}</b> 条` : ""}${d.only_then ? `，这一版里有 <b>${d.only_then}</b> 条现在没了` : ""}</div>
-        <div class="dbarx" title="一样 ${d.same} · 只在这一版 ${d.only_then} · 只在现在 ${d.only_now}"><i class="s" style="width:${pc(d.same)}"></i><i class="o" style="width:${pc(d.only_then)}"></i><i class="n" style="width:${pc(d.only_now)}"></i></div>
-        <div class="dlegx"><span><i style="background:var(--line2)"></i>一样 ${d.same}</span><span><i style="background:var(--bad,#c0392b)"></i>只在这一版 ${d.only_then}</span><span><i style="background:var(--ok)"></i>只在现在 ${d.only_now}</span></div>`}
-      ${!d.identical && (d.then_samples.length || d.now_samples.length) ? `<details style="margin-top:6px" ${d.only_then + d.only_now <= 6 ? "open" : ""}><summary class="dim" style="cursor:pointer">看差别</summary><div class="dl">
-        <div><b>只在这一版（${d.only_then}）</b>${smp(d.then_samples, "old") || '<div class="dim">—</div>'}</div><div><b>只在现在（${d.only_now}）</b>${smp(d.now_samples, "new") || '<div class="dim">—</div>'}</div></div></details>` : ""}</div>
-    <div class="pv" style="max-height:calc(calc(100*var(--vh)) - 500px);min-height:200px">${r.cut ? `<div class="dim" style="text-align:center;font-size:calc(13px*var(--fk))">前面还有 ${r.cut} 条没显示（恢复 / 导出是完整的）</div>` : ""}${r.entries.length ? chatHtml(r.entries, s.agent) : '<div class="empty">这一版里没有能显示的消息</div>'}</div>`;
-  $("#pvClaude").onclick = () => tlRestore([s.id], "copy", "claude");
-  const cx = $("#pvCodex"); if (cx) cx.onclick = () => tlReplaceDlg([s.id], "codex");
-  const rp = $("#pvRep"); if (rp) rp.onclick = () => tlReplaceDlg([s.id], "claude");
-  $("#pvExB").onclick = e => { e.stopPropagation(); $("#pvEx").classList.toggle("open"); };
-  $$("#pvEx [data-f]").forEach(b => b.onclick = () => { $("#pvEx").classList.remove("open"); ssExport([{snap: s.id}], b.dataset.f, "version"); });
-  const pv = box.querySelector(".pv"); pv.scrollTop = pv.scrollHeight;
-}
-async function tlRestore(snaps, mode, target){
-  try { const r = await api("/api/timeline/restore", {snaps, mode, target, desktop: true});
-    if (r.ok === false && !(r.made || []).length) return toast("❌ " + (r.error || (r.errors || [])[0] || "没恢复成"), 6000);
-    if (mode === "copy" && target === "claude") { madeDlg("✅ 已恢复到 Claude", r); SS.d = null; treeLoad(); return; }
-    const q = (r.results || []).filter(x => x.deferred);
-    if (!queuedAsk(q)) toast("✅ 已换回这一版（换之前的版本在备份库里，可以撤回）", 7000);
-    poll(); TL.vers = null; R.timeline();
-  } catch(e){ toast("❌ " + e.message, 6000); }
-}
-function tlReplaceDlg(snaps, target){
-  const app = target === "codex" ? "Codex" : target === "claude" ? "Claude" : "Claude / Codex", tgt = target === "codex" ? "codex" : "claude";
-  openDlg(target === "codex" ? "恢复到 Codex" : "替换当前会话", `<div>用备份里的版本<b>替换</b> ${snaps.length} 个${app}会话现在的内容。</div>
-    <ul style="font-size:calc(13.5px*var(--fk));margin:8px 0;padding-left:20px"><li>替换前先把现在的版本存进会话备份库，并记进操作记录，可以撤回。</li><li>${app} 桌面端开着的话会排队，等它完全退出后再换。</li>
-    <li>不想动现在的会话：用「恢复到 Claude」另存一份新的更稳妥。</li></ul>
-    <label class="chk"><input type="checkbox" id="rpOk"> 我知道会替换现在的会话内容</label>`,
-    `<button onclick="closeDlg()">取消</button><button class="primary danger" id="rpGo" disabled>替换</button>`);
-  $("#rpOk").onchange = e => $("#rpGo").disabled = !e.target.checked;
-  $("#rpGo").onclick = () => { closeDlg(); tlRestore(snaps, "replace", tgt); };
-}
-// 恢复 / 导入之后：新会话的继续命令、桌面端登记情况、撤回
-function madeDlg(title, r){
-  const made = r.made || [], dj = r.desktop;
-  const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。<button class="ghost" id="mdCr">${ic("power")} 关闭 Claude 并登记（完成后重启）</button>`
-    : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
-  const many = made.length > 5, okN = made.filter(m => m.check && m.check.ok).length, subN = made.reduce((a, m) => a + (m.subs || 0), 0);
-  openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）${many ? `：自检通过 ${okN}/${made.length}${subN ? ` · 带回 ${subN} 个子会话` : ""}` : "："}</div>` : ""}
-    ${many ? `<details style="margin-top:6px"><summary class="dim">展开看每一个</summary>` : ""}${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}${m.subs ? ` <span class="tag acc">含 ${m.subs} 个子会话</span>` : ""}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
-      ${m.check ? `<div class="dim" style="font-size:calc(13px*var(--fk))" title="${esc((m.check.issues || []).join("\n"))}">${m.check.ok ? '<span class="tag ok">自检通过</span> 按 Claude Code 的会话规矩读了一遍' : `<span class="tag warn">自检提示 ${(m.check.issues || []).length} 条</span> ${esc((m.check.issues || [])[0] || "")}`}</div>` : ""}
-      <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}${many ? "</details>" : ""}
-    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:6px">${dnote}</div>
-    ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
-    `<button id="mdUndo" class="ghost">${ic("undo")} 撤回</button><span style="flex:1"></span><button onclick="closeDlg()">关闭</button><button class="primary" id="mdGo">${ic("list")} 去会话列表看</button>`);
-  $$("#dlgBody [data-cp]").forEach(b => b.onclick = () => copyText(b.dataset.cp));
-  if ($("#mdCr")) $("#mdCr").onclick = () => crAsk({kind: "claude", jobs: [dj.job], verb: "登记"});
-  $$("#dlgBody [data-open]").forEach(b => b.onclick = async () => { try { const o = await api("/api/sessions/open", {agent: "claude", id: b.dataset.open}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } });
-  $("#mdGo").onclick = () => { closeDlg(); TL.cur = null; SS.cur = made[0] ? {agent: "claude", id: made[0].id} : null; go("sessions"); };
-  $("#mdUndo").onclick = () => confirmDlg("撤回", "把刚才新建的会话挪进回收站（不直接删），桌面端列表里登记的那一条也撤掉。", "撤回", async () => {
-    try { const x = await api("/api/sessions/undo", {op: r.op}); closeDlg(); doneOrQueued(x, "已撤回"); SS.d = null; treeLoad(); if (R[PAGE]) R[PAGE](); } catch(e){ toast("❌ " + e.message); } });
-}
-
-// 全部会话：选一个时间点
-// 全部会话的增长曲线：x = 时间，y = 那时备份库里所有会话加起来的消息数（阶梯）；每次备份一个点；拖竖线选时间点（松手才加载）
-function tlGrowth(runs, idx){
-  const G = TL.grow || [], by = new Map(G.map(g => [Math.floor(g.at), g]));
-  const vs = runs.map(r => by.get(Math.floor(r.at)) || {at: r.at, total: null, apps: {}});
-  let lastT = 0; vs.forEach(v => { if (v.total == null) v.total = lastT; else lastT = v.total; });
-  const ag = SS.agent, val = v => ag ? ((v.apps || {})[ag] || 0) : v.total;
-  const W = 1000, H = 96, P = 10, t0 = vs[0].at, t1 = vs[vs.length - 1].at, span = Math.max(1, t1 - t0);
-  const mx = Math.max(1, ...vs.map(val)), X = t => P + (t - t0) / span * (W - 2*P), Y = m => H - 8 - (m || 0) / mx * (H - 20);
-  const pts = vs.map(v => [X(v.at), Y(val(v))]);
-  const step = ps => ps.map(([x, y], i) => i ? `H${x.toFixed(1)}V${y.toFixed(1)}` : `M${x.toFixed(1)},${y.toFixed(1)}`).join("") + `H${W - P}`;
-  const apps = ag ? [] : [["claude", "var(--claude)"], ["codex", "var(--cxn)"], ["dsh", "var(--dsh,#4d6bfe)"], ["cursor", "var(--cur,#3a3a38)"], ["opencode", "var(--oc,#1f7a8c)"], ["zcode", "var(--zc,#5b4bd6)"], ["antigravity", "var(--ag,#4285f4)"]].filter(([k]) => vs.some(v => (v.apps || {})[k]));
-  const lab = i => `${val(vs[i]).toLocaleString()} 条`;
-  return `<div class="tlspark tlgrow" id="tlGr"><div class="tlglab"><b>全部会话的消息总数</b>${ag ? `（只算 ${esc(APPN[ag] || ag)}）` : ""} · 现在 ${val(vs[vs.length - 1]).toLocaleString()} 条
-      ${apps.length > 1 ? apps.map(([k, c]) => `<span class="tlgk"><i style="background:${c}"></i>${esc(APPN[k])}</span>`).join("") : ""}</div>
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-    ${apps.length > 1 ? apps.map(([k, c]) => `<path class="ln sub" style="stroke:${c}" d="${step(vs.map(v => [X(v.at), Y((v.apps || {})[k] || 0)]))}"/>`).join("") : ""}
-    <path class="ln" d="${step(pts)}"/>
-    ${pts.map(([x, y], i) => `<circle class="mk${i === idx ? " on" : ""}" data-i="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3"><title>${fullTime(vs[i].at)} · ${lab(i)}（这次存了 ${runs[i].n} 个新版本）</title></circle>`).join("")}
-    <line class="cur" x1="${pts[idx][0]}" x2="${pts[idx][0]}" y1="2" y2="${H}"/></svg><span class="knob" style="left:${(pts[idx][0] / W * 100).toFixed(2)}%">${lab(idx)}</span></div>`;
-}
-function tlWireGrowth(runs, set){
-  const box = $("#tlGr"); if (!box) return;
-  const svg = box.querySelector("svg"), W = 1000, P = 10, t0 = runs[0].at, span = Math.max(1, runs[runs.length - 1].at - t0);
-  const near = e => { const r = svg.getBoundingClientRect(), t = t0 + ((e.clientX - r.left) / r.width * W - P) / (W - 2*P) * span;
-    let b = 0; runs.forEach((v, i) => { if (Math.abs(v.at - t) < Math.abs(runs[b].at - t)) b = i; }); return b; };
-  const move = i => { const c = svg.querySelector(`circle.mk[data-i="${i}"]`), x = +c.getAttribute("cx"), ln = svg.querySelector("line.cur");
-    ln.setAttribute("x1", x); ln.setAttribute("x2", x); const k = box.querySelector(".knob"); k.style.left = (x / W * 100).toFixed(2) + "%";
-    k.textContent = c.querySelector("title").textContent.split(" · ")[1].split("（")[0];
-    svg.querySelectorAll("circle.mk").forEach(m => m.classList.toggle("on", m === c)); };
-  let drag = false, last = -1;
-  svg.onpointerdown = e => { drag = true; svg.setPointerCapture(e.pointerId); last = near(e); move(last); set(last, true); };
-  svg.onpointermove = e => { if (!drag) return; const i = near(e); if (i !== last) { last = i; move(i); set(i, true); } };
-  svg.onpointerup = e => { if (!drag) return; drag = false; set(near(e)); };
-}
-async function tlGlobal(){
-  const pg = $("#pg-timeline");
-  if (!TL.runs) { pg.innerHTML = tlHead("") + '<div class="emp">读取…</div>';
-    try { [TL.runs, TL.grow] = await Promise.all([api("/api/timeline/runs").then(r => r.items.slice().reverse()), api("/api/timeline/growth").then(r => r.items).catch(() => [])]); }
-    catch(e){ pg.innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
-    if (TL.ri < 0 || TL.ri >= TL.runs.length) TL.ri = TL.runs.length - 1; TL.pt = null; }
-  const runs = TL.runs;
-  pg.innerHTML = tlHead("每一格是一次备份。选一个时间点，看那时候每个会话是什么样（只读），勾选几个一起「恢复到 Claude」（另存成新会话），或者换回那时的版本。左侧分组、搜索都能筛。") +
-    (runs.length ? `<div class="card">${runs.length > 1 && TL.spark ? tlGrowth(runs, TL.ri) : ""}${tlPicker(runs.map(r => r.at), TL.ri, `${fullTime(runs[TL.ri].at)} · 那次存了 ${runs[TL.ri].n} 个新版本`)}</div>
-      <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
-        <div class="bar" style="padding:8px 10px 0;margin:0"><span class="seg" id="tlSt"></span><span class="sp"></span></div>
-        <div class="scroll" id="tlList" style="border:0;border-radius:0;max-height:calc(calc(100*var(--vh)) - 420px)"></div><div class="batch" id="tlBatch"></div></div></div>
-      <div class="grip" id="tlGrip"></div><div class="r"><div class="card" id="tlPv"><div class="emp">${ic("messages")}点左边一个会话，预览它在这个时间点的对话</div></div></div></div>`
-      : `<div class="card"><div class="emp">${ic("history")}会话备份库里还没有版本。自动备份缺省每 10 分钟一次；也可以现在就备份。<div><button class="primary" id="tlBk">${ic("download")} 立即备份</button></div></div></div>`);
-  tlWireHead();
-  const bk = $("#tlBk"); if (bk) bk.onclick = async () => { bk.disabled = true; try { await api("/api/backup/now", {}); } catch(e){ toast("❌ " + e.message); } TL.runs = null; tlGlobal(); };
-  if (!runs.length) return;
-  const set = (i, quick) => { TL.ri = i; if (quick) { $(".tlnow").textContent = `${fullTime(runs[i].at)} · 那次存了 ${runs[i].n} 个新版本`; return; } TL.pt = null; TL.sel.clear(); tlGlobal(); };
-  tlWirePicker(runs.map(r => r.at), set);
-  tlWireGrowth(runs, set); TL.regrow = () => { const g = $("#tlGr"); if (g && TL.runs === runs) { g.outerHTML = tlGrowth(runs, TL.ri); tlWireGrowth(runs, set); } };
-  dragGrip($("#tlGrip"), () => $("#pg-timeline .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-timeline .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
-  if (!TL.pt) {
-    const nx = runs[TL.ri + 1], t = Math.min(runs[TL.ri].at + 600, nx ? nx.at - 0.001 : Infinity);
-    $("#tlList").innerHTML = '<div class="empty">读取…</div>';
-    try { TL.pt = await api("/api/timeline/point?t=" + (isFinite(t) ? t : runs[TL.ri].at + 600)); } catch(e){ $("#tlList").innerHTML = `<div class="miss">${esc(e.message)}</div>`; return; }
-  }
-  tlList();
-}
-function tlVisible(){
-  const q = SS.q.trim().toLowerCase();
-  return (TL.pt ? TL.pt.items : []).filter(x => (TL.state === "all" || x.state === TL.state) && (!SS.agent || x.agent === SS.agent) &&
-    (!TR.sel || trMatch({gacct: tlGacct(x), cwd: x.cwd})) && (!q || [x.title, x.cwd, x.id].some(v => String(v || "").toLowerCase().includes(q))));
-}
-function tlList(){
-  if (!$("#tlList") || !TL.pt) return;
-  const c = TL.pt.counts, ST_ = {changed: ["warn", "后来变过"], gone: ["bad", "现在没了"], same: ["ok", "没变"]};
-  $("#tlSt").innerHTML = [["changed", `后来变过 ${c.changed}`], ["gone", `现在没了 ${c.gone}`], ["same", `没变 ${c.same}`], ["all", "全部"]].map(([v, t]) => `<button data-v="${v}" class="${TL.state === v ? "on" : ""}">${t}</button>`).join("");
-  $$("#tlSt button").forEach(b => b.onclick = () => { TL.state = b.dataset.v; tlList(); });
-  const rows = tlVisible();
-  for (const k of [...TL.sel]) if (!rows.some(x => x.snap === k)) TL.sel.delete(k);
-  $("#tlList").innerHTML = rows.length ? `<table class="t"><tr><th style="width:28px"><input type="checkbox" id="tlAll"></th><th>会话</th><th>项目</th><th>那时的版本</th><th class="n">消息</th><th></th></tr>${rows.map(x => `<tr class="click${TL.pv && TL.pv.snap.id === x.snap ? " sel" : ""}" data-s="${x.snap}">
-      <td><input type="checkbox" data-c="${x.snap}" ${TL.sel.has(x.snap) ? "checked" : ""}></td><td class="tl"><div class="ell">${logo(x.agent)} ${esc(x.title)}</div></td>
-      <td class="ell" title="${esc(x.cwd || "")}">${esc(projName(x.cwd))}</td><td class="n">${when(x.at)}</td><td class="n">${x.msgs ?? "—"}</td>
-      <td><span class="tag ${ST_[x.state][0]}">${ST_[x.state][1]}${x.later_versions ? " ·" + x.later_versions : ""}</span> <button class="ghost" data-one="${esc(x.agent + ":" + x.id)}" title="看这个会话的全部版本" style="padding:1px 5px">${ic("history")}</button></td></tr>`).join("")}</table>`
-    : `<div class="emp">${ic("history")}这个时间点没有符合筛选的会话${TL.state !== "all" ? "<div><button id='tlAllSt'>看全部</button></div>" : ""}</div>`;
-  $$("#tlList [data-c]").forEach(cb => { cb.onclick = e => e.stopPropagation(); cb.onchange = () => { cb.checked ? TL.sel.add(+cb.dataset.c) : TL.sel.delete(+cb.dataset.c); tlBatch(); }; });
-  $$("#tlList tr[data-s]").forEach(tr => tr.onclick = () => { $$("#tlList tr[data-s]").forEach(t => t.classList.toggle("sel", t === tr)); const x = rows.find(r => r.snap === +tr.dataset.s); tlPreview(+tr.dataset.s, $("#tlPv"), x.agent); });
-  $$("#tlList [data-one]").forEach(b => b.onclick = e => { e.stopPropagation(); const [a, ...i] = b.dataset.one.split(":"); tlOpen(a, i.join(":")); });
-  const as = $("#tlAllSt"); if (as) as.onclick = () => { TL.state = "all"; tlList(); };
-  const all = $("#tlAll"); if (all) { all.checked = rows.length && rows.every(x => TL.sel.has(x.snap)); all.onchange = () => { rows.forEach(x => all.checked ? TL.sel.add(x.snap) : TL.sel.delete(x.snap)); tlList(); }; }
-  tlBatch();
-}
-function tlBatch(){
-  const n = TL.sel.size, b = $("#tlBatch"); if (!b) return;
-  const pick = (TL.pt ? TL.pt.items : []).filter(x => TL.sel.has(x.snap));
-  b.innerHTML = n ? `<span>已选 ${n} 个</span><span style="flex:1"></span><button id="tlEx">${ic("file")} 导出</button>${pick.every(x => x.state !== "gone") ? `<button id="tlRep">${ic("undo")} 换回那时的版本…</button>` : ""}<button class="primary" id="tlGo">${ic("claude", "logo")} 恢复到 Claude（${n}）</button>`
-    : `<span class="dim">勾选几个，一起恢复到这个时间点</span><span style="flex:1"></span><span class="dim">${tlVisible().length} 个</span>`;
-  if (!n) return;
-  $("#tlGo").onclick = () => tlRestore([...TL.sel], "copy", "claude");
-  $("#tlEx").onclick = () => openDlg("导出这些版本", `导出 ${n} 个会话在 ${fullTime(TL.runs[TL.ri].at)} 时的版本。`, `<button onclick="closeDlg()">取消</button><button id="tx2">HTML</button><button class="primary" id="tx1">Markdown</button>`) ||
-    ($("#tx1").onclick = () => ssExport([...TL.sel].map(s => ({snap: s})), "md", "timeline"), $("#tx2").onclick = () => ssExport([...TL.sel].map(s => ({snap: s})), "html", "timeline"));
-  const rp = $("#tlRep"); if (rp) rp.onclick = () => tlReplaceDlg([...TL.sel], "claude-or-codex");
-}
-
 // ---------- 导入 .md / .html / .jsonl ----------
 // 0.4.8：桌面版用系统的选文件 / 选文件夹对话框，页面只拿路径（文件内容不经过页面）；浏览器里分块上传（原样字节，8 MB 一块）。
 // 预览只读开头，条数慢慢补；导入在后台一个一个做，有进度、能取消；子代理（子会话）跟着主会话走。
@@ -3918,56 +3598,27 @@ async function imPoll(){
   }
 }
 
-// ---------- 备份与还原 ----------
-const BK_UNIT = {min: "分钟", hour: "小时", day: "天"};
-const inTxt = t => { const d = t - Date.now() / 1000; return d <= 30 ? "马上" : d < 3600 ? Math.round(d / 60) + " 分钟后" : d < 86400 ? (d / 3600).toFixed(1) + " 小时后" : (d / 86400).toFixed(1) + " 天后"; };
-async function bkRender(pg, tab){
-  let bk, jobs, bs, snaps, trash, ops, s;
-  try { [bk, jobs, bs, snaps, trash, ops, s] = await Promise.all([api("/api/backups"), api("/api/jobs"), api("/api/sessions/backup-status"),
-      api("/api/sessions/snapshots"), api("/api/sessions/trash"), api("/api/sessions/ops"), api("/api/settings")]); }
-  catch(e){ pg.innerHTML = `<div class="miss">读不到：${esc(e.message)}</div>`; return; }
-  const waiting = jobs.filter(j => j.state === "waiting"), sc = bs.sched || {};
-  const JST = {waiting: ["warn", "排队中"], closing: ["warn", "正在关闭桌面端"], done: ["ok", "做完了"], failed: ["bad", "失败"], cancelled: ["", "已取消"]};
-  const hid = k => tab === k ? "" : "hidden";
-  pg.innerHTML = `<div class="tbpane" data-tab="undo" ${hid("undo")}><p class="sub">每次改动之前都先备份。这里能撤回账号同步、文件导入、会话操作（改名、归档、删除…）；桌面端开着时要改的，排在最上面。</p>
-    <div class="card" id="bkJobs"><h3>排队中的改动 <span class="tag ${waiting.length ? "warn" : ""}">${waiting.length}</span></h3>
-      ${jobs.length ? `<table class="t">${jobs.slice().reverse().slice(0, 12).map(j => `<tr><td>${esc(j.title)}</td><td>${when(j.queued)}</td><td><span class="tag ${(JST[j.state] || [""])[0]}">${(JST[j.state] || ["", j.state])[1]}</span></td>
-        <td class="dim ell">${esc(typeof j.result === "string" ? j.result : (j.result && (j.result.error || j.result.note)) || "")}</td><td class="nw">${j.state === "waiting" ? `<button data-crj="${esc(j.id)}" data-k="${esc(j.kind || "claude")}" title="关闭${APPN[j.kind] || "Claude"} 桌面端、做完、再按原来的方式打开它">${ic("power")} 关闭并执行</button> <button data-cj="${esc(j.id)}">取消</button>` : ""}</td></tr>`).join("")}</table>`
-        : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">没有。桌面端开着时要改它的数据，会排在这里，等它退出后自动做。</div>'}</div>
-    <div class="card"><h3>${ic("list")}会话操作记录（可撤回）</h3>
-      ${ops.items.length ? `<table class="t">${ops.items.slice(0, 30).map(o => `<tr><td>${when(o.time)}</td><td>${esc(o.summary || o.kind)}</td><td>${o.errors.length ? `<span class="tag bad" title="${esc(o.errors.join("\n"))}">${o.errors.length} 个错误</span>` : ""}</td>
-        <td>${o.undone ? '<span class="tag">已撤回</span>' : `<button data-op="${esc(o.id)}">${ic("undo")} 撤回</button>`}</td></tr>`).join("")}</table>` : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">还没有。</div>'}</div>
-    <div class="card" id="bkSyHist"></div>
-    <div class="tbpane" data-tab="bk" ${hid("bk")}><p class="sub">会话备份库是时间线的数据来源：定时把变过的会话增量备份进来。删除的会话先进回收站。</p>
-    <div class="card"><h3>${ic("history")}会话备份库<span class="sp"></span><button id="bkPrune" title="按保留规则清掉旧版本，再压缩数据库">${ic("trash")} 清理旧版本</button><button class="primary" id="bkNow">${ic("download")} 立即备份</button></h3>
-      <div class="sched"><div>自动备份<b>${sc.auto ? `每 ${sc.every} ${BK_UNIT[sc.unit] || sc.unit}` : "已关"}</b>${sc.running || bs.running ? '<span class="tag warn">正在备份</span>' : ""}</div>
-        <div>上次<b>${(sc.last_run || bs.last) ? when(sc.last_run || bs.last) : "还没备份过"}</b>${sc.last_error ? `<span class="tag bad" title="${esc(sc.last_error)}">失败</span>` : sc.last_result ? `新版本 ${sc.last_result.snapshots} · 看了 ${sc.last_result.files} 个` : ""}</div>
-        <div>下次<b>${sc.auto ? sc.next ? inTxt(sc.next) : "马上" : "—"}</b>${sc.auto ? `${fullTime(sc.next || Date.now() / 1000).slice(5, 16)}` : "打开自动备份才会定时跑"}</div>
-        <div>数据库文件<b>${kb(bs.db_bytes)}</b>${bs.sessions} 个会话 · ${bs.snapshots} 个版本</div></div>
-      <div class="kv"><div>位置</div><div><code>${esc(bs.db)}</code></div><div>存储</div><div>记录原文共 ${kb(bs.raw_bytes)}，实际只存了 ${kb(bs.stored_bytes)}（每次只存追加的部分 + 相同内容只存一份 + 压缩）${bs.error ? ` <span class="tag bad">${esc(bs.error)}</span>` : ""}</div></div>
-      <div class="setrow" style="margin-top:6px"><div class="sl">${ic("sync")}<div><b>定时自动备份</b><div class="sd">缺省开、每 10 分钟；最短 5 分钟。只备份变过的会话，后台低优先级跑；正在跑就跳过这一轮；睡眠 / 关机错过了，醒来补一次；失败才弹通知。</div></div></div>
-        <span class="numu"><input type="number" id="bkEvery" min="1" value="${esc(s.session_backup_every ?? 10)}"><select id="bkUnit">${Object.entries(BK_UNIT).map(([k, v]) => `<option value="${k}" ${s.session_backup_unit === k ? "selected" : ""}>${v}</option>`).join("")}</select></span>${sw("bkAuto", s.session_backup_auto)}</div>
-      <div class="setrow" style="border:0"><div class="sl">${ic("archive")}<div><b>保留多久</b><div class="sd">最近 N 天的版本全留；再往前到 M 天每天留最后一版；更早的每周一版。每个会话最新的一版永远留着。点「清理旧版本」才按这个删。</div></div></div>
-        <span class="numu">全留 <input type="number" id="bkKeepAll" min="1" value="${esc(s.retention_all_days ?? 7)}"> 天，每天一版到 <input type="number" id="bkKeepDay" min="1" value="${esc(s.retention_daily_days ?? 90)}"> 天</span></div>
-      ${snaps.items.length ? `<details style="margin-top:6px"><summary class="dim" style="cursor:pointer;font-size:calc(13.5px*var(--fk))">最近的 ${Math.min(snaps.items.length, 50)} 个版本</summary><div class="scroll" style="max-height:300px;margin-top:6px"><table class="t"><tr><th>会话</th><th>备份时间</th><th class="n">大小</th><th>原文件</th><th></th></tr>
-        ${snaps.items.slice(0, 50).map(x => `<tr><td class="tl">${logo(x.agent)} <span class="ell" style="display:inline-block;vertical-align:bottom;max-width:300px">${esc(x.title || x.sid)}</span></td><td>${when(x.at)}</td><td class="n">${kb(x.size)}</td><td>${x.exists ? '<span class="tag ok">在</span>' : '<span class="tag warn">不在了</span>'}</td><td style="white-space:nowrap"><button data-tlo="${esc(x.agent + ":" + x.sid)}">${ic("history")} 时间线</button></td></tr>`).join("")}</table></div></details>` : ""}</div>
-    <div class="card"><h3>${ic("trash")}回收站 <span class="tag">${trash.items.length}</span></h3>
-      ${trash.items.length ? `<table class="t">${trash.items.map(t => `<tr><td><code>${esc(t.id)}</code></td><td>${when(t.time)}</td><td>${t.items.length} 个会话（${t.items.filter(i => i.agent === "claude").length} Claude / ${t.items.filter(i => i.agent === "codex").length} Codex）</td>
-        <td>${t.restored ? `<span class="tag ok">已还原</span>` : ""}</td><td style="white-space:nowrap">${t.restored ? "" : `<button data-tr="${esc(t.id)}">${ic("undo")} 还原</button> `}<button class="ghost danger" data-tp="${esc(t.id)}">彻底删除</button></td></tr>`).join("")}</table>`
-        : '<div class="dim" style="font-size:calc(13.5px*var(--fk))">空的。在会话管理里删除的会话会先放在这里。</div>'}</div>
-    <div class="card"><h3>${ic("upload")}导出 / 导入 .md / .html / .jsonl</h3>
-      <div class="dim" style="font-size:calc(13.5px*var(--fk))">导出：在「时间线」分栏勾选会话（那个时间点的版本）→ 底部「导出 .md / .html」；或者在会话详情的「…」菜单里导出现在的版本。导入：把以前导出的 .md / .html / 原始 jsonl 变成一个新的 Claude Code 会话。</div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button id="bkImp">${ic("upload")} 导入 .md / .html / .jsonl…</button><button id="bkToTl">${ic("history")} 去时间线选会话导出</button></div></div>
-    </div>`;
-  $$("[data-op]").forEach(b => b.onclick = () => confirmDlg("撤回", "按账本把这次操作撤回去（改过的文件换回备份；新建的挪进回收站，不直接删）。", "撤回", async () => {
-    const r = await api("/api/sessions/undo", {op: b.dataset.op}); closeDlg(); doneOrQueued(r, "已撤回"); R.timeline(); }));
-  $$("[data-bk]").forEach(b => b.onclick = () => confirmDlg("撤回同步", `撤回 <code>${esc(b.dataset.bk)}</code>：那次补进来的登记挪进回收站、刷新过的换回同步前的原样（按文件指纹核对）；会话记录本身不动。撤完会再核对一遍。`, "撤回", async () => {
-    const r = await api("/api/restore", {backup: b.dataset.bk}); closeDlg();
-    const v = r.verify;
-    if (doneOrQueued(r, r.already ? r.note : v && !v.ok ? null : `已撤回：挪走 ${r.removed || 0} 个、换回 ${r.restored || 0} 个。核对：${v ? v.summary : "—"}`) && v && !v.ok) syVerifyDlg(v, "撤回做完了，但核对时有对不上的");
-    R.timeline(); }));
-  $$("[data-bkv]").forEach(b => b.onclick = () => syVerify(b.dataset.bkv));
-};
+// ---------- 导入结果对话框 ----------
+function madeDlg(title, r){
+  const made = r.made || [], dj = r.desktop;
+  const dnote = !dj ? "没登记进桌面端列表（命令行 claude --resume 能用）。" : dj.deferred ? `Claude 桌面端开着：登记进桌面端列表的那一步已排队，退出桌面端后自动做（${made.length} 个会话文件已经写好，命令行现在就能接着聊）。<button class="ghost" id="mdCr">${ic("power")} 关闭 Claude 并登记（完成后重启）</button>`
+    : dj.ok === false ? "没登记进桌面端列表：" + esc(dj.error || "") : `已登记进 Claude 桌面端当前账号的会话列表${dj.folder ? `（<code>${esc(short(dj.folder))}…</code>）` : ""}，重开桌面端就能看到。`;
+  const many = made.length > 5, okN = made.filter(m => m.check && m.check.ok).length, subN = made.reduce((a, m) => a + (m.subs || 0), 0);
+  openDlg(title, `${made.length ? `<div>新建了 ${made.length} 个 Claude Code 会话（原来的不动）${many ? `：自检通过 ${okN}/${made.length}${subN ? ` · 带回 ${subN} 个子会话` : ""}` : "："}</div>` : ""}
+    ${many ? `<details style="margin-top:6px"><summary class="dim">展开看每一个</summary>` : ""}${made.map(m => `<div class="mk"><div class="tl">${ic("claude", "logo")} ${esc(m.title)}${m.subs ? ` <span class="tag acc">含 ${m.subs} 个子会话</span>` : ""}</div><div class="dim" style="font-size:calc(13px*var(--fk));word-break:break-all">${esc(m.cwd)} · ${esc(m.id)}</div>
+      ${m.check ? `<div class="dim" style="font-size:calc(13px*var(--fk))" title="${esc((m.check.issues || []).join("\n"))}">${m.check.ok ? '<span class="tag ok">自检通过</span> 按 Claude Code 的会话规矩读了一遍' : `<span class="tag warn">自检提示 ${(m.check.issues || []).length} 条</span> ${esc((m.check.issues || [])[0] || "")}`}</div>` : ""}
+      <div class="cmdl"><code>${esc(m.resume)}</code><button class="ghost" data-cp="${esc(m.resume)}" title="复制">${ic("copy")}</button><button data-open="${esc(m.id)}">${ic("play")} 在终端里接着聊</button></div></div>`).join("")}${many ? "</details>" : ""}
+    <div class="dim" style="font-size:calc(13.5px*var(--fk));margin-top:6px">${dnote}</div>
+    ${(r.errors || []).length ? `<div class="miss">${r.errors.length} 个没成：${esc(r.errors[0])}</div>` : ""}`,
+    `<button id="mdUndo" class="ghost">${ic("undo")} 撤回</button><span style="flex:1"></span><button onclick="closeDlg()">关闭</button><button class="primary" id="mdGo">${ic("list")} 去会话列表看</button>`);
+  $$("#dlgBody [data-cp]").forEach(b => b.onclick = () => copyText(b.dataset.cp));
+  if ($("#mdCr")) $("#mdCr").onclick = () => crAsk({kind: "claude", jobs: [dj.job], verb: "登记"});
+  $$("#dlgBody [data-open]").forEach(b => b.onclick = async () => { try { const o = await api("/api/sessions/open", {agent: "claude", id: b.dataset.open}); toast(o.ok === false ? "❌ " + o.error : "✅ 已在新终端里打开"); } catch(e){ toast("❌ " + e.message, 5000); } });
+  $("#mdGo").onclick = () => { closeDlg(); SS.cur = made[0] ? {agent: "claude", id: made[0].id} : null; go("sessions"); };
+  $("#mdUndo").onclick = () => confirmDlg("撤回", "把刚才新建的会话挪进回收站（不直接删），桌面端列表里登记的那一条也撤掉。", "撤回", async () => {
+    try { const x = await api("/api/sessions/undo", {op: r.op}); closeDlg(); doneOrQueued(x, "已撤回"); SS.d = null; treeLoad(); if (R[PAGE]) R[PAGE](); } catch(e){ toast("❌ " + e.message); } });
+}
+
 
 // ---------- 设置 ----------
 const setRow = (icn, title, desc, ctl) => `<div class="setrow"><div class="sl">${ic(icn)}<div><b>${title}</b><div class="sd">${desc}</div></div></div>${ctl}</div>`;
@@ -3993,8 +3644,7 @@ R.settings = async () => {
       ${setRow("bell", "系统通知", "同步 / 导入做完、排队的改动做完、检测到账号切换、有新版本时在右下角弹通知", sw("stNotify", s.notify))}</div></div>
     <div class="card"><h3>同步与导入</h3><div class="setlist">
       ${setRow("users", "切换 Claude 账号后自动同步对话历史", "检测到 Claude 桌面端或 Claude Code 命令行换了登录账号，就把别的账号的会话补进新账号（先备份、只补缺的、不覆盖；桌面端开着时等它关掉再做）。缺省开，关掉后只提醒不同步", sw("stSwitchSync", s.claude_auto_sync_on_account_switch !== false))}
-      ${setRow("sync", "自动同步 Claude 会话", "桌面端没开时把别的账号新出现的会话补进当前账号。CC Msg 里也开了的话开一个就够", sw("stSync", s.auto_sync))}
-      ${setRow("history", "会话自动备份", "把 Claude Code / Codex 的会话增量备份进 sessions.sqlite（时间线、恢复都靠它）。缺省开、每 10 分钟，最短 5 分钟；失败才弹通知", `<span class="numu"><input type="number" id="stBkE" min="1" value="${esc(s.session_backup_every ?? 10)}" ${s.session_backup_auto ? "" : "disabled"}><select id="stBkU" ${s.session_backup_auto ? "" : "disabled"}>${Object.entries(BK_UNIT).map(([k, v]) => `<option value="${k}" ${s.session_backup_unit === k ? "selected" : ""}>${v}</option>`).join("")}</select></span>${sw("stBk", s.session_backup_auto)}`)}</div></div>
+      ${setRow("sync", "自动同步 Claude 会话", "桌面端没开时把别的账号新出现的会话补进当前账号。CC Msg 里也开了的话开一个就够", sw("stSync", s.auto_sync))}</div></div>
     <div class="card"><h3>隐私</h3><div class="setlist">
       ${setRow("eye", "总是显示完整账号", "缺省关：账号打码显示，点眼睛临时显示（不记住，重开就又打码）。打开后每次启动都直接显示。完整账号只从本机接口（127.0.0.1 + 口令）取，不写日志；诊断报告里永远是打码的", sw("stFull", s.show_full_accounts))}</div></div>
     <div class="card"><h3>更新</h3><div class="setlist">
@@ -4017,9 +3667,6 @@ R.settings = async () => {
   const bind = (id, key) => { const e = $(id); if (e) e.onchange = () => saveSetting({[key]: e.checked}); };
   bind("#stTray", "tray_close"); bind("#stMin", "start_min"); bind("#stAuto", "autostart"); bind("#stNotify", "notify"); bind("#stSync", "auto_sync"); bind("#stSwitchSync", "claude_auto_sync_on_account_switch");
   bind("#stUpd", "update_auto");
-  $("#stBk").onchange = e => { $("#stBkE").disabled = $("#stBkU").disabled = !e.target.checked; saveSetting({session_backup_auto: e.target.checked}); };
-  const stEv = async () => { const r = await saveSetting({session_backup_every: +$("#stBkE").value, session_backup_unit: $("#stBkU").value}); if (!r) R.settings(); };
-  $("#stBkE").onchange = stEv; $("#stBkU").onchange = stEv;
   $("#stAdv").ontoggle = e => { ST.advOpen = e.target.open; };
   const bcSave = async ch => { const r = await saveSetting(ch); if (!r) R.settings(); };
   $("#stBc").onchange = e => { $("#stBcD").disabled = $("#stBcM").disabled = !e.target.checked; bcSave({backup_clean_auto: e.target.checked, backup_clean_days: +$("#stBcD").value || 0, backup_clean_mb: +$("#stBcM").value || 0}); };
@@ -4080,7 +3727,7 @@ R.about = async () => {
   const L = (u, t, i) => `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" data-ext="${esc(u)}">${ic(i || "external")}${esc(t || u)}</a>`;
   pg.innerHTML = `<div class="ab">
     <div class="abhd"><img src="/icon.png" alt=""><div><h2>${esc(a.product)}</h2><div class="ver" translate="no">v${esc(a.version)}</div>
-      <div class="dim" style="font-size:calc(13.5px*var(--fk))">Claude Code / Codex 的会话管家：账号同步、时间线与备份、用量统计</div></div></div>
+      <div class="dim" style="font-size:calc(13.5px*var(--fk))">Claude Code / Codex 的会话管家：账号同步、会话导入导出、用量统计</div></div></div>
     <div class="card"><div class="abgrid">
       <span>版本</span><span translate="no">${esc(a.version)}${a.frozen ? "" : " (Python " + esc(a.python) + ")"}</span>
       <span>作者</span><span>${L(a.author_url, a.author, "user")}</span>
@@ -4234,7 +3881,7 @@ async function updInstall(){
   await treeLoad();
   const qs = new URLSearchParams(location.search);
   const fromUrl = !!(qs.get("page") || location.hash.replace("#", ""));
-  if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst"), tab: qs.get("tab") || (fromUrl && want === "timeline" ? "tl" : null)}); else go("sessions");
+  if (R[want]) goTo(want, {src: qs.get("src"), dst: qs.get("dst"), tab: qs.get("tab")}); else go("sessions");
   const dl = new URLSearchParams(location.search).get("dlg"); if (dl) ccOpen(dl);       // 老链接 ?dlg=usage 之类：现在都是页面
   try { const lg = await api("/api/legacy"); if (lg && lg.notice) { ST.legacy = lg; renderBans(); } } catch(e){}
   setTimeout(async () => { try { const f = await api("/api/formats/banner"); if (f && f.banner) { ST.fmt = f.banner; renderBans(); }
