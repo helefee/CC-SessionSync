@@ -52,10 +52,11 @@ if ($hasMsvc) { $cc = @("--msvc=latest"); Write-Host "    compiler: MSVC" } else
 # 0.4.2 smaller installer: leave out what CC Session Sync never runs (checked with the Nuitka module report + the smoke / health tests)
 #   asyncio / multiprocessing (only reachable from bottle's unused aiohttp adapter / concurrent.futures.process), pure-Python
 #   fallbacks that have a C version (_pydecimal, _pyio), the 2nd zstandard backend (cffi, ~650 KB), libyaml (we use the pure loader),
-#   pywebview's CEF backend + Android jar, dev-only stdlib modules; link-time optimisation and no asserts.
+#   unused pywebview backends (CEF / Qt / GTK / Cocoa / Android) + Android jar, dev-only stdlib modules; link-time optimisation and no asserts.
 $slim = @(
     "--nofollow-import-to=asyncio,multiprocessing,concurrent.futures.process,_pydecimal,_pyio,doctest,pdb,xmlrpc,xdrlib,pickletools,pstats,trace,timeit,pyclbr,modulefinder,symtable,cgitb,imaplib,poplib,__phello__,__hello__",
     "--nofollow-import-to=zstandard.backend_cffi,zstandard._cffi,yaml._yaml,yaml.cyaml",
+    "--nofollow-import-to=webview.platforms.cef,webview.platforms.android,webview.platforms.qt,webview.platforms.gtk,webview.platforms.cocoa",
     "--noinclude-data-files=webview/lib/pywebview-android.jar",
     "--python-flag=no_asserts", "--lto=yes"
 )

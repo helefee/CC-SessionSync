@@ -9,15 +9,11 @@ anything that can be dry-run is dry-run first.
 1. **Account sync:** after you switch Claude Code accounts, old sessions "disappear". Claude Desktop keeps its session list per
    account / organization folder, so the new account's list is empty although the conversations are still on disk. The app registers the
    sessions from the other account folders into the current one (both Desktop and CLI logins). **Account switches are detected and notified.**
-2. **Codex → Claude Code:** turns a Codex thread (`~/.codex/sessions/**/rollout-*.jsonl`) into a Claude Code session
-   (`~/.claude/projects/<project>/<id>.jsonl`, optionally also registered in the Desktop list) that you continue with `claude --resume`
-   or in Desktop. **Codex's files are only read** (the only exception is the optional "record in Codex's import ledger", off by default).
-3. **Session management:** Claude Code, Codex, Cursor, dsh, OpenCode and ZCode sessions in one list, grouped by **account** or **project**;
+2. **Session management:** Claude Code, Codex, Cursor, DeepSeek Harness, OpenCode, ZCode and Antigravity sessions in one list, grouped by **account** or **project**;
    search (titles / full text), filter, read-only viewer; rename, archive, continue in a terminal, delete (backed up and moved to a recycle
-   bin, never deleted directly); **export to .md / .html / raw .jsonl and import back** losslessly.
-4. **Timeline & backups:** sessions are **backed up incrementally every 10 minutes** by default; pick a point in time, preview that
-   version and compare it with now, then **Restore to Claude** as a new session (or replace, or restore to Codex).
-5. **Cross-app session list**: browse Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode / Antigravity sessions in one UI (read-only; `.md` / `.html` / `.jsonl` file import can become a new Claude Code session).
+   bin, never deleted directly); **export to .md / .html / raw .jsonl and import back** losslessly. Other apps are listed read-only; this app does not convert sessions between them.
+3. **Cross-app session list**: browse Claude Code / Codex / DeepSeek Harness / Cursor / OpenCode / ZCode / Antigravity sessions in one UI (read-only; `.md` / `.html` / `.jsonl` file import can become a new Claude Code session).
+4. **Usage & token flow:** usage is read from on-disk session logs (same request counted once). Account sync still takes a backup before each write and keeps one-click undo in Sync history (the old Timeline & Backups page is gone).
 6. **Usage**, **Diagnostics / self-check**, **Check for updates** (never installs by itself), tray icon and system notifications.
 7. **Chinese or English UI** (0.4.3): follows the system language by default; change it in 设置 / Settings → Language.
 
@@ -47,8 +43,8 @@ anything that can be dry-run is dry-run first.
 ## Desktop app
 
 - Single instance: launching it again brings the open window to the front. Closing the window minimizes to the tray by default
-  (changeable in Settings). Tray menu: show / hide window, sync Claude sessions now, auto sync, sessions, timeline &
-  backups, usage, queued changes (when there are any), start at login, minimize to tray on close, start minimized, notifications, check for
+  (changeable in Settings). Tray menu: show / hide window, sync Claude sessions now, auto sync, sessions, usage, queued
+  changes (when there are any), start at login, minimize to tray on close, start minimized, notifications, check for
   updates, diagnostics, quit.
 - The UI listens on `127.0.0.1:8766` only and every request needs the one-time token embedded in the page.
 - **System notifications:** sync / import finished, queued changes done, account switch detected, new version available. Can be turned off.
@@ -323,34 +319,11 @@ cc-sessionsync backups                    # backups made before each sync
 cc-sessionsync clean-backups --days 90    # clean old config backups: preview first, --yes to delete (0.3.9)
 cc-sessionsync restore 20261017-101500    # undo a sync (backed up first as well)
 cc-sessionsync auto                       # foreground: auto sync while Desktop is closed (Ctrl+C to stop)
-# ② Codex → Claude Code
-cc-sessionsync codex list --days 0                     # Codex threads (0 = any time)
-cc-sessionsync codex import                            # dry run (the default; writes nothing)
-cc-sessionsync codex import --only 3f9a1c,77b0de --apply   # import just these (last digits of the thread id)
-cc-sessionsync codex import --cwd D:\work\shop --apply     # only threads from this project
-cc-sessionsync codex import --no-desktop --apply       # CLI transcript only, leave the Desktop list alone
-cc-sessionsync codex import --mark-codex-imported --apply   # also record in Codex's import ledger
-cc-sessionsync codex ledgers                           # import ledgers
-cc-sessionsync codex undo 20261017-101800              # undo one import
-# ③ DeepSeek Harness ⇄ Claude Code
-cc-sessionsync dsh detect                              # where dsh is, data dir, session root / compression
-cc-sessionsync dsh list
-cc-sessionsync dsh validate <id-or-file>              # offline check with dsh's own rules
-cc-sessionsync dsh to-claude [--only <last digits>] [--reasoning] [--images] [--no-desktop] [--apply]
-cc-sessionsync dsh from-claude [--only <last digits>] [--again] [--apply]   # only ever creates new dsh sessions
-cc-sessionsync dsh ledgers
-cc-sessionsync dsh undo 20261018-151308
-# ④ Cursor ⇄ Claude Code (Cursor's data is read-only)
-cc-sessionsync cursor detect
-cc-sessionsync cursor list [-n 50]
-cc-sessionsync cursor to-claude [--only <last digits>] [--reasoning] [--subagents] [--no-desktop] [--apply]
-cc-sessionsync cursor context <claude|codex|dsh|cursor> <id> [--project] [--apply]   # context file for Cursor
-cc-sessionsync cursor ledgers
-cc-sessionsync cursor undo 20261018-201957
-# ⑥ sessions (read-only on the CLI; rename / delete / restore in the window)
-cc-sessionsync sessions list [--agent claude|codex] [-n 50]
-cc-sessionsync sessions backup            # incremental backup into ~/.cc-sessionsync/sessions.sqlite
+# ② import / export sessions
+cc-sessionsync import <file-or-folder>            # preview import of .md / .html / .jsonl (add --apply to write)
 cc-sessionsync sessions export claude <id> --fmt md
+# ③ sessions (read-only on the CLI; rename / delete / restore in the window)
+cc-sessionsync sessions list [--agent claude|codex] [-n 50]
 cc-sessionsync sessions trash             # recycle bin
 cc-sessionsync sessions ops               # operation log
 cc-sessionsync usage [--full]             # usage summary
@@ -360,12 +333,11 @@ The CLI output stays in Chinese; the language setting applies to the window, tra
 
 ## Safety
 
-- **Dry run first:** `sync --dry-run` and `codex import` without `--apply` only compute; in the UI you preview before you can apply.
+- **Dry run first:** `sync --dry-run` and `import` without `--apply` only compute; in the UI you preview before you apply.
 - **Never write Claude Desktop's data while it runs** (it keeps the list in memory and overwrites it on exit). The app offers to close
   Desktop gracefully and relaunch it afterwards, or queues the job until you quit it yourself (`jobs` shows / cancels them).
 - **Backups + undo:** every sync copies the target account folder to `~/.cc-sessionsync/claude-sync-bak/<time>/` with a ledger;
-  imports keep ledgers with the previous versions; undo moves new files to `~/.cc-sessionsync/trash/` (never deletes)
-  and restores updated ones. Sessions you continued after an import are kept.
+  session file import also previews first (`import` without `--apply`).
 - **Add, never delete:** sync only adds missing and refreshes outdated entries; sessions you deleted in the current account stay deleted.
 - All writes go to a temp file first and are swapped in atomically.
 
