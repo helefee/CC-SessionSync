@@ -70,6 +70,12 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 ![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
 
+### 精简功能面 + 更可靠的换号检测（0.5.5）
+
+- **会话转换已移除**：不再提供跨应用「转换」页 / CLI；请用会话页的 **导入 .md / .html / .jsonl** 与 **导出**（含批量）。
+- **时间线与备份页已移除**：不再浏览快照或「恢复到 Claude」。磁盘上的 `sessions.sqlite` 不删；**账号同步**自带的同步前备份与「同步记录」一键撤销仍在。
+- **Claude 账号登录 / 切换检测加强**：同时看 `.claude.json`（含 `CLAUDE_CONFIG_DIR`）、桌面端 Local Storage、凭据文件路径/mtime/size（**从不读凭据内容或 Keychain 密文**）。防抖约 2.5 秒，有候选时加快轮询。登出→登录也算。桌面端开着时会明确提示「已检测到账号切换…等待退出后再同步」——这是已认出、在等待，不是没检查到。
+
 ### Antigravity 会话列表与用量（0.5.4）
 
 - **只读**：发现 `~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/brain/<id>/.system_generated/logs/transcript_full.jsonl`（对照 [CC Switch](https://github.com/farion1231/cc-switch) `agy.rs`）；同 `step_index` 多行时最后一行胜出。

@@ -129,6 +129,7 @@ def main() -> int:
             "    assert im['ok'], im\n"
             "    out['import-'+fmt]=im['made'][0]['id']\n"
             "print('JSON'+json.dumps(out))\n")
+        h = subprocess.run([sys.executable, "-c", helper], env=env, capture_output=True, text=True, encoding="utf-8", creationflags=nw)
         made = {}
         for line in h.stdout.splitlines():
             if line.startswith("JSON"):
