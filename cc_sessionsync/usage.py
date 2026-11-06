@@ -370,6 +370,40 @@ def _dsh_rows(L: dict, fid: str, hours: set, rows: list, pt=None, mults=None) ->
         hours.add(int(ev["ts"] // 3600))
 
 
+
+def _scan_antigravity(c, known: dict, full: bool, pt, mults, hours: set) -> int:
+    """Antigravity：只读 transcript 里 PLANNER_RESPONSE 的真实 token（与 CC Switch session_usage_agy 一致）。
+    无 transcript 的旧 .pb / 仅索引会话跳过，不估文件大小。"""
+    from . import antigravity as AG
+    n = 0
+    for info in AG.usage_sessions():
+        path = Path(info["transcript"])
+        try:
+            stt = path.stat()
+        except OSError:
+            continue
+        fid = _fid(path, stt)
+        row = known.get(fid)
+        if row and not full and row[3] == stt.st_size and row[4] == stt.st_mtime and row[1] == str(path):
+            continue
+        rows = []
+        for u in AG.iter_usage(info):
+            model = u.get("model") or "unknown"
+            t = (u["inp"], u["cr"], u["cw"], 0, u["out"])  # cw5=cache_write；output 已含 thinking
+            if not sum(t):
+                continue
+            ts = float(u["ts"] or stt.st_mtime)
+            hours.add(int(ts // 3600))
+            rows.append(mkrow(u["id"], "antigravity", "log", ts, info["id"], "google", 0, model, t,
+                              u.get("think") or 0, 0, fid, stop=1, prompt=u["inp"] + u["cr"] + u["cw"],
+                              proj=info.get("product") or "", pt=pt, mults=mults))
+        if rows:
+            c.executemany(UPSERT, rows)
+        c.execute("INSERT OR REPLACE INTO files VALUES(?,?,?,?,?,?,?)",
+                  (fid, str(path), "antigravity", stt.st_size, stt.st_mtime, stt.st_size, "{}"))
+        n += 1
+    return n
+
 def _scan_dsh(c, known: dict, full: bool, pt, mults, hours: set) -> int:
     """dsh 的会话文件是 zstd 压缩的，不能从中间接着读：变了就整个解一遍（键会去重）。只读，从不写 dsh 的文件。"""
     from . import dsh
@@ -493,6 +527,11 @@ def scan(full: bool = False) -> dict:
                 STATE.pop("dsh_error", None)
             except Exception as e:                     # dsh 读不了不影响 Claude / Codex 的统计
                 STATE["dsh_error"] = f"{type(e).__name__}: {e}"
+            try:
+                nfiles += _scan_antigravity(c, known, full, pt, mults, hours)
+                STATE.pop("antigravity_error", None)
+            except Exception as e:
+                STATE["antigravity_error"] = f"{type(e).__name__}: {e}"
             _dedupe_ridless(c)
             c.commit()
             if mig or c.execute("SELECT 1 FROM calls WHERE coalesce(ver,0) < ? LIMIT 1", (SCHEMA,)).fetchone():

@@ -21,9 +21,9 @@ from datetime import datetime, timezone
 
 FORMAT = "ccss-ir/1"
 FORMATS = {FORMAT, "ccss-cursor/1"}
-AGENTS = ("claude", "codex", "dsh", "cursor", "opencode", "zcode")
-LABEL = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}
-SHORT = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode"}
+AGENTS = ("claude", "codex", "dsh", "cursor", "opencode", "zcode", "antigravity")
+LABEL = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode", "antigravity": "Antigravity"}
+SHORT = {"claude": "Claude Code", "codex": "Codex", "dsh": "DeepSeek", "cursor": "Cursor", "opencode": "OpenCode", "zcode": "ZCode", "antigravity": "Antigravity"}
 PREFIX = {k: f"（{v}）" for k, v in SHORT.items()}      # 导过去的会话标题前缀：「（Cursor）修首页白屏」
 
 

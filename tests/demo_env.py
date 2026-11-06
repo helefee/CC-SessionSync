@@ -24,7 +24,7 @@ U = lambda: str(uuid.uuid4())
 def env_for(T: Path) -> dict:
     H = T / "home"
     return dict(HOME=str(H), USERPROFILE=str(H), XDG_CONFIG_HOME=str(T / "cfg"), APPDATA=str(T / "cfg"), LOCALAPPDATA=str(T / "la"),
-                CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), CC_SESSIONSYNC_HOME=str(T / "ss"),
+                CLAUDE_CONFIG_DIR=str(H / ".claude"), CODEX_HOME=str(H / ".codex"), GEMINI_HOME=str(T / "gemini"), CC_SESSIONSYNC_HOME=str(T / "ss"),
                 CC_SESSIONSYNC_FAKE_APP=str(T / "desktop-running"),
                 CURSOR_USER_DIR=str(T / "cfg" / "Cursor" / "User"), CURSOR_CONFIG_DIR=str(H / ".cursor"), CC_SESSIONSYNC_FAKE_CURSOR_PROCS=str(T / "noprocs.json"), CC_SESSIONSYNC_FAKE_PROCS=str(T / "noprocs.json"),
                 CC_SESSIONSYNC_FAKE_OPENCODE_PROCS=str(T / "noprocs.json"), CC_SESSIONSYNC_FAKE_ZCODE_PROCS=str(T / "noprocs.json"),
@@ -321,6 +321,27 @@ def build(T: Path, extra: bool = False) -> dict:
         t.execute("update tasks set title = '整理路由（我改的名）' where title = '用户改的名字'")
         t.commit()
         t.close()
+    if os.environ.get("CCSS_DEMO_AG"):          # Antigravity（演示 / 截图）：transcript + 真实 token 字段
+        import json as _j
+        g = T / "gemini" / "antigravity-ide"
+        sid = "ag-demo-pay"
+        logs = g / "brain" / sid / ".system_generated" / "logs"
+        logs.mkdir(parents=True)
+        (g / "brain" / sid / "task.md").write_text("# 重构支付模块\n", encoding="utf-8")
+        t0 = NOW - timedelta(hours=6)
+        turns = [
+            {"step_index": 0, "type": "USER_INPUT", "content": "changed setting `Model Selection` from None to Gemini 3.5 Flash (High).", "created_at": iso(t0)},
+            {"step_index": 1, "type": "USER_INPUT", "content": "<USER_REQUEST>\n帮我重构支付模块，先列计划\n</USER_REQUEST>", "created_at": iso(t0 + timedelta(minutes=1))},
+            {"step_index": 2, "type": "PLANNER_RESPONSE", "status": "DONE", "content": "好的，我先扫一遍相关文件，再给出拆分步骤。", "thinking": "先找 payment 目录",
+             "input_tokens": 4200, "output_tokens": 180, "cache_read_tokens": 800, "created_at": iso(t0 + timedelta(minutes=2)),
+             "tool_calls": [{"name": "view_file", "args": {"path": "/work/shop/payment.py"}}]},
+            {"step_index": 3, "type": "VIEW_FILE", "content": "Created At: t\nCompleted At: t\ndef charge():\n    pass\n", "created_at": iso(t0 + timedelta(minutes=3))},
+            {"step_index": 4, "type": "USER_INPUT", "content": "<USER_REQUEST>\n按计划改，并补测试\n</USER_REQUEST>", "created_at": iso(t0 + timedelta(minutes=20))},
+            {"step_index": 5, "type": "PLANNER_RESPONSE", "status": "DONE", "content": "已拆出 PaymentService，并加上单测。", "input_tokens": 9100, "output_tokens": 640, "cache_read_tokens": 3500, "created_at": iso(t0 + timedelta(minutes=25))},
+        ]
+        (logs / "transcript_full.jsonl").write_text("\n".join(_j.dumps(x, ensure_ascii=False) for x in turns) + "\n", encoding="utf-8")
+
+
     return {"A1": A1, "A2": A2, "A3": A3, "sessions": sessions}
 
 

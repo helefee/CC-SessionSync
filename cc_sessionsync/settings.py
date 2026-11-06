@@ -15,6 +15,7 @@
     ui_font / ui_zoom                         界面字号倍数（0.8–1.5，缺省 1）和界面缩放（0.8–2，缺省 1）（0.2.6）
     cursor_user_dir / cursor_home             Cursor 的 User 目录（state.vscdb 所在）和 ~/.cursor（诊断里选）（0.2.6）
     opencode_dir / zcode_dir / opencode_cli    OpenCode 数据目录、ZCode 主目录（~/.zcode）、opencode 命令行路径（0.2.7）
+    antigravity_dir                         Antigravity / Gemini 根目录（缺省 ~/.gemini）（0.5.4）
     backup_clean_auto / backup_clean_days / backup_clean_mb   自动清理 ~/.cc-sessionsync/backups（缺省关；天数 / MB，0 = 不按这个删）（0.3.9）
     lang                                      界面语言：auto（跟随系统，缺省）/ zh / en（0.4.3）
     chat_style / chat_width                   看会话时的气泡样式 app（跟随来源应用，缺省）/ unified；正文最宽多少 px（520–1600，0 = 全宽，缺省 860）（0.5.2）

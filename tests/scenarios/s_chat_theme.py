@@ -22,7 +22,7 @@ def grab(name):
 m = re.search(r"const CHTH = (\{.*?\n\});", page, re.S)
 ok(bool(m), "CHTH theme table exists")
 TH = json.loads(m.group(1)) if m else {}
-APPS = {"claude", "codex", "cursor", "dsh", "opencode", "zcode"}
+APPS = {"claude", "codex", "cursor", "dsh", "opencode", "zcode", "antigravity"}
 ok(set(TH) == APPS, f"one theme per source app ({sorted(TH)})")
 SK = {"r", "af", "tic"}; CK = {"ub", "uf", "link", "ok", "bad", "code"}  # 其余形状键可省（用缺省）; CK = {"ub", "uf", "link", "ok", "bad", "code"}
 for a, t in TH.items():

@@ -91,6 +91,13 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 ![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
 
+### Antigravity 对话转换与用量（0.5.4）
+
+- **只读**：发现 `~/.gemini/{antigravity-cli,antigravity,antigravity-ide}/brain/<id>/.system_generated/logs/transcript_full.jsonl`（对照 [CC Switch](https://github.com/farion1231/cc-switch) `agy.rs`）；同 `step_index` 多行时最后一行胜出。
+- **对话**：可在会话列表查看、转成 Claude Code / Codex / DeepSeek Harness / OpenCode（原生新会话）或导出给 Cursor / ZCode / Antigravity 的上下文文件。**不写** Antigravity 自己的库。
+- **用量**：`PLANNER_RESPONSE` 上的 `input_tokens` / `output_tokens` / `cache_read_tokens` / `cache_write_tokens` 为真实计数（input 不含 cache，output 已含 thinking）；旧 `.pb` / 仅有索引的会话不估数字。
+- **限制**：无 transcript 的旧 protobuf 会话只列出；写入 Antigravity 不安全故不做。
+
 ### 换号自动同步、同步记录一键撤销、同步进度（0.5.3）
 
 - **切换 Claude 账号后自动同步**（设置 →「切换 Claude 账号后自动同步对话历史」，缺省开）：检测到 Claude 桌面端（Local Storage 里的 accountUuid / organizationUuid）或 Claude Code 命令行（`~/.claude.json` 的 `oauthAccount`，`CLAUDE_CONFIG_DIR` 下同理）换了登录账号，确认稳定后把别的账号的会话补进新账号，通知「检测到 Claude 账号切换为 X，已同步 N 个会话」，可一键撤销。第一次运行只记下当前账号，不同步；只补缺的、不覆盖；写之前先备份；桌面端开着时排队，关掉后再做。关掉开关后只提醒、不写任何东西。
