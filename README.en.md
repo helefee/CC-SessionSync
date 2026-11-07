@@ -60,6 +60,8 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.5
 
+- **Slim unused copy, leftover convert/timeline docs, and unreferenced screenshots (0.5.7):** drop unused English strings, stale convert/timeline documentation, and screenshots that the docs no longer link to. Features stay the same. The Windows installer is about the same size as 0.5.6.
+
 - **Simpler usage charts, live usage flow, and click-to-toggle the session tree (0.5.6):** the Usage page drops the original / curve / heatmap style switchers and uses simple bar charts (tokens / requests / cost still switchable). The token flow starts at current totals with live mode on by default, so newly recorded usage is added as it lands instead of replaying finished usage from the start. Session view no longer has a Conversation | Token flow toggle; click an account or project row in the left tree to expand or collapse its conversations.
 
 - **Leaner surface + harder account-switch detection (0.5.5):** session conversion UI/CLI removed — use Sessions **import** (`.md` / `.html` / `.jsonl`) and **export** (incl. batch). Timeline & Backups page removed (no snapshot browse/restore); on-disk `sessions.sqlite` is left alone; Account sync still keeps pre-sync backups and Sync history one-click undo. Claude login/switch detection watches `.claude.json` (incl. `CLAUDE_CONFIG_DIR`), desktop Local Storage, and credentials path/mtime/size (**never credential contents / Keychain payloads**); ~2.5s debounce with faster polling while a candidate is open; logged-out→login counts. If the desktop app is open you get a clear “detected… waiting to quit before syncing” banner — recognized, not missed.
