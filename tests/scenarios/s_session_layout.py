@@ -25,7 +25,8 @@ ok('id="ssPin"' in lay and 'store.set("ccss.sspin"' in lay, "pin toggle restores
 ok("SS.cur = null" in close and "ssList()" in close and "treeRender()" in close and "SS.sel" not in close, "closing keeps the multi-selection, redraws list + tree")
 ok("ssLayout()" in grab("toggleSide"), "Ctrl+B / sidebar toggle re-lays out the session page")
 ok("ssLayout()" in grab("ssView"), "opening a session re-lays out")
-ok(re.search(r'tn\[data-sel\]"\)\.forEach[^\n]*\n[^\n]*split2\.focus[^\n]*ssClose\(\)', page), "clicking a group in the sidebar while a session fills the page shows that group's list")
+ok(re.search(r'tn\[data-sel\]"\)\.forEach[\s\S]{0,500}split2\.focus[\s\S]{0,80}ssClose\(\)', page), "clicking a group in the sidebar while a session fills the page shows that group's list")
+ok('TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id)' in page, "clicking an account or project row toggles its conversation list open or closed")
 ok('id="ssNav"' in page and 'id="ssBatch"' in page, "batch bar still in the list pane")
 # 用量页
 ok('id="ufTl"' in page and 'id="ufTh"' in page and "function ufTl(" in page, "usage flow: timeline is its own canvas below the flow")

@@ -1271,7 +1271,9 @@ function treeRender(){
   box.innerHTML = html;
   foldBind(box, () => { treeRender(); ssList(); });
   $$("#tree [data-tw]").forEach(t => t.onclick = e => { e.stopPropagation(); const id = t.dataset.tw; TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id); trSave(); treeRender(); });
-  $$("#tree .tn[data-sel]").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel); if (TR.sel && t.dataset.id) { TR.open.add(t.dataset.id); trSave(); }
+  $$("#tree .tn[data-sel]").forEach(t => t.onclick = () => { TR.sel = JSON.parse(t.dataset.sel);
+    const id = t.dataset.id;
+    if (id && t.querySelector("[data-tw]")) { TR.open.has(id) ? TR.open.delete(id) : TR.open.add(id); trSave(); }  // 点账号 / 项目整行即可展开或收起，不必点 >
     if (PAGE === "sessions" && $("#pg-sessions .split2.focus")) ssClose();   // 0.5.2：点分组 = 想看这组的列表，先把占满中间的会话收起来
     treeRender(); trApply(); });
   $$("#tree .tn[data-sk]").forEach(t => t.onclick = () => { const [a, ...i] = t.dataset.sk.split(":"); SS.cur = {agent: a, id: i.join(":")};
@@ -1439,8 +1441,8 @@ function usRenderShell(){
       <select id="usProv"><option value="">全部供应商</option></select><select id="usModel"><option value="">全部模型</option></select>
       ${seg("range", [["today","今天"],["24h","24 小时"],["7d","7 天"],["30d","30 天"],["all","全部"]])}</div>
     <div class="ucards" id="usCards"></div>
-    <div class="uchart udist" id="usDist"><div class="ct"><span id="usDistTitle">分布</span><span class="sp" style="flex:1"></span><span class="seg" data-dim="1"><button data-v="model" class="${USS.dim==="model"?"on":""}">按模型</button><button data-v="project" class="${USS.dim==="project"?"on":""}">按项目</button></span>${styleSeg("dist")}</div><div class="ucv-body"></div><div class="uleg"></div><div class="utip"></div></div>
-    <div class="uchart" id="usTrend"><div class="ct"><span id="usChTitle">用量趋势</span><span class="sp" style="flex:1"></span><span id="usSerSeg"></span>${seg("metric", [["tokens","Tokens"],["requests","请求数"],["cost","费用"]])}${styleSeg("trend")}</div><div class="ucv-body" id="usChart"></div><div class="uleg"></div><div class="utip"></div></div>
+    <div class="uchart udist" id="usDist"><div class="ct"><span id="usDistTitle">分布</span><span class="sp" style="flex:1"></span><span class="seg" data-dim="1"><button data-v="model" class="${USS.dim==="model"?"on":""}">按模型</button><button data-v="project" class="${USS.dim==="project"?"on":""}">按项目</button></span></div><div class="ucv-body"></div><div class="uleg"></div><div class="utip"></div></div>
+    <div class="uchart" id="usTrend"><div class="ct"><span id="usChTitle">用量趋势</span><span class="sp" style="flex:1"></span><span id="usSerSeg"></span>${seg("metric", [["tokens","Tokens"],["requests","请求数"],["cost","费用"]])}</div><div class="ucv-body" id="usChart"></div><div class="uleg"></div><div class="utip"></div></div>
     <div class="uchart" id="usFlow"><div class="ct"><span>Token 流转</span><span class="dim" id="ufSub" style="font-size:calc(12px*var(--fk))"></span><span class="sp" style="flex:1"></span><span class="tfls" id="ufLs"></span><button class="ghost tflive" id="ufLive"><i class="tfdot"></i><span>实时</span></button></div><div id="ufBody"><div class="empty">滚动到这里时读取…</div></div></div>
     <div id="usMiss"></div>
     <div class="utabs">${[["logs","请求日志"],["providers","供应商"],["models","模型"],["prices","价格"]].map(([v,t]) => `<button data-tab="${v}" class="${US.tab===v?"on":""}">${t}</button>`).join("")}</div>
@@ -1508,9 +1510,10 @@ function usCards(){
 }
 // ---- 0.2.4：图表样式（原样式 / 曲线图，记住选择）+ 按模型 / 项目分布 ----
 const USS_K = "ccss.usStyle";
-const USS = (() => { const d = {trend:"heat", dist:"bar", series:"kind", dim:"model", hide:{}};
+const USS = (() => { const d = {trend:"bar", dist:"bar", series:"kind", dim:"model", hide:{}};
   let o; try { o = Object.assign(d, JSON.parse(localStorage.getItem(USS_K) || "{}")); } catch(e){ o = d; }
-  if (!o.v044) { o.trend = "heat"; o.v044 = 1; try { localStorage.setItem(USS_K, JSON.stringify(o)); } catch(e){} }   // 0.4.4：「按天分布」缺省是矩阵图（之后记住你的选择）
+  if (!o.v044) { o.v044 = 1; }
+  if (!o.v056) { o.trend = "bar"; o.dist = "bar"; o.v056 = 1; try { localStorage.setItem(USS_K, JSON.stringify(o)); } catch(e){} }   // 0.5.6：去掉矩阵图 / 曲线图切换，缺省简单柱状图
   return o; })();
 const ussSave = () => { try { localStorage.setItem(USS_K, JSON.stringify(USS)); } catch(e){} };
 const fmtFull = n => n == null ? "—" : Math.round(n).toLocaleString("en-US");
@@ -2073,7 +2076,6 @@ R.sessions = async (keep) => {
   pg.innerHTML = `<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">${ic("list")}会话</h2><span id="ssNav" class="ssnav"></span><span id="ssChip"></span><span id="ssStale"></span><span class="sp"></span>
       <span class="dim" style="font-size:calc(13px*var(--fk))">改名 / 删除先备份、可撤回；删除进回收站</span>
       <button id="ssImp" title="把导出的 .md / .html / .jsonl 导回来，变成新的 Claude Code 会话">${ic("upload")} 导入 .md / .html / .jsonl</button>
-      <button class="ghost tflive" id="ssLive" title="实时：打开最近在进行的 Claude Code / Codex / DeepSeek Harness 会话，跟着看它的 token 流转"><i class="tfdot"></i><span>实时</span></button>
       <button class="ghost" id="ssRef" title="刷新">${ic("refresh")}</button></div>
     ${SS.hits ? `<div class="ban" style="margin:0 0 10px;max-width:none">${ic("search")}<div class="tx">内容里含「${esc(SS.hits.q)}」的会话：${SS.hits.set.size} 个${SS.hits.partial ? "（会话太多，只搜了一部分）" : ""}</div><div class="acts"><button id="ssFtX">清除</button></div></div>` : ""}
     <div class="split2"><div class="l"><div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column"><div class="scroll" id="ssList" style="border:0;border-radius:0;flex:1"></div>
@@ -2083,7 +2085,6 @@ R.sessions = async (keep) => {
   $("#ssImp").onclick = () => imDlg();
   const fx = $("#ssFtX"); if (fx) fx.onclick = () => { SS.hits = null; R.sessions(); };
   $("#ssRef").onclick = () => R.sessions();
-  $("#ssLive").onclick = () => tfGlobalLive();
   dragGrip($("#ssGrip"), () => $("#pg-sessions .split2>.r").getBoundingClientRect().width, w => rootCss("--dw", w + "px"), 320, () => $("#pg-sessions .split2").getBoundingClientRect().width - 320, "ccss.detailw", true);
   if (SS.cur && live.has(skey(SS.cur))) ssView(SS.cur.agent, SS.cur.id); else { SS.cur = null; ssLayout(); }
 };
@@ -3283,10 +3284,8 @@ function ufSet(d, mode){
   UF.d = d; UF.m = ufModel(d); UF.g = null; UF.strip = null; UF.sv++; UF.col = null;
   ufScale();
   if (mode === "new" || !$("#ufCv")) {
-    const auto = mode === "new" && !tfRM() && UF.m.N > 1 && UF.m.T.n;
-    UF.pos = auto ? 0 : UF.m.N; UF.P = [];
+    UF.pos = UF.m.N; UF.P = [];          // 停在末尾显示当前合计；新用量由实时增量流进来，不从头回放
     ufRender();
-    if (auto) ufSetPlay(true);
   } else {
     UF.pos = atEnd ? UF.m.N : Math.min(UF.pos, UF.m.N);
     const sl = $("#ufSl"); if (sl) { sl.max = UF.m.N; sl.disabled = !UF.m.N; }
@@ -3319,7 +3318,7 @@ function ufOnLoad(heat){ if (UF.seen && $("#ufBody")) ufLoad(heat === "tick" && 
 function ufWatch(){
   const el = $("#usFlow"); if (!el) return;
   UF.seen = false; if (UF.io) UF.io.disconnect();
-  UF.lv.on = store.get("ccss.uflive") === "1"; ufLiveWire();
+  UF.lv.on = store.get("ccss.uflive") !== "0"; ufLiveWire();
   if (!("IntersectionObserver" in window)) { UF.seen = true; ufLoad(); return; }
   UF.io = new IntersectionObserver(es => { if (!es.some(e => e.isIntersecting)) return; UF.io.disconnect(); UF.io = null; UF.seen = true; ufLoad(true); }, {rootMargin: "120px"});
   UF.io.observe(el);
@@ -3395,9 +3394,7 @@ async function ssView(agent, id, lim){
   if (SS.cur.agent !== agent || SS.cur.id !== id) return;
   if (dt && dt.item) x = Object.assign({}, dt.item, x, {resume: dt.item.resume, file: dt.item.file});
   const g = trGroup(x.gacct);
-  const tfOn = TF_AG.includes(agent), mode = tfOn && store.get("ccss.svmode") === "flow" ? "flow" : "chat";
   box.innerHTML = `<h3>${logo(agent)} <span class="ell" style="max-width:none;flex:1">${esc(x.title || "（无标题）")}</span>
-      ${tfOn ? `<span class="seg svmode" id="svMode" title="对话内容，或者按真实用量回放每一次模型调用的 token 流转"><button data-m="chat" class="${mode === "chat" ? "on" : ""}">对话</button><button data-m="flow" class="${mode === "flow" ? "on" : ""}">Token 流转</button></span>` : ""}
       <span class="menu" id="svRd"><button class="ghost" id="svRdB" title="阅读设置：气泡样式、文本宽度">${ic("type")}</button><div class="list rdpop">${rdPop()}</div></span>
       <button class="ghost" id="svRen" title="改名">${ic("pencil")}</button>
       <span class="menu" id="svMore"><button class="ghost" id="svMoreB">${ic("more")}</button><div class="list">
@@ -3412,17 +3409,10 @@ async function ssView(agent, id, lim){
         agent === "dsh" ? `<button class="primary" id="svOpen" title="DeepSeek Harness 的会话在它自己的桌面版里接着聊；这里复制命令行用的继续命令">${ic("copy")} 继续…</button>` :
         agent === "cursor" ? `<button class="primary" id="svOpen" title="Cursor 的对话在 Cursor 里接着聊；本程序可导出后再导入 Claude Code">${ic("file")} 导出…</button>` : `<button class="primary" id="svOpen" title="在终端里接着这个会话">${ic("play")} 继续</button>`}</h3>
     <div class="dim" style="font-size:calc(13px*var(--fk));margin:-4px 0 8px;word-break:break-all">${g ? (g.kind === "unknown" ? "未知账号" : acm(g.rid, g.masked)) + " " + eyeB() + " · " : ""}${agent === "dsh" ? `<span class="tag dsh">DeepSeek Harness · 只读</span> ${x.model ? esc(x.model) + " · " : ""}` : agent === "cursor" ? `<span class="tag cursor">${esc(x.source_name || "Cursor")} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.mode ? esc(x.mode) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : agent === "opencode" || agent === "zcode" ? `<span class="tag ${agent}">${esc(x.source_name || APPN[agent])} · 只读</span> ${x.model ? esc(x.model) + " · " : ""}${x.subagent ? "子代理 · " : ""}` : ""}<span title="${esc(x.cwd || "")}">${esc(x.cwd || "")}</span> · ${esc(id)}${x.alias ? ` · 原名「${esc(x.tool_title || "")}」` : ""}</div>
-    ${tfOn ? `<div id="svFlow"${mode === "flow" ? "" : " hidden"}></div>` : ""}
-    <div class="pv chatpv" id="svPv"${mode === "flow" ? " hidden" : ""}>${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
+    <div class="pv chatpv" id="svPv">${r.cut ? `<div class="cnote">只显示了最近的 ${r.entries.length} 条，前面还有 ${r.cut} 条${lim < 5000 ? ` <button class="ghost" id="svMoreE">加载更早的</button>` : "（导出能看全部）"}</div>` : ""}${chatHtml(r.entries, agent)}</div>`;
   { const pv = $("#svPv"), old = SS.pvKeep; SS.pvKeep = null;
     pv.scrollTop = old != null ? pv.scrollHeight - old : pv.scrollHeight;
     const me = $("#svMoreE"); if (me) me.onclick = () => { SS.pvKeep = pv.scrollHeight - pv.scrollTop; me.disabled = true; ssView(agent, id, Math.min(5000, lim * 3)); }; }
-  if (tfOn) {                          // 0.5.1：对话 | Token 流转（记住选的哪个）
-    const show = m => { $$("#svMode button").forEach(b => b.classList.toggle("on", b.dataset.m === m)); $("#svPv").hidden = m === "flow"; $("#svFlow").hidden = m !== "flow";
-      if (m === "flow") tfView(agent, id, $("#svFlow")); else { tfSetPlay(false); if (TF.lv) { TF.lv.on = false; if (TF.lv.ac) TF.lv.ac.abort(); } const pv = $("#svPv"); pv.scrollTop = pv.scrollHeight; } };
-    $$("#svMode button").forEach(b => b.onclick = () => { store.set("ccss.svmode", b.dataset.m); show(b.dataset.m); });
-    if (mode === "flow") tfView(agent, id, $("#svFlow"));
-  }
   $("#svRen").onclick = () => ssRename(agent, id, x);
   $("#svRdB").onclick = e => { e.stopPropagation(); $$(".menu.open").forEach(m => m !== $("#svRd") && m.classList.remove("open")); $("#svRd").classList.toggle("open"); };
   $("#svRd .list").onclick = e => e.stopPropagation();          // 在里面点不收起
