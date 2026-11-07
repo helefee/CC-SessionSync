@@ -156,7 +156,8 @@ else:
 ok('id="tbAbout" data-p="about"' in page and 'id="pg-about"' in page and "R.about = async" in page and '"/api/about"' in page, "about: top-bar button, page and renderer")
 ok('$$("#nav [data-p], #tbSet, #tbAbout")' in page and page.count("#tbSet, #tbAbout") == 2, "about: top-bar button highlighted like settings")
 ok('id="stAbout"' in page, "settings links to about")
-ok('id="svMode"' in page and 'store.set("ccss.svmode"' in page and "tfView(agent, id" in page, "session view: 对话 | Token 流转 toggle, remembered")
+ok('id="svMode"' not in page and 'id="svFlow"' not in page, "session view: Token 流转 toggle removed")
+ok("function tfView" in page and "/api/sessions/tokenflow?agent=" in page, "session tokenflow helpers remain (used by tests / unused UI code)")
 ok("/api/sessions/tokenflow?agent=" in page and "prefers-reduced-motion" in page, "token flow: fetches real usage, respects reduced motion")
 ok("cdn" not in page.lower() and "<script src=" not in page, "no CDN / external script")
 

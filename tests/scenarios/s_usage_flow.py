@@ -106,6 +106,8 @@ ok(all(x in html for x in ("fxBand", "fxDot", "fxHover", "fxSpread", "fxCount", 
 ok("visibilitychange" in html and "document.hidden" in html and "requestAnimationFrame" in html, "page: animation runs on rAF and stops when the page is hidden")
 ok(html.count("tfRM()") >= 4 and "UF_MAXP" in html, "page: reduced motion respected + particle cap")
 ok(all(x in html for x in ('id="ufPlay"', 'id="ufSl"', 'id="ufSp"', 'id="ufLive"')), "page: play / scrub / speed / live controls")
+ok('store.get("ccss.uflive") !== "0"' in html, "page: usage flow live is on by default")
+ok("if (auto) ufSetPlay(true)" not in html and "停在末尾显示当前合计" in html, "page: does not auto-replay historical usage from the start")
 en = json.loads((ROOT / "cc_sessionsync" / "i18n" / "en.json").read_text(encoding="utf-8"))
 ok(all(en.get(k) for k in ("输入种类", "这段时间没有用量", "整段时间", "截至")), "English strings for the usage flow")
 if shutil.which("node"):
