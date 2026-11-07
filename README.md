@@ -70,6 +70,11 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 ![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
 
+### 清理未用文案、截图与过时文档（0.5.7）
+
+- 删掉已经没人引用的英文文案、转换 / 时间线残留说明，以及仓库里不再出现在文档里的旧截图。程序功能不变。
+- Windows 安装包体积和 0.5.6 差不多（那部分瘦不下来多少）；主要减轻的是仓库和文档。
+
 ### 更简单的用量页与侧边栏（0.5.6）
 
 - **用量统计图简化**：去掉「原样式 / 曲线图 / 矩阵图」切换，按模型 / 按项目的分布和趋势都改成简单柱状图（仍可按 Tokens / 请求数 / 费用查看）。
@@ -456,16 +461,12 @@ Claude 桌面端可以不用订阅登录，改走自己的推理网关 / 第三�
 
 | | |
 |---|---|
-| ![时间点](docs/screenshots/v022-07-timeline-light.png) | ![恢复到 Claude](docs/screenshots/v021-25-restore-to-claude-light.png) |
-| （时间线与快照恢复已移除；请用会话页的导出 / 导入。） | （账号同步仍有同步前备份与同步记录一键撤销。） |
-| ![按项目分组](docs/screenshots/v021-04-tree-account-expanded-dark.png) | ![备份](docs/screenshots/v022-09-backups-light.png) |
-| **按账号分组**（深色）：账号下再按项目分，选中一组可以整组导出。 | **备份**：自动备份的上次 / 下次 / 结果、数据库大小、保留规则、清理。 |
-| ![Codex → Claude Code](docs/screenshots/v022-14-codex-light.png) | ![演练](docs/screenshots/04-codex-dryrun-light.png) |
-| **会话**（深色）：只读查看、改名、归档、导出、在终端里接着聊、删除进回收站，可批量。 | **导入 .md / .html**：先预览，无损 / 按标题解析一目了然。 |
-| ![用量](docs/screenshots/v022-02-usage-light.png) | |
-| **用量**（页面，不是弹窗）：读本机会话日志（同一次请求只算一次），缓存读 / 写分开算；费用「按 API 价折算」，不是实际账单；没价格的模型显示「—」。 | |
+| ![按账号分组](docs/screenshots/v021-04-tree-account-expanded-dark.png) | ![会话](docs/screenshots/v022-14-codex-light.png) |
+| **按账号分组**（深色）：账号下再按项目分，选中一组可以整组导出。 | **会话**：只读查看、改名、归档、导出、在终端里接着聊、删除进回收站，可批量。 |
+| ![导入](docs/screenshots/04-codex-dryrun-light.png) | ![用量](docs/screenshots/v022-02-usage-light.png) |
+| **导入 .md / .html / .jsonl**：先预览，无损 / 按标题解析一目了然。 | **用量**（页面，不是弹窗）：读本机会话日志（同一次请求只算一次），缓存读 / 写分开算；费用「按 API 价折算」，不是实际账单；没价格的模型显示「—」。 |
 | ![设置](docs/screenshots/v022-10-settings-light.png) | ![诊断](docs/screenshots/v022-12-diag-light.png) |
-| **设置**：主题、托盘、开机自启、通知、自动同步、自动备份、总是显示完整账号、检查更新。 | **诊断 / 自检**：每一项通过 / 注意 / 没通过，附建议；第一次启动自动跑一次。报告里账号打码，可以直接复制发出来。 |
+| **设置**：主题、托盘、开机自启、通知、自动同步、总是显示完整账号、检查更新。 | **诊断 / 自检**：每一项通过 / 注意 / 没通过，附建议；第一次启动自动跑一次。报告里账号打码，可以直接复制发出来。 |
 
 ### 会话管理怎么改文件
 
@@ -494,47 +495,27 @@ cc-sessionsync clean-backups --days 90    # 清理旧的配置备份：先预览
 cc-sessionsync restore 20261017-101500    # 撤回某次同步（撤回前也先备份）
 cc-sessionsync auto                       # 前台常驻：桌面端没开时自动补齐（Ctrl+C 停）
 
-# ② Codex → Claude Code
-cc-sessionsync codex list --days 0                     # 列出 Codex 对话（0 = 不限时间）
-cc-sessionsync codex import                            # 演练（缺省就是演练，什么都不写）
-cc-sessionsync codex import --only 3f9a1c,77b0de --apply   # 只导这两个（线程号末几位）
-cc-sessionsync codex import --cwd D:\work\shop --apply     # 只导这个项目下的
-cc-sessionsync codex import --no-desktop --apply       # 只写命令行用的会话记录，不碰桌面端列表
-cc-sessionsync codex import --mark-codex-imported --apply   # 同时登记进 Codex 导入记录（防止 Codex 再导回去，见下文）
-cc-sessionsync settings --codex-mark-imported on       # 以后缺省就登记（off 关掉；单次用 --no-mark-codex-imported）
-cc-sessionsync codex ledgers                           # 导入账本
-cc-sessionsync codex undo 20261017-101800              # 撤回一次导入
-
-# ⑤ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
-cc-sessionsync sessions list [--agent claude|codex] [-n 50]
-cc-sessionsync sessions backup            # 增量备份进 ~/.cc-sessionsync/sessions.sqlite
+# ② 导入 / 导出会话
+cc-sessionsync import <文件或文件夹>          # 预览导入 .md / .html / .jsonl（加 --apply 才写）
 cc-sessionsync sessions export claude <会话号> --fmt md
+
+# ③ 会话管理（命令行只读；改名 / 删除 / 还原请在窗口里做）
+cc-sessionsync sessions list [--agent claude|codex] [-n 50]
 cc-sessionsync sessions trash             # 回收站
 cc-sessionsync sessions ops               # 操作记录
 cc-sessionsync usage [--full]             # 用量汇总
 ```
 
-导入后命令行会打印每个会话的打开方式，例如：
-
-```
-cd D:\work\shop && claude --resume 8d7c1c3e-…
-```
-
-（Claude Code 按工作目录找会话，要先进到 Codex 对话当时的工作目录。）桌面端：打开 / 重启 Claude 桌面端，列表里标题前带「（Codex）」的就是。
-
 ## 怎么保证安全
 
-- **先演练**：`sync --dry-run`、`codex import`（不加 `--apply`）只算不写；界面上也是先「演练」才能点执行。
+- **先演练**：`sync --dry-run`、`import`（不加 `--apply`）只算不写；界面上也是先预览再执行。
 - **桌面端开着不写它的数据**：Claude 桌面端把会话列表放在内存里，退出时写回磁盘，开着的时候改会被盖掉。所以要改桌面端列表时，
   如果它开着，先问你：「关闭并执行（完成后重启）」会请它正常退出（不强制；强制结束要再确认一次），或者排队等你自己退出，
   后台等它完全退出后再做，做完按原来的方式把它重新打开（`jobs` 能看、能取消）。只写命令行会话（`--no-desktop`）不用等。
 - **备份 + 撤回**：
   - 同步：每次写之前把目标账号文件夹整个拷到 `~/.cc-sessionsync/claude-sync-bak/<时间>/`，旁边 `ledger.json` 记补了哪些、刷新了哪些；
     `restore` 把补进来的挪进回收站、刷新过的换回原版本。撤回过的会话，自动同步不会再补回来。
-  - Codex 导入：`~/.cc-sessionsync/codex-import/<时间>/ledger.json` 记这次新建 / 更新了哪些文件，更新前的版本拷在旁边；
-    `codex undo` 把新建的挪进回收站（`~/.cc-sessionsync/trash/`，不直接删）、更新过的换回原版本。导过去之后你在 Claude 里接着聊过的会话不动。
 - **只补不删**：同步只补缺的、刷新旧的，不删除；在当前账号里删过的会话（桌面端留了墓碑）不复活；对话记录文件已经没了的不补。
-- **再导一次**：Codex 那边又聊了 → 更新同一份 Claude 会话（先备份）；你已经在 Claude 里接着聊过 → 不覆盖。
 - 所有写都是「写临时文件再一步换上」，不会写出半个文件。
 
 ## 目录怎么认
@@ -549,43 +530,6 @@ cd D:\work\shop && claude --resume 8d7c1c3e-…
 
 两个桌面端目录都有时：会话列表、Local Storage（账号）、IndexedDB 各自看哪边最近有写入；一样新时，桌面端是从 WindowsApps（商店版）跑的就用 MSIX 那边。
 `status` / `diag` 会写明每一项用的是哪边、为什么。
-
-## Codex → Claude Code 的限制
-
-
-- **工具调用折成文字**：Codex 的 shell / exec_command / apply_patch / update_plan / web_search / MCP 调用，写成助手回复里的一段
-  「〔Codex 调用了 …〕+ 命令 + 截短的输出（缺省每个 20 行 / 2000 字符）」，不是 Claude 的 `tool_use` / `tool_result`。
-  原因：两边工具名和参数格式不一样，硬塞成 Claude 的工具调用可能被 API 拒掉，整份会话就续不上。所以 Claude 接手后要自己再看一下文件 / git 状态（导入的第一条消息里也这么提示了）。
-- **思考过程（reasoning）缺省不带**：Codex 的大多是加密的，读不出来；有明文摘要的可以用 `--reasoning` 带上。
-- **图片不带**：用户贴的图、工具返回的图、生成的图都换成「[图片…]」占位。
-- **Codex 注入的上下文不带**：AGENTS.md、环境信息、权限说明等（Claude Code 自己会重新带上它的）。
-- **只导用户自己开的对话**：子代理、`codex exec` 一次性任务、从 Claude 导进 Codex 的线程缺省跳过（免得来回套娃）；`--all` 可以都算上。
-- **很长的对话**：全部历史都会导进来，太长时 Claude Code 第一次接着聊可能提示上下文太长，用 `/compact` 压一下即可。
-- **模型显示**：导入的助手消息模型名记为 `codex-import`，费用 / token 统计为 0。
-- Claude Code 的会话文件格式不是官方公开格式，这里按本机 Claude Code（测试用 2.1.302）实际写出的文件来拼；CI 每次都用最新版 Claude Code
-  真的 `claude --resume` 一遍（连本机假 API）确认能打开。Claude Code 以后改格式可能需要跟着更新。
-- Codex 桌面端如果开了「从 Claude Code 导入会话」，可能会把导过去的这份当成 Claude 会话再导回 Codex 一份。缺省不处理（不碰 Codex 的文件），
-  要防止就打开下面的「登记进 Codex 导入记录」。
-
-## 登记进 Codex 导入记录（可选，缺省关）
-
-Codex 桌面端「从 Claude Code 导入会话」会扫 `~/.claude/projects`，用 `<CODEX_HOME>/external_agent_session_imports.json` 记哪些已经导过。
-打开这个开关后，每导一个会话，就在这个文件里加一条记录：「这份 Claude 会话 = 原来那个 Codex 线程」，Codex 看到就不会再导一份重复的。
-
-- 打开方式：命令行 `--mark-codex-imported`（单次）、`cc-sessionsync settings --codex-mark-imported on`（以后缺省），
-  或界面「Codex → Claude Code」页的「登记进 Codex 导入记录」勾选（会记住）。缺省关。
-- 记录格式和 Codex 自己写的一样（对照 Codex 开源代码 `codex-rs/external-agent-migration/src/sessions/ledger.rs`）：
-  `{"records": [{"source_path", "content_sha256", "imported_thread_id", "imported_at", "source_modified_at", "connector_names", "title"}],
-  "detected_connector_records": [...]}`；`source_path` 按 Codex 的写法（Windows 是 `\\?\C:\…`），`imported_thread_id` 是原来的 Codex 线程号。
-- **只动这一个文件**，Codex 的其它文件（对话、索引、数据库、配置）一概不碰。改之前把原文件拷进这次导入的账本，写临时文件再一步换上；
-  文件里原有的记录和其它字段原样保留，只增 / 改我们自己那几条。文件不存在就按 Codex 的格式新建。
-- **格式不对就整个不动**：文件不是合法 JSON、或者不是 `{"records": [...]}` 的样子 → 报错，这次导入一个文件都不写（演练时就会提示）。
-  修好它，或者这次用 `--no-mark-codex-imported` 不登记。
-- **撤回**：`codex undo` 一起还原。文件从导入以后没变过 → 原样换回备份（导入前没有这个文件 → 挪进回收站）；
-  之后 Codex 自己又往里加过记录 → 只把我们那几条换回原样，Codex 后来加的保留。你在 Claude 里接着聊过、被保留下来的会话，登记也保留。
-- 你在 Claude 里接着聊了以后，这份会话的内容和登记的不一样了，Codex 会试着把新增的部分接到原来那个 Codex 线程后面
-  （它要求内容严格对得上，转换过的文字版一般对不上，就放弃）；不会再新建一份重复的。
-- Codex 桌面端开着时也可以导：写之前会重新读一遍文件再原子替换，窗口很短；保险起见可以先退出 Codex 再导。
 
 ## 开发
 

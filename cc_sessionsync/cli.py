@@ -223,9 +223,9 @@ def cmd_after_quit(a) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="cc-sessionsync", description="Claude Code 换号后会话补齐 + Codex 对话导入 Claude Code")
+    ap = argparse.ArgumentParser(prog="cc-sessionsync", description="Claude Code 换号后会话补齐、会话管理、用量统计")
     ap.add_argument("--version", action="version", version=f"cc-sessionsync {__version__}")
-    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,clean-backups,restore,verify,auto,codex,sessions,usage,settings,jobs,diag,selfcheck,ui}")
+    sub = ap.add_subparsers(dest="cmd", metavar="{desktop,status,sync,backups,clean-backups,restore,verify,auto,import,sessions,usage,settings,jobs,diag,selfcheck,ui}")
     sub.add_parser("status", help="看当前账号、会话文件夹、Codex 对话数").set_defaults(fn=cmd_status)
     s = sub.add_parser("sync", help="把别的账号下的 Claude 会话补进当前账号的会话列表")
     s.add_argument("--dry-run", action="store_true", help="只演练，不写")

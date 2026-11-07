@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "cc-sessionsync"
 dynamic = ["version"]
-description = "Claude Code 换号后会话补齐、Codex 对话导入 Claude Code、会话管理 / 备份、用量统计、模型与 API（桌面版 + 命令行，带备份 / 账本 / 撤回）"
+description = "Claude Code 换号后会话补齐、会话管理、导入导出、用量统计（桌面版 + 命令行）"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
