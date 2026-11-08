@@ -249,6 +249,21 @@ def msix_claude_dirs() -> list[Path]:
         return []
 
 
+def claude_data_dirs() -> list[Path]:
+    """商店版桌面端新的数据目录（2026-11 起）：%LOCALAPPDATA%\\Claude-Data\\claude_<包号>（也认 Claude_*）。
+    这个文件夹本身就是数据目录（直接放 claude-code-sessions、Local Storage），%APPDATA%\\Claude 里可能还留着旧数据。只列存在的。"""
+    root = Path(os.environ.get("LOCALAPPDATA") or Path.home() / "AppData" / "Local") / "Claude-Data"
+    try:
+        seen, out = set(), []
+        for d in sorted(list(root.glob("Claude_*")) + list(root.glob("claude_*"))):
+            k = str(d).lower()
+            if d.is_dir() and k not in seen:
+                seen.add(k); out.append(d)
+        return out
+    except OSError:
+        return []
+
+
 CODEX_STORE_SUBS = ("LocalCache/Roaming/.codex", "LocalCache/Local/.codex", "LocalCache/Roaming/Codex", "LocalCache/Local/Codex", "LocalState/.codex")
 
 
@@ -301,6 +316,8 @@ def candidates(agent: str, settings: dict | None = None, wsl: list[str] | None =
             add("%APPDATA%\\Claude（桌面端）", appdata / "Claude", "app")
             for d in msix_claude_dirs():
                 add("商店版桌面端（MSIX 虚拟化目录）", d, "app")
+            for d in claude_data_dirs():
+                add("商店版桌面端（Claude-Data）", d, "app")
         elif sys.platform == "darwin":
             add("桌面端", home / "Library" / "Application Support" / "Claude", "app")
         else:

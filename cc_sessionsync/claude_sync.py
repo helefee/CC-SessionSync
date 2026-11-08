@@ -2,6 +2,7 @@
 """Claude 桌面端会话列表跨账号同步。
 
 桌面端的会话列表按「账号 / 组织」分文件夹记：<Claude 数据目录>/claude-code-sessions/<账号>/<组织>/local_*.json，
+（Windows 上数据目录是 %APPDATA%\\Claude、商店版虚拟化目录，或 2026-11 起商店版新位置 %LOCALAPPDATA%\\Claude-Data\\claude_<包号>）
 只显示当前登录的那个文件夹；对话内容本身在 ~/.claude/projects/**/<会话号>.jsonl，本地、不分账号。
 切换账号后旧会话「不见了」只是列表文件在别的文件夹里。这里把别的文件夹里的会话列表文件补齐复制到目标文件夹：
 
@@ -89,10 +90,21 @@ def app_dir_candidates(profile: str = "1p") -> list[dict]:
     if sys.platform == "win32" or os.environ.get("LOCALAPPDATA"):
         for d in detect.msix_claude_dirs():
             out.append({"id": "msix:" + d.parent.parent.parent.name, "label": "商店版虚拟化目录（" + d.parent.parent.parent.name + "）", "path": d})
+        # 2026-11 起商店版把数据目录搬到 %LOCALAPPDATA%\Claude-Data\claude_<包号>（会话列表、Local Storage 都在这）
+        for d in detect.claude_data_dirs():
+            out.append({"id": "claudedata:" + d.name, "label": "商店版数据目录 Claude-Data（" + d.name + "）", "path": d})
     e = _env_dir()
     if e:
         out.append({"id": "env", "label": "CLAUDE_USER_DATA_DIR（签名版桌面端会忽略）", "path": e})
-    return out
+    seen, uniq = set(), []
+    for c in out:
+        try:
+            k = str(Path(c["path"]).resolve()).lower()
+        except OSError:
+            k = str(c["path"]).lower()
+        if k not in seen:
+            seen.add(k); uniq.append(c)
+    return uniq
 
 
 # ---------- API 模式（3P：API key / 第三方供应商）----------
@@ -308,7 +320,7 @@ def app_resolve(max_age: float = 20) -> dict:
                 best = max(have, key=lambda r: r["activity"])
                 tie = [r for r in have if best["activity"] - r["activity"] < 2]
                 if len(tie) > 1:
-                    pick = next((r for r in tie if r["id"].startswith("msix:")), tie[0]) if msix else next((r for r in tie if r["id"] == "appdata"), tie[0])
+                    pick = next((r for r in tie if r["id"].startswith("claudedata:")), next((r for r in tie if r["id"].startswith("msix:")), tie[0])) if msix else next((r for r in tie if r["id"] == "appdata"), tie[0])
                     why = "两边一样新，" + ("桌面端是商店版，用虚拟化目录" if msix else "用 %APPDATA%")
                 else:
                     pick, why = best, "两边都有，这边最近写过"
