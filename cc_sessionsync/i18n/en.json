@@ -598,6 +598,8 @@
 "商店版桌面端（MSIX 虚拟化目录）": "Store desktop app (MSIX virtualized folder)",
 "商店版没查到 AUMID，按 exe 路径打开": "No AUMID found for the Store version, opening by exe path",
 "商店版虚拟化目录（": "Store-version virtualized folder (",
+"商店版桌面端（Claude-Data）": "Store desktop app (Claude-Data)",
+"商店版数据目录 Claude-Data（": "Store-version data folder Claude-Data (",
 "商店版（MSIX）：shell:AppsFolder": "Store version (MSIX): shell:AppsFolder",
 "商店版（WindowsApps）": "Store version (WindowsApps)",
 "回到会话": "Back to session",
