@@ -70,6 +70,11 @@ Claude Code / Codex 的会话管家，Windows 桌面程序（也能 pip 装、�
 
 ![导入原始 jsonl：先预览，自动认出 Claude Code / Codex](docs/screenshots/v047-import-jsonl-light.png)
 
+### 识别商店版 Claude 新数据目录（0.5.8）
+
+- Windows 商店版 Claude 桌面端从约 2026-11 起，把用户数据迁到 `%LOCALAPPDATA%\Claude-Data\claude_<包号>\`（会话列表 `claude-code-sessions` 和用来判断当前登录账号的 Local Storage 都在这里）。以前程序只看 `%APPDATA%\Claude` 和商店版虚拟化目录，所以按账号分组时会觉得「这个账号下面没有对话」。
+- 现在会同时扫描这个新目录；旧目录仍保留，避免漏掉残留数据。对话内容文件本身还在 `~/.claude/projects/`，没有搬家。
+
 ### 清理未用文案、截图与过时文档（0.5.7）
 
 - 删掉已经没人引用的英文文案、转换 / 时间线残留说明，以及仓库里不再出现在文档里的旧截图。程序功能不变。

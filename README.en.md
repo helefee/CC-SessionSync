@@ -60,6 +60,8 @@ anything that can be dry-run is dry-run first.
 
 ## What's new in 0.5
 
+- **Recognize the Store Claude Claude-Data folder (0.5.8):** Windows Store Claude Desktop moved its user data (session list `claude-code-sessions` and Local Storage used to detect the signed-in account) to `%LOCALAPPDATA%\Claude-Data\claude_<packageId>\` around 2026-11. SessionSync previously only looked in `%APPDATA%\Claude` and the Store virtualized folder, so conversations could look missing under an account. It now scans the new folder too and still keeps the old ones so leftover data is not lost. Transcript files themselves stay in `~/.claude/projects/` and did not move.
+
 - **Slim unused copy, leftover convert/timeline docs, and unreferenced screenshots (0.5.7):** drop unused English strings, stale convert/timeline documentation, and screenshots that the docs no longer link to. Features stay the same. The Windows installer is about the same size as 0.5.6.
 
 - **Simpler usage charts, live usage flow, and click-to-toggle the session tree (0.5.6):** the Usage page drops the original / curve / heatmap style switchers and uses simple bar charts (tokens / requests / cost still switchable). The token flow starts at current totals with live mode on by default, so newly recorded usage is added as it lands instead of replaying finished usage from the start. Session view no longer has a Conversation | Token flow toggle; click an account or project row in the left tree to expand or collapse its conversations.
